@@ -3,6 +3,7 @@ run:
     - lint/gorules.go
 linters:
   enable:
+    - exhaustruct
     - gocritic
 linters-settings:
   gocritic:
