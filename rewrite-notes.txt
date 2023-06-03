@@ -1,0 +1,12 @@
+## Static analysis wishlist
+
+
+## Ruby -> Go patterns
+ensure -> defer func(){}()
+to_s -> String()
+
+
+## Small dynamic mangles that needed to be consolidated
+
+
+## Modeling sum return types as interfaces postmortem

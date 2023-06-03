@@ -1,0 +1,13 @@
+run:
+  skip-files:
+    - lint/gorules.go
+linters:
+  enable:
+    - gocritic
+linters-settings:
+  gocritic:
+    enabled-checks:
+      - ruleguard
+    settings:
+      ruleguard:
+        rules: "lint\\gorules.go"
