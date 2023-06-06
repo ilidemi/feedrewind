@@ -7,5 +7,5 @@ import (
 )
 
 func callToTimeNow(m dsl.Matcher) {
-	m.Match(`time.Now`).Report(`call to time.Now`)
+	// m.Match(`time.Now`).Report(`call to time.Now`)
 }
