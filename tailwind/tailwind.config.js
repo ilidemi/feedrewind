@@ -1,6 +1,7 @@
 module.exports = {
     content: [
-        './templates/**/*'
+        './templates/**/*',
+        './routes/**/*.go'
     ],
     theme: {
         screens: {

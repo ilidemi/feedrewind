@@ -1,2 +1,7 @@
 *.exe
 !tailwind/bin/*
+
+*.sublime-workspace
+tmp/
+
+web/tailwind.css

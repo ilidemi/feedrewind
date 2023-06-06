@@ -1,0 +1,278 @@
+{{template "landing.gohtml" .}}
+
+{{define "content"}}
+<div class="min-h-screen p-6 pb-14 flex flex-col">
+  <header class="flex flex-row gap-x-6 gap-y-4 flex-wrap justify-between items-center">
+    <a href="/" class="hover:cursor-pointer flex pt-1">
+      <img src="/static/logo.svg" class="w-40" alt="Logo">
+    </a>
+    <div class="flex flex-row gap-2">
+      <a
+        href="/login"
+        class="text-sm text-primary-700 border border-gray-300 hover:border-primary-900 rounded-full px-3 py-1.5 hover:cursor-pointer"
+      >
+        Sign in
+      </a>
+      <a
+        href="/signup"
+        class="text-sm text-white bg-primary-700 hover:bg-primary-900 rounded-full px-3 py-1.5 hover:cursor-pointer"
+      >
+        Sign up
+      </a>
+    </div>
+  </header>
+  <main class="flex-1 flex flex-col">
+    <div class="flex flex-col gap-3 2xs:gap-6 md:gap-6 mt-14">
+      <h1 class="text-[22px] 3xs:text-[28px] 2xs:text-[32px] md:text-[42px] leading-[1.005] flex flex-col headline text-center">
+        <span>Learn more</span>
+        <span>from the people</span>
+        <span>you already trust.</span>
+      </h1>
+      <p class="flex flex-col text-center text-xs 3xs:text-sm 2xs:text-base">
+        <span>There is a blog that excites you. <br class="md:hidden">You want to read it all</span>
+        <span>but don’t want to stay up all night again.</span>
+        <span>If only you could subscribe years ago.</span>
+        <span>Now you can.</span>
+      </p>
+    </div>
+
+    {{with .Screenshot}}
+    <div id="screenshot_container">
+      <div id="screenshot_scaled_container" class="
+        relative mt-14 origin-top-left
+        max-w-[480px] min-h-[722px] max-h-[722px] mx-auto
+        md:max-w-[717px] md:min-h-[443px] md:max-h-[443px] md:mx-0
+      ">
+        <div class="
+          scale-75 origin-top-left rounded-xl shadow-xl shadow-primary-700/20 bg-white w-max
+        ">
+          <div class="
+            px-6 py-5 min-w-[640px] max-w-[640px]
+            min-h-[540px]
+            md:min-h-[590px]
+          ">
+            <div class="flex flex-col gap-6">
+              <h2>A Blog of Your Choice</h2>
+              <ul class="flex flex-row">
+                <li class="px-5 py-3 text-sm font-semibold border-b-2 border-gray-200 text-gray-500">
+                  Everything ({{.LinksCount}})
+                </li>
+                <li class="px-5 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-600">
+                    <span class="flex flex-row items-center gap-2 justify-center">
+                      <!-- funnel -->
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                        <path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clip-rule="evenodd"/>
+                      </svg>
+                      Custom
+                    </span>
+                </li>
+                <li class="flex-grow border-b-2 border-gray-200"></li>
+              </ul>
+              <div class="flex flex-col gap-1.5">
+                <div>Selected: Everything ({{.LinksCount}})</div>
+                {{range $i := .Links}}
+                  <div class="flex flex-row gap-2 items-top">
+                    <div class="h-6 flex flex-row items-center">
+                      <div class="rounded w-4 h-4 bg-blue-600 landing-screenshot-checkbox"></div>
+                    </div>
+                    <div>
+                      <a id="landing_post_{{$i}}"
+                         href="{{.PreviewPath}}"
+                         target="_blank"
+                         class="link text-black landing-post"
+                      ><span class="hidden md:inline">{{.Title}}</span><span class="inline md:hidden">{{.TitleMobile}}</span></a>
+                      {{if .IsEarliest}}
+                        <span class="text-gray-500">(earliest)</span>
+                      {{else if .IsNewest}}
+                        <span class="text-gray-500">(newest)</span>
+                      {{end}}
+                    </div>
+                  </div>
+                {{end}}
+                <div id="link_glow_color" class="hidden text-primary-400"></div>
+                <script>
+                    let linkGlowColor = window.getComputedStyle(
+                        document.getElementById("link_glow_color")
+                    ).getPropertyValue("color");
+                    for (let i = 0; i < {{.LinksCount}}; i++) {
+                        document.getElementById(`landing_post_${i}`).animate([
+                            {color: "black"},
+                            {color: "black", offset: 0.3 + 0.05 * i},
+                            {color: linkGlowColor, offset: 0.4 + 0.05 * i},
+                            {color: "black", offset: 0.5 + 0.05 * i},
+                            {color: "black"}
+                        ], {
+                            easing: "ease-in-out",
+                            duration: 5000,
+                            iterations: Infinity
+                        });
+                    }
+                </script>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="
+          scale-75 origin-top-left rounded-xl shadow-xl shadow-primary-700/20 bg-white w-max absolute
+          left-[0px] top-[430.5px]
+          md:left-[240px] md:top-[140px]
+        ">
+          <div class="px-6 py-5 min-w-[640px] max-w-[640px] flex flex-col gap-2">
+            <div class="font-semibold">Weekly Schedule</div>
+            <div class="flex flex-row gap-2">
+              {{range .DaysOfWeek}}
+                <div class="flex-1">{{.}}</div>
+              {{end}}
+            </div>
+            <div class="flex flex-row gap-2 items-end basis-auto max-w-full text-gray-700 font-semibold">
+              {{range .ScheduleColumns}}
+                <div class="flex-1 min-w-0 flex flex-col gap-2 text-sm">
+                  {{range .}}
+                    {{if .IsAdd}}
+                      <div class="flex-1 flex-grow font-mono text-center border border-gray-300 rounded-md px-2 py-1">+</div>
+                    {{else if .IsSelected}}
+                      <div class="flex-1 text-white bg-primary-500 border border-primary-500 rounded-md px-2 py-1">
+                        <span class="flex flex-row gap-1">
+                          <span class="font-mono min-w-[10px]">-</span>
+                          <span class="truncate">A Blog of Your Choice</span>
+                        </span>
+                      </div>
+                    {{end}}
+                  {{end}}
+                </div>
+              {{end}}
+            </div>
+          </div>
+        </div>
+        <div class="
+          rounded-lg shadow-lg shadow-primary-700/20 bg-white w-[125px] flex flex-col items-center p-3 absolute
+          left-[131px] top-[591.5px]
+          md:left-[494.5px] md:top-[313px]
+        ">
+          <!-- mail -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-[64px] h-[64px] text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          <div class="text-xs font-semibold">Email</div>
+        </div>
+        <div class="
+          rounded-lg shadow-lg shadow-primary-700/20 bg-white w-[125px] flex flex-col items-center p-3 absolute
+          left-[237.5px] top-[615.5px]
+          md:left-[594.5px] md:top-[336px]
+        ">
+          <!-- rss -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-[64px] h-[64px] text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 11-2 0 1 1 0 012 0z"/>
+          </svg>
+          <div class="text-xs font-semibold">or a private RSS</div>
+        </div>
+        <div class="
+          text-primary-300 absolute
+          scale-[1.15] left-[220px] top-[400px] rotate-180
+          md:scale-100 md:left-[213px] md:top-[197px] md:rotate-[76.46deg]
+        ">
+          <!-- https://www.flaticon.com/free-icon/arrow-up_8286966 with an outline -->
+          <svg width="38px" height="38px" viewBox="0 0 540 540">
+            <path d="M490.641,230.189L490.657,230.209C498.726,240.134 504,256.449 504,269.333C504,301.846 476.482,331.155 443.969,335.22C443.857,335.234 443.745,335.247 443.633,335.26L394.439,340.882C390.695,375.997 384.184,436.88 382.193,454.3C381.734,458.314 380.267,463.777 379.895,466.199C373.426,508.245 335.167,541.205 293.121,544.439C292.304,544.502 291.486,544.533 290.667,544.533L269.333,544.533C268.514,544.533 267.696,544.502 266.879,544.439C225.511,541.257 190.099,509.897 180.553,468.529C179.37,463.403 178.355,459.099 177.807,454.3C175.83,437.003 169.396,376.854 165.641,341.629L117.267,337.483C117,337.46 116.733,337.434 116.466,337.404C79.753,333.325 56,304.101 56,271.467C56,255.828 59.955,244.112 67.774,232.383C68.103,231.89 68.445,231.407 68.8,230.933L203.2,51.733C222.4,26.133 251.2,13.333 280,13.333C308.8,13.333 337.6,26.133 356.8,51.733L490.641,230.189Z" fill="white"/>
+            <path d="M465.6,250.133L331.2,70.933C318.4,53.867 299.2,45.333 280,45.333C260.8,45.333 241.6,53.867 228.8,70.933L94.4,250.133C90.133,256.533 88,262.933 88,271.467C88,288.533 100.8,303.467 120,305.6L194.667,312C194.667,312 206.756,425.778 209.6,450.667C210.012,454.269 210.845,457.486 211.733,461.333C218.133,489.067 241.6,510.4 269.333,512.533L290.667,512.533C318.4,510.4 344,489.067 348.267,461.333C348.601,459.159 349.988,454.269 350.4,450.667C353.244,425.778 365.333,312 365.333,312L440,303.467C457.067,301.333 472,286.4 472,269.333C472,262.933 469.867,254.4 465.6,250.133Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="
+          text-primary-300 absolute
+          scale-[1.15] left-[220px] top-[562px] rotate-180
+          md:scale-100 md:left-[557px] md:top-[264px] md:rotate-[145.82deg]
+        ">
+          <!-- https://www.flaticon.com/free-icon/arrow-up_8286966 with an outline -->
+          <svg width="38px" height="38px" viewBox="0 0 540 540">
+            <path d="M490.641,230.189L490.657,230.209C498.726,240.134 504,256.449 504,269.333C504,301.846 476.482,331.155 443.969,335.22C443.857,335.234 443.745,335.247 443.633,335.26L394.439,340.882C390.695,375.997 384.184,436.88 382.193,454.3C381.734,458.314 380.267,463.777 379.895,466.199C373.426,508.245 335.167,541.205 293.121,544.439C292.304,544.502 291.486,544.533 290.667,544.533L269.333,544.533C268.514,544.533 267.696,544.502 266.879,544.439C225.511,541.257 190.099,509.897 180.553,468.529C179.37,463.403 178.355,459.099 177.807,454.3C175.83,437.003 169.396,376.854 165.641,341.629L117.267,337.483C117,337.46 116.733,337.434 116.466,337.404C79.753,333.325 56,304.101 56,271.467C56,255.828 59.955,244.112 67.774,232.383C68.103,231.89 68.445,231.407 68.8,230.933L203.2,51.733C222.4,26.133 251.2,13.333 280,13.333C308.8,13.333 337.6,26.133 356.8,51.733L490.641,230.189Z" fill="white"/>
+            <path d="M465.6,250.133L331.2,70.933C318.4,53.867 299.2,45.333 280,45.333C260.8,45.333 241.6,53.867 228.8,70.933L94.4,250.133C90.133,256.533 88,262.933 88,271.467C88,288.533 100.8,303.467 120,305.6L194.667,312C194.667,312 206.756,425.778 209.6,450.667C210.012,454.269 210.845,457.486 211.733,461.333C218.133,489.067 241.6,510.4 269.333,512.533L290.667,512.533C318.4,510.4 344,489.067 348.267,461.333C348.601,459.159 349.988,454.269 350.4,450.667C353.244,425.778 365.333,312 365.333,312L440,303.467C457.067,301.333 472,286.4 472,269.333C472,262.933 469.867,254.4 465.6,250.133Z" fill="currentColor"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <script>
+        let screenshotsAreScaled = false;
+        let scaleScreenshots = () => {
+            let mainWidth = document.getElementsByTagName("main")[0].offsetWidth;
+            let defaultWidth = 480;
+            if (mainWidth >= defaultWidth && !screenshotsAreScaled) {
+                return;
+            }
+            let ratio = Math.min(mainWidth / defaultWidth, 1.0);
+            let container = document.getElementById("screenshot_container");
+            let scaledContainer = document.getElementById("screenshot_scaled_container");
+            scaledContainer.style.transform = `scale(${ratio})`
+            container.style.maxHeight = `${scaledContainer.offsetHeight * ratio}px`;
+            screenshotsAreScaled = true;
+        }
+        scaleScreenshots();
+        window.addEventListener("resize", scaleScreenshots);
+    </script>
+    {{end}}
+
+    <div class="
+      flex flex-col gap-2 mt-44 mx-auto bg-primary-50 shadow-lg shadow-primary-700/20 rounded-xl max-w-full
+      w-[480px] p-3
+      2xs:p-6
+      md:p-6 md:w-[531px]
+    ">
+      <div class="font-semibold">Try it out:</div>
+      <form novalidate="novalidate" action="/subscriptions/add" accept-charset="UTF-8" method="POST">
+        <!-- TODO CSRF -->
+        <div class="flex flex-row">
+          <input
+            placeholder="Feed or blog link"
+            autocomplete="off"
+            class="border border-primary-700 rounded-l-md w-full focus:ring-transparent focus:shadow-none"
+            type="url"
+            name="start_url"
+          >
+          <button id="discover_go"
+                  type="submit"
+                  class="btn-no-disable rounded-l-none border border-primary-700 rounded-r-md relative"
+          >
+            <div id="discover_go_label">Go</div>
+            <div id="discover_spinner" class="absolute-center hidden">
+              <div class="spinner spinner-dark"></div>
+            </div>
+          </button>
+
+          <script>
+              function showSpinner() {
+                  const label = document.getElementById("discover_go_label");
+                  label.classList.add("invisible");
+                  const spinner = document.getElementById("discover_spinner");
+                  spinner.classList.remove("hidden");
+                  void spinner.offsetWidth; // trigger reflow
+              }
+
+              const discoverButton = document.getElementById("discover_go");
+              discoverButton.addEventListener("click", () => {
+                  showSpinner();
+              });
+          </script>
+        </div>
+      </form>
+    </div>
+
+    <div id="suggestions" class="flex flex-col gap-y-6 mt-44 w-[480px] md:w-[531px] mx-auto max-w-full">
+      <div>
+        <div>
+          <span class="whitespace-nowrap">Not sure what to read?</span>
+          <span class="whitespace-nowrap">Start with one of our picks:</span>
+        </div>
+        <div class="text-xs text-gray-500">(not affiliated with FeedRewind)</div>
+      </div>
+      {{template "partial_suggestions.gohtml" .Suggestions}}
+    </div>
+  </main>
+  <footer>
+    <div class="text-sm flex flex-row gap-6 pt-16">
+      <a href="mailto:contact@feedrewind.com" target="_blank" class="link-secondary">Contact</a>
+      <a href="/terms" class="link-secondary">Terms</a>
+      <a href="/privacy" class="link-secondary">Privacy</a>
+      <a href="/about" class="link-secondary">About</a>
+    </div>
+  </footer>
+</div>
+{{end}}

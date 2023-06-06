@@ -9,22 +9,24 @@
     [
         {
             "name": "Project",
-            "shell_cmd": "go build .",
+            "working_dir": "$project_path",
             "variants":
             [
                 {
                     "name": "golangci-lint",
-                    "cmd":
-                    [
-                        "golangci-lint cache clean && golangci-lint run"
-                    ],
-                    "shell": true
+                    "shell_cmd":"golangci-lint cache clean && golangci-lint run",
                 },
                 {
                     "name": "tailwindcss",
                     "cmd":
                     [
-                        "tailwind/bin/tailwindcss-3.0.23-windows-x64.exe -i tailwind/application.tailwind.css -c tailwind/tailwind.config.js -o web/tailwind.css"
+                        "tailwind\\bin\\tailwindcss-3.0.23-windows-x64.exe",
+                        "-i",
+                        "tailwind/application.tailwind.css",
+                        "-c",
+                        "tailwind/tailwind.config.js",
+                        "-o",
+                        "web/tailwind.css"
                     ],
                     "shell": true
                 }
