@@ -26,7 +26,7 @@
                         "-c",
                         "tailwind/tailwind.config.js",
                         "-o",
-                        "web/tailwind.css"
+                        "static/tailwind.css"
                     ],
                     "shell": true
                 }

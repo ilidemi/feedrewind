@@ -2,10 +2,12 @@ package middleware
 
 import (
 	"context"
+	"feedrewind/helpers"
 	"feedrewind/log"
 	"net/http"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -73,12 +75,15 @@ func Logger(next http.Handler) http.Handler {
 			}
 		}
 
-		log.Info().
-			Func(commonFields).
-			Str("ip", r.Header.Get("X-Forwarded-For")).
-			Str("referrer", r.Referer()).
-			Str("user-agent", r.UserAgent()).
-			Msg("started")
+		isStaticFile := strings.HasPrefix(r.URL.Path, helpers.StaticUrlPrefix)
+		if !isStaticFile {
+			log.Info().
+				Func(commonFields).
+				Str("ip", r.Header.Get("X-Forwarded-For")).
+				Str("referrer", r.Referer()).
+				Str("user-agent", r.UserAgent()).
+				Msg("started")
+		}
 
 		var errorWrapper errorWrapper
 
@@ -94,7 +99,7 @@ func Logger(next http.Handler) http.Handler {
 					Int("status", status).
 					TimeDiff("duration", time.Now(), t1).
 					Msg("failed")
-			} else {
+			} else if !isStaticFile {
 				log.Info().
 					Func(commonFields).
 					Int("status", status).

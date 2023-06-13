@@ -1,35 +1,33 @@
 package main
 
 import (
+	"feedrewind/helpers"
 	"feedrewind/log"
 	frmiddleware "feedrewind/middleware"
 	"feedrewind/routes"
+	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
+
+	_ "net/http/pprof"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func main() {
+	go func() {
+		fmt.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	r := chi.NewRouter()
 	r.Use(frmiddleware.Logger)
+	r.Use(middleware.Compress(5))
 	r.Use(frmiddleware.Recoverer)
+	r.Use(frmiddleware.DefaultHeaders)
+	r.Use(middleware.GetHead)
 
 	r.Get("/", routes.LandingIndex)
-
-	workdir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	staticDir := http.Dir(filepath.Join(workdir, "web"))
-	r.Get("/static/*", func(w http.ResponseWriter, r *http.Request) {
-		rctx := chi.RouteContext(r.Context())
-		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
-		fs := http.StripPrefix(pathPrefix, http.FileServer(staticDir))
-		fs.ServeHTTP(w, r)
-	})
+	r.Get(helpers.StaticRouteTemplate, routes.StaticFile)
 
 	log.Info().Msg("Started")
 	if err := http.ListenAndServe(":3000", r); err != nil {
