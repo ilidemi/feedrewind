@@ -33,7 +33,11 @@
                         "static/tailwind.css"
                     ],
                     "shell": true
-                }
+                },
+                {
+                    "name": "WSL startup",
+                    "shell_cmd": "go run cmd/wsl_startup/main.go",
+                },
             ]
         }
     ]
