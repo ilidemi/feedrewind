@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -45,7 +46,24 @@ func init() {
 	hashedPathsByFilename = make(map[string]string)
 	files = make(map[string]*StaticFile)
 
-	const staticDir = "static"
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	rootDir := cwd
+	for {
+		parentDir, curDirName := filepath.Split(rootDir)
+		fmt.Println(rootDir, parentDir, curDirName)
+		if curDirName == "" {
+			panic("couldn't find root dir")
+		} else if curDirName == "feedrewind" {
+			break
+		} else {
+			rootDir = strings.TrimRight(parentDir, string(filepath.Separator))
+		}
+	}
+
+	staticDir := path.Join(rootDir, "static")
 	dirEntries, err := os.ReadDir(staticDir)
 	if err != nil {
 		panic(err)

@@ -13,8 +13,12 @@
             "variants":
             [
                 {
+                    "name": "test",
+                    "shell_cmd": "go test ./...",
+                },
+                {
                     "name": "golangci-lint",
-                    "shell_cmd":"golangci-lint cache clean && golangci-lint run",
+                    "shell_cmd": "golangci-lint cache clean && golangci-lint run",
                 },
                 {
                     "name": "tailwindcss",
