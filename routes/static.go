@@ -1,12 +1,12 @@
 package routes
 
 import (
-	"feedrewind/helpers"
+	"feedrewind/util"
 	"net/http"
 )
 
 func StaticFile(w http.ResponseWriter, r *http.Request) {
-	staticFile, err := helpers.GetStaticFile(r.URL.Path)
+	staticFile, err := util.GetStaticFile(r.URL.Path)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return

@@ -1,10 +1,11 @@
 package main
 
 import (
-	"feedrewind/helpers"
+	"feedrewind/db"
 	"feedrewind/log"
 	frmiddleware "feedrewind/middleware"
 	"feedrewind/routes"
+	"feedrewind/util"
 	"fmt"
 	"net/http"
 
@@ -12,16 +13,33 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/spf13/cobra"
 )
 
 //go:generate go run cmd/timezones/main.go
 //go:generate go run third_party/tzdata/generate_zipdata.go
 
 func main() {
+	// pprof
 	go func() {
 		fmt.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 
+	rootCmd := &cobra.Command{
+		Use: "feedrewind",
+		Run: func(_ *cobra.Command, _ []string) {
+			runServer()
+		},
+	}
+	rootCmd.AddCommand(db.DbCmd)
+
+	if err := rootCmd.Execute(); err != nil {
+		panic(err)
+	}
+}
+
+func runServer() {
 	r := chi.NewRouter()
 	r.Use(frmiddleware.Logger)
 	r.Use(middleware.Compress(5))
@@ -30,11 +48,10 @@ func main() {
 	r.Use(middleware.GetHead)
 
 	r.Get("/", routes.LandingIndex)
-	r.Get(helpers.StaticRouteTemplate, routes.StaticFile)
+	r.Get(util.StaticRouteTemplate, routes.StaticFile)
 
 	log.Info().Msg("Started")
 	if err := http.ListenAndServe(":3000", r); err != nil {
 		panic(err)
 	}
-
 }

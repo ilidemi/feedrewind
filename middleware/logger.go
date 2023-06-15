@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"context"
-	"feedrewind/helpers"
 	"feedrewind/log"
+	"feedrewind/util"
 	"net/http"
 	"regexp"
 	"sort"
@@ -75,7 +75,7 @@ func Logger(next http.Handler) http.Handler {
 			}
 		}
 
-		isStaticFile := strings.HasPrefix(r.URL.Path, helpers.StaticUrlPrefix)
+		isStaticFile := strings.HasPrefix(r.URL.Path, util.StaticUrlPrefix)
 		if !isStaticFile {
 			log.Info().
 				Func(commonFields).

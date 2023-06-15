@@ -6,6 +6,9 @@ linters:
     - exhaustruct
     - gocritic
 linters-settings:
+  exhaustruct:
+    exclude:
+      - 'cobra\.Command$'
   gocritic:
     enabled-checks:
       - ruleguard

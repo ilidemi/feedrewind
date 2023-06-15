@@ -1,4 +1,4 @@
-package helpers
+package util
 
 import (
 	"golang.org/x/text/cases"

@@ -2,9 +2,9 @@ package routes
 
 import (
 	"bytes"
-	"feedrewind/helpers"
-	rhelpers "feedrewind/routes/helpers"
+	rutil "feedrewind/routes/util"
 	"feedrewind/templates"
+	"feedrewind/util"
 	"net/http"
 )
 
@@ -14,14 +14,14 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 		IsSelected bool
 	}
 	type screenshot struct {
-		Links           []rhelpers.ScreenshotLink
+		Links           []rutil.ScreenshotLink
 		LinksCount      int
 		DaysOfWeek      []string
 		ScheduleColumns [][]scheduleCell
 	}
 	type suggestions struct {
-		SuggestedCategories []rhelpers.SuggestedCategory
-		MiscellaneousBlogs  []rhelpers.MiscellaneousBlog
+		SuggestedCategories []rutil.SuggestedCategory
+		MiscellaneousBlogs  []rutil.MiscellaneousBlog
 		WidthClass          string
 	}
 	type result struct {
@@ -32,9 +32,9 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	err := templates.Templates.ExecuteTemplate(&buf, "index.gohtml", result{
 		Screenshot: screenshot{
-			Links:      rhelpers.ScreenshotLinks,
-			LinksCount: len(rhelpers.ScreenshotLinks),
-			DaysOfWeek: helpers.DaysOfWeekCapitalized,
+			Links:      rutil.ScreenshotLinks,
+			LinksCount: len(rutil.ScreenshotLinks),
+			DaysOfWeek: util.DaysOfWeekCapitalized,
 			ScheduleColumns: [][]scheduleCell{
 				{
 					{IsAdd: true},
@@ -63,8 +63,8 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		Suggestions: suggestions{
-			SuggestedCategories: rhelpers.SuggestedCategories,
-			MiscellaneousBlogs:  rhelpers.MiscellaneousBlogs,
+			SuggestedCategories: rutil.SuggestedCategories,
+			MiscellaneousBlogs:  rutil.MiscellaneousBlogs,
 			WidthClass:          "max-w-[531px]",
 		},
 	})

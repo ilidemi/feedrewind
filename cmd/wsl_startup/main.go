@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -56,4 +57,15 @@ func main() {
 			panic(err)
 		}
 	}
+
+	dbIPPath := "config/wsl_ip.txt"
+	err = os.WriteFile(dbIPPath, []byte(ip), 0666)
+	if err != nil {
+		panic(err)
+	}
+	dbIP, err := os.ReadFile(dbIPPath)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("DB IP", string(dbIP))
 }

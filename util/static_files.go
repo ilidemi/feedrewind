@@ -1,4 +1,4 @@
-package helpers
+package util
 
 import (
 	"fmt"
@@ -53,7 +53,6 @@ func init() {
 	rootDir := cwd
 	for {
 		parentDir, curDirName := filepath.Split(rootDir)
-		fmt.Println(rootDir, parentDir, curDirName)
 		if curDirName == "" {
 			panic("couldn't find root dir")
 		} else if curDirName == "feedrewind" {

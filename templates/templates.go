@@ -2,7 +2,7 @@ package templates
 
 import (
 	"embed"
-	"feedrewind/helpers"
+	"feedrewind/util"
 	"html/template"
 )
 
@@ -12,7 +12,7 @@ var Templates *template.Template
 
 func init() {
 	funcMap := template.FuncMap{
-		"static": helpers.StaticHashedPath,
+		"static": util.StaticHashedPath,
 	}
 	var err error
 	Templates, err = template.New("index.gohtml").Funcs(funcMap).ParseFS(templateFS, "*/*.gohtml")
