@@ -1456,7 +1456,7 @@ CREATE TRIGGER users_bump_updated_at BEFORE UPDATE ON public.users FOR EACH ROW 
 --
 
 ALTER TABLE ONLY public.user_rsses
-    ADD CONSTRAINT fk_rails_17396fc3a7 FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE;
+    ADD CONSTRAINT fk_rails_17396fc3a7 FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -1464,7 +1464,7 @@ ALTER TABLE ONLY public.user_rsses
 --
 
 ALTER TABLE ONLY public.subscriptions
-    ADD CONSTRAINT fk_rails_416412a06b FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE;
+    ADD CONSTRAINT fk_rails_416412a06b FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -1472,7 +1472,7 @@ ALTER TABLE ONLY public.subscriptions
 --
 
 ALTER TABLE ONLY public.subscription_rsses
-    ADD CONSTRAINT fk_rails_647dccf03a FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+    ADD CONSTRAINT fk_rails_647dccf03a FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id) ON DELETE CASCADE;
 
 
 --
@@ -1480,7 +1480,7 @@ ALTER TABLE ONLY public.subscription_rsses
 --
 
 ALTER TABLE ONLY public.blog_crawl_votes
-    ADD CONSTRAINT fk_rails_6d5d61b810 FOREIGN KEY (blog_id) REFERENCES public.blogs(id);
+    ADD CONSTRAINT fk_rails_6d5d61b810 FOREIGN KEY (blog_id) REFERENCES public.blogs(id) ON DELETE CASCADE;
 
 
 --
@@ -1488,7 +1488,7 @@ ALTER TABLE ONLY public.blog_crawl_votes
 --
 
 ALTER TABLE ONLY public.blog_discarded_feed_entries
-    ADD CONSTRAINT fk_rails_76729800cc FOREIGN KEY (blog_id) REFERENCES public.blogs(id);
+    ADD CONSTRAINT fk_rails_76729800cc FOREIGN KEY (blog_id) REFERENCES public.blogs(id) ON DELETE CASCADE;
 
 
 --
@@ -1496,7 +1496,7 @@ ALTER TABLE ONLY public.blog_discarded_feed_entries
 --
 
 ALTER TABLE ONLY public.blog_post_category_assignments
-    ADD CONSTRAINT fk_rails_77d2d90745 FOREIGN KEY (blog_post_id) REFERENCES public.blog_posts(id);
+    ADD CONSTRAINT fk_rails_77d2d90745 FOREIGN KEY (blog_post_id) REFERENCES public.blog_posts(id) ON DELETE CASCADE;
 
 
 --
@@ -1504,7 +1504,7 @@ ALTER TABLE ONLY public.blog_post_category_assignments
 --
 
 ALTER TABLE ONLY public.postmark_messages
-    ADD CONSTRAINT fk_rails_897226ae9c FOREIGN KEY (subscription_post_id) REFERENCES public.subscription_posts(id);
+    ADD CONSTRAINT fk_rails_897226ae9c FOREIGN KEY (subscription_post_id) REFERENCES public.subscription_posts(id) ON DELETE CASCADE;
 
 
 --
@@ -1512,7 +1512,7 @@ ALTER TABLE ONLY public.postmark_messages
 --
 
 ALTER TABLE ONLY public.blog_canonical_equality_configs
-    ADD CONSTRAINT fk_rails_9b3fd3910a FOREIGN KEY (blog_id) REFERENCES public.blogs(id);
+    ADD CONSTRAINT fk_rails_9b3fd3910a FOREIGN KEY (blog_id) REFERENCES public.blogs(id) ON DELETE CASCADE;
 
 
 --
@@ -1520,7 +1520,7 @@ ALTER TABLE ONLY public.blog_canonical_equality_configs
 --
 
 ALTER TABLE ONLY public.blog_posts
-    ADD CONSTRAINT fk_rails_9d677c923b FOREIGN KEY (blog_id) REFERENCES public.blogs(id);
+    ADD CONSTRAINT fk_rails_9d677c923b FOREIGN KEY (blog_id) REFERENCES public.blogs(id) ON DELETE CASCADE;
 
 
 --
@@ -1528,7 +1528,7 @@ ALTER TABLE ONLY public.blog_posts
 --
 
 ALTER TABLE ONLY public.blog_post_categories
-    ADD CONSTRAINT fk_rails_a7dfb6db3e FOREIGN KEY (blog_id) REFERENCES public.blogs(id);
+    ADD CONSTRAINT fk_rails_a7dfb6db3e FOREIGN KEY (blog_id) REFERENCES public.blogs(id) ON DELETE CASCADE;
 
 
 --
@@ -1536,7 +1536,7 @@ ALTER TABLE ONLY public.blog_post_categories
 --
 
 ALTER TABLE ONLY public.blog_missing_from_feed_entries
-    ADD CONSTRAINT fk_rails_aecbb1e2bd FOREIGN KEY (blog_id) REFERENCES public.blogs(id);
+    ADD CONSTRAINT fk_rails_aecbb1e2bd FOREIGN KEY (blog_id) REFERENCES public.blogs(id) ON DELETE CASCADE;
 
 
 --
@@ -1544,7 +1544,7 @@ ALTER TABLE ONLY public.blog_missing_from_feed_entries
 --
 
 ALTER TABLE ONLY public.schedules
-    ADD CONSTRAINT fk_rails_b2b9b40998 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+    ADD CONSTRAINT fk_rails_b2b9b40998 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id) ON DELETE CASCADE;
 
 
 --
@@ -1552,7 +1552,7 @@ ALTER TABLE ONLY public.schedules
 --
 
 ALTER TABLE ONLY public.subscription_posts
-    ADD CONSTRAINT fk_rails_b5e611fa3d FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+    ADD CONSTRAINT fk_rails_b5e611fa3d FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id) ON DELETE CASCADE;
 
 
 --
@@ -1560,7 +1560,7 @@ ALTER TABLE ONLY public.subscription_posts
 --
 
 ALTER TABLE ONLY public.blog_crawl_client_tokens
-    ADD CONSTRAINT fk_rails_blogs FOREIGN KEY (blog_id) REFERENCES public.blogs(id);
+    ADD CONSTRAINT fk_rails_blogs FOREIGN KEY (blog_id) REFERENCES public.blogs(id) ON DELETE CASCADE;
 
 
 --
@@ -1568,7 +1568,7 @@ ALTER TABLE ONLY public.blog_crawl_client_tokens
 --
 
 ALTER TABLE ONLY public.blog_crawl_progresses
-    ADD CONSTRAINT fk_rails_blogs FOREIGN KEY (blog_id) REFERENCES public.blogs(id);
+    ADD CONSTRAINT fk_rails_blogs FOREIGN KEY (blog_id) REFERENCES public.blogs(id) ON DELETE CASCADE;
 
 
 --
@@ -1576,7 +1576,7 @@ ALTER TABLE ONLY public.blog_crawl_progresses
 --
 
 ALTER TABLE ONLY public.blog_post_locks
-    ADD CONSTRAINT fk_rails_c1a166e65f FOREIGN KEY (blog_id) REFERENCES public.blogs(id);
+    ADD CONSTRAINT fk_rails_c1a166e65f FOREIGN KEY (blog_id) REFERENCES public.blogs(id) ON DELETE CASCADE;
 
 
 --
@@ -1584,7 +1584,7 @@ ALTER TABLE ONLY public.blog_post_locks
 --
 
 ALTER TABLE ONLY public.subscriptions
-    ADD CONSTRAINT fk_rails_c6353e971b FOREIGN KEY (blog_id) REFERENCES public.blogs(id);
+    ADD CONSTRAINT fk_rails_c6353e971b FOREIGN KEY (blog_id) REFERENCES public.blogs(id) ON DELETE CASCADE;
 
 
 --
@@ -1592,7 +1592,7 @@ ALTER TABLE ONLY public.subscriptions
 --
 
 ALTER TABLE ONLY public.blog_post_category_assignments
-    ADD CONSTRAINT fk_rails_c6de9c562d FOREIGN KEY (category_id) REFERENCES public.blog_post_categories(id);
+    ADD CONSTRAINT fk_rails_c6de9c562d FOREIGN KEY (category_id) REFERENCES public.blog_post_categories(id) ON DELETE CASCADE;
 
 
 --
@@ -1600,7 +1600,7 @@ ALTER TABLE ONLY public.blog_post_category_assignments
 --
 
 ALTER TABLE ONLY public.postmark_bounced_users
-    ADD CONSTRAINT fk_rails_cf5feb15c9 FOREIGN KEY (example_bounce_id) REFERENCES public.postmark_bounces(id);
+    ADD CONSTRAINT fk_rails_cf5feb15c9 FOREIGN KEY (example_bounce_id) REFERENCES public.postmark_bounces(id) ON DELETE CASCADE;
 
 
 --
@@ -1608,7 +1608,7 @@ ALTER TABLE ONLY public.postmark_bounced_users
 --
 
 ALTER TABLE ONLY public.user_settings
-    ADD CONSTRAINT fk_rails_d1371c6356 FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT fk_rails_d1371c6356 FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -1616,7 +1616,7 @@ ALTER TABLE ONLY public.user_settings
 --
 
 ALTER TABLE ONLY public.subscription_posts
-    ADD CONSTRAINT fk_rails_d857bf4496 FOREIGN KEY (blog_post_id) REFERENCES public.blog_posts(id);
+    ADD CONSTRAINT fk_rails_d857bf4496 FOREIGN KEY (blog_post_id) REFERENCES public.blog_posts(id) ON DELETE CASCADE;
 
 
 --
@@ -1624,7 +1624,7 @@ ALTER TABLE ONLY public.subscription_posts
 --
 
 ALTER TABLE ONLY public.start_feeds
-    ADD CONSTRAINT fk_rails_d91add3512 FOREIGN KEY (start_page_id) REFERENCES public.start_pages(id);
+    ADD CONSTRAINT fk_rails_d91add3512 FOREIGN KEY (start_page_id) REFERENCES public.start_pages(id) ON DELETE CASCADE;
 
 
 --
@@ -1632,7 +1632,7 @@ ALTER TABLE ONLY public.start_feeds
 --
 
 ALTER TABLE ONLY public.postmark_messages
-    ADD CONSTRAINT fk_rails_e906f9105c FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+    ADD CONSTRAINT fk_rails_e906f9105c FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id) ON DELETE CASCADE;
 
 
 --
@@ -1640,7 +1640,7 @@ ALTER TABLE ONLY public.postmark_messages
 --
 
 ALTER TABLE ONLY public.blog_crawl_votes
-    ADD CONSTRAINT fk_rails_f74b6b39ca FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE;
+    ADD CONSTRAINT fk_rails_f74b6b39ca FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -1789,4 +1789,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20230205064728'),
 ('20230205065219'),
 ('20230308011655'),
-('20230614044411');
+('20230614044411'),
+('20230614051555');

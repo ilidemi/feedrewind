@@ -13,6 +13,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -231,13 +232,8 @@ func migrate() {
 			panic(err)
 		}
 		defer func() {
-			if err := recover(); err != nil {
-				rb := tx.Rollback(ctx)
-				if rb != nil {
-					panic(errors.Wrap(rb, "rollback error"))
-				} else {
-					panic(err)
-				}
+			if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+				panic(errors.Wrap(err, "rollback error"))
 			}
 		}()
 
@@ -278,13 +274,8 @@ func rollback() {
 			panic(err)
 		}
 		defer func() {
-			if err := recover(); err != nil {
-				rb := tx.Rollback(ctx)
-				if rb != nil {
-					panic(errors.Wrap(rb, "rollback error"))
-				} else {
-					panic(err)
-				}
+			if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+				panic(errors.Wrap(err, "rollback error"))
 			}
 		}()
 
