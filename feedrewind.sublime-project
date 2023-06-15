@@ -38,6 +38,10 @@
                     "name": "WSL startup",
                     "shell_cmd": "go run cmd/wsl_startup/main.go",
                 },
+                {
+                    "name": "scc",
+                    "shell_cmd": "scc --no-cocomo --exclude-dir assets,static,third_party -M structure\\.sql -M raw-time-zones\\.json",
+                },
             ]
         }
     ]
