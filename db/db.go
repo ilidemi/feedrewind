@@ -5,6 +5,7 @@ import (
 	"context"
 	"feedrewind/config"
 	"feedrewind/db/migrations"
+	"feedrewind/db/pgw"
 	"fmt"
 	"go/token"
 	"hash/crc32"
@@ -14,7 +15,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -61,11 +61,11 @@ func init() {
 	DbCmd.AddCommand(rollbackCmd)
 }
 
-var Conn *pgxpool.Pool
+var Conn *pgw.Pool
 
 func init() {
 	var err error
-	Conn, err = pgxpool.New(context.Background(), config.Cfg.DB.DSN())
+	Conn, err = pgw.NewPool(context.Background(), config.Cfg.DB.DSN())
 	if err != nil {
 		panic(err)
 	}

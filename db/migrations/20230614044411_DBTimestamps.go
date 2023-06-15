@@ -2,9 +2,8 @@ package migrations
 
 import (
 	"context"
+	"feedrewind/db/pgw"
 	"fmt"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type DBTimestamps struct{}
@@ -49,8 +48,8 @@ var tables = []string{
 	"users",
 }
 
-func (m *DBTimestamps) Up(ctx context.Context, tx pgx.Tx) {
-	_, err := tx.Exec(ctx, `
+func (m *DBTimestamps) Up(ctx context.Context, tx pgw.Tx) {
+	tx.MustExec(ctx, `
 create function bump_updated_at()
 returns trigger as $$
 begin
@@ -59,57 +58,28 @@ begin
 end;
 $$ language 'plpgsql'
 `)
-	if err != nil {
-		panic(err)
-	}
 
 	for _, table := range tables {
-		_, err := tx.Exec(
-			ctx, "alter table "+table+" alter column created_at set default current_timestamp",
-		)
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = tx.Exec(
-			ctx, "alter table "+table+" alter column updated_at set default current_timestamp",
-		)
-		if err != nil {
-			panic(err)
-		}
+		tx.MustExec(ctx, "alter table "+table+" alter column created_at set default current_timestamp")
+		tx.MustExec(ctx, "alter table "+table+" alter column updated_at set default current_timestamp")
 
 		query := fmt.Sprintf(`create trigger %s_bump_updated_at
 	before update on %s
 	for each row
 	execute procedure bump_updated_at();
 `, table, table)
-		_, err = tx.Exec(ctx, query)
-		if err != nil {
-			panic(err)
-		}
+		tx.MustExec(ctx, query)
+
 	}
 
 }
 
-func (m *DBTimestamps) Down(ctx context.Context, tx pgx.Tx) {
+func (m *DBTimestamps) Down(ctx context.Context, tx pgw.Tx) {
 	for _, table := range tables {
-		_, err := tx.Exec(ctx, "alter table "+table+" alter column created_at drop default")
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = tx.Exec(ctx, "alter table "+table+" alter column updated_at drop default")
-		if err != nil {
-			panic(err)
-		}
-		_, err = tx.Exec(ctx, "drop trigger "+table+"_bump_updated_at on "+table)
-		if err != nil {
-			panic(err)
-		}
+		tx.MustExec(ctx, "alter table "+table+" alter column created_at drop default")
+		tx.MustExec(ctx, "alter table "+table+" alter column updated_at drop default")
+		tx.MustExec(ctx, "drop trigger "+table+"_bump_updated_at on "+table)
 	}
 
-	_, err := tx.Exec(ctx, "drop function bump_updated_at")
-	if err != nil {
-		panic(err)
-	}
+	tx.MustExec(ctx, "drop function bump_updated_at")
 }

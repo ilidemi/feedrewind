@@ -2,15 +2,14 @@ package migrations
 
 import (
 	"context"
+	"feedrewind/db/pgw"
 	"sort"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type Migration interface {
 	Version() string
-	Up(ctx context.Context, tx pgx.Tx)
-	Down(ctx context.Context, tx pgx.Tx)
+	Up(ctx context.Context, tx pgw.Tx)
+	Down(ctx context.Context, tx pgw.Tx)
 }
 
 var All []Migration
