@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"feedrewind/db/pgw"
 	"feedrewind/log"
 	"feedrewind/util"
 	"net/http"
@@ -86,6 +87,7 @@ func Logger(next http.Handler) http.Handler {
 		}
 
 		var errorWrapper errorWrapper
+		r = pgw.WithDBDuration(withErrorWrapper(r, &errorWrapper))
 
 		defer func() {
 			status := ww.Status()
@@ -98,34 +100,36 @@ func Logger(next http.Handler) http.Handler {
 				event.
 					Int("status", status).
 					TimeDiff("duration", time.Now(), t1).
+					Dur("db_duration", pgw.DbDuration(r.Context())).
 					Msg("failed")
 			} else if !isStaticFile {
 				log.Info().
 					Func(commonFields).
 					Int("status", status).
 					TimeDiff("duration", time.Now(), t1).
+					Dur("db_duration", pgw.DbDuration(r.Context())).
 					Msg("completed")
 			}
 		}()
-		next.ServeHTTP(ww, withErrorWrapper(r, &errorWrapper))
+		next.ServeHTTP(ww, r)
 	}
 	return http.HandlerFunc(fn)
 }
 
-type errorWrapperKey struct{}
+type errorWrapperKeyType struct{}
 
-var ErrorWrapperKey = &errorWrapperKey{}
+var errorWrapperKey = &errorWrapperKeyType{}
 
 type errorWrapper struct {
 	err error
 }
 
 func withErrorWrapper(r *http.Request, errorWrapper *errorWrapper) *http.Request {
-	r = r.WithContext(context.WithValue(r.Context(), ErrorWrapperKey, errorWrapper))
+	r = r.WithContext(context.WithValue(r.Context(), errorWrapperKey, errorWrapper))
 	return r
 }
 
 func setError(r *http.Request, error error) {
-	errorWrapper, _ := r.Context().Value(ErrorWrapperKey).(*errorWrapper)
+	errorWrapper, _ := r.Context().Value(errorWrapperKey).(*errorWrapper)
 	errorWrapper.err = error
 }
