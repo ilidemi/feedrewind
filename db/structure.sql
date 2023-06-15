@@ -141,6 +141,20 @@ CREATE TYPE public.subscription_status AS ENUM (
 );
 
 
+--
+-- Name: bump_updated_at(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.bump_updated_at() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+	NEW.updated_at = now();
+	return NEW;
+end;
+$$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -154,8 +168,8 @@ CREATE TABLE public.admin_telemetries (
     key text NOT NULL,
     value double precision NOT NULL,
     extra json,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -185,8 +199,8 @@ ALTER SEQUENCE public.admin_telemetries_id_seq OWNED BY public.admin_telemetries
 CREATE TABLE public.ar_internal_metadata (
     key character varying NOT NULL,
     value character varying,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -198,8 +212,8 @@ CREATE TABLE public.blog_canonical_equality_configs (
     blog_id bigint NOT NULL,
     same_hosts text[],
     expect_tumblr_paths boolean NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -209,8 +223,8 @@ CREATE TABLE public.blog_canonical_equality_configs (
 
 CREATE TABLE public.blog_crawl_client_tokens (
     value character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     blog_id bigint NOT NULL
 );
 
@@ -224,8 +238,8 @@ CREATE TABLE public.blog_crawl_progresses (
     count integer,
     epoch integer NOT NULL,
     epoch_times character varying,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     blog_id bigint NOT NULL
 );
 
@@ -238,8 +252,8 @@ CREATE TABLE public.blog_crawl_votes (
     id bigint NOT NULL,
     blog_id bigint NOT NULL,
     value public.blog_crawl_vote_value NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     user_id bigint
 );
 
@@ -271,8 +285,8 @@ CREATE TABLE public.blog_discarded_feed_entries (
     id bigint NOT NULL,
     blog_id bigint NOT NULL,
     url character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -303,8 +317,8 @@ CREATE TABLE public.blog_missing_from_feed_entries (
     id bigint NOT NULL,
     blog_id bigint NOT NULL,
     url text NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -336,8 +350,8 @@ CREATE TABLE public.blog_post_categories (
     blog_id bigint NOT NULL,
     name text NOT NULL,
     index integer NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     is_top boolean NOT NULL
 );
 
@@ -369,8 +383,8 @@ CREATE TABLE public.blog_post_category_assignments (
     id bigint NOT NULL,
     blog_post_id bigint NOT NULL,
     category_id bigint NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -399,8 +413,8 @@ ALTER SEQUENCE public.blog_post_category_assignments_id_seq OWNED BY public.blog
 
 CREATE TABLE public.blog_post_locks (
     blog_id bigint NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -414,8 +428,8 @@ CREATE TABLE public.blog_posts (
     index integer NOT NULL,
     url character varying NOT NULL,
     title character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -449,8 +463,8 @@ CREATE TABLE public.blogs (
     status public.blog_status NOT NULL,
     status_updated_at timestamp without time zone NOT NULL,
     version integer NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_action public.blog_update_action NOT NULL,
     url character varying
 );
@@ -471,8 +485,8 @@ CREATE TABLE public.delayed_jobs (
     failed_at timestamp without time zone,
     locked_by character varying,
     queue character varying,
-    created_at timestamp(6) without time zone,
-    updated_at timestamp(6) without time zone
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -502,8 +516,8 @@ ALTER SEQUENCE public.delayed_jobs_id_seq OWNED BY public.delayed_jobs.id;
 CREATE TABLE public.postmark_bounced_users (
     user_id bigint NOT NULL,
     example_bounce_id bigint NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -516,8 +530,8 @@ CREATE TABLE public.postmark_bounces (
     bounce_type text NOT NULL,
     message_id text,
     payload json NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -528,8 +542,8 @@ CREATE TABLE public.postmark_bounces (
 CREATE TABLE public.postmark_messages (
     message_id text NOT NULL,
     subscription_post_id bigint,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     message_type public.postmark_message_type NOT NULL,
     subscription_id bigint NOT NULL
 );
@@ -546,8 +560,8 @@ CREATE TABLE public.product_events (
     user_properties json,
     user_ip text,
     dispatched_at timestamp without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     product_user_id text NOT NULL,
     browser text,
     os_name text,
@@ -583,8 +597,8 @@ CREATE TABLE public.schedules (
     id bigint NOT NULL,
     day_of_week public.day_of_week NOT NULL,
     count integer NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     subscription_id bigint NOT NULL
 );
 
@@ -624,8 +638,8 @@ CREATE TABLE public.schema_migrations (
 CREATE TABLE public.start_feeds (
     id bigint NOT NULL,
     content bytea,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     url text NOT NULL,
     final_url text,
     title text NOT NULL,
@@ -641,8 +655,8 @@ CREATE TABLE public.start_pages (
     id bigint NOT NULL,
     content bytea NOT NULL,
     url text NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     final_url text NOT NULL
 );
 
@@ -674,8 +688,8 @@ CREATE TABLE public.subscription_posts (
     id bigint NOT NULL,
     blog_post_id bigint NOT NULL,
     subscription_id bigint NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     published_at timestamp without time zone,
     published_at_local_date character varying,
     publish_status public.post_publish_status,
@@ -709,8 +723,8 @@ ALTER SEQUENCE public.subscription_posts_id_seq OWNED BY public.subscription_pos
 CREATE TABLE public.subscription_rsses (
     id bigint NOT NULL,
     body text NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     subscription_id bigint NOT NULL
 );
 
@@ -746,8 +760,8 @@ CREATE TABLE public.subscriptions (
     is_paused boolean,
     is_added_past_midnight boolean,
     discarded_at timestamp without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     finished_setup_at timestamp without time zone,
     final_item_published_at timestamp without time zone,
     user_id bigint,
@@ -765,8 +779,8 @@ CREATE TABLE public.subscriptions (
 CREATE TABLE public.test_singletons (
     key text NOT NULL,
     value text,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -781,8 +795,8 @@ CREATE TABLE public.typed_blog_urls (
     source text NOT NULL,
     result text NOT NULL,
     user_id bigint,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -811,8 +825,8 @@ ALTER SEQUENCE public.typed_blog_urls_id_seq OWNED BY public.typed_blog_urls.id;
 
 CREATE TABLE public.user_rsses (
     body text NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     user_id bigint NOT NULL
 );
 
@@ -824,8 +838,8 @@ CREATE TABLE public.user_rsses (
 CREATE TABLE public.user_settings (
     user_id bigint NOT NULL,
     timezone character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     version integer NOT NULL,
     delivery_channel public.post_delivery_channel
 );
@@ -838,8 +852,8 @@ CREATE TABLE public.user_settings (
 CREATE TABLE public.users (
     email character varying NOT NULL,
     password_digest character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     auth_token character varying NOT NULL,
     id bigint NOT NULL,
     name text NOT NULL,
@@ -1235,6 +1249,209 @@ CREATE UNIQUE INDEX index_users_on_product_user_id ON public.users USING btree (
 
 
 --
+-- Name: admin_telemetries admin_telemetries_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER admin_telemetries_bump_updated_at BEFORE UPDATE ON public.admin_telemetries FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: ar_internal_metadata ar_internal_metadata_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER ar_internal_metadata_bump_updated_at BEFORE UPDATE ON public.ar_internal_metadata FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: blog_canonical_equality_configs blog_canonical_equality_configs_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER blog_canonical_equality_configs_bump_updated_at BEFORE UPDATE ON public.blog_canonical_equality_configs FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: blog_crawl_client_tokens blog_crawl_client_tokens_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER blog_crawl_client_tokens_bump_updated_at BEFORE UPDATE ON public.blog_crawl_client_tokens FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: blog_crawl_progresses blog_crawl_progresses_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER blog_crawl_progresses_bump_updated_at BEFORE UPDATE ON public.blog_crawl_progresses FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: blog_crawl_votes blog_crawl_votes_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER blog_crawl_votes_bump_updated_at BEFORE UPDATE ON public.blog_crawl_votes FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: blog_discarded_feed_entries blog_discarded_feed_entries_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER blog_discarded_feed_entries_bump_updated_at BEFORE UPDATE ON public.blog_discarded_feed_entries FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: blog_missing_from_feed_entries blog_missing_from_feed_entries_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER blog_missing_from_feed_entries_bump_updated_at BEFORE UPDATE ON public.blog_missing_from_feed_entries FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: blog_post_categories blog_post_categories_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER blog_post_categories_bump_updated_at BEFORE UPDATE ON public.blog_post_categories FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: blog_post_category_assignments blog_post_category_assignments_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER blog_post_category_assignments_bump_updated_at BEFORE UPDATE ON public.blog_post_category_assignments FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: blog_post_locks blog_post_locks_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER blog_post_locks_bump_updated_at BEFORE UPDATE ON public.blog_post_locks FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: blog_posts blog_posts_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER blog_posts_bump_updated_at BEFORE UPDATE ON public.blog_posts FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: blogs blogs_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER blogs_bump_updated_at BEFORE UPDATE ON public.blogs FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: delayed_jobs delayed_jobs_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER delayed_jobs_bump_updated_at BEFORE UPDATE ON public.delayed_jobs FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: postmark_bounced_users postmark_bounced_users_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER postmark_bounced_users_bump_updated_at BEFORE UPDATE ON public.postmark_bounced_users FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: postmark_bounces postmark_bounces_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER postmark_bounces_bump_updated_at BEFORE UPDATE ON public.postmark_bounces FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: postmark_messages postmark_messages_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER postmark_messages_bump_updated_at BEFORE UPDATE ON public.postmark_messages FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: product_events product_events_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER product_events_bump_updated_at BEFORE UPDATE ON public.product_events FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: schedules schedules_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER schedules_bump_updated_at BEFORE UPDATE ON public.schedules FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: start_feeds start_feeds_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER start_feeds_bump_updated_at BEFORE UPDATE ON public.start_feeds FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: start_pages start_pages_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER start_pages_bump_updated_at BEFORE UPDATE ON public.start_pages FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: subscription_posts subscription_posts_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER subscription_posts_bump_updated_at BEFORE UPDATE ON public.subscription_posts FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: subscription_rsses subscription_rsses_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER subscription_rsses_bump_updated_at BEFORE UPDATE ON public.subscription_rsses FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: subscriptions subscriptions_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER subscriptions_bump_updated_at BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: test_singletons test_singletons_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER test_singletons_bump_updated_at BEFORE UPDATE ON public.test_singletons FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: typed_blog_urls typed_blog_urls_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER typed_blog_urls_bump_updated_at BEFORE UPDATE ON public.typed_blog_urls FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: user_rsses user_rsses_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER user_rsses_bump_updated_at BEFORE UPDATE ON public.user_rsses FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: user_settings user_settings_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER user_settings_bump_updated_at BEFORE UPDATE ON public.user_settings FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
+-- Name: users users_bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER users_bump_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at();
+
+
+--
 -- Name: user_rsses fk_rails_17396fc3a7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1571,4 +1788,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20230119010446'),
 ('20230205064728'),
 ('20230205065219'),
-('20230308011655');
+('20230308011655'),
+('20230614044411');
