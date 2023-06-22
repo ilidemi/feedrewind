@@ -9,6 +9,7 @@ linters-settings:
   exhaustruct:
     exclude:
       - 'cobra\.Command$'
+      - 'http\.Cookie$'
   gocritic:
     enabled-checks:
       - ruleguard

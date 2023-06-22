@@ -46,8 +46,14 @@ func runServer() {
 	r.Use(frmiddleware.Recoverer)
 	r.Use(frmiddleware.DefaultHeaders)
 	r.Use(middleware.GetHead)
+	r.Use(frmiddleware.Session)
+	r.Use(frmiddleware.CurrentUser)
+	r.Use(frmiddleware.CSRF)
 
 	r.Get("/", routes.LandingIndex)
+	r.Get("/login", routes.LoginPage)
+	r.Post("/login", routes.Login)
+	r.Get("/subscriptions", routes.Dashboard)
 	r.Get(util.StaticRouteTemplate, routes.StaticFile)
 
 	log.Info().Msg("Started")

@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"encoding/hex"
+	"os"
+)
 
 func developmentConfig() Config {
 	wslIp, err := os.ReadFile("config/wsl_ip.txt")
@@ -9,6 +12,15 @@ func developmentConfig() Config {
 	}
 	if len(wslIp) == 0 {
 		panic("wsl ip is empty")
+	}
+
+	sessionHashKey, err := hex.DecodeString("REDACTED_DEV_SESSION_HASH_KEY")
+	if err != nil {
+		panic(err)
+	}
+	sessionBlockKey, err := hex.DecodeString("REDACTED_DEV_SESSION_BLOCK_KEY")
+	if err != nil {
+		panic(err)
 	}
 
 	return Config{
@@ -20,5 +32,7 @@ func developmentConfig() Config {
 			Port:     5432,
 			DBName:   "rss_catchup_rails_development",
 		},
+		SessionHashKey:  sessionHashKey,
+		SessionBlockKey: sessionBlockKey,
 	}
 }

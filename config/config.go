@@ -6,8 +6,10 @@ import (
 )
 
 type Config struct {
-	Env Env
-	DB  DBConfig
+	Env             Env
+	DB              DBConfig
+	SessionHashKey  []byte
+	SessionBlockKey []byte
 }
 
 type Env int

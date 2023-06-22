@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"feedrewind/util"
 	"fmt"
 	"net/http"
 
@@ -15,9 +16,15 @@ func Recoverer(next http.Handler) http.Handler {
 				if !ok {
 					err = fmt.Errorf("%v", rvr)
 				}
-				setError(r, errors.WithStack(err))
 
-				w.WriteHeader(http.StatusInternalServerError)
+				status := http.StatusInternalServerError
+				if httpErr, ok := err.(util.HttpError); ok {
+					status = httpErr.Status
+					err = httpErr.Inner
+				}
+
+				w.WriteHeader(status)
+				setError(r, errors.WithStack(err))
 			}
 		}()
 

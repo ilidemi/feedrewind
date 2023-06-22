@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"bytes"
-	rutil "feedrewind/routes/util"
+	"feedrewind/routes/rutil"
 	"feedrewind/templates"
 	"feedrewind/util"
+	"html/template"
 	"net/http"
 )
 
@@ -24,13 +24,14 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 		MiscellaneousBlogs  []rutil.MiscellaneousBlog
 		WidthClass          string
 	}
-	type result struct {
+	type landingIndexResult struct {
+		CSRFField   template.HTML
 		Screenshot  screenshot
 		Suggestions suggestions
 	}
 
-	var buf bytes.Buffer
-	err := templates.Templates.ExecuteTemplate(&buf, "index.gohtml", result{
+	result := landingIndexResult{
+		CSRFField: rutil.CSRFField(r),
 		Screenshot: screenshot{
 			Links:      rutil.ScreenshotLinks,
 			LinksCount: len(rutil.ScreenshotLinks),
@@ -67,15 +68,7 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 			MiscellaneousBlogs:  rutil.MiscellaneousBlogs,
 			WidthClass:          "max-w-[531px]",
 		},
-	})
-	if err != nil {
-		panic(err)
 	}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	_, err = buf.WriteTo(w)
-	if err != nil {
-		panic(err)
-	}
+	templates.MustWrite(w, "landing/index", result)
 }

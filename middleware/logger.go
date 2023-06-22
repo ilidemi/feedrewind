@@ -80,7 +80,7 @@ func Logger(next http.Handler) http.Handler {
 		if !isStaticFile {
 			log.Info().
 				Func(commonFields).
-				Str("ip", r.Header.Get("X-Forwarded-For")).
+				Str("ip", util.UserIp(r)).
 				Str("referrer", r.Referer()).
 				Str("user-agent", r.UserAgent()).
 				Msg("started")

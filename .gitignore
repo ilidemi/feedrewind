@@ -4,4 +4,4 @@
 *.sublime-workspace
 tmp/
 
-web/tailwind.css
+static/tailwind.css

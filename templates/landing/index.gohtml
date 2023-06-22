@@ -1,4 +1,4 @@
-{{template "landing.gohtml" .}}
+{{template "layouts/landing" .}}
 
 {{define "content"}}
 <div class="min-h-screen p-6 pb-14 flex flex-col">
@@ -218,7 +218,7 @@
     ">
       <div class="font-semibold">Try it out:</div>
       <form novalidate="novalidate" action="/subscriptions/add" accept-charset="UTF-8" method="POST">
-        <!-- TODO CSRF -->
+        {{.CSRFField}}
         <div class="flex flex-row">
           <input
             placeholder="Feed or blog link"
@@ -263,7 +263,7 @@
         </div>
         <div class="text-xs text-gray-500">(not affiliated with FeedRewind)</div>
       </div>
-      {{template "partial_suggestions.gohtml" .Suggestions}}
+      {{template "onboarding/partial_suggestions" .Suggestions}}
     </div>
   </main>
   <footer>

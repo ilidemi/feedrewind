@@ -12,11 +12,11 @@
   {{template "layouts/partial_rails_ujs"}}
 </head>
 
-<body class="container mx-auto max-w-screen-md">
+<body class="container mx-auto max-w-[360px]">
 <!-- TODO popups -->
-<div class="modal-inert">
+<main class="mx-4 my-8 modal-inert">
   {{block "content" .}}
   {{end}}
-</div>
+</main>
 </body>
 </html>
