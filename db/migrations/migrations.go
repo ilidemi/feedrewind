@@ -8,8 +8,8 @@ import (
 
 type Migration interface {
 	Version() string
-	Up(ctx context.Context, tx pgw.Tx)
-	Down(ctx context.Context, tx pgw.Tx)
+	Up(ctx context.Context, tx *pgw.Tx)
+	Down(ctx context.Context, tx *pgw.Tx)
 }
 
 var All []Migration

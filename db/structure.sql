@@ -1192,6 +1192,14 @@ ALTER TABLE ONLY public.user_settings
 
 
 --
+-- Name: users users_email_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_email_unique UNIQUE (email);
+
+
+--
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1790,4 +1798,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20230205065219'),
 ('20230308011655'),
 ('20230614044411'),
-('20230614051555');
+('20230614051555'),
+('20230623031513');

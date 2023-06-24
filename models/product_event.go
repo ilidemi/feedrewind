@@ -2,9 +2,10 @@ package models
 
 import (
 	"context"
-	"feedrewind/db"
+	"feedrewind/db/pgw"
 	"feedrewind/util"
 	"net/http"
+	"net/url"
 	"regexp"
 
 	"github.com/google/uuid"
@@ -22,13 +23,14 @@ func ProductUserId_MustNew() ProductUserId {
 	return ProductUserId(guid.String())
 }
 
-func ProductEvent_MustFromRequest(
-	r *http.Request, productUserId ProductUserId, eventType string, eventProperties map[string]any,
+func ProductEvent_MustEmitFromRequest(
+	tx pgw.Queryable, r *http.Request, productUserId ProductUserId, eventType string,
+	eventProperties map[string]any,
 ) {
 	platform := resolveUserAgent(r.UserAgent())
 	anonIp := anonymizeUserIp(util.UserIp(r))
 	ctx := context.Background()
-	db.Conn.MustExec(ctx, `
+	tx.MustExec(ctx, `
 		insert into product_events (
 			event_type, event_properties, user_ip, product_user_id, browser, os_name,
 			os_version, bot_name
@@ -37,6 +39,17 @@ func ProductEvent_MustFromRequest(
 	`, eventType, eventProperties, anonIp, productUserId, platform.Browser, platform.OsName,
 		platform.OsVersion, platform.BotName,
 	)
+}
+
+func ProductEvent_MustEmitAddPage(
+	tx pgw.Queryable, r *http.Request, productUserId ProductUserId, path string, userIsAnonymous bool,
+) {
+	referer := collapseReferer(r.Referer())
+	ProductEvent_MustEmitFromRequest(tx, r, productUserId, "visit add page", map[string]any{
+		"path":              path,
+		"referer":           referer,
+		"user_is_anonymous": userIsAnonymous,
+	})
 }
 
 var userIpRegex = regexp.MustCompile(`.\d+.\d+$`)
@@ -69,4 +82,25 @@ func resolveUserAgent(userAgentStr string) userPlatform {
 			BotName:   nil,
 		}
 	}
+}
+
+func collapseReferer(referer string) *string {
+	if referer == "" {
+		return nil
+	}
+
+	refererUrl, err := url.Parse(referer)
+	if err != nil {
+		return &referer
+	}
+
+	if refererUrl.Host == "feedrewind.com" ||
+		refererUrl.Host == "www.feedrewind.com" ||
+		refererUrl.Host == "feedrewind.herokuapp.com" {
+
+		result := "FeedRewind"
+		return &result
+	}
+
+	return &referer
 }

@@ -14,6 +14,10 @@ func CurrentUser(r *http.Request) *models.User {
 	return middleware.GetCurrentUser(r)
 }
 
+func CurrentProductUserId(r *http.Request) models.ProductUserId {
+	return middleware.GetCurrentProductUserId(r)
+}
+
 func CSRFField(r *http.Request) template.HTML {
 	return template.HTML(fmt.Sprintf(
 		"<input type=\"hidden\" name=\"authenticity_token\" value=\"%s\">", middleware.GetCSRFToken(r),

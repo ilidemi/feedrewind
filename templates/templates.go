@@ -89,7 +89,6 @@ func init() {
 			if !strings.HasPrefix(localTmpl.Name, "partial_") {
 				continue
 			}
-			fmt.Println(localTmpl.Name)
 			template.Must(tmpl.New(localTmpl.Name).Parse(localTmpl.Content))
 		}
 		templatesByName[routeTmpl.Name] = tmpl

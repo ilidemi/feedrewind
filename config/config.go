@@ -35,6 +35,8 @@ func (c DBConfig) DSN() string {
 	return fmt.Sprintf("user=%s%s host=%s port=%d dbname=%s", c.User, password, c.Host, c.Port, c.DBName)
 }
 
+const AuthTokenLength = 16
+
 var Cfg Config
 
 func init() {

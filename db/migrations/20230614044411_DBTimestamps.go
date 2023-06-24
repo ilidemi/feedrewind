@@ -48,7 +48,7 @@ var tables = []string{
 	"users",
 }
 
-func (m *DBTimestamps) Up(ctx context.Context, tx pgw.Tx) {
+func (m *DBTimestamps) Up(ctx context.Context, tx *pgw.Tx) {
 	tx.MustExec(ctx, `
 create function bump_updated_at()
 returns trigger as $$
@@ -74,7 +74,7 @@ $$ language 'plpgsql'
 
 }
 
-func (m *DBTimestamps) Down(ctx context.Context, tx pgw.Tx) {
+func (m *DBTimestamps) Down(ctx context.Context, tx *pgw.Tx) {
 	for _, table := range tables {
 		tx.MustExec(ctx, "alter table "+table+" alter column created_at drop default")
 		tx.MustExec(ctx, "alter table "+table+" alter column updated_at drop default")

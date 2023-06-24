@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"feedrewind/db"
 	"feedrewind/models"
 	"net/http"
 )
@@ -10,7 +11,7 @@ import (
 func CurrentUser(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		authToken := GetSessionAuthToken(r)
-		currentUser := models.User_MustFindByAuthToken(authToken)
+		currentUser := models.User_MustFindByAuthToken(db.Conn, authToken)
 
 		var productUserId models.ProductUserId
 		if currentUser != nil {
@@ -24,7 +25,7 @@ func CurrentUser(next http.Handler) http.Handler {
 
 		var currentUserHasBounced bool
 		if currentUser != nil {
-			currentUserHasBounced = models.PostmarkBouncedUser_MustExists(currentUser.Id)
+			currentUserHasBounced = models.PostmarkBouncedUser_MustExists(db.Conn, currentUser.Id)
 		} else {
 			currentUserHasBounced = false
 		}

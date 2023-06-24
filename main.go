@@ -51,8 +51,11 @@ func runServer() {
 	r.Use(frmiddleware.CSRF)
 
 	r.Get("/", routes.LandingIndex)
-	r.Get("/login", routes.LoginPage)
-	r.Post("/login", routes.Login)
+	r.Get(util.LoginPath, routes.LoginPage)
+	r.Post(util.LoginPath, routes.Login)
+	r.Get("/logout", routes.Logout)
+	r.Get(util.SignUpPath, routes.SignUpPage)
+	r.Post(util.SignUpPath, routes.SignUp)
 	r.Get("/subscriptions", routes.Dashboard)
 	r.Get(util.StaticRouteTemplate, routes.StaticFile)
 

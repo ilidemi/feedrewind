@@ -11,23 +11,26 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type dbDurationKeyType struct{}
-
-var dbDurationKey = &dbDurationKeyType{}
+type Queryable interface {
+	MustExec(ctx context.Context, sql string, args ...any) pgconn.CommandTag
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
 
 type Pool struct {
 	impl *pgxpool.Pool
 }
 
-func (pool *Pool) Begin(ctx context.Context) (Tx, error) {
+func (pool *Pool) Begin(ctx context.Context) (*Tx, error) {
 	t1 := time.Now()
 	defer addDuration(ctx, t1)()
 
 	tx, err := pool.impl.Begin(ctx)
 	if err != nil {
-		return Tx{}, err
+		return nil, err
 	}
-	return Tx{tx}, nil
+	return &Tx{tx}, nil
 }
 
 func (pool *Pool) MustExec(ctx context.Context, sql string, args ...any) pgconn.CommandTag {
@@ -75,7 +78,7 @@ type Tx struct {
 }
 
 // Begin starts a pseudo nested transaction.
-func (tx Tx) Begin(ctx context.Context) (Tx, error) {
+func (tx *Tx) Begin(ctx context.Context) (Tx, error) {
 	t1 := time.Now()
 	defer addDuration(ctx, t1)()
 
@@ -91,7 +94,7 @@ func (tx Tx) Begin(ctx context.Context) (Tx, error) {
 // transaction. Commit will return an error where errors.Is(ErrTxClosed) is true if the Tx is already closed, but is
 // otherwise safe to call multiple times. If the commit fails with a rollback status (e.g. the transaction was already
 // in a broken state) then an error where errors.Is(ErrTxCommitRollback) is true will be returned.
-func (tx Tx) Commit(ctx context.Context) error {
+func (tx *Tx) Commit(ctx context.Context) error {
 	t1 := time.Now()
 	defer addDuration(ctx, t1)()
 
@@ -103,14 +106,14 @@ func (tx Tx) Commit(ctx context.Context) error {
 // closed, but is otherwise safe to call multiple times. Hence, a defer tx.Rollback() is safe even if tx.Commit() will
 // be called first in a non-error condition. Any other failure of a real transaction will result in the connection
 // being closed.
-func (tx Tx) Rollback(ctx context.Context) error {
+func (tx *Tx) Rollback(ctx context.Context) error {
 	t1 := time.Now()
 	defer addDuration(ctx, t1)()
 
 	return tx.impl.Rollback(ctx)
 }
 
-func (tx Tx) Exec(ctx context.Context, sql string, arguments ...any) (
+func (tx *Tx) Exec(ctx context.Context, sql string, arguments ...any) (
 	commandTag pgconn.CommandTag, err error,
 ) {
 	t1 := time.Now()
@@ -119,7 +122,7 @@ func (tx Tx) Exec(ctx context.Context, sql string, arguments ...any) (
 	return tx.impl.Exec(ctx, sql, arguments...)
 }
 
-func (tx Tx) MustExec(ctx context.Context, sql string, arguments ...any) pgconn.CommandTag {
+func (tx *Tx) MustExec(ctx context.Context, sql string, arguments ...any) pgconn.CommandTag {
 	t1 := time.Now()
 	defer addDuration(ctx, t1)()
 
@@ -130,19 +133,23 @@ func (tx Tx) MustExec(ctx context.Context, sql string, arguments ...any) pgconn.
 	return tag
 }
 
-func (tx Tx) Query(ctx context.Context, sql string, arguments ...any) (pgx.Rows, error) {
+func (tx *Tx) Query(ctx context.Context, sql string, arguments ...any) (pgx.Rows, error) {
 	t1 := time.Now()
 	defer addDuration(ctx, t1)()
 
 	return tx.impl.Query(ctx, sql, arguments...)
 }
 
-func (tx Tx) QueryRow(ctx context.Context, sql string, arguments ...any) pgx.Row {
+func (tx *Tx) QueryRow(ctx context.Context, sql string, arguments ...any) pgx.Row {
 	t1 := time.Now()
 	defer addDuration(ctx, t1)()
 
 	return tx.impl.QueryRow(ctx, sql, arguments...)
 }
+
+type dbDurationKeyType struct{}
+
+var dbDurationKey = &dbDurationKeyType{}
 
 func addDuration(ctx context.Context, t1 time.Time) func() {
 	return func() {

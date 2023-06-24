@@ -1,0 +1,91 @@
+{{template "layouts/login_signup" .}}
+
+{{define "content"}}
+<div class="flex flex-col gap-6">
+  <div class="flex flex-row justify-center">
+    <a href="/" class="hover:cursor-pointer">
+      <img src="{{static "logo_icon.svg"}}" class="w-12" alt="Logo">
+    </a>
+  </div>
+  <div class="text-2xl text-center">Sign up for FeedRewind</div>
+
+  <form id="{{.FormId}}" novalidate="novalidate" action="/signup" accept-charset="UTF-8" method="post">
+    {{.CSRFField}}
+    <div class="flex flex-col gap-2">
+      {{if .Error}}
+        <div class="bg-red-100 text-red-800 rounded-md w-full p-3 mb-5">
+          {{.Error}}
+        </div>
+      {{end}}
+
+      <div class="flex flex-col gap-1">
+        <label for="email">Email</label>
+        <div class="flex flex-col">
+          <input
+            type="email"
+            name="email"
+            id="{{.EmailInputId}}"
+            placeholder="your@email.com"
+            class="rounded-md border border-gray-300 placeholder:text-gray-400"
+            autocomplete="username"
+            required="required"
+          >
+          <span id="{{.EmailErrorId}}"
+                class="invisible self-end text-sm font-semibold text-red-600"
+                aria-live="polite"
+          >
+            No error
+          </span>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label for="new-password">Password</label>
+        <div class="flex flex-col">
+          <input
+            type="password"
+            name="new-password"
+            id="{{.PasswordInputId}}"
+            placeholder="correct horse battery staple"
+            class="rounded-md border border-gray-300 placeholder:text-gray-400"
+            autocomplete="new-password"
+            required="required"
+            minlength="8"
+          >
+          <span id="{{.PasswordErrorId}}"
+                class="invisible self-end text-sm font-semibold text-red-600"
+                aria-live="polite"
+          >
+            No error
+          </span>
+        </div>
+      </div>
+
+      <input type="hidden" name="timezone" id="timezone">
+      <script>
+        document.getElementById("timezone").value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      </script>
+
+      <input type="hidden" name="time_offset" id="time_offset">
+      <script>
+          document.getElementById("time_offset").value = new Date().getTimezoneOffset();
+      </script>
+
+      <input type="submit" name="commit" value="Sign up" class="btn" data-disable-with="Sign up">
+    </div>
+  </form>
+
+  {{template "partial_validation" .}}
+
+  <div class="flex flex-col gap-5">
+    <div class="text-sm text-gray-500 text-center">
+      By signing up you agree to our
+      <a href="/terms" class="underline decoration-from-font hover:cursor-pointer">terms of service</a>.
+    </div>
+
+    <div class="text-sm text-gray-500 text-center">
+      Already have an account?
+      <a class="btn-secondary" href="/login">Sign in</a>
+    </div>
+  </div>
+</div>
+{{end}}

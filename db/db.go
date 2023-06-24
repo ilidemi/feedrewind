@@ -71,6 +71,13 @@ func init() {
 	}
 }
 
+func ensurePgDump() {
+	_, err := exec.LookPath("pg_dump")
+	if err != nil {
+		panic(err)
+	}
+}
+
 func dumpStructure() {
 	filename := "db/structure.sql"
 
@@ -148,8 +155,7 @@ func generateMigration(name string) {
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5"
+	"feedrewind/db/pgw"
 )
 
 type {{.StructName}} struct {}
@@ -162,11 +168,11 @@ func (m *{{.StructName}}) Version() string {
 	return "{{.Version}}"
 }
 
-func (m *{{.StructName}}) Up(ctx context.Context, tx pgx.Tx) {
+func (m *{{.StructName}}) Up(ctx context.Context, tx *pgw.Tx) {
 	panic("Not implemented")
 }
 
-func (m *{{.StructName}}) Down(ctx context.Context, tx pgx.Tx) {
+func (m *{{.StructName}}) Down(ctx context.Context, tx *pgw.Tx) {
 	panic("Not implemented")
 }
 `
@@ -220,6 +226,8 @@ func migrate() {
 		}
 	}
 
+	ensurePgDump()
+
 	ctx := context.Background()
 	for _, migration := range migrations.All {
 		version := migration.Version()
@@ -242,6 +250,7 @@ func migrate() {
 		if err != nil {
 			panic(err)
 		}
+
 		if err := tx.Commit(ctx); err != nil {
 			panic(err)
 		}

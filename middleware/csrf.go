@@ -6,14 +6,13 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
+	"feedrewind/config"
 	"feedrewind/util"
 	"fmt"
 	"net/http"
 )
 
 const CSRFFormKey = "authenticity_token"
-
-const csrfTokenLength = 16
 
 func CSRF(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +24,7 @@ func CSRF(next http.Handler) http.Handler {
 			if err != nil {
 				panic(err)
 			}
-			if len(rawAuthToken) != csrfTokenLength {
+			if len(rawAuthToken) != config.AuthTokenLength {
 				panic(fmt.Errorf("Unexpected auth token length: %d", len(rawAuthToken)))
 			}
 		}
@@ -40,6 +39,13 @@ func CSRF(next http.Handler) http.Handler {
 			}
 
 			if !mustValidateCSRFToken(incomingToken, rawAuthToken) {
+				if len(rawAuthToken) != 0 &&
+					(r.URL.Path == util.LoginPath || r.URL.Path == util.SignUpPath) {
+					// Trying to log in or sign up when already logged in
+					http.Redirect(w, r, "/", http.StatusFound)
+					return
+				}
+
 				panic(util.HttpError{
 					Status: http.StatusForbidden,
 					Inner:  errors.New("CSRF validation failed"),
@@ -59,7 +65,7 @@ func mustValidateCSRFToken(csrfToken string, authToken []byte) bool {
 		return false
 	}
 
-	if len(maskedCSRFToken) != csrfTokenLength*2 {
+	if len(maskedCSRFToken) != config.AuthTokenLength*2 {
 		return false
 	}
 
@@ -67,10 +73,10 @@ func mustValidateCSRFToken(csrfToken string, authToken []byte) bool {
 		return true
 	}
 
-	oneTimePad := maskedCSRFToken[:csrfTokenLength]
-	encryptedCSRFToken := maskedCSRFToken[csrfTokenLength:]
-	var decodedCSRFToken [csrfTokenLength]byte
-	for i := 0; i < csrfTokenLength; i++ {
+	oneTimePad := maskedCSRFToken[:config.AuthTokenLength]
+	encryptedCSRFToken := maskedCSRFToken[config.AuthTokenLength:]
+	decodedCSRFToken := make([]byte, config.AuthTokenLength)
+	for i := 0; i < config.AuthTokenLength; i++ {
 		decodedCSRFToken[i] = oneTimePad[i] ^ encryptedCSRFToken[i]
 	}
 
@@ -78,7 +84,7 @@ func mustValidateCSRFToken(csrfToken string, authToken []byte) bool {
 }
 
 func mustMaskCSRFToken(authToken []byte) string {
-	var oneTimePad [csrfTokenLength]byte
+	oneTimePad := make([]byte, config.AuthTokenLength)
 	_, err := rand.Read(oneTimePad[:])
 	if err != nil {
 		panic(err)
@@ -86,15 +92,15 @@ func mustMaskCSRFToken(authToken []byte) string {
 
 	decodedCSRFToken := []byte(authToken)
 	if len(decodedCSRFToken) == 0 {
-		decodedCSRFToken = make([]byte, csrfTokenLength)
+		decodedCSRFToken = make([]byte, config.AuthTokenLength)
 		_, err := rand.Read(decodedCSRFToken)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	var encryptedCSRFToken [csrfTokenLength]byte
-	for i := 0; i < csrfTokenLength; i++ {
+	encryptedCSRFToken := make([]byte, config.AuthTokenLength)
+	for i := 0; i < config.AuthTokenLength; i++ {
 		encryptedCSRFToken[i] = oneTimePad[i] ^ decodedCSRFToken[i]
 	}
 	maskedCSRFToken := append(oneTimePad[:], encryptedCSRFToken[:]...)

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"feedrewind/db"
 	"feedrewind/log"
 	"feedrewind/middleware"
 	"feedrewind/models"
@@ -9,7 +10,6 @@ import (
 	"feedrewind/util"
 	"html/template"
 	"net/http"
-	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -55,6 +55,11 @@ func LoginPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
+	if rutil.CurrentUser(r) != nil {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
 	err := r.ParseForm()
 	if err != nil {
 		panic(err)
@@ -63,32 +68,29 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	password := util.EnsureParam(r, "current-password")
 	redirect := util.EnsureParam(r, "redirect")
 
-	user := models.User_MustFindByEmail(email)
+	user := models.User_MustFindByEmail(db.Conn, email)
 	if user != nil {
 		err := bcrypt.CompareHashAndPassword([]byte(user.PasswordDigest), []byte(password))
 		if err == nil {
 			middleware.MustSetSessionAuthToken(w, r, user.AuthToken)
 
-			var subscriptionId models.SubscriptionId
-			const anonSubscription = "anonymous_subscription"
-			if subscriptionIdStr, ok := util.FindCookie(r, anonSubscription); ok {
-				subscriptionIdInt, _ := strconv.ParseInt(subscriptionIdStr, 10, 64)
-				subscriptionId = models.SubscriptionId(subscriptionIdInt)
-				util.DeleteCookie(w, anonSubscription)
-			}
-
 			// Users visiting landing page then signing in need to be excluded from the sign up funnel
 			// Track them twice: first as anonymous, then properly
-			currentProductUserId := middleware.GetCurrentProductUserId(r)
-			models.ProductEvent_MustFromRequest(r, currentProductUserId, "log in", map[string]any{
-				"user_is_anonymous": true,
-			})
-			models.ProductEvent_MustFromRequest(r, user.ProductUserId, "log in", map[string]any{
-				"user_is_anonymous": false,
-			})
+			currentProductUserId := rutil.CurrentProductUserId(r)
+			models.ProductEvent_MustEmitFromRequest(
+				db.Conn, r, currentProductUserId, "log in", map[string]any{
+					"user_is_anonymous": true,
+				},
+			)
+			models.ProductEvent_MustEmitFromRequest(
+				db.Conn, r, user.ProductUserId, "log in", map[string]any{
+					"user_is_anonymous": false,
+				},
+			)
 
-			if subscriptionId != 0 && models.Subscription_MustExists(subscriptionId) {
-				models.Subscription_MustSetUserId(subscriptionId, user.Id)
+			subscriptionId := rutil.MustExtractAnonymousSubscriptionId(w, r)
+			if subscriptionId != 0 && models.Subscription_MustExists(db.Conn, subscriptionId) {
+				models.Subscription_MustSetUserId(db.Conn, subscriptionId, user.Id)
 				http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
 			}
 
@@ -106,4 +108,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	result := newLoginResult(r, "Email or password is invalid", redirect)
 	templates.MustWrite(w, "login_signup/login", result)
+}
+
+func Logout(w http.ResponseWriter, r *http.Request) {
+	middleware.MustSetSessionAuthToken(w, r, "")
+	http.Redirect(w, r, "/", http.StatusFound)
 }

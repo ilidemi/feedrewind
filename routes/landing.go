@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"feedrewind/db"
+	"feedrewind/models"
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
 	"feedrewind/util"
@@ -9,6 +11,13 @@ import (
 )
 
 func LandingIndex(w http.ResponseWriter, r *http.Request) {
+	if rutil.CurrentUser(r) != nil {
+		http.Redirect(w, r, "/subscriptions", http.StatusFound)
+		return
+	}
+
+	models.ProductEvent_MustEmitAddPage(db.Conn, r, rutil.CurrentProductUserId(r), "/", true)
+
 	type scheduleCell struct {
 		IsAdd      bool
 		IsSelected bool

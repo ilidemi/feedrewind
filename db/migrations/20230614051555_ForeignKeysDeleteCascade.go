@@ -170,7 +170,7 @@ var foreignKeys = []foreignKey{
 	},
 }
 
-func (m *ForeignKeysDeleteCascade) Up(ctx context.Context, tx pgw.Tx) {
+func (m *ForeignKeysDeleteCascade) Up(ctx context.Context, tx *pgw.Tx) {
 	for _, fKey := range foreignKeys {
 		tx.MustExec(ctx, "alter table "+fKey.table+" drop constraint "+fKey.name)
 
@@ -182,7 +182,7 @@ func (m *ForeignKeysDeleteCascade) Up(ctx context.Context, tx pgw.Tx) {
 	}
 }
 
-func (m *ForeignKeysDeleteCascade) Down(ctx context.Context, tx pgw.Tx) {
+func (m *ForeignKeysDeleteCascade) Down(ctx context.Context, tx *pgw.Tx) {
 	for _, fKey := range foreignKeys {
 		tx.MustExec(ctx, "alter table "+fKey.table+" drop constraint "+fKey.name)
 
