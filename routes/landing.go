@@ -6,7 +6,6 @@ import (
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
 	"feedrewind/util"
-	"html/template"
 	"net/http"
 )
 
@@ -34,13 +33,13 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 		WidthClass          string
 	}
 	type landingIndexResult struct {
-		CSRFField   template.HTML
+		Session     *util.Session
 		Screenshot  screenshot
 		Suggestions suggestions
 	}
 
 	result := landingIndexResult{
-		CSRFField: rutil.CSRFField(r),
+		Session: rutil.Session(r),
 		Screenshot: screenshot{
 			Links:      rutil.ScreenshotLinks,
 			LinksCount: len(rutil.ScreenshotLinks),

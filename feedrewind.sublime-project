@@ -40,7 +40,21 @@
                 },
                 {
                     "name": "scc",
-                    "shell_cmd": "scc --no-cocomo --exclude-dir assets,static,third_party -M structure\\.sql -M raw-time-zones\\.json -M partial_rails_ujs\\.gohtml",
+                    "cmd": [
+                        "scc",
+                        "--no-cocomo",
+                        "--exclude-dir",
+                        "assets,static,third_party",
+                        "-M",
+                        "structure\\.sql",
+                        "-M",
+                        "raw-time-zones\\.json",
+                        "-M",
+                        "partial_rails_ujs\\.gohtml",
+                        "-M",
+                        "partial_wicg_inert\\.gohtml"
+                    ],
+                    "shell": true
                 },
             ]
         }

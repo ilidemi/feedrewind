@@ -218,7 +218,7 @@
     ">
       <div class="font-semibold">Try it out:</div>
       <form novalidate="novalidate" action="/subscriptions/add" accept-charset="UTF-8" method="POST">
-        {{.CSRFField}}
+        {{.Session.CSRFField}}
         <div class="flex flex-row">
           <input
             placeholder="Feed or blog link"

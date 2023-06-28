@@ -8,14 +8,13 @@ import (
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
 	"feedrewind/util"
-	"html/template"
 	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type loginResult struct {
-	CSRFField       template.HTML
+	Session         *util.Session
 	Error           string
 	Redirect        string
 	FormId          string
@@ -27,7 +26,7 @@ type loginResult struct {
 
 func newLoginResult(r *http.Request, error string, redirect string) loginResult {
 	return loginResult{
-		CSRFField:       rutil.CSRFField(r),
+		Session:         rutil.Session(r),
 		Error:           error,
 		Redirect:        redirect,
 		FormId:          "login_form",

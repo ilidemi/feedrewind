@@ -5,14 +5,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/pkgerrors"
 )
 
 var logger zerolog.Logger
 
 func init() {
-	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+	zerolog.ErrorStackMarshaler = marshalStack
 	zerolog.DurationFieldInteger = true
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	logger = zerolog.New(os.Stderr).With().Stack().Logger()
@@ -28,4 +28,88 @@ func Warn() *zerolog.Event {
 
 func Error() *zerolog.Event {
 	return logger.Error().Timestamp()
+}
+
+// Stack marshaling is copied from pkgerrors/stacktrace with quality of life modifications
+
+type state struct {
+	b []byte
+}
+
+// Write implement fmt.Formatter interface.
+func (s *state) Write(b []byte) (n int, err error) {
+	s.b = b
+	return len(b), nil
+}
+
+// Width implement fmt.Formatter interface.
+func (s *state) Width() (wid int, ok bool) {
+	return 0, false
+}
+
+// Precision implement fmt.Formatter interface.
+func (s *state) Precision() (prec int, ok bool) {
+	return 0, false
+}
+
+// Flag implement fmt.Formatter interface.
+func (s *state) Flag(c int) bool {
+	return false
+}
+
+func frameField(f errors.Frame, s *state, c rune) string {
+	f.Format(s, c)
+	return string(s.b)
+}
+
+func marshalStack(err error) interface{} {
+	type stackTracer interface {
+		StackTrace() errors.StackTrace
+	}
+	sterr, ok := err.(stackTracer)
+	if !ok {
+		return nil
+	}
+	st := sterr.StackTrace()
+	var s state
+	out := make([]map[string]string, 0, len(st))
+	isOmittingMiddleware := false
+	for i, frame := range st {
+		source := frameField(frame, &s, 's')
+		line := frameField(frame, &s, 'd')
+		funcName := frameField(frame, &s, 'n')
+
+		if i == 0 && source == "recoverer.go" && funcName == "Recoverer.func1.1" {
+			continue
+		}
+
+		if i == 1 && source == "panic.go" && funcName == "gopanic" {
+			continue
+		}
+
+		if funcName == "(*Mux).ServeHTTP" {
+			isOmittingMiddleware = false
+		}
+
+		if isOmittingMiddleware {
+			continue
+		}
+
+		out = append(out, map[string]string{
+			"source": source,
+			"line":   line,
+			"func":   funcName,
+			"~":      "    ", // Visual spacing
+		})
+		if funcName == "(*Mux).routeHTTP" {
+			// Omit middleware
+			out = append(out, map[string]string{
+				"middleware_omitted": "true",
+				"~":                  "    ", // Visual spacing
+			})
+			isOmittingMiddleware = true
+		}
+	}
+
+	return out
 }

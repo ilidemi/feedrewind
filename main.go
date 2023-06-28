@@ -56,7 +56,14 @@ func runServer() {
 	r.Get("/logout", routes.Logout)
 	r.Get(util.SignUpPath, routes.SignUpPage)
 	r.Post(util.SignUpPath, routes.SignUp)
-	r.Get("/subscriptions", routes.Dashboard)
+
+	r.Group(func(authorized chi.Router) {
+		authorized.Use(frmiddleware.Authorize)
+
+		authorized.Get("/subscriptions", routes.SubscriptionsIndex)
+	})
+	r.Post("/subscriptions/{id:\\d+}/delete", routes.SubscriptionsDelete)
+
 	r.Get(util.StaticRouteTemplate, routes.StaticFile)
 
 	log.Info().Msg("Started")

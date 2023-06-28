@@ -9,11 +9,14 @@
   <link rel="icon" sizes="192x192" href="{{static "favicon_192x192.png"}}">
   <link rel="apple-touch-icon" href="{{static "apple-touch-icon.png"}}">
   <link rel="stylesheet" media="screen" href="{{static "tailwind.css"}}">
+  <meta name="csrf-param" content="authenticity_token">
+  <meta name="csrf-token" content="{{.Session.CSRFToken}}">
+  {{template "layouts/partial_wicg_inert"}}
   {{template "layouts/partial_rails_ujs"}}
 </head>
 
 <body class="container mx-auto max-w-[360px]">
-<!-- TODO popups -->
+{{template "layouts/partial_popups"}}
 <main class="mx-4 my-8 modal-inert">
   {{block "content" .}}
   {{end}}

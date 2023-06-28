@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"net/http"
 	"path"
+	"reflect"
 	"strings"
 )
 
@@ -95,10 +96,21 @@ func init() {
 	}
 }
 
+// Template naming conventions:
+// All templates are accessible by full path without extension ("dir/template", "dir/partial_1")
+// Within the same folder, partials are accessible without dir ("partial_1")
+// Layout partials have to be referred by the full path, as every end user is in a different dir
+// Data must have a field Session *util.Session
 func MustWrite(w http.ResponseWriter, templateName string, data any) {
 	tmpl, ok := templatesByName[templateName]
 	if !ok {
 		panic(fmt.Errorf("Template not found: %s", templateName))
+	}
+
+	sessionField := reflect.ValueOf(data).FieldByName("Session")
+	if sessionField == (reflect.Value{}) ||
+		sessionField.Type() != reflect.TypeOf((*util.Session)(nil)) {
+		panic("Data is expected to have a field Session of type *util.Session")
 	}
 
 	var buf bytes.Buffer

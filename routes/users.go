@@ -12,7 +12,6 @@ import (
 	"feedrewind/templates"
 	"feedrewind/util"
 	"fmt"
-	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
@@ -22,7 +21,7 @@ import (
 )
 
 type signUpResult struct {
-	CSRFField       template.HTML
+	Session         *util.Session
 	Error           string
 	FormId          string
 	EmailInputId    string
@@ -33,7 +32,7 @@ type signUpResult struct {
 
 func newSignUpResult(r *http.Request, errorMsg string) signUpResult {
 	return signUpResult{
-		CSRFField:       rutil.CSRFField(r),
+		Session:         rutil.Session(r),
 		Error:           errorMsg,
 		FormId:          "signup_form",
 		EmailInputId:    "email",

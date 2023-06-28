@@ -10,7 +10,7 @@
   <div class="text-2xl text-center">Sign up for FeedRewind</div>
 
   <form id="{{.FormId}}" novalidate="novalidate" action="/signup" accept-charset="UTF-8" method="post">
-    {{.CSRFField}}
+    {{.Session.CSRFField}}
     <div class="flex flex-col gap-2">
       {{if .Error}}
         <div class="bg-red-100 text-red-800 rounded-md w-full p-3 mb-5">

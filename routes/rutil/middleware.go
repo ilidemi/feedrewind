@@ -3,6 +3,7 @@ package rutil
 import (
 	"feedrewind/middleware"
 	"feedrewind/models"
+	"feedrewind/util"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -18,8 +19,30 @@ func CurrentProductUserId(r *http.Request) models.ProductUserId {
 	return middleware.GetCurrentProductUserId(r)
 }
 
-func CSRFField(r *http.Request) template.HTML {
-	return template.HTML(fmt.Sprintf(
-		"<input type=\"hidden\" name=\"authenticity_token\" value=\"%s\">", middleware.GetCSRFToken(r),
+func Session(r *http.Request) *util.Session {
+	csrfToken := middleware.GetCSRFToken(r)
+	csrfField := template.HTML(fmt.Sprintf(
+		"<input type=\"hidden\" name=\"authenticity_token\" value=\"%s\">", csrfToken,
 	))
+
+	currentUser := CurrentUser(r)
+	isLoggedIn := false
+	userHasBounced := false
+	userEmail := ""
+	userName := ""
+	if currentUser != nil {
+		isLoggedIn = true
+		userHasBounced = middleware.GetCurrentUserHasBounced(r)
+		userEmail = currentUser.Email
+		userName = currentUser.Name
+	}
+
+	return &util.Session{
+		CSRFToken:      csrfToken,
+		CSRFField:      csrfField,
+		IsLoggedIn:     isLoggedIn,
+		UserHasBounced: userHasBounced,
+		UserEmail:      userEmail,
+		UserName:       userName,
+	}
 }
