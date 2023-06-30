@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func MustGenerateRandomId(tx pgw.Queryable, tableName string) int64 {
+func MustGenerateRandomId(ctx context.Context, tx pgw.Queryable, tableName string) int64 {
 	buf := make([]byte, 8)
 	for {
 		_, err := rand.Read(buf)
@@ -23,7 +23,6 @@ func MustGenerateRandomId(tx pgw.Queryable, tableName string) int64 {
 			continue
 		}
 
-		ctx := context.Background()
 		row := tx.QueryRow(ctx, "select 1 from "+tableName+" where id = $1", id)
 		var one int
 		err = row.Scan(&one)

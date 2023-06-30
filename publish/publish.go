@@ -2,6 +2,7 @@ package publish
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
 	"feedrewind/db/pgw"
 	"feedrewind/log"
@@ -29,9 +30,9 @@ type item struct {
 	PubDate     string `xml:"pubDate"`
 }
 
-func MustCreateEmptyUserFeed(tx pgw.Queryable, userId models.UserId) {
+func MustCreateEmptyUserFeed(ctx context.Context, tx pgw.Queryable, userId models.UserId) {
 	userRssText := mustGenerateUserRss(nil)
-	models.UserRss_MustCreate(tx, userId, userRssText)
+	models.UserRss_MustCreate(ctx, tx, userId, userRssText)
 	log.Info().Msg("Created empty user RSS")
 }
 

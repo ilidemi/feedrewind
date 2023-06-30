@@ -19,8 +19,8 @@ func TestTzInfoIsComplete(t *testing.T) {
 }
 
 func TestTzdbIsComplete(t *testing.T) {
-	for groupId := range FriendlyNameByGroupId {
-		_, ok := tzdata.LocationByName[groupId]
-		assert.Truef(t, ok, "group from tzdb is not in tzdata: %s", groupId)
+	for _, friendlyTimezone := range FriendlyTimezones {
+		_, ok := tzdata.LocationByName[friendlyTimezone.GroupId]
+		assert.Truef(t, ok, "group from tzdb is not in tzdata: %s", friendlyTimezone.GroupId)
 	}
 }

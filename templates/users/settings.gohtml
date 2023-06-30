@@ -1,0 +1,220 @@
+{{template "layouts/application" .}}
+
+{{define "content"}}
+<div class="flex flex-col gap-6">
+  <div class="flex flex-col gap-1">
+    <div>
+      <a href="/subscriptions" class="text-sm link-secondary">← Dashboard</a>
+    </div>
+    <h2>Settings</h2>
+  </div>
+
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-col gap-1.5">
+      <div class="flex flex-row gap-[0.3125rem] items-center">
+        <div class="font-semibold">Time zone</div>
+        <div id="timezone_save_spinner" class="spinner spinner-light hidden"></div>
+      </div>
+      <select name="timezone" id="timezone" class="border border-gray-300 rounded-md max-w-full">
+        {{range .TimezoneOptions}}
+          <option {{if .IsSelected}}selected="selected" {{end}}value="{{.Value}}">{{.Label}}</option>
+        {{end}}
+      </select>
+      <div id="timezone_suggestion" class="hidden">
+        (This device is on <button id="client_timezone" class="link"></button>)
+      </div>
+    </div>
+    <div id="future_timezone" class="hidden">Entries will be arriving in early mornings
+      <span id="future_timezone_name"></span>.
+    </div>
+
+    {{template "partial_delivery_channel" .DeliveryChannel}}
+
+    <script>
+        let maxSeenVersion = {{.Version}};
+
+        const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const clientOffset = new Date().getTimezoneOffset();
+
+        const shortFriendlyPrefixNameByGroupId = {{.ShortFriendlyPrefixNameByGroupIdJson}};
+        const shortFriendlyNameByGroupId = {{.ShortFriendlyNameByGroupIdJson}};
+        const groupIdByTimezoneId = {{.GroupIdByTimezoneIdJson}};
+
+        let timezoneRequestsInFlight = 0;
+
+        function showTimezoneSpinner() {
+            timezoneRequestsInFlight++;
+            let spinner = document.getElementById("timezone_save_spinner");
+            spinner.classList.remove("hidden");
+        }
+
+        function maybeHideTimezoneSpinner() {
+            timezoneRequestsInFlight--;
+            if (timezoneRequestsInFlight === 0) {
+                let spinner = document.getElementById("timezone_save_spinner");
+                spinner.classList.add("hidden");
+            }
+        }
+
+        const timezoneSelect = document.getElementById("timezone");
+        timezoneSelect.addEventListener("change", async () => {
+            let newTimezone = document.getElementById("timezone").value;
+            showTimezoneSpinner();
+            maxSeenVersion += 1;
+            const requestVersion = maxSeenVersion;
+
+            try {
+                const abortController = new AbortController();
+                const timeoutId = setTimeout(() => abortController.abort(), 30000);
+                let formData = new FormData();
+                formData.set("timezone", newTimezone);
+                formData.set("client_timezone", clientTimezone); // Just for logging
+                formData.set("client_offset", clientOffset.toString()); // Just for logging
+                formData.set("version", requestVersion);
+                const body = new URLSearchParams(formData);
+                const response = await fetch(
+                    "settings/save_timezone",
+                    {
+                        method: "post",
+                        headers: {
+                            "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: body,
+                        signal: abortController.signal
+                    }
+                );
+
+                if (response.status === 200) {
+                    clearTimeout(timeoutId);
+                    maybeHideTimezoneSpinner();
+                    updateTimezoneLabels();
+                } else if (response.status === 409) {
+                    const json = await response.json();
+                    clearTimeout(timeoutId);
+                    maybeHideTimezoneSpinner();
+                    if (json.version >= maxSeenVersion) {
+                        showRefreshPopup("Settings are out of date. Please refresh the page.");
+                    }
+                    // If the version is older, we're expecting some other request to succeed
+                } else {
+                    clearTimeout(timeoutId);
+                    maybeHideTimezoneSpinner();
+                    if (requestVersion === maxSeenVersion) {
+                        showRefreshPopup("Something went wrong. Please refresh the page.");
+                    }
+                    // If the version is older, we're expecting some other request to succeed
+                }
+            } catch (err) {
+                // Timeout
+                maybeHideTimezoneSpinner();
+                showRefreshPopup("Something went wrong. Please refresh the page.");
+            }
+        });
+
+        const timezoneSuggestion = document.getElementById("timezone_suggestion");
+        let clientTimezoneGroupId;
+
+        timezoneSuggestion.addEventListener("click", () => {
+            timezoneSelect.value = clientTimezoneGroupId;
+            timezoneSelect.dispatchEvent(new Event('change'));
+        });
+
+        function updateTimezoneLabels() {
+            if (groupIdByTimezoneId.hasOwnProperty(clientTimezone) &&
+                timezoneSelect.value !== groupIdByTimezoneId[clientTimezone]
+            ) {
+                clientTimezoneGroupId = groupIdByTimezoneId[clientTimezone];
+                document.getElementById("client_timezone").innerText =
+                    shortFriendlyPrefixNameByGroupId[clientTimezoneGroupId];
+                timezoneSuggestion.classList.remove("hidden");
+            } else {
+                timezoneSuggestion.classList.add("hidden");
+            }
+
+            const futureTimezoneName = document.getElementById("future_timezone_name");
+            // Select is guaranteed to have every value from the friendly names map, but the friendly names
+            // map may not have a weird tz that user had on signup and we have to display here. Hence fallback
+            if (shortFriendlyNameByGroupId.hasOwnProperty(timezoneSelect.value)) {
+                futureTimezoneName.innerText = shortFriendlyNameByGroupId[timezoneSelect.value];
+            } else {
+                futureTimezoneName.innerText = timezoneSelect.value;
+            }
+            document.getElementById("future_timezone").classList.remove("hidden");
+        }
+
+        updateTimezoneLabels();
+
+        let deliveryChannelRequestsInFlight = 0;
+
+        function showDeliveryChannelSpinner() {
+            deliveryChannelRequestsInFlight++;
+            let spinner = document.getElementById("delivery_channel_save_spinner");
+            spinner.classList.remove("hidden");
+        }
+
+        function maybeHideDeliveryChannelSpinner() {
+            deliveryChannelRequestsInFlight--;
+            if (deliveryChannelRequestsInFlight === 0) {
+                let spinner = document.getElementById("delivery_channel_save_spinner");
+                spinner.classList.add("hidden");
+            }
+        }
+
+        const deliveryChannelRadios = document.querySelectorAll("input[name='delivery_channel']");
+        for (let radio of deliveryChannelRadios) {
+            radio.addEventListener("change", async (event) => {
+                showDeliveryChannelSpinner();
+                maxSeenVersion += 1;
+                const requestVersion = maxSeenVersion;
+
+                try {
+                    const abortController = new AbortController();
+                    const timeoutId = setTimeout(() => abortController.abort(), 30000);
+                    let formData = new FormData();
+                    formData.set("delivery_channel", event.target.value);
+                    formData.set("client_timezone", clientTimezone); // Just for logging
+                    formData.set("client_offset", clientOffset.toString()); // Just for logging
+                    formData.set("version", requestVersion);
+                    const body = new URLSearchParams(formData);
+                    const response = await fetch(
+                        "settings/save_delivery_channel",
+                        {
+                            method: "post",
+                            headers: {
+                                "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: body,
+                            signal: abortController.signal
+                        }
+                    );
+
+                    if (response.status === 200) {
+                        clearTimeout(timeoutId);
+                        maybeHideDeliveryChannelSpinner();
+                    } else if (response.status === 409) {
+                        const json = await response.json();
+                        clearTimeout(timeoutId);
+                        maybeHideDeliveryChannelSpinner();
+                        if (json.version >= maxSeenVersion) {
+                            showRefreshPopup("Settings are out of date. Please refresh the page.");
+                        }
+                        // If the version is older, we're expecting some other request to succeed
+                    } else {
+                        clearTimeout(timeoutId);
+                        maybeHideDeliveryChannelSpinner();
+                        if (requestVersion === maxSeenVersion) {
+                            showRefreshPopup("Something went wrong. Please refresh the page.");
+                        }
+                        // If the version is older, we're expecting some other request to succeed
+                    }
+                } catch (err) {
+                    // Timeout
+                    maybeHideDeliveryChannelSpinner();
+                    showRefreshPopup("Something went wrong. Please refresh the page.");
+                }
+            });
+        }
+    </script>
+  </div>
+</div>
+{{end}}

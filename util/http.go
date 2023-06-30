@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -23,7 +24,7 @@ func HttpPanic(status int, text string) {
 	})
 }
 
-func EnsureParam(r *http.Request, name string) string {
+func EnsureParamStr(r *http.Request, name string) string {
 	if r.Form == nil {
 		panic("call r.ParseForm() before util.EnsureParam()")
 	}
@@ -37,6 +38,18 @@ func EnsureParam(r *http.Request, name string) string {
 	}
 
 	return value[0]
+}
+
+func EnsureParamInt(r *http.Request, name string) int {
+	str := EnsureParamStr(r, name)
+	val64, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		panic(HttpError{
+			Status: http.StatusBadRequest,
+			Inner:  fmt.Errorf("couldn't read int: %s", str),
+		})
+	}
+	return int(val64)
 }
 
 func FindCookie(r *http.Request, name string) (string, bool) {

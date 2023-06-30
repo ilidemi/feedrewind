@@ -13,8 +13,9 @@ import (
 )
 
 func SubscriptionsIndex(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	currentUser := rutil.CurrentUser(r)
-	subscriptions := models.Subscription_MustListWithPostCounts(db.Conn, currentUser.Id)
+	subscriptions := models.Subscription_MustListWithPostCounts(ctx, db.Conn, currentUser.Id)
 
 	var settingUpSubscriptions []models.SubscriptionWithPostCounts
 	var activeSubscriptions []models.SubscriptionWithPostCounts
@@ -83,13 +84,14 @@ func SubscriptionsIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func SubscriptionsDelete(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	subscriptionIdStr := chi.URLParam(r, "id")
 	subscriptionIdInt, err := strconv.ParseInt(subscriptionIdStr, 10, 64)
 	if err != nil {
 		panic(err)
 	}
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
-	subscription, ok := models.Subscription_MustGetUserIdBlogBestUrl(db.Conn, subscriptionId)
+	subscription, ok := models.Subscription_MustGetUserIdBlogBestUrl(ctx, db.Conn, subscriptionId)
 	if !ok {
 		subscriptionsRedirectNotFound(w, r)
 		return
@@ -99,14 +101,20 @@ func SubscriptionsDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	models.Subscription_MustDelete(db.Conn, subscriptionId)
+	models.Subscription_MustDelete(ctx, db.Conn, subscriptionId)
 
-	models.ProductEvent_MustEmitFromRequest(
-		db.Conn, r, rutil.CurrentProductUserId(r), "delete subscription", map[string]any{
+	models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
+		Context:       ctx,
+		Tx:            db.Conn,
+		Request:       r,
+		ProductUserId: rutil.CurrentProductUserId(r),
+		EventType:     "delete subscription",
+		EventProperties: map[string]any{
 			"subscription_id": subscriptionId,
 			"blog_url":        subscription.BlogBestUrl,
 		},
-	)
+		UserProperties: nil,
+	})
 
 	if redirect, ok := r.Form["redirect"]; ok && redirect[0] == "add" {
 		http.Redirect(w, r, "/subscriptions/add", http.StatusFound)

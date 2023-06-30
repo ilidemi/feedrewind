@@ -35,8 +35,13 @@ func Logger(next http.Handler) http.Handler {
 			path += "#" + r.URL.EscapedFragment()
 		}
 
+		type formKV struct {
+			Key   string
+			Value any
+		}
+
 		var formErr error
-		var formDict *zerolog.Event
+		var formKVs []formKV
 		if err := r.ParseForm(); err != nil {
 			formErr = err
 		} else if len(r.PostForm) != 0 {
@@ -46,21 +51,22 @@ func Logger(next http.Handler) http.Handler {
 			}
 			sort.Strings(keys)
 
-			formDict = zerolog.Dict()
 			for _, key := range keys {
 				values := r.PostForm[key]
 
+				var kv formKV
 				if formFilter.MatchString(key) {
-					formDict.Str(key, "*******")
+					kv = formKV{key, "*******"}
 				} else if len(values) == 1 {
-					formDict.Str(key, values[0])
+					kv = formKV{key, values[0]}
 				} else {
 					arr := zerolog.Arr()
 					for _, value := range values {
 						arr.Str(value)
 					}
-					formDict.Array(key, arr)
+					kv = formKV{key, arr}
 				}
+				formKVs = append(formKVs, kv)
 			}
 		}
 
@@ -71,7 +77,11 @@ func Logger(next http.Handler) http.Handler {
 			if formErr != nil {
 				event.Str("form_err", formErr.Error())
 			}
-			if formDict != nil {
+			if len(formKVs) > 0 {
+				formDict := zerolog.Dict()
+				for _, kv := range formKVs {
+					formDict.Any(kv.Key, kv.Value)
+				}
 				event.Dict("form", formDict)
 			}
 		}

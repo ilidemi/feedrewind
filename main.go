@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"feedrewind/db"
 	"feedrewind/log"
 	frmiddleware "feedrewind/middleware"
+	"feedrewind/models"
 	"feedrewind/routes"
 	"feedrewind/util"
 	"fmt"
@@ -40,6 +42,8 @@ func main() {
 }
 
 func runServer() {
+	models.MustInit(context.Background(), db.Conn)
+
 	r := chi.NewRouter()
 	r.Use(frmiddleware.Logger)
 	r.Use(middleware.Compress(5))
@@ -61,6 +65,9 @@ func runServer() {
 		authorized.Use(frmiddleware.Authorize)
 
 		authorized.Get("/subscriptions", routes.SubscriptionsIndex)
+		authorized.Get("/settings", routes.SettingsPage)
+		authorized.Post("/settings/save_timezone", routes.SettingsSaveTimezone)
+		authorized.Post("/settings/save_delivery_channel", routes.SettingsSaveDeliveryChannel)
 	})
 	r.Post("/subscriptions/{id:\\d+}/delete", routes.SubscriptionsDelete)
 

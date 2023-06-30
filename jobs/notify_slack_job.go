@@ -1,12 +1,13 @@
 package jobs
 
 import (
+	"context"
 	"feedrewind/db/pgw"
 	"strings"
 )
 
-func NotifySlackJob_MustPerformLater(tx pgw.Queryable, text string) {
-	mustPerformLater(tx, "NotifySlackJob", defaultQueue, strToYaml(text))
+func NotifySlackJob_MustPerformNow(ctx context.Context, tx pgw.Queryable, text string) {
+	mustPerformNow(ctx, tx, "NotifySlackJob", defaultQueue, strToYaml(text))
 }
 
 func NotifySlackJob_Escape(text string) string {

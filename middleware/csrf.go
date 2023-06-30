@@ -34,7 +34,8 @@ func CSRF(next http.Handler) http.Handler {
 			err := r.ParseForm()
 			if err == nil {
 				incomingToken = r.PostFormValue(CSRFFormKey)
-			} else {
+			}
+			if incomingToken == "" {
 				incomingToken = r.Header.Get("X-CSRF-Token")
 			}
 

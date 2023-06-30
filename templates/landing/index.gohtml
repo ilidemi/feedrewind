@@ -70,7 +70,7 @@
               </ul>
               <div class="flex flex-col gap-1.5">
                 <div>Selected: Everything ({{.LinksCount}})</div>
-                {{range $i := .Links}}
+                {{range $i, $ := .Links}}
                   <div class="flex flex-row gap-2 items-top">
                     <div class="h-6 flex flex-row items-center">
                       <div class="rounded w-4 h-4 bg-blue-600 landing-screenshot-checkbox"></div>
@@ -79,7 +79,7 @@
                       <a id="landing_post_{{$i}}"
                          href="{{.PreviewPath}}"
                          target="_blank"
-                         class="link text-black landing-post"
+                         class="link text-black"
                       ><span class="hidden md:inline">{{.Title}}</span><span class="inline md:hidden">{{.TitleMobile}}</span></a>
                       {{if .IsEarliest}}
                         <span class="text-gray-500">(earliest)</span>

@@ -11,15 +11,19 @@ func callToTimeNow(m dsl.Matcher) {
 	m.Match(`time.LoadLocation`).
 		Report(`calls to time.LoadLocation() are disallowed, use tzdata.LocationByName instead`)
 	m.Match(`db.Conn`).
-		Where(
-			!m.File().PkgPath.Matches(`feedrewind/routes`) &&
-				!m.File().PkgPath.Matches(`feedrewind/db`) &&
-				!m.File().PkgPath.Matches(`feedrewind/middleware`)).
-		Report(`references to db.Conn are only allowed in db, middleware and routes, use pgw.Queryable instead`)
+		Where(!m.File().PkgPath.Matches(`feedrewind/routes`) &&
+			!m.File().PkgPath.Matches(`feedrewind/db`) &&
+			!m.File().PkgPath.Matches(`feedrewind/middleware`) &&
+			!m.File().PkgPath.Matches(`^feedrewind$`)).
+		Report(`references to db.Conn are only allowed in main, db, routes and middleware, use pgw.Queryable instead`)
 	m.Match(`pgw.Tx`).
-		Where(
-			!m.File().PkgPath.Matches(`feedrewind/routes`) &&
-				!m.File().PkgPath.Matches(`feedrewind/db`) &&
-				!m.File().PkgPath.Matches(`feedrewind/middleware`)).
-		Report(`references to pgw.Tx are only allowed in db, middleware and routes, use pgw.Queryable instead`)
+		Where(!m.File().PkgPath.Matches(`feedrewind/routes`) &&
+			!m.File().PkgPath.Matches(`feedrewind/db`) &&
+			!m.File().PkgPath.Matches(`feedrewind/middleware`) &&
+			!m.File().PkgPath.Matches(`^feedrewind$`)).
+		Report(`references to pgw.Tx are only allowed in main, db, routes and middleware, use pgw.Queryable instead`)
+	m.Match(`context.Background`).
+		Where(!m.File().PkgPath.Matches(`feedrewind/db`) &&
+			!m.File().PkgPath.Matches(`^feedrewind$`)).
+		Report(`Background context is probably a mistake. Pass through request context instead`)
 }

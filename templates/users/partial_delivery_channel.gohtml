@@ -1,0 +1,53 @@
+<div id="delivery_channel_picker" class="flex flex-col gap-1.5">
+  <div class="flex flex-row gap-[0.3125rem] items-center">
+    <div class="font-semibold">Deliver entries via</div>
+    <div id="delivery_channel_save_spinner" class="spinner spinner-light hidden"></div>
+  </div>
+
+  <div class="flex flex-row gap-3">
+    <div class="w-[6.5rem] h-[4.5rem] relative">
+      <input
+        type="radio"
+        id="delivery_rss"
+        name="delivery_channel"
+        value="{{.RSSValue}}"
+        class="peer absolute top-2 right-2 hover:cursor-pointer focus:ring-transparent"
+        {{if .IsRSSSelected}}
+          checked
+        {{end}}
+      >
+      <label
+        for="delivery_rss"
+        class="w-full h-full rounded-lg border border-gray-200 flex flex-col place-content-center place-items-center hover:cursor-pointer hover:bg-gray-50 peer-hover:bg-gray-50 peer-focus-visible:show-ring peer-focus-visible:ring-offset-0 peer-checked:border-indigo-700"
+      >
+        <!-- rss icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-9 h-9 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 11-2 0 1 1 0 012 0z"/>
+        </svg>
+        <span class="w-fit">RSS</span>
+      </label>
+    </div>
+    <div class="w-[6.5rem] h-[4.5rem] relative">
+      <input
+        type="radio"
+        id="delivery_email"
+        name="delivery_channel"
+        value="{{.EmailValue}}"
+        class="peer absolute top-2 right-2 hover:cursor-pointer focus:ring-transparent"
+        {{if .IsEmailSelected}}
+          checked
+        {{end}}
+      >
+      <label
+        for="delivery_email"
+        class="w-full h-full rounded-lg border border-gray-200 flex flex-col place-content-center place-items-center hover:cursor-pointer hover:bg-gray-50 peer-hover:bg-gray-50 peer-focus-visible:show-ring peer-focus-visible:ring-offset-0 peer-checked:border-indigo-700"
+      >
+        <!-- mail icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-9 h-9 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        <span class="w-fit">Email</span>
+      </label>
+    </div>
+  </div>
+</div>

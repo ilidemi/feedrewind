@@ -23,32 +23,48 @@ func ProductUserId_MustNew() ProductUserId {
 	return ProductUserId(guid.String())
 }
 
-func ProductEvent_MustEmitFromRequest(
-	tx pgw.Queryable, r *http.Request, productUserId ProductUserId, eventType string,
-	eventProperties map[string]any,
-) {
-	platform := resolveUserAgent(r.UserAgent())
-	anonIp := anonymizeUserIp(util.UserIp(r))
-	ctx := context.Background()
-	tx.MustExec(ctx, `
+type ProductEventRequestArgs struct {
+	Context         context.Context
+	Tx              pgw.Queryable
+	Request         *http.Request
+	ProductUserId   ProductUserId
+	EventType       string
+	EventProperties map[string]any
+	UserProperties  map[string]any
+}
+
+func ProductEvent_MustEmitFromRequest(args ProductEventRequestArgs) {
+	platform := resolveUserAgent(args.Request.UserAgent())
+	anonIp := anonymizeUserIp(util.UserIp(args.Request))
+	args.Tx.MustExec(args.Context, `
 		insert into product_events (
-			event_type, event_properties, user_ip, product_user_id, browser, os_name,
+			event_type, event_properties, user_properties, user_ip, product_user_id, browser, os_name,
 			os_version, bot_name
 		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, eventType, eventProperties, anonIp, productUserId, platform.Browser, platform.OsName,
-		platform.OsVersion, platform.BotName,
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`,
+		args.EventType, args.EventProperties, args.UserProperties, anonIp, args.ProductUserId,
+		platform.Browser, platform.OsName, platform.OsVersion, platform.BotName,
 	)
 }
 
 func ProductEvent_MustEmitAddPage(
-	tx pgw.Queryable, r *http.Request, productUserId ProductUserId, path string, userIsAnonymous bool,
+	ctx context.Context, tx pgw.Queryable, r *http.Request, productUserId ProductUserId, path string,
+	userIsAnonymous bool,
 ) {
 	referer := collapseReferer(r.Referer())
-	ProductEvent_MustEmitFromRequest(tx, r, productUserId, "visit add page", map[string]any{
-		"path":              path,
-		"referer":           referer,
-		"user_is_anonymous": userIsAnonymous,
+	ProductEvent_MustEmitFromRequest(ProductEventRequestArgs{
+		Context:       ctx,
+		Tx:            tx,
+		Request:       r,
+		ProductUserId: productUserId,
+		EventType:     "visit add page",
+		EventProperties: map[string]any{
+			"path":              path,
+			"referer":           referer,
+			"user_is_anonymous": userIsAnonymous,
+		},
+		UserProperties: nil,
 	})
 }
 

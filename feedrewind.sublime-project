@@ -35,8 +35,12 @@
                     "shell": true
                 },
                 {
-                    "name": "WSL startup",
+                    "name": "cmd/wsl_startup",
                     "shell_cmd": "go run cmd/wsl_startup/main.go",
+                },
+                {
+                    "name": "cmd/timezones",
+                    "shell_cmd": "go run cmd/timezones/main.go",
                 },
                 {
                     "name": "scc",
@@ -55,7 +59,7 @@
                         "partial_wicg_inert\\.gohtml"
                     ],
                     "shell": true
-                },
+                }
             ]
         }
     ]

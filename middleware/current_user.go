@@ -10,8 +10,9 @@ import (
 // CurrentUser should come after Session
 func CurrentUser(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		authToken := GetSessionAuthToken(r)
-		currentUser := models.User_MustFindByAuthToken(db.Conn, authToken)
+		currentUser := models.User_MustFindByAuthToken(ctx, db.Conn, authToken)
 
 		var productUserId models.ProductUserId
 		if currentUser != nil {
@@ -25,7 +26,7 @@ func CurrentUser(next http.Handler) http.Handler {
 
 		var currentUserHasBounced bool
 		if currentUser != nil {
-			currentUserHasBounced = models.PostmarkBouncedUser_MustExists(db.Conn, currentUser.Id)
+			currentUserHasBounced = models.PostmarkBouncedUser_MustExists(ctx, db.Conn, currentUser.Id)
 		} else {
 			currentUserHasBounced = false
 		}

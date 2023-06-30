@@ -5,6 +5,8 @@ import (
 	"feedrewind/util"
 	"net/http"
 	"strconv"
+
+	"github.com/goccy/go-json"
 )
 
 // Returns 0 if not found
@@ -17,4 +19,18 @@ func MustExtractAnonymousSubscriptionId(w http.ResponseWriter, r *http.Request) 
 		util.DeleteCookie(w, anonSubscription)
 	}
 	return subscriptionId
+}
+
+func MustWriteJson(w http.ResponseWriter, statusCode int, data map[string]any) {
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		panic(err)
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(statusCode)
+	_, err = w.Write(bytes)
+	if err != nil {
+		panic(err)
+	}
 }

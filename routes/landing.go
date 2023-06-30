@@ -15,7 +15,7 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	models.ProductEvent_MustEmitAddPage(db.Conn, r, rutil.CurrentProductUserId(r), "/", true)
+	models.ProductEvent_MustEmitAddPage(r.Context(), db.Conn, r, rutil.CurrentProductUserId(r), "/", true)
 
 	type scheduleCell struct {
 		IsAdd      bool

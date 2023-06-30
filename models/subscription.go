@@ -21,8 +21,7 @@ const (
 	SubscriptionStatusCrawledLooksWrong = "crawled_looks_wrong"
 )
 
-func Subscription_MustExists(tx pgw.Queryable, id SubscriptionId) bool {
-	ctx := context.Background()
+func Subscription_MustExists(ctx context.Context, tx pgw.Queryable, id SubscriptionId) bool {
 	row := tx.QueryRow(ctx, "select 1 from subscriptions where id = $1", id)
 	var one int
 	err := row.Scan(&one)
@@ -35,8 +34,7 @@ func Subscription_MustExists(tx pgw.Queryable, id SubscriptionId) bool {
 	return true
 }
 
-func Subscription_MustSetUserId(tx pgw.Queryable, id SubscriptionId, userId UserId) {
-	ctx := context.Background()
+func Subscription_MustSetUserId(ctx context.Context, tx pgw.Queryable, id SubscriptionId, userId UserId) {
 	tx.MustExec(ctx, "update subscriptions set user_id = $1 where id = $2", userId, id)
 }
 
@@ -49,8 +47,9 @@ type SubscriptionWithPostCounts struct {
 	TotalCount     int
 }
 
-func Subscription_MustListWithPostCounts(tx pgw.Queryable, userId UserId) []SubscriptionWithPostCounts {
-	ctx := context.Background()
+func Subscription_MustListWithPostCounts(
+	ctx context.Context, tx pgw.Queryable, userId UserId,
+) []SubscriptionWithPostCounts {
 	rows, err := tx.Query(ctx, `
 		with user_subscriptions as (
 			select id, name, status, is_paused, finished_setup_at, created_at from subscriptions
@@ -101,9 +100,8 @@ type SubscriptionUserIdBlogBestUrl struct {
 }
 
 func Subscription_MustGetUserIdBlogBestUrl(
-	tx pgw.Queryable, subscriptionId SubscriptionId,
+	ctx context.Context, tx pgw.Queryable, subscriptionId SubscriptionId,
 ) (SubscriptionUserIdBlogBestUrl, bool) {
-	ctx := context.Background()
 	row := tx.QueryRow(ctx, `
 		select user_id, (
 			select coalesce(url, feed_url) from blogs
@@ -121,7 +119,6 @@ func Subscription_MustGetUserIdBlogBestUrl(
 	return s, true
 }
 
-func Subscription_MustDelete(tx pgw.Queryable, subscriptionId SubscriptionId) {
-	ctx := context.Background()
+func Subscription_MustDelete(ctx context.Context, tx pgw.Queryable, subscriptionId SubscriptionId) {
 	tx.MustExec(ctx, "delete from subscriptions where id = $1", subscriptionId)
 }
