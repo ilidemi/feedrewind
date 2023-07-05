@@ -1,0 +1,306 @@
+{{template "layouts/application" .}}
+
+{{define "content"}}
+<div class="flex flex-col gap-12">
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-col gap-1">
+      <div>
+        <a href="/subscriptions" class="text-sm link-secondary">← Dashboard</a>
+      </div>
+
+      <!-- @formatter:off -->
+      <!-- whitespace is significant here -->
+      <h2 class="break-word" id="name_header">{{.Name}}<a class="external-link" href="{{.Url}}" target="_blank"></a></h2>
+      <!-- @formatter:on -->
+    </div>
+
+    {{if .FeedUrl}}
+      <div class="flex flex-col gap-1">
+        <p class="font-semibold">Private feed link</p>
+        <div>
+          {{template "partial_copy_feed_link" .FeedUrl}}
+        </div>
+      </div>
+    {{end}}
+    <div>
+      <span class="font-semibold">Published:</span>
+      <span id="published_count">{{.PublishedCount}}/{{.TotalCount}}</span>
+    </div>
+    <div>
+      <span class="font-semibold">Status:</span>
+      {{if .IsDone}}
+        <span>All done</span>
+      {{else}}
+        <span id="active_status"
+              {{if .IsPaused}} class="hidden" {{end}}
+        >
+          Active
+        </span><span id="paused_status"
+              {{if not .IsPaused}} class="hidden" {{end}}
+        >
+          Paused
+        </span>
+
+        <div class="flex flex-row gap-[0.3125rem] items-center mt-1">
+          <button id="pause_button" class="inline-flex flex-row gap-1 items-center btn-secondary bg-gray-50 {{if .IsPaused}} hidden {{end}}">
+            <!-- pause icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Pause
+          </button>
+          <button id="resume_button" class="inline-flex flex-row gap-1 items-center btn-secondary bg-gray-50 {{if not .IsPaused}} hidden {{end}}">
+            <!-- play icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Resume
+          </button>
+          <div id="paused_save_spinner_container">
+            <div id="paused_save_spinner" class="spinner spinner-light hidden"></div>
+          </div>
+        </div>
+
+        <script>
+            function showPauseSpinner() {
+                let spinner = document.getElementById("paused_save_spinner");
+                spinner.classList.remove("hidden");
+                void spinner.offsetWidth; // trigger reflow
+            }
+
+            function hidePauseSpinner() {
+                let spinner = document.getElementById("paused_save_spinner");
+                spinner.classList.add("hidden");
+            }
+
+            const activeStatus = document.getElementById("active_status");
+            const pausedStatus = document.getElementById("paused_status");
+            const pauseButton = document.getElementById("pause_button");
+            const resumeButton = document.getElementById("resume_button");
+
+            pauseButton.addEventListener("click", async () => {
+                pauseButton.disabled = true;
+                showPauseSpinner();
+
+                try {
+                    const abortController = new AbortController();
+                    const timeoutId = setTimeout(() => abortController.abort(), 30000);
+                    const response = await fetch(
+                        "{{.PausePath}}",
+                        {
+                            method: "post",
+                            headers: {
+                                "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            signal: abortController.signal
+                        }
+                    );
+
+                    if (response.status === 200) {
+                        clearTimeout(timeoutId);
+                        hidePauseSpinner();
+                        pauseButton.disabled = false;
+                        activeStatus.classList.add("hidden");
+                        pauseButton.classList.add("hidden");
+                        pausedStatus.classList.remove("hidden");
+                        resumeButton.classList.remove("hidden");
+
+                    } else {
+                        clearTimeout(timeoutId);
+                        hidePauseSpinner();
+                        showRefreshPopup("Something went wrong. Please refresh the page.");
+                    }
+                } catch (err) {
+                    // Timeout
+                    hidePauseSpinner();
+                    showRefreshPopup("Something went wrong. Please refresh the page.");
+                }
+            });
+
+            resumeButton.addEventListener("click", async () => {
+                resumeButton.disabled = true;
+                showPauseSpinner();
+
+                try {
+                    const abortController = new AbortController();
+                    const timeoutId = setTimeout(() => abortController.abort(), 30000);
+                    const response = await fetch(
+                        "{{.UnpausePath}}",
+                        {
+                            method: "post",
+                            headers: {
+                                "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            signal: abortController.signal
+                        }
+                    );
+
+                    if (response.status === 200) {
+                        clearTimeout(timeoutId);
+                        hidePauseSpinner();
+                        resumeButton.disabled = false;
+                        pausedStatus.classList.add("hidden");
+                        resumeButton.classList.add("hidden");
+                        activeStatus.classList.remove("hidden");
+                        pauseButton.classList.remove("hidden");
+
+                    } else {
+                        clearTimeout(timeoutId);
+                        hidePauseSpinner();
+                        showRefreshPopup("Something went wrong. Please refresh the page.");
+                    }
+                } catch (err) {
+                    // Timeout
+                    hidePauseSpinner();
+                    showRefreshPopup("Something went wrong. Please refresh the page.");
+                }
+            });
+        </script>
+      {{end}}
+    </div>
+
+    {{if not .IsDone}}
+      <form id="schedule_form">
+        <div class="flex flex-col">
+          <div class="sticky top-0 bg-white py-1">
+            <div id="schedule_header" class="flex flex-row gap-[0.3125rem] items-center flex-wrap">
+              <div class="font-semibold self-baseline">Weekly schedule</div>
+              <div id="schedule_save_spinner_container">
+                <div id="schedule_save_spinner" class="spinner spinner-light hidden"></div>
+              </div>
+              <div class="flex-1"></div>
+              <div id="schedule_empty_error" class="invisible text-red-600 self-baseline text-sm">
+                Select at least some days
+              </div>
+            </div>
+          </div>
+
+          {{template "partial_schedule" .Schedule}}
+        </div>
+
+        <script>
+            let scheduleRequestsInFlight = 0;
+            let isScheduleValid = true;
+            let maxSeenScheduleVersion = {{.ScheduleVersion}};
+
+            function showScheduleSpinner() {
+                scheduleRequestsInFlight++;
+                let spinner = document.getElementById("schedule_save_spinner");
+                spinner.classList.remove("hidden");
+                void spinner.offsetWidth; // trigger reflow
+            }
+
+            function maybeHideScheduleSpinner() {
+                scheduleRequestsInFlight--;
+                if (scheduleRequestsInFlight === 0) {
+                    let spinner = document.getElementById("schedule_save_spinner");
+                    spinner.classList.add("hidden");
+                }
+            }
+
+            async function {{.ScheduleJS.ValidateCallback}}(isValid, countsByDay, hasSomethingChanged) {
+                isScheduleValid = isValid;
+
+                const scheduleHeader = document.getElementById("schedule_header");
+                const scheduleError = document.getElementById("schedule_empty_error");
+                const scheduleSpinnerContainer = document.getElementById("schedule_save_spinner_container");
+                const scheduleMobile = document.getElementById("schedule_mobile");
+                if (isValid) {
+                    scheduleError.classList.add("invisible");
+                    scheduleSpinnerContainer.classList.remove("hidden");
+                    updateNextPosts(countsByDay);
+                } else {
+                    scheduleSpinnerContainer.classList.add("hidden");
+                    const scheduleMobileStyle = window.getComputedStyle(scheduleMobile);
+                    if (scheduleMobileStyle.display !== "none") {
+                        scheduleHeader.style.maxWidth = scheduleMobileStyle.width;
+                    } else {
+                        scheduleHeader.style.maxWidth = null;
+                    }
+                    scheduleError.classList.remove("invisible");
+                    // Don't update next posts because the schedule won't be saved
+                }
+
+                if (isValid && hasSomethingChanged) {
+                    showScheduleSpinner();
+                    maxSeenScheduleVersion += 1;
+                    const requestVersion = maxSeenScheduleVersion;
+
+                    try {
+                        const abortController = new AbortController();
+                        const timeoutId = setTimeout(() => abortController.abort(), 30000);
+                        const formData = new FormData(document.getElementById("schedule_form"));
+                        formData.set("schedule_version", maxSeenScheduleVersion);
+                        const body = new URLSearchParams(formData);
+                        const response = await fetch(
+                            window.location,
+                            {
+                                method: "post",
+                                headers: {
+                                    "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                                },
+                                body: body,
+                                signal: abortController.signal
+                            }
+                        );
+
+                        if (response.status === 200) {
+                            clearTimeout(timeoutId);
+                            maybeHideScheduleSpinner();
+                        } else if (response.status === 409) {
+                            const json = await response.json();
+                            clearTimeout(timeoutId);
+                            maybeHideScheduleSpinner();
+                            if (json.schedule_version >= maxSeenScheduleVersion) {
+                                showRefreshPopup("Schedule is out of date. Please refresh the page.");
+                            }
+                            // If the version is older, we're expecting some other request to succeed
+                        } else {
+                            clearTimeout(timeoutId);
+                            maybeHideScheduleSpinner();
+                            if (requestVersion === maxSeenScheduleVersion) {
+                                showRefreshPopup("Something went wrong. Please refresh the page.");
+                            }
+                            // If the version is older, we're expecting some other request to succeed
+                        }
+                    } catch (err) {
+                        // Timeout
+                        maybeHideScheduleSpinner();
+                        showRefreshPopup("Something went wrong. Please refresh the page.");
+                    }
+                }
+            }
+
+            function {{.ScheduleJS.SetNameChangeCallback}}(callback) {
+            }
+        </script>
+      </form>
+
+      {{template "partial_schedule_preview" .SchedulePreview}}
+
+      {{template "partial_schedule_js" .ScheduleJS}}
+    {{end}}
+  </div>
+
+  <div>
+    <button id="delete_button" class="btn-red flex flex-row items-center gap-1">
+      <!-- trash icon -->
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+      Delete
+    </button>
+
+    <script>
+        document
+            .getElementById("delete_button")
+            .addEventListener("click", () => {
+                showDeleteSubscriptionPopup(
+                    "Delete ", "{{.Name}}", "? This cannot be undone.", "{{.DeletePath}}", "Keep", "Delete"
+                );
+            })
+    </script>
+  </div>
+</div>
+{{end}}

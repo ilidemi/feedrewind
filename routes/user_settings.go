@@ -110,18 +110,7 @@ func SettingsSaveTimezone(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		defer func() {
-			if result {
-				if err := tx.Commit(); err != nil {
-					panic(err)
-				}
-				log.Info().Msg("Unlocked PublishPostsJob")
-			} else {
-				if err := tx.Rollback(); err != nil {
-					panic(err)
-				}
-			}
-		}()
+		defer util.CommitOrRollback(tx, result, "Unlocked PublishPostsJob")
 
 		log.Info().Msg("Locking PublishPostsJob")
 		lockedJobs := jobs.PublishPostsJob_MustLock(tx, currentUser.Id)
@@ -134,35 +123,32 @@ func SettingsSaveTimezone(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		userSettings := models.UserSettings_MustGetById(tx, currentUser.Id)
-		if !((userSettings.DeliveryChannel != nil && len(lockedJobs) == 1) ||
-			(userSettings.DeliveryChannel == nil && len(lockedJobs) == 0)) {
-			log.Warn().Int("count", len(lockedJobs)).Msg("Unexpected amout of job rows for the user")
+		oldUserSettings := models.UserSettings_MustGetById(tx, currentUser.Id)
+		if !((oldUserSettings.DeliveryChannel != nil && len(lockedJobs) == 1) ||
+			(oldUserSettings.DeliveryChannel == nil && len(lockedJobs) == 0)) {
+			log.Warn().Int("count", len(lockedJobs)).Msg("Unexpected amount of job rows for the user")
 			return false
 		}
 
-		if userSettings.Version >= newVersion {
+		if oldUserSettings.Version >= newVersion {
 			log.Info().
-				Int("existing_version", userSettings.Version).
+				Int("existing_version", oldUserSettings.Version).
 				Int("new_version", newVersion).
 				Msg("Version conflict")
 			rutil.MustWriteJson(w, http.StatusConflict, map[string]any{
-				"version": userSettings.Version,
+				"version": oldUserSettings.Version,
 			})
 		}
 
-		oldTimezone := userSettings.Timezone
+		oldTimezone := oldUserSettings.Timezone
 		models.UserSettings_MustSaveTimezone(tx, currentUser.Id, newTimezone, newVersion)
 
 		if len(lockedJobs) == 1 {
 			job := lockedJobs[0]
-			jobDateStr := jobs.PublishPostsJob_MustGetNextScheduledDate(tx, currentUser.Id)
-			jobDate, err := time.ParseInLocation("2006-01-02", jobDateStr, newLocation)
-			if err != nil {
-				panic(err)
-			}
-			newHour := jobs.PublishPostsJob_GetHourOfDay(*userSettings.DeliveryChannel)
-			newRunAt := jobDate.Add(time.Duration(newHour) * time.Hour).UTC()
+			jobDate := jobs.PublishPostsJob_MustGetNextScheduledDate(tx, currentUser.Id)
+			jobTime := util.Schedule_MustDateInLocation(jobDate, newLocation)
+			newHour := jobs.PublishPostsJob_GetHourOfDay(*oldUserSettings.DeliveryChannel)
+			newRunAt := jobTime.Add(time.Duration(newHour) * time.Hour).UTC()
 			jobs.PublishPostsJob_MustUpdateRunAt(tx, job.Id, newRunAt)
 			log.Info().Time("run_at", newRunAt).Msg("Rescheduled PublishPostsJob")
 		}
@@ -226,18 +212,7 @@ func SettingsSaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		defer func() {
-			if result {
-				if err := tx.Commit(); err != nil {
-					panic(err)
-				}
-				log.Info().Msg("Unlocked PublishPostsJob")
-			} else {
-				if err := tx.Rollback(); err != nil {
-					panic(err)
-				}
-			}
-		}()
+		defer util.CommitOrRollback(tx, result, "Unlocked PublishPostsJob")
 
 		log.Info().Msg("Locking PublishPostsJob")
 		lockedJobs := jobs.PublishPostsJob_MustLock(tx, currentUser.Id)
@@ -250,40 +225,37 @@ func SettingsSaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		userSettings := models.UserSettings_MustGetById(tx, currentUser.Id)
-		if !((userSettings.DeliveryChannel != nil && len(lockedJobs) == 1) ||
-			(userSettings.DeliveryChannel == nil && len(lockedJobs) == 0)) {
-			log.Warn().Int("count", len(lockedJobs)).Msg("Unexpected amout of job rows for the user")
+		oldUserSettings := models.UserSettings_MustGetById(tx, currentUser.Id)
+		if !((oldUserSettings.DeliveryChannel != nil && len(lockedJobs) == 1) ||
+			(oldUserSettings.DeliveryChannel == nil && len(lockedJobs) == 0)) {
+			log.Warn().Int("count", len(lockedJobs)).Msg("Unexpected amount of job rows for the user")
 			return false
 		}
 
-		if userSettings.Version >= newVersion {
+		if oldUserSettings.Version >= newVersion {
 			log.Info().
-				Int("existing_version", userSettings.Version).
+				Int("existing_version", oldUserSettings.Version).
 				Int("new_version", newVersion).
 				Msg("Version conflict")
 			rutil.MustWriteJson(w, http.StatusConflict, map[string]any{
-				"version": userSettings.Version,
+				"version": oldUserSettings.Version,
 			})
 		}
 
-		oldDeliveryChannel := userSettings.DeliveryChannel
+		oldDeliveryChannel := oldUserSettings.DeliveryChannel
 		models.UserSettings_MustSaveDeliveryChannel(tx, currentUser.Id, newDeliveryChannel, newVersion)
 
 		if len(lockedJobs) > 0 {
 			job := lockedJobs[0]
-			jobDateStr := jobs.PublishPostsJob_MustGetNextScheduledDate(tx, currentUser.Id)
-			location := tzdata.LocationByName[userSettings.Timezone]
-			jobDate, err := time.ParseInLocation("2006-01-02", jobDateStr, location)
-			if err != nil {
-				panic(err)
-			}
+			jobDate := jobs.PublishPostsJob_MustGetNextScheduledDate(tx, currentUser.Id)
+			location := tzdata.LocationByName[oldUserSettings.Timezone]
+			jobTime := util.Schedule_MustDateInLocation(jobDate, location)
 			newHour := jobs.PublishPostsJob_GetHourOfDay(newDeliveryChannel)
-			newRunAt := jobDate.Add(time.Duration(newHour) * time.Hour).UTC()
+			newRunAt := jobTime.Add(time.Duration(newHour) * time.Hour).UTC()
 			jobs.PublishPostsJob_MustUpdateRunAt(tx, job.Id, newRunAt)
 			log.Info().Time("run_at", newRunAt).Msg("Rescheduled PublishPostsJob")
 		} else {
-			jobs.PublishPostsJob_MustInitialSchedule(tx, currentUser.Id, userSettings)
+			jobs.PublishPostsJob_MustInitialSchedule(tx, currentUser.Id, oldUserSettings)
 			log.Info().Msg("Did initial schedule for PublishPostsJob")
 		}
 

@@ -1,24 +1,42 @@
 package util
 
 import (
+	"html/template"
 	"time"
 
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"github.com/goccy/go-json"
 )
 
-var DaysOfWeek = []string{"sun", "mon", "tue", "wed", "thu", "fri", "sat"}
-var DaysOfWeekCapitalized []string
+type DayOfWeek string
+
+var DaysOfWeek = []DayOfWeek{"sun", "mon", "tue", "wed", "thu", "fri", "sat"}
+var DaysOfWeekJson template.JS
 
 func init() {
-	caser := cases.Title(language.AmericanEnglish)
-	for _, day := range DaysOfWeek {
-		DaysOfWeekCapitalized = append(DaysOfWeekCapitalized, caser.String(day))
+	daysOfWeekJsonBytes, err := json.Marshal(DaysOfWeek)
+	if err != nil {
+		panic(err)
 	}
+	DaysOfWeekJson = template.JS(string(daysOfWeekJsonBytes))
 }
 
-func Schedule_DateStr(date time.Time) string {
-	return date.Format("2006-01-02")
+type Date string
+
+func Schedule_Date(time time.Time) Date {
+	return Date(time.Format("2006-01-02"))
+}
+
+func Schedule_MustDateInLocation(date Date, location *time.Location) time.Time {
+	time, err := time.ParseInLocation("2006-01-02", string(date), location)
+	if err != nil {
+		panic(err)
+	}
+
+	return time
+}
+
+func Schedule_IsEarlyMorning(localTime time.Time) bool {
+	return localTime.Hour() < 5
 }
 
 func Schedule_MustUTCStr(time time.Time) string {

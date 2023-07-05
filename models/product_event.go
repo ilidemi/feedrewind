@@ -64,6 +64,34 @@ func ProductEvent_MustEmitAddPage(
 	})
 }
 
+type ProductEventScheduleArgs struct {
+	Tx             pgw.Queryable
+	Request        *http.Request
+	ProductUserId  ProductUserId
+	EventType      string
+	SubscriptionId SubscriptionId
+	BlogBestUrl    string
+	WeeklyCount    int
+	ActiveDays     int
+}
+
+func ProductEvent_MustEmitSchedule(args ProductEventScheduleArgs) {
+	ProductEvent_MustEmitFromRequest(ProductEventRequestArgs{
+		Tx:            args.Tx,
+		Request:       args.Request,
+		ProductUserId: args.ProductUserId,
+		EventType:     args.EventType,
+		EventProperties: map[string]any{
+			"subscription_id":      args.SubscriptionId,
+			"blog_url":             args.BlogBestUrl,
+			"weekly_count":         args.WeeklyCount,
+			"active_days":          args.ActiveDays,
+			"posts_per_active_day": float64(args.WeeklyCount) / float64(args.ActiveDays),
+		},
+		UserProperties: nil,
+	})
+}
+
 var userIpRegex = regexp.MustCompile(`.\d+.\d+$`)
 
 func anonymizeUserIp(userIp string) string {

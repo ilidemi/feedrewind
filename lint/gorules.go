@@ -15,13 +15,14 @@ func callToTimeNow(m dsl.Matcher) {
 			!m.File().PkgPath.Matches(`feedrewind/db`) &&
 			!m.File().PkgPath.Matches(`feedrewind/middleware`) &&
 			!m.File().PkgPath.Matches(`^feedrewind$`)).
-		Report(`references to db.Conn are only allowed in main, db, routes and middleware, use pgw.Queryable instead`)
+		Report(`references to db.Conn are only allowed in main, db, routes, and middleware, use pgw.Queryable instead`)
 	m.Match(`pgw.Tx`).
 		Where(!m.File().PkgPath.Matches(`feedrewind/routes`) &&
 			!m.File().PkgPath.Matches(`feedrewind/db`) &&
+			!m.File().PkgPath.Matches(`feedrewind/util`) &&
 			!m.File().PkgPath.Matches(`feedrewind/middleware`) &&
 			!m.File().PkgPath.Matches(`^feedrewind$`)).
-		Report(`references to pgw.Tx are only allowed in main, db, routes and middleware, use pgw.Queryable instead`)
+		Report(`references to pgw.Tx are only allowed in main, db, routes, util and middleware, use pgw.Queryable instead`)
 	m.Match(`context.Background`).
 		Where(!m.File().PkgPath.Matches(`feedrewind/db`) &&
 			!m.File().PkgPath.Matches(`^feedrewind$`)).

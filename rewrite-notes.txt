@@ -12,6 +12,7 @@ Returning errors as errors loses stacktrace. Panicking scatters Must* everywhere
 <%= link_to "Link", "/path" -> <a href="/path">Link</a>
 <%= form_with url: "subscriptions/add" -> <form action="subscriptions/add" accept-charset="UTF-8"
 <%= form.url_field -> just <input type="url", id if needed
+<%= hidden_field_tag "key", value1 %> -> <input type="hidden" name="key" id="key" value="value1">
 
 
 ## Small dynamic mangles that needed to be consolidated

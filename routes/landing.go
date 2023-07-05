@@ -24,7 +24,7 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 	type screenshot struct {
 		Links           []rutil.ScreenshotLink
 		LinksCount      int
-		DaysOfWeek      []string
+		DaysOfWeek      []util.DayOfWeek
 		ScheduleColumns [][]scheduleCell
 	}
 	type suggestions struct {
@@ -43,7 +43,7 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 		Screenshot: screenshot{
 			Links:      rutil.ScreenshotLinks,
 			LinksCount: len(rutil.ScreenshotLinks),
-			DaysOfWeek: util.DaysOfWeekCapitalized,
+			DaysOfWeek: util.DaysOfWeek,
 			ScheduleColumns: [][]scheduleCell{
 				{
 					{IsAdd: true},

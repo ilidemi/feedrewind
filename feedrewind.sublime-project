@@ -47,6 +47,7 @@
                     "cmd": [
                         "scc",
                         "--no-cocomo",
+                        "--no-complexity",
                         "--exclude-dir",
                         "assets,static,third_party",
                         "-M",

@@ -10,6 +10,9 @@ import (
 	"path"
 	"reflect"
 	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 //go:embed *
@@ -17,8 +20,12 @@ var templateFS embed.FS
 var templatesByName map[string]*template.Template
 
 func init() {
+	caser := cases.Title(language.AmericanEnglish)
 	funcMap := template.FuncMap{
 		"static": util.StaticHashedPath,
+		"title": func(dayOfWeek util.DayOfWeek) string {
+			return caser.String(string(dayOfWeek))
+		},
 	}
 
 	type namedTemplate struct {

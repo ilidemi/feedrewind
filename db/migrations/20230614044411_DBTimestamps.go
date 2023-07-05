@@ -15,7 +15,7 @@ func (m *DBTimestamps) Version() string {
 	return "20230614044411"
 }
 
-var tables = []string{
+var tables20230614044411 = []string{
 	"admin_telemetries",
 	"ar_internal_metadata",
 	"blog_canonical_equality_configs",
@@ -58,7 +58,7 @@ end;
 $$ language 'plpgsql'
 `)
 
-	for _, table := range tables {
+	for _, table := range tables20230614044411 {
 		tx.MustExec("alter table " + table + " alter column created_at set default current_timestamp")
 		tx.MustExec("alter table " + table + " alter column updated_at set default current_timestamp")
 
@@ -68,13 +68,11 @@ $$ language 'plpgsql'
 	execute procedure bump_updated_at();
 `, table, table)
 		tx.MustExec(query)
-
 	}
-
 }
 
 func (m *DBTimestamps) Down(tx *pgw.Tx) {
-	for _, table := range tables {
+	for _, table := range tables20230614044411 {
 		tx.MustExec("alter table " + table + " alter column created_at drop default")
 		tx.MustExec("alter table " + table + " alter column updated_at drop default")
 		tx.MustExec("drop trigger " + table + "_bump_updated_at on " + table)

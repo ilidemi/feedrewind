@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type HttpError struct {
@@ -40,6 +42,18 @@ func EnsureParamStr(r *http.Request, name string) string {
 	return value[0]
 }
 
+func EnsureParamInt64(r *http.Request, name string) int64 {
+	str := EnsureParamStr(r, name)
+	val, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		panic(HttpError{
+			Status: http.StatusBadRequest,
+			Inner:  fmt.Errorf("couldn't read int64: %s", str),
+		})
+	}
+	return val
+}
+
 func EnsureParamInt(r *http.Request, name string) int {
 	str := EnsureParamStr(r, name)
 	val64, err := strconv.ParseInt(str, 10, 64)
@@ -50,6 +64,17 @@ func EnsureParamInt(r *http.Request, name string) int {
 		})
 	}
 	return int(val64)
+}
+
+// Route params return bool ok instead of BadRequest because we may want to manually redirect the user
+func URLParamInt64(r *http.Request, name string) (int64, bool) {
+	str := chi.URLParam(r, name)
+	result, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		return 0, false
+	}
+
+	return result, true
 }
 
 func FindCookie(r *http.Request, name string) (string, bool) {

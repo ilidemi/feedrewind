@@ -15,14 +15,14 @@ func (m *ForeignKeysDeleteCascade) Version() string {
 	return "20230614051555"
 }
 
-type foreignKey struct {
+type foreignKey20230614051555 struct {
 	table        string
 	name         string
 	column       string
 	foreignTable string
 }
 
-var foreignKeys = []foreignKey{
+var foreignKeys20230614051555 = []foreignKey20230614051555{
 	{
 		table:        "user_rsses",
 		name:         "fk_rails_17396fc3a7",
@@ -170,7 +170,7 @@ var foreignKeys = []foreignKey{
 }
 
 func (m *ForeignKeysDeleteCascade) Up(tx *pgw.Tx) {
-	for _, fKey := range foreignKeys {
+	for _, fKey := range foreignKeys20230614051555 {
 		tx.MustExec("alter table " + fKey.table + " drop constraint " + fKey.name)
 
 		query := fmt.Sprintf(`alter table %s
@@ -182,7 +182,7 @@ func (m *ForeignKeysDeleteCascade) Up(tx *pgw.Tx) {
 }
 
 func (m *ForeignKeysDeleteCascade) Down(tx *pgw.Tx) {
-	for _, fKey := range foreignKeys {
+	for _, fKey := range foreignKeys20230614051555 {
 		tx.MustExec("alter table " + fKey.table + " drop constraint " + fKey.name)
 
 		query := fmt.Sprintf(`alter table %s

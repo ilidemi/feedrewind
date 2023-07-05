@@ -1,12 +1,15 @@
 package jobs
 
 import (
+	"errors"
 	"feedrewind/db/pgw"
 	"feedrewind/models"
 	"feedrewind/third_party/tzdata"
 	"feedrewind/util"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func PublishPostsJob_MustInitialSchedule(
@@ -25,7 +28,7 @@ func PublishPostsJob_MustInitialSchedule(
 	mustPerformAt(
 		tx, nextRun, "PublishPostsJob", defaultQueue,
 		yamlString(fmt.Sprint(userId)),
-		strToYaml(util.Schedule_DateStr(date)),
+		strToYaml(string(util.Schedule_Date(date))),
 		strToYaml(util.Schedule_MustUTCStr(nextRun)),
 	)
 }
@@ -67,7 +70,8 @@ func PublishPostsJob_MustLock(tx pgw.Queryable, userId models.UserId) []LockedPu
 	return locks
 }
 
-func PublishPostsJob_MustGetNextScheduledDate(tx pgw.Queryable, userId models.UserId) string {
+// Returns zero value if the job was not found
+func PublishPostsJob_MustGetNextScheduledDate(tx pgw.Queryable, userId models.UserId) util.Date {
 	row := tx.QueryRow(`
 		select (regexp_match(handler, concat(E'arguments:\n  - ', $1::text, E'\n  - ''([0-9-]+)''')))[1]
 		from delayed_jobs
@@ -75,9 +79,11 @@ func PublishPostsJob_MustGetNextScheduledDate(tx pgw.Queryable, userId models.Us
 			handler like concat(E'%arguments:\n  - ', $1::text, E'\n%')
 		order by run_at desc
 	`, fmt.Sprint(userId))
-	var date string
+	var date util.Date
 	err := row.Scan(&date)
-	if err != nil {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ""
+	} else if err != nil {
 		panic(err)
 	}
 

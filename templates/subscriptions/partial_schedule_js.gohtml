@@ -1,0 +1,89 @@
+<script>
+    let scheduleDaysOfWeek = {{.DaysOfWeekJson}};
+
+    function validateSchedule(hasSomethingChanged) {
+        let countsByDay = new Map(scheduleDaysOfWeek.map(
+            day => [day, parseInt(document.getElementById(`${day}_count`).value)]
+        ));
+        let totalCount = 0;
+        countsByDay.forEach(value => {
+            totalCount += value;
+        });
+        let isValid = totalCount > 0;
+        {{.ValidateCallback}}(isValid, countsByDay, hasSomethingChanged);
+    }
+
+    scheduleDaysOfWeek.forEach(day => {
+        let dayField = document.getElementById(`${day}_count`);
+        let dayPosts = document.getElementById(`${day}_posts`);
+        let dayPostsMobile = document.getElementById(`${day}_posts_mobile`);
+
+        function remove() {
+            dayField.value = parseInt(dayField.value) - 1;
+            document.getElementsByName(`${day}_remove`)[0].remove();
+            document.getElementsByName(`${day}_remove_mobile`)[0].remove();
+            validateSchedule(true);
+        }
+
+        function createRemoveButton() {
+            let button = document
+                .getElementById(`${day}_template`)
+                .cloneNode(true);
+            button.removeAttribute("id");
+            button.setAttribute("name", `${day}_remove`);
+            button.classList.remove("hidden");
+            button.addEventListener("click", remove);
+            return button;
+        }
+
+        function createRemoveButtonMobile() {
+            let button = document
+                .getElementById(`${day}_template_mobile`)
+                .cloneNode(true);
+            button.removeAttribute("id");
+            button.setAttribute("name", `${day}_remove_mobile`);
+            button.classList.remove("hidden");
+            button.addEventListener("click", remove);
+            return button;
+        }
+
+        function insertAdd() {
+            let removeButton = createRemoveButton();
+            dayPosts.appendChild(removeButton);
+
+            let removeButtonMobile = createRemoveButtonMobile();
+            dayPostsMobile.prepend(removeButtonMobile);
+        }
+
+        let initialDayCount = parseInt(dayField.value);
+        for (let i = 0; i < initialDayCount; i++) {
+            insertAdd();
+        }
+
+        document
+            .getElementById(`${day}_add`)
+            .addEventListener("click", () => {
+                dayField.value = parseInt(dayField.value) + 1;
+                insertAdd();
+                validateSchedule(true);
+            });
+
+        document
+            .getElementById(`${day}_add_mobile`)
+            .addEventListener("click", () => {
+                dayField.value = parseInt(dayField.value) + 1;
+                insertAdd();
+                validateSchedule(true);
+            });
+    });
+
+    validateSchedule(false);
+
+    {{.SetNameChangeCallback}}((newName) => {
+        let elems = document.getElementsByClassName("schedule-sub-name");
+        for (let elem of elems) {
+            elem.innerText = newName;
+            elem.title = newName;
+        }
+    });
+</script>

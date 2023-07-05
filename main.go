@@ -73,6 +73,11 @@ func runServer() {
 			authorized.Use(frmiddleware.Authorize)
 
 			authorized.Get("/subscriptions", routes.SubscriptionsIndex)
+			authorized.Get("/subscriptions/{id}", routes.SubscriptionsShow)
+			authorized.Post("/subscriptions/{id}", routes.SubscriptionsUpdate)
+			authorized.Post("/subscriptions/{id}/pause", routes.SubscriptionsPause)
+			authorized.Post("/subscriptions/{id}/unpause", routes.SubscriptionsUnpause)
+
 			authorized.Get("/settings", routes.SettingsPage)
 			authorized.Post("/settings/save_timezone", routes.SettingsSaveTimezone)
 			authorized.Post("/settings/save_delivery_channel", routes.SettingsSaveDeliveryChannel)

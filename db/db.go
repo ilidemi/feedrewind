@@ -86,7 +86,8 @@ func dumpStructure() {
 		panic(err)
 	}
 	pgDumpCmd := exec.Command(
-		pgDump, "--schema-only", "--no-privileges", "--no-owner", "--file", filename, config.Cfg.DB.DBName,
+		pgDump, "--schema-only", "--no-privileges", "--no-owner", "--file", filename,
+		"--host", config.Cfg.DB.Host, config.Cfg.DB.DBName,
 	)
 	pgDumpCmd.Stdout = os.Stdout
 	pgDumpCmd.Stderr = os.Stderr
@@ -156,10 +157,7 @@ func generateMigration(name string) {
 
 	templateText := `package migrations
 
-import (
-	"context"
-	"feedrewind/db/pgw"
-)
+import "feedrewind/db/pgw"
 
 type {{.StructName}} struct {}
 
@@ -171,11 +169,11 @@ func (m *{{.StructName}}) Version() string {
 	return "{{.Version}}"
 }
 
-func (m *{{.StructName}}) Up(ctx context.Context, tx *pgw.Tx) {
+func (m *{{.StructName}}) Up(tx *pgw.Tx) {
 	panic("Not implemented")
 }
 
-func (m *{{.StructName}}) Down(ctx context.Context, tx *pgw.Tx) {
+func (m *{{.StructName}}) Down(tx *pgw.Tx) {
 	panic("Not implemented")
 }
 `

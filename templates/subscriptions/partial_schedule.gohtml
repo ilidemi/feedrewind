@@ -1,0 +1,99 @@
+<div>
+  {{$name := .Name}}
+  {{$currentCountByDay := .CurrentCountByDay}}
+  {{$otherSubNamesByDay := .OtherSubNamesByDay}}
+  {{range .DaysOfWeek}}
+    <input type="hidden" name="{{.}}_count" id="{{.}}_count" value="{{index $currentCountByDay .}}">
+  {{end}}
+  <div class="flex-col gap-1 hidden md:flex">
+    <div class="w-0 h-0"> <!-- Leading gap --> </div>
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-row gap-2">
+        {{range .DaysOfWeek}}
+          <div class="flex-1">{{title .}}</div>
+        {{end}}
+      </div>
+      <div class="flex flex-row gap-2 items-end basis-auto max-w-full">
+        {{range .DaysOfWeek}}
+          <div id="{{.}}_posts"
+               class="flex-1 min-w-0 flex flex-col">
+            <button id="{{.}}_add"
+                    type="button"
+                    class="btn-secondary font-mono flex-grow text-center">+
+            </button>
+            <button id="{{.}}_template"
+                    type="button"
+                    class="hidden rounded-md text-sm font-semibold text-white bg-primary-500 hover:bg-primary-700 border border-primary-500 hover:border-primary-700 hover:cursor-pointer px-2 py-1 mt-2">
+                <span class="flex flex-row gap-1">
+                  <span class="font-mono min-w-[10px]">-</span>
+                  <span class="truncate schedule-sub-name" title="{{$name}}">{{$name}}</span>
+                </span>
+            </button>
+          </div>
+        {{end}}
+      </div>
+      {{if .HasOtherSubs}}
+        <div class="w-full h-px bg-primary-300"></div>
+        <div class="flex flex-row gap-2">
+          {{range .DaysOfWeek}}
+            <div class="flex-1 min-w-0 flex flex-col gap-2">
+              {{range index $otherSubNamesByDay .}}
+                <div class="bg-primary-100 border border-primary-100 rounded-md px-2 py-1 flex flex-row gap-1 items-center">
+                  <div>
+                    <!-- rss icon -->
+                    <svg width="10" height="11" viewBox="0 0 10 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M7.06645 3.41149C5.18896 1.534 2.69086 0.5 0.0323486 0.5V2.45607C2.16837 2.45607 4.17527 3.28658 5.68333 4.79464C7.19136 6.3027 8.0219 8.30959 8.0219 10.4456H9.97797C9.97794 7.7871 8.94394 5.28897 7.06645 3.41149Z" fill="#CBD5E1"/>
+                      <path d="M0.012146 3.81006V5.76613C2.59238 5.76613 4.6916 7.86531 4.6916 10.4456H6.64767C6.64767 6.78675 3.67101 3.81006 0.012146 3.81006Z" fill="#CBD5E1"/>
+                      <path d="M1.401 10.5C2.17474 10.5 2.80199 9.87274 2.80199 9.09899C2.80199 8.32525 2.17474 7.698 1.401 7.698C0.627247 7.698 0 8.32525 0 9.09899C0 9.87274 0.627247 10.5 1.401 10.5Z" fill="#CBD5E1"/>
+                    </svg>
+                  </div>
+                  <div class="text-sm text-primary-700 truncate" title="{{.}}">{{.}}</div>
+                </div>
+              {{end}}
+            </div>
+          {{end}}
+        </div>
+      {{end}}
+    </div>
+    <div class="w-0 h-0"> <!-- Trailing gap --> </div>
+  </div>
+  <div id="schedule_mobile" class="flex-col gap-3 w-fit flex md:hidden">
+    <div class="w-0 h-0"> <!-- Leading gap --> </div>
+    <div class="grid grid-cols-[min-content_minmax(0,_10rem)_minmax(0,_10rem)] gap-x-2 gap-y-6">
+      {{range .DaysOfWeek}}
+        <div>{{title .}}</div>
+        <div>
+          <button id="{{.}}_add_mobile"
+                  type="button"
+                  class="btn-secondary w-full font-mono text-center">+
+          </button>
+        </div>
+        <div id="{{.}}_posts_mobile"
+             class="flex flex-col gap-2">
+          <button id="{{.}}_template_mobile"
+                  type="button"
+                  class="hidden rounded-md text-sm font-semibold text-white bg-primary-500 hover:bg-primary-700 border border-primary-500 hover:border-primary-700 hover:cursor-pointer px-2 py-1">
+              <span class="flex flex-row gap-1">
+                <span class="font-mono min-w-[10px]">-</span>
+                <span class="truncate schedule-sub-name" title="{{$name}}">{{$name}}</span>
+              </span>
+          </button>
+          {{range index $otherSubNamesByDay .}}
+            <div class="bg-primary-100 border border-primary-100 rounded-md px-2 py-1 flex flex-row gap-1 items-center">
+              <div>
+                <!-- rss icon -->
+                <svg width="10" height="11" viewBox="0 0 10 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M7.06645 3.41149C5.18896 1.534 2.69086 0.5 0.0323486 0.5V2.45607C2.16837 2.45607 4.17527 3.28658 5.68333 4.79464C7.19136 6.3027 8.0219 8.30959 8.0219 10.4456H9.97797C9.97794 7.7871 8.94394 5.28897 7.06645 3.41149Z" fill="#CBD5E1"/>
+                  <path d="M0.012146 3.81006V5.76613C2.59238 5.76613 4.6916 7.86531 4.6916 10.4456H6.64767C6.64767 6.78675 3.67101 3.81006 0.012146 3.81006Z" fill="#CBD5E1"/>
+                  <path d="M1.401 10.5C2.17474 10.5 2.80199 9.87274 2.80199 9.09899C2.80199 8.32525 2.17474 7.698 1.401 7.698C0.627247 7.698 0 8.32525 0 9.09899C0 9.87274 0.627247 10.5 1.401 10.5Z" fill="#CBD5E1"/>
+                </svg>
+              </div>
+              <div class="text-sm text-primary-700 truncate" title="{{.}}">{{.}}</div>
+            </div>
+          {{end}}
+        </div>
+      {{end}}
+    </div>
+    <div class="w-0 h-0"> <!-- Trailing gap --> </div>
+  </div>
+</div>
