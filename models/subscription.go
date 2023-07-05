@@ -1,7 +1,6 @@
 package models
 
 import (
-	"context"
 	"errors"
 	"feedrewind/db/pgw"
 
@@ -21,8 +20,8 @@ const (
 	SubscriptionStatusCrawledLooksWrong = "crawled_looks_wrong"
 )
 
-func Subscription_MustExists(ctx context.Context, tx pgw.Queryable, id SubscriptionId) bool {
-	row := tx.QueryRow(ctx, "select 1 from subscriptions where id = $1", id)
+func Subscription_MustExists(tx pgw.Queryable, id SubscriptionId) bool {
+	row := tx.QueryRow("select 1 from subscriptions where id = $1", id)
 	var one int
 	err := row.Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -34,8 +33,8 @@ func Subscription_MustExists(ctx context.Context, tx pgw.Queryable, id Subscript
 	return true
 }
 
-func Subscription_MustSetUserId(ctx context.Context, tx pgw.Queryable, id SubscriptionId, userId UserId) {
-	tx.MustExec(ctx, "update subscriptions set user_id = $1 where id = $2", userId, id)
+func Subscription_MustSetUserId(tx pgw.Queryable, id SubscriptionId, userId UserId) {
+	tx.MustExec("update subscriptions set user_id = $1 where id = $2", userId, id)
 }
 
 type SubscriptionWithPostCounts struct {
@@ -47,10 +46,8 @@ type SubscriptionWithPostCounts struct {
 	TotalCount     int
 }
 
-func Subscription_MustListWithPostCounts(
-	ctx context.Context, tx pgw.Queryable, userId UserId,
-) []SubscriptionWithPostCounts {
-	rows, err := tx.Query(ctx, `
+func Subscription_MustListWithPostCounts(tx pgw.Queryable, userId UserId) []SubscriptionWithPostCounts {
+	rows, err := tx.Query(`
 		with user_subscriptions as (
 			select id, name, status, is_paused, finished_setup_at, created_at from subscriptions
 			where user_id = $1 and discarded_at is null
@@ -100,9 +97,9 @@ type SubscriptionUserIdBlogBestUrl struct {
 }
 
 func Subscription_MustGetUserIdBlogBestUrl(
-	ctx context.Context, tx pgw.Queryable, subscriptionId SubscriptionId,
+	tx pgw.Queryable, subscriptionId SubscriptionId,
 ) (SubscriptionUserIdBlogBestUrl, bool) {
-	row := tx.QueryRow(ctx, `
+	row := tx.QueryRow(`
 		select user_id, (
 			select coalesce(url, feed_url) from blogs
 			where blogs.id = subscriptions.blog_id
@@ -119,6 +116,6 @@ func Subscription_MustGetUserIdBlogBestUrl(
 	return s, true
 }
 
-func Subscription_MustDelete(ctx context.Context, tx pgw.Queryable, subscriptionId SubscriptionId) {
-	tx.MustExec(ctx, "delete from subscriptions where id = $1", subscriptionId)
+func Subscription_MustDelete(tx pgw.Queryable, subscriptionId SubscriptionId) {
+	tx.MustExec("delete from subscriptions where id = $1", subscriptionId)
 }

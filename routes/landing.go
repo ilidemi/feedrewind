@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"feedrewind/db"
 	"feedrewind/models"
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
@@ -15,7 +14,8 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	models.ProductEvent_MustEmitAddPage(r.Context(), db.Conn, r, rutil.CurrentProductUserId(r), "/", true)
+	conn := rutil.DBConn(r)
+	models.ProductEvent_MustEmitAddPage(conn, r, rutil.CurrentProductUserId(r), "/", true)
 
 	type scheduleCell struct {
 		IsAdd      bool

@@ -1,7 +1,6 @@
 package mutil
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
@@ -10,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func MustGenerateRandomId(ctx context.Context, tx pgw.Queryable, tableName string) int64 {
+func MustGenerateRandomId(tx pgw.Queryable, tableName string) int64 {
 	buf := make([]byte, 8)
 	for {
 		_, err := rand.Read(buf)
@@ -23,7 +22,7 @@ func MustGenerateRandomId(ctx context.Context, tx pgw.Queryable, tableName strin
 			continue
 		}
 
-		row := tx.QueryRow(ctx, "select 1 from "+tableName+" where id = $1", id)
+		row := tx.QueryRow("select 1 from "+tableName+" where id = $1", id)
 		var one int
 		err = row.Scan(&one)
 		if errors.Is(err, pgx.ErrNoRows) {

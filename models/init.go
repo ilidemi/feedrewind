@@ -2,14 +2,13 @@ package models
 
 import (
 	"bytes"
-	"context"
 	"feedrewind/db/pgw"
 	"feedrewind/log"
 	"feedrewind/util"
 	"fmt"
 )
 
-func MustInit(ctx context.Context, tx pgw.Queryable) {
+func MustInit(tx pgw.Queryable) {
 	var timezoneInExpr bytes.Buffer
 	timezoneInExpr.WriteString("('")
 	isFirst := true
@@ -32,7 +31,7 @@ func MustInit(ctx context.Context, tx pgw.Queryable) {
 
 	log.Info().
 		Msg("Ensuring user timezones")
-	rows, err := tx.Query(ctx, query)
+	rows, err := tx.Query(query)
 	if err != nil {
 		panic(err)
 	}

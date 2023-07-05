@@ -1,15 +1,14 @@
 package migrations
 
 import (
-	"context"
 	"feedrewind/db/pgw"
 	"sort"
 )
 
 type Migration interface {
 	Version() string
-	Up(ctx context.Context, tx *pgw.Tx)
-	Down(ctx context.Context, tx *pgw.Tx)
+	Up(tx *pgw.Tx)
+	Down(tx *pgw.Tx)
 }
 
 var All []Migration

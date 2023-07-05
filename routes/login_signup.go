@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"feedrewind/db"
 	"feedrewind/jobs"
 	"feedrewind/log"
 	"feedrewind/middleware"
@@ -74,8 +73,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	password := util.EnsureParamStr(r, "current-password")
 	redirect := util.EnsureParamStr(r, "redirect")
 
-	ctx := r.Context()
-	user := models.User_MustFindByEmail(ctx, db.Conn, email)
+	conn := rutil.DBConn(r)
+	user := models.User_MustFindByEmail(conn, email)
 	if user != nil {
 		err := bcrypt.CompareHashAndPassword([]byte(user.PasswordDigest), []byte(password))
 		if err == nil {
@@ -85,8 +84,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			// Track them twice: first as anonymous, then properly
 			currentProductUserId := rutil.CurrentProductUserId(r)
 			models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
-				Context:       ctx,
-				Tx:            db.Conn,
+				Tx:            conn,
 				Request:       r,
 				ProductUserId: currentProductUserId,
 				EventType:     "log in",
@@ -96,8 +94,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 				UserProperties: nil,
 			})
 			models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
-				Context:       ctx,
-				Tx:            db.Conn,
+				Tx:            conn,
 				Request:       r,
 				ProductUserId: user.ProductUserId,
 				EventType:     "log in",
@@ -108,8 +105,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			})
 
 			subscriptionId := rutil.MustExtractAnonymousSubscriptionId(w, r)
-			if subscriptionId != 0 && models.Subscription_MustExists(ctx, db.Conn, subscriptionId) {
-				models.Subscription_MustSetUserId(ctx, db.Conn, subscriptionId, user.Id)
+			if subscriptionId != 0 && models.Subscription_MustExists(conn, subscriptionId) {
+				models.Subscription_MustSetUserId(conn, subscriptionId, user.Id)
 				http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
 			}
 
@@ -177,29 +174,29 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	timezone := util.EnsureParamStr(r, "timezone")
 	timeOffsetStr := util.EnsureParamStr(r, "time_offset")
 
-	ctx := r.Context()
-	tx, err := db.Conn.Begin(ctx)
+	conn := rutil.DBConn(r)
+	tx, err := conn.Begin()
 	if err != nil {
 		panic(err)
 	}
 	defer func() {
-		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 			panic(errors.Wrap(err, "rollback error"))
 		}
 	}()
 	defer func() {
-		if err := tx.Commit(ctx); err != nil {
+		if err := tx.Commit(); err != nil {
 			panic(err)
 		}
 	}()
 
 	const passwordTooShort = "Password is too short (minimum is 8 characters)"
 	const userAlreadyExists = "We already have an account registered with that email address"
-	existingUser := models.User_MustFindByEmail(ctx, tx, email)
+	existingUser := models.User_MustFindByEmail(tx, email)
 	var user *models.User
 	if existingUser != nil && existingUser.PasswordDigest == "" {
 		var err error
-		user, err = models.User_UpdatePassword(ctx, tx, existingUser.Id, password)
+		user, err = models.User_UpdatePassword(tx, existingUser.Id, password)
 		if errors.Is(err, models.ErrPasswordTooShort) {
 			result := newSignUpResult(r, passwordTooShort)
 			templates.MustWrite(w, "login_signup/signup", result)
@@ -210,11 +207,11 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	} else {
 		name := email[:strings.Index(email, "@")]
 		productUserId := rutil.CurrentProductUserId(r)
-		if productUserId != "" && models.User_MustExistsByProductUserId(ctx, tx, productUserId) {
+		if productUserId != "" && models.User_MustExistsByProductUserId(tx, productUserId) {
 			productUserId = models.ProductUserId_MustNew()
 		}
 		var err error
-		user, err = models.User_Create(ctx, tx, email, password, name, productUserId)
+		user, err = models.User_Create(tx, email, password, name, productUserId)
 		if errors.Is(err, models.ErrUserAlreadyExists) {
 			result := newSignUpResult(r, userAlreadyExists)
 			templates.MustWrite(w, "login_signup/signup", result)
@@ -247,12 +244,11 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Info().Msgf("Timezone out: %s", timezoneOut)
 
-		models.UserSettings_MustCreate(ctx, tx, user.Id, timezoneOut)
+		models.UserSettings_MustCreate(tx, user.Id, timezoneOut)
 
-		publish.MustCreateEmptyUserFeed(ctx, tx, user.Id)
+		publish.MustCreateEmptyUserFeed(tx, user.Id)
 
 		models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
-			Context:         ctx,
 			Tx:              tx,
 			Request:         r,
 			ProductUserId:   user.ProductUserId,
@@ -262,14 +258,14 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		})
 
 		slackMessage := fmt.Sprintf("*%s* signed up", jobs.NotifySlackJob_Escape(user.Email))
-		jobs.NotifySlackJob_MustPerformNow(ctx, tx, slackMessage)
+		jobs.NotifySlackJob_MustPerformNow(tx, slackMessage)
 	}
 
 	middleware.MustSetSessionAuthToken(w, r, user.AuthToken)
 
 	subscriptionId := rutil.MustExtractAnonymousSubscriptionId(w, r)
-	if subscriptionId != 0 && models.Subscription_MustExists(ctx, tx, subscriptionId) {
-		models.Subscription_MustSetUserId(ctx, tx, subscriptionId, user.Id)
+	if subscriptionId != 0 && models.Subscription_MustExists(tx, subscriptionId) {
+		models.Subscription_MustSetUserId(tx, subscriptionId, user.Id)
 		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
 		return
 	} else {

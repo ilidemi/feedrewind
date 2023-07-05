@@ -12,57 +12,14 @@ import (
 )
 
 type Queryable interface {
-	MustExec(ctx context.Context, sql string, args ...any) pgconn.CommandTag
-	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	MustExec(sql string, args ...any) pgconn.CommandTag
+	Exec(sql string, args ...any) (pgconn.CommandTag, error)
+	Query(sql string, args ...any) (pgx.Rows, error)
+	QueryRow(sql string, args ...any) pgx.Row
 }
 
 type Pool struct {
 	impl *pgxpool.Pool
-}
-
-func (pool *Pool) Begin(ctx context.Context) (*Tx, error) {
-	t1 := time.Now()
-	defer addDuration(ctx, t1)()
-
-	tx, err := pool.impl.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &Tx{tx}, nil
-}
-
-func (pool *Pool) MustExec(ctx context.Context, sql string, args ...any) pgconn.CommandTag {
-	t1 := time.Now()
-	defer addDuration(ctx, t1)()
-
-	tag, err := pool.impl.Exec(ctx, sql, args...)
-	if err != nil {
-		panic(err)
-	}
-	return tag
-}
-
-func (pool *Pool) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
-	t1 := time.Now()
-	defer addDuration(ctx, t1)()
-
-	return pool.impl.Exec(ctx, sql, args...)
-}
-
-func (pool *Pool) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
-	t1 := time.Now()
-	defer addDuration(ctx, t1)()
-
-	return pool.impl.Query(ctx, sql, args...)
-}
-
-func (pool *Pool) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
-	t1 := time.Now()
-	defer addDuration(ctx, t1)()
-
-	return pool.impl.QueryRow(ctx, sql, args...)
 }
 
 func NewPool(ctx context.Context, connString string) (*Pool, error) {
@@ -73,32 +30,106 @@ func NewPool(ctx context.Context, connString string) (*Pool, error) {
 	return &Pool{pool}, nil
 }
 
-type Tx struct {
-	impl pgx.Tx
-}
-
-// Begin starts a pseudo nested transaction.
-func (tx *Tx) Begin(ctx context.Context) (Tx, error) {
+func (pool *Pool) Acquire(ctx context.Context) (*Conn, error) {
 	t1 := time.Now()
 	defer addDuration(ctx, t1)()
 
-	nested, err := tx.impl.Begin(ctx)
+	conn, err := pool.impl.Acquire(ctx)
 	if err != nil {
-		return Tx{nil}, err
+		return nil, err
 	}
 
-	return Tx{nested}, nil
+	return &Conn{
+		impl: conn,
+		ctx:  ctx,
+	}, nil
+}
+
+type Conn struct {
+	impl *pgxpool.Conn
+	ctx  context.Context
+}
+
+func (conn *Conn) Begin() (*Tx, error) {
+	t1 := time.Now()
+	defer addDuration(conn.ctx, t1)()
+
+	tx, err := conn.impl.Begin(conn.ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &Tx{
+		impl: tx,
+		ctx:  conn.ctx,
+	}, nil
+}
+
+func (conn *Conn) MustExec(sql string, args ...any) pgconn.CommandTag {
+	t1 := time.Now()
+	defer addDuration(conn.ctx, t1)()
+
+	tag, err := conn.impl.Exec(conn.ctx, sql, args...)
+	if err != nil {
+		panic(err)
+	}
+	return tag
+}
+
+func (conn *Conn) Exec(sql string, args ...any) (pgconn.CommandTag, error) {
+	t1 := time.Now()
+	defer addDuration(conn.ctx, t1)()
+
+	return conn.impl.Exec(conn.ctx, sql, args...)
+}
+
+func (conn *Conn) Query(sql string, args ...any) (pgx.Rows, error) {
+	t1 := time.Now()
+	defer addDuration(conn.ctx, t1)()
+
+	return conn.impl.Query(conn.ctx, sql, args...)
+}
+
+func (conn *Conn) QueryRow(sql string, args ...any) pgx.Row {
+	t1 := time.Now()
+	defer addDuration(conn.ctx, t1)()
+
+	return conn.impl.QueryRow(conn.ctx, sql, args...)
+}
+
+func (conn *Conn) Release() {
+	conn.impl.Release()
+}
+
+type Tx struct {
+	impl pgx.Tx
+	ctx  context.Context
+}
+
+// Begin starts a pseudo nested transaction.
+func (tx *Tx) Begin() (*Tx, error) {
+	t1 := time.Now()
+	defer addDuration(tx.ctx, t1)()
+
+	nested, err := tx.impl.Begin(tx.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Tx{
+		impl: nested,
+		ctx:  tx.ctx,
+	}, nil
 }
 
 // Commit commits the transaction if this is a real transaction or releases the savepoint if this is a pseudo nested
 // transaction. Commit will return an error where errors.Is(ErrTxClosed) is true if the Tx is already closed, but is
 // otherwise safe to call multiple times. If the commit fails with a rollback status (e.g. the transaction was already
 // in a broken state) then an error where errors.Is(ErrTxCommitRollback) is true will be returned.
-func (tx *Tx) Commit(ctx context.Context) error {
+func (tx *Tx) Commit() error {
 	t1 := time.Now()
-	defer addDuration(ctx, t1)()
+	defer addDuration(tx.ctx, t1)()
 
-	return tx.impl.Commit(ctx)
+	return tx.impl.Commit(tx.ctx)
 }
 
 // Rollback rolls back the transaction if this is a real transaction or rolls back to the savepoint if this is a
@@ -106,45 +137,45 @@ func (tx *Tx) Commit(ctx context.Context) error {
 // closed, but is otherwise safe to call multiple times. Hence, a defer tx.Rollback() is safe even if tx.Commit() will
 // be called first in a non-error condition. Any other failure of a real transaction will result in the connection
 // being closed.
-func (tx *Tx) Rollback(ctx context.Context) error {
+func (tx *Tx) Rollback() error {
 	t1 := time.Now()
-	defer addDuration(ctx, t1)()
+	defer addDuration(tx.ctx, t1)()
 
-	return tx.impl.Rollback(ctx)
+	return tx.impl.Rollback(tx.ctx)
 }
 
-func (tx *Tx) Exec(ctx context.Context, sql string, arguments ...any) (
+func (tx *Tx) Exec(sql string, arguments ...any) (
 	commandTag pgconn.CommandTag, err error,
 ) {
 	t1 := time.Now()
-	defer addDuration(ctx, t1)()
+	defer addDuration(tx.ctx, t1)()
 
-	return tx.impl.Exec(ctx, sql, arguments...)
+	return tx.impl.Exec(tx.ctx, sql, arguments...)
 }
 
-func (tx *Tx) MustExec(ctx context.Context, sql string, arguments ...any) pgconn.CommandTag {
+func (tx *Tx) MustExec(sql string, arguments ...any) pgconn.CommandTag {
 	t1 := time.Now()
-	defer addDuration(ctx, t1)()
+	defer addDuration(tx.ctx, t1)()
 
-	tag, err := tx.impl.Exec(ctx, sql, arguments...)
+	tag, err := tx.impl.Exec(tx.ctx, sql, arguments...)
 	if err != nil {
 		panic(err)
 	}
 	return tag
 }
 
-func (tx *Tx) Query(ctx context.Context, sql string, arguments ...any) (pgx.Rows, error) {
+func (tx *Tx) Query(sql string, arguments ...any) (pgx.Rows, error) {
 	t1 := time.Now()
-	defer addDuration(ctx, t1)()
+	defer addDuration(tx.ctx, t1)()
 
-	return tx.impl.Query(ctx, sql, arguments...)
+	return tx.impl.Query(tx.ctx, sql, arguments...)
 }
 
-func (tx *Tx) QueryRow(ctx context.Context, sql string, arguments ...any) pgx.Row {
+func (tx *Tx) QueryRow(sql string, arguments ...any) pgx.Row {
 	t1 := time.Now()
-	defer addDuration(ctx, t1)()
+	defer addDuration(tx.ctx, t1)()
 
-	return tx.impl.QueryRow(ctx, sql, arguments...)
+	return tx.impl.QueryRow(tx.ctx, sql, arguments...)
 }
 
 type dbDurationKeyType struct{}

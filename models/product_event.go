@@ -1,7 +1,6 @@
 package models
 
 import (
-	"context"
 	"feedrewind/db/pgw"
 	"feedrewind/util"
 	"net/http"
@@ -24,7 +23,6 @@ func ProductUserId_MustNew() ProductUserId {
 }
 
 type ProductEventRequestArgs struct {
-	Context         context.Context
 	Tx              pgw.Queryable
 	Request         *http.Request
 	ProductUserId   ProductUserId
@@ -36,7 +34,7 @@ type ProductEventRequestArgs struct {
 func ProductEvent_MustEmitFromRequest(args ProductEventRequestArgs) {
 	platform := resolveUserAgent(args.Request.UserAgent())
 	anonIp := anonymizeUserIp(util.UserIp(args.Request))
-	args.Tx.MustExec(args.Context, `
+	args.Tx.MustExec(`
 		insert into product_events (
 			event_type, event_properties, user_properties, user_ip, product_user_id, browser, os_name,
 			os_version, bot_name
@@ -49,12 +47,10 @@ func ProductEvent_MustEmitFromRequest(args ProductEventRequestArgs) {
 }
 
 func ProductEvent_MustEmitAddPage(
-	ctx context.Context, tx pgw.Queryable, r *http.Request, productUserId ProductUserId, path string,
-	userIsAnonymous bool,
+	tx pgw.Queryable, r *http.Request, productUserId ProductUserId, path string, userIsAnonymous bool,
 ) {
 	referer := collapseReferer(r.Referer())
 	ProductEvent_MustEmitFromRequest(ProductEventRequestArgs{
-		Context:       ctx,
 		Tx:            tx,
 		Request:       r,
 		ProductUserId: productUserId,

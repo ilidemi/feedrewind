@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"feedrewind/db"
 	"feedrewind/models"
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
@@ -13,9 +12,9 @@ import (
 )
 
 func SubscriptionsIndex(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	conn := rutil.DBConn(r)
 	currentUser := rutil.CurrentUser(r)
-	subscriptions := models.Subscription_MustListWithPostCounts(ctx, db.Conn, currentUser.Id)
+	subscriptions := models.Subscription_MustListWithPostCounts(conn, currentUser.Id)
 
 	var settingUpSubscriptions []models.SubscriptionWithPostCounts
 	var activeSubscriptions []models.SubscriptionWithPostCounts
@@ -84,14 +83,14 @@ func SubscriptionsIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func SubscriptionsDelete(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	conn := rutil.DBConn(r)
 	subscriptionIdStr := chi.URLParam(r, "id")
 	subscriptionIdInt, err := strconv.ParseInt(subscriptionIdStr, 10, 64)
 	if err != nil {
 		panic(err)
 	}
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
-	subscription, ok := models.Subscription_MustGetUserIdBlogBestUrl(ctx, db.Conn, subscriptionId)
+	subscription, ok := models.Subscription_MustGetUserIdBlogBestUrl(conn, subscriptionId)
 	if !ok {
 		subscriptionsRedirectNotFound(w, r)
 		return
@@ -101,11 +100,10 @@ func SubscriptionsDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	models.Subscription_MustDelete(ctx, db.Conn, subscriptionId)
+	models.Subscription_MustDelete(conn, subscriptionId)
 
 	models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
-		Context:       ctx,
-		Tx:            db.Conn,
+		Tx:            conn,
 		Request:       r,
 		ProductUserId: rutil.CurrentProductUserId(r),
 		EventType:     "delete subscription",

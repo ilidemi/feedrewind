@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"context"
 	"feedrewind/db/pgw"
 	"fmt"
 )
@@ -170,26 +169,26 @@ var foreignKeys = []foreignKey{
 	},
 }
 
-func (m *ForeignKeysDeleteCascade) Up(ctx context.Context, tx *pgw.Tx) {
+func (m *ForeignKeysDeleteCascade) Up(tx *pgw.Tx) {
 	for _, fKey := range foreignKeys {
-		tx.MustExec(ctx, "alter table "+fKey.table+" drop constraint "+fKey.name)
+		tx.MustExec("alter table " + fKey.table + " drop constraint " + fKey.name)
 
 		query := fmt.Sprintf(`alter table %s
 			add constraint %s foreign key(%s) references %s(id) on delete cascade`,
 			fKey.table, fKey.name, fKey.column, fKey.foreignTable,
 		)
-		tx.MustExec(ctx, query)
+		tx.MustExec(query)
 	}
 }
 
-func (m *ForeignKeysDeleteCascade) Down(ctx context.Context, tx *pgw.Tx) {
+func (m *ForeignKeysDeleteCascade) Down(tx *pgw.Tx) {
 	for _, fKey := range foreignKeys {
-		tx.MustExec(ctx, "alter table "+fKey.table+" drop constraint "+fKey.name)
+		tx.MustExec("alter table " + fKey.table + " drop constraint " + fKey.name)
 
 		query := fmt.Sprintf(`alter table %s
 			add constraint %s foreign key(%s) references %s(id)`,
 			fKey.table, fKey.name, fKey.column, fKey.foreignTable,
 		)
-		tx.MustExec(ctx, query)
+		tx.MustExec(query)
 	}
 }

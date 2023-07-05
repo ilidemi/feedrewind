@@ -42,39 +42,48 @@ func main() {
 }
 
 func runServer() {
-	models.MustInit(context.Background(), db.Conn)
+	conn, err := db.Pool.Acquire(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	models.MustInit(conn)
+	conn.Release()
 
-	r := chi.NewRouter()
-	r.Use(frmiddleware.Logger)
-	r.Use(middleware.Compress(5))
-	r.Use(frmiddleware.Recoverer)
-	r.Use(frmiddleware.DefaultHeaders)
-	r.Use(middleware.GetHead)
-	r.Use(frmiddleware.Session)
-	r.Use(frmiddleware.CurrentUser)
-	r.Use(frmiddleware.CSRF)
+	staticR := chi.NewRouter()
+	staticR.Use(frmiddleware.Logger)
+	staticR.Use(middleware.Compress(5))
+	staticR.Use(frmiddleware.Recoverer)
+	staticR.Use(frmiddleware.DefaultHeaders)
+	staticR.Use(middleware.GetHead)
 
-	r.Get("/", routes.LandingIndex)
-	r.Get(util.LoginPath, routes.LoginPage)
-	r.Post(util.LoginPath, routes.Login)
-	r.Get("/logout", routes.Logout)
-	r.Get(util.SignUpPath, routes.SignUpPage)
-	r.Post(util.SignUpPath, routes.SignUp)
+	staticR.Group(func(r chi.Router) {
+		r.Use(frmiddleware.DB)
+		r.Use(frmiddleware.Session)
+		r.Use(frmiddleware.CurrentUser)
+		r.Use(frmiddleware.CSRF)
 
-	r.Group(func(authorized chi.Router) {
-		authorized.Use(frmiddleware.Authorize)
+		r.Get("/", routes.LandingIndex)
+		r.Get(util.LoginPath, routes.LoginPage)
+		r.Post(util.LoginPath, routes.Login)
+		r.Get("/logout", routes.Logout)
+		r.Get(util.SignUpPath, routes.SignUpPage)
+		r.Post(util.SignUpPath, routes.SignUp)
 
-		authorized.Get("/subscriptions", routes.SubscriptionsIndex)
-		authorized.Get("/settings", routes.SettingsPage)
-		authorized.Post("/settings/save_timezone", routes.SettingsSaveTimezone)
-		authorized.Post("/settings/save_delivery_channel", routes.SettingsSaveDeliveryChannel)
+		r.Group(func(authorized chi.Router) {
+			authorized.Use(frmiddleware.Authorize)
+
+			authorized.Get("/subscriptions", routes.SubscriptionsIndex)
+			authorized.Get("/settings", routes.SettingsPage)
+			authorized.Post("/settings/save_timezone", routes.SettingsSaveTimezone)
+			authorized.Post("/settings/save_delivery_channel", routes.SettingsSaveDeliveryChannel)
+		})
+		r.Post("/subscriptions/{id:\\d+}/delete", routes.SubscriptionsDelete)
 	})
-	r.Post("/subscriptions/{id:\\d+}/delete", routes.SubscriptionsDelete)
 
-	r.Get(util.StaticRouteTemplate, routes.StaticFile)
+	staticR.Get(util.StaticRouteTemplate, routes.StaticFile)
 
 	log.Info().Msg("Started")
-	if err := http.ListenAndServe(":3000", r); err != nil {
+	if err := http.ListenAndServe(":3000", staticR); err != nil {
 		panic(err)
 	}
 }

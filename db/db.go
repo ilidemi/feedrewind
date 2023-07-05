@@ -61,11 +61,11 @@ func init() {
 	DbCmd.AddCommand(rollbackCmd)
 }
 
-var Conn *pgw.Pool
+var Pool *pgw.Pool
 
 func init() {
 	var err error
-	Conn, err = pgw.NewPool(context.Background(), config.Cfg.DB.DSN())
+	Pool, err = pgw.NewPool(context.Background(), config.Cfg.DB.DSN())
 	if err != nil {
 		panic(err)
 	}
@@ -95,9 +95,12 @@ func dumpStructure() {
 		panic(err)
 	}
 
-	rows, err := Conn.Query(
-		context.Background(), "select version from schema_migrations order by version asc",
-	)
+	conn, err := Pool.Acquire(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Release()
+	rows, err := conn.Query("select version from schema_migrations order by version asc")
 	if err != nil {
 		panic(err)
 	}
@@ -194,12 +197,16 @@ func (m *{{.StructName}}) Down(ctx context.Context, tx *pgw.Tx) {
 }
 
 func migrate() {
-	lockId := migrationLock()
-	defer migrationUnlock(lockId)()
+	conn, err := Pool.Acquire(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Release()
 
-	versionsRows, err := Conn.Query(
-		context.Background(), "select version from schema_migrations order by version asc",
-	)
+	lockId := migrationLock(conn)
+	defer migrationUnlock(conn, lockId)()
+
+	versionsRows, err := conn.Query("select version from schema_migrations order by version asc")
 	if err != nil {
 		panic(err)
 	}
@@ -228,30 +235,29 @@ func migrate() {
 
 	ensurePgDump()
 
-	ctx := context.Background()
 	for _, migration := range migrations.All {
 		version := migration.Version()
 		if version <= latestDbVersion {
 			continue
 		}
 
-		tx, err := Conn.Begin(ctx)
+		tx, err := conn.Begin()
 		if err != nil {
 			panic(err)
 		}
 		defer func() {
-			if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			if err := tx.Rollback(); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 				panic(errors.Wrap(err, "rollback error"))
 			}
 		}()
 
-		migration.Up(ctx, tx)
-		_, err = tx.Exec(ctx, "insert into schema_migrations (version) values ($1)", version)
+		migration.Up(tx)
+		_, err = tx.Exec("insert into schema_migrations (version) values ($1)", version)
 		if err != nil {
 			panic(err)
 		}
 
-		if err := tx.Commit(ctx); err != nil {
+		if err := tx.Commit(); err != nil {
 			panic(err)
 		}
 
@@ -261,11 +267,16 @@ func migrate() {
 }
 
 func rollback() {
-	lockId := migrationLock()
-	defer migrationUnlock(lockId)()
+	conn, err := Pool.Acquire(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Release()
 
-	ctx := context.Background()
-	maxVersionRow := Conn.QueryRow(ctx, "select max(version) from schema_migrations")
+	lockId := migrationLock(conn)
+	defer migrationUnlock(conn, lockId)()
+
+	maxVersionRow := conn.QueryRow("select max(version) from schema_migrations")
 	var maxVersion string
 	if err := maxVersionRow.Scan(&maxVersion); err != nil {
 		panic(err)
@@ -278,25 +289,25 @@ func rollback() {
 		}
 		found = true
 
-		tx, err := Conn.Begin(ctx)
+		tx, err := conn.Begin()
 		if err != nil {
 			panic(err)
 		}
 		defer func() {
-			if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			if err := tx.Rollback(); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 				panic(errors.Wrap(err, "rollback error"))
 			}
 		}()
 
-		migration.Down(ctx, tx)
-		tag, err := tx.Exec(ctx, "delete from schema_migrations where version = $1", maxVersion)
+		migration.Down(tx)
+		tag, err := tx.Exec("delete from schema_migrations where version = $1", maxVersion)
 		if err != nil {
 			panic(err)
 		}
 		if tag.RowsAffected() != 1 {
 			panic(fmt.Errorf("Expected to delete a single row, got %d", tag.RowsAffected()))
 		}
-		if err := tx.Commit(ctx); err != nil {
+		if err := tx.Commit(); err != nil {
 			panic(err)
 		}
 
@@ -311,11 +322,11 @@ func rollback() {
 	}
 }
 
-func migrationLock() int {
+func migrationLock(conn *pgw.Conn) int {
 	dbNameHash := crc32.ChecksumIEEE([]byte(config.Cfg.DB.DBName))
 	const migratorSalt = 2053462845
 	lockId := migratorSalt * int(dbNameHash)
-	lockRow := Conn.QueryRow(context.Background(), "select pg_try_advisory_lock($1)", lockId)
+	lockRow := conn.QueryRow("select pg_try_advisory_lock($1)", lockId)
 	var gotLock bool
 	err := lockRow.Scan(&gotLock)
 	if err != nil {
@@ -328,9 +339,9 @@ func migrationLock() int {
 	return lockId
 }
 
-func migrationUnlock(lockId int) func() {
+func migrationUnlock(conn *pgw.Conn, lockId int) func() {
 	return func() {
-		row := Conn.QueryRow(context.Background(), "select pg_advisory_unlock($1)", lockId)
+		row := conn.QueryRow("select pg_advisory_unlock($1)", lockId)
 		var unlocked bool
 		err := row.Scan(&unlocked)
 		if err != nil {

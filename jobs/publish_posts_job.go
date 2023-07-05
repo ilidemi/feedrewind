@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"context"
 	"feedrewind/db/pgw"
 	"feedrewind/models"
 	"feedrewind/third_party/tzdata"
@@ -11,7 +10,7 @@ import (
 )
 
 func PublishPostsJob_MustInitialSchedule(
-	ctx context.Context, tx pgw.Queryable, userId models.UserId, userSettings models.UserSettings,
+	tx pgw.Queryable, userId models.UserId, userSettings models.UserSettings,
 ) {
 	utcNow := time.Now().UTC()
 	location := tzdata.LocationByName[userSettings.Timezone]
@@ -24,7 +23,7 @@ func PublishPostsJob_MustInitialSchedule(
 	}
 
 	mustPerformAt(
-		ctx, tx, nextRun, "PublishPostsJob", defaultQueue,
+		tx, nextRun, "PublishPostsJob", defaultQueue,
 		yamlString(fmt.Sprint(userId)),
 		strToYaml(util.Schedule_DateStr(date)),
 		strToYaml(util.Schedule_MustUTCStr(nextRun)),
@@ -36,10 +35,8 @@ type LockedPublishPostsJob struct {
 	LockedBy string
 }
 
-func PublishPostsJob_MustLock(
-	ctx context.Context, tx pgw.Queryable, userId models.UserId,
-) []LockedPublishPostsJob {
-	rows, err := tx.Query(ctx, `
+func PublishPostsJob_MustLock(tx pgw.Queryable, userId models.UserId) []LockedPublishPostsJob {
+	rows, err := tx.Query(`
 		select id, locked_by
 		from delayed_jobs
 		where (handler like concat(E'%class: PublishPostsJob\n%'))
@@ -70,10 +67,8 @@ func PublishPostsJob_MustLock(
 	return locks
 }
 
-func PublishPostsJob_MustGetNextScheduledDate(
-	ctx context.Context, tx pgw.Queryable, userId models.UserId,
-) string {
-	row := tx.QueryRow(ctx, `
+func PublishPostsJob_MustGetNextScheduledDate(tx pgw.Queryable, userId models.UserId) string {
+	row := tx.QueryRow(`
 		select (regexp_match(handler, concat(E'arguments:\n  - ', $1::text, E'\n  - ''([0-9-]+)''')))[1]
 		from delayed_jobs
 		where handler like concat(E'%class: PublishPostsJob\n%') and
@@ -100,8 +95,8 @@ func PublishPostsJob_GetHourOfDay(deliveryChannel models.DeliveryChannel) int {
 	}
 }
 
-func PublishPostsJob_MustUpdateRunAt(ctx context.Context, tx pgw.Queryable, jobId JobId, runAt time.Time) {
-	tx.MustExec(ctx, `
+func PublishPostsJob_MustUpdateRunAt(tx pgw.Queryable, jobId JobId, runAt time.Time) {
+	tx.MustExec(`
 		update delayed_jobs set run_at = $1 where id = $2
 	`, runAt.Format(runAtFormat), jobId)
 }

@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"context"
 	"feedrewind/db/pgw"
 	"fmt"
 )
@@ -48,8 +47,8 @@ var tables = []string{
 	"users",
 }
 
-func (m *DBTimestamps) Up(ctx context.Context, tx *pgw.Tx) {
-	tx.MustExec(ctx, `
+func (m *DBTimestamps) Up(tx *pgw.Tx) {
+	tx.MustExec(`
 create function bump_updated_at()
 returns trigger as $$
 begin
@@ -60,26 +59,26 @@ $$ language 'plpgsql'
 `)
 
 	for _, table := range tables {
-		tx.MustExec(ctx, "alter table "+table+" alter column created_at set default current_timestamp")
-		tx.MustExec(ctx, "alter table "+table+" alter column updated_at set default current_timestamp")
+		tx.MustExec("alter table " + table + " alter column created_at set default current_timestamp")
+		tx.MustExec("alter table " + table + " alter column updated_at set default current_timestamp")
 
 		query := fmt.Sprintf(`create trigger %s_bump_updated_at
 	before update on %s
 	for each row
 	execute procedure bump_updated_at();
 `, table, table)
-		tx.MustExec(ctx, query)
+		tx.MustExec(query)
 
 	}
 
 }
 
-func (m *DBTimestamps) Down(ctx context.Context, tx *pgw.Tx) {
+func (m *DBTimestamps) Down(tx *pgw.Tx) {
 	for _, table := range tables {
-		tx.MustExec(ctx, "alter table "+table+" alter column created_at drop default")
-		tx.MustExec(ctx, "alter table "+table+" alter column updated_at drop default")
-		tx.MustExec(ctx, "drop trigger "+table+"_bump_updated_at on "+table)
+		tx.MustExec("alter table " + table + " alter column created_at drop default")
+		tx.MustExec("alter table " + table + " alter column updated_at drop default")
+		tx.MustExec("drop trigger " + table + "_bump_updated_at on " + table)
 	}
 
-	tx.MustExec(ctx, "drop function bump_updated_at")
+	tx.MustExec("drop function bump_updated_at")
 }
