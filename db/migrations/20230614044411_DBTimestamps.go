@@ -5,46 +5,48 @@ import (
 	"fmt"
 )
 
-type DBTimestamps struct{}
+type DBTimestamps struct {
+	tables []string
+}
 
 func init() {
-	registerMigration(&DBTimestamps{})
+	registerMigration(&DBTimestamps{
+		tables: []string{
+			"admin_telemetries",
+			"ar_internal_metadata",
+			"blog_canonical_equality_configs",
+			"blog_crawl_client_tokens",
+			"blog_crawl_progresses",
+			"blog_crawl_votes",
+			"blog_discarded_feed_entries",
+			"blog_missing_from_feed_entries",
+			"blog_post_categories",
+			"blog_post_category_assignments",
+			"blog_post_locks",
+			"blog_posts",
+			"blogs",
+			"delayed_jobs",
+			"postmark_bounced_users",
+			"postmark_bounces",
+			"postmark_messages",
+			"product_events",
+			"schedules",
+			"start_feeds",
+			"start_pages",
+			"subscription_posts",
+			"subscription_rsses",
+			"subscriptions",
+			"test_singletons",
+			"typed_blog_urls",
+			"user_rsses",
+			"user_settings",
+			"users",
+		},
+	})
 }
 
 func (m *DBTimestamps) Version() string {
 	return "20230614044411"
-}
-
-var tables20230614044411 = []string{
-	"admin_telemetries",
-	"ar_internal_metadata",
-	"blog_canonical_equality_configs",
-	"blog_crawl_client_tokens",
-	"blog_crawl_progresses",
-	"blog_crawl_votes",
-	"blog_discarded_feed_entries",
-	"blog_missing_from_feed_entries",
-	"blog_post_categories",
-	"blog_post_category_assignments",
-	"blog_post_locks",
-	"blog_posts",
-	"blogs",
-	"delayed_jobs",
-	"postmark_bounced_users",
-	"postmark_bounces",
-	"postmark_messages",
-	"product_events",
-	"schedules",
-	"start_feeds",
-	"start_pages",
-	"subscription_posts",
-	"subscription_rsses",
-	"subscriptions",
-	"test_singletons",
-	"typed_blog_urls",
-	"user_rsses",
-	"user_settings",
-	"users",
 }
 
 func (m *DBTimestamps) Up(tx *pgw.Tx) {
@@ -58,7 +60,7 @@ end;
 $$ language 'plpgsql'
 `)
 
-	for _, table := range tables20230614044411 {
+	for _, table := range m.tables {
 		tx.MustExec("alter table " + table + " alter column created_at set default current_timestamp")
 		tx.MustExec("alter table " + table + " alter column updated_at set default current_timestamp")
 
@@ -72,7 +74,7 @@ $$ language 'plpgsql'
 }
 
 func (m *DBTimestamps) Down(tx *pgw.Tx) {
-	for _, table := range tables20230614044411 {
+	for _, table := range m.tables {
 		tx.MustExec("alter table " + table + " alter column created_at drop default")
 		tx.MustExec("alter table " + table + " alter column updated_at drop default")
 		tx.MustExec("drop trigger " + table + "_bump_updated_at on " + table)
