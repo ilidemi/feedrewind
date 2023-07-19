@@ -239,10 +239,7 @@ func migrate() {
 			continue
 		}
 
-		tx, err := conn.Begin()
-		if err != nil {
-			panic(err)
-		}
+		tx := conn.MustBegin()
 		defer func() {
 			if err := tx.Rollback(); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 				panic(errors.Wrap(err, "rollback error"))
@@ -287,10 +284,7 @@ func rollback() {
 		}
 		found = true
 
-		tx, err := conn.Begin()
-		if err != nil {
-			panic(err)
-		}
+		tx := conn.MustBegin()
 		defer func() {
 			if err := tx.Rollback(); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 				panic(errors.Wrap(err, "rollback error"))

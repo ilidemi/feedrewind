@@ -8,14 +8,21 @@ import (
 	"net/http"
 )
 
-func LandingIndex(w http.ResponseWriter, r *http.Request) {
+func Landing_Index(w http.ResponseWriter, r *http.Request) {
 	if rutil.CurrentUser(r) != nil {
 		http.Redirect(w, r, "/subscriptions", http.StatusFound)
 		return
 	}
 
 	conn := rutil.DBConn(r)
-	models.ProductEvent_MustEmitAddPage(conn, r, rutil.CurrentProductUserId(r), "/", true)
+	models.ProductEvent_MustEmitVisitAddPage(models.ProductEventVisitAddPageArgs{
+		Tx:              conn,
+		Request:         r,
+		ProductUserId:   rutil.CurrentProductUserId(r),
+		Path:            "/",
+		UserIsAnonymous: true,
+		Extra:           nil,
+	})
 
 	type scheduleCell struct {
 		IsAdd      bool
@@ -27,15 +34,10 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 		DaysOfWeek      []util.DayOfWeek
 		ScheduleColumns [][]scheduleCell
 	}
-	type suggestions struct {
-		SuggestedCategories []rutil.SuggestedCategory
-		MiscellaneousBlogs  []rutil.MiscellaneousBlog
-		WidthClass          string
-	}
 	type landingIndexResult struct {
 		Session     *util.Session
 		Screenshot  screenshot
-		Suggestions suggestions
+		Suggestions rutil.Suggestions
 	}
 
 	result := landingIndexResult{
@@ -71,7 +73,7 @@ func LandingIndex(w http.ResponseWriter, r *http.Request) {
 				},
 			},
 		},
-		Suggestions: suggestions{
+		Suggestions: rutil.Suggestions{
 			SuggestedCategories: rutil.SuggestedCategories,
 			MiscellaneousBlogs:  rutil.MiscellaneousBlogs,
 			WidthClass:          "max-w-[531px]",

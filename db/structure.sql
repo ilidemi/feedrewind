@@ -149,8 +149,21 @@ CREATE FUNCTION public.bump_updated_at_utc() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 begin
-	NEW.updated_at = (now() at time zone 'utc');
+	NEW.updated_at = utc_now();
 	return NEW;
+end;
+$$;
+
+
+--
+-- Name: utc_now(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.utc_now() RETURNS timestamp without time zone
+    LANGUAGE plpgsql
+    AS $$
+begin
+	return (now() at time zone 'utc');
 end;
 $$;
 
@@ -168,8 +181,8 @@ CREATE TABLE public.admin_telemetries (
     key text NOT NULL,
     value double precision NOT NULL,
     extra json,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -199,8 +212,8 @@ ALTER SEQUENCE public.admin_telemetries_id_seq OWNED BY public.admin_telemetries
 CREATE TABLE public.ar_internal_metadata (
     key character varying NOT NULL,
     value character varying,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -212,8 +225,8 @@ CREATE TABLE public.blog_canonical_equality_configs (
     blog_id bigint NOT NULL,
     same_hosts text[],
     expect_tumblr_paths boolean NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -223,8 +236,8 @@ CREATE TABLE public.blog_canonical_equality_configs (
 
 CREATE TABLE public.blog_crawl_client_tokens (
     value character varying NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     blog_id bigint NOT NULL
 );
 
@@ -238,8 +251,8 @@ CREATE TABLE public.blog_crawl_progresses (
     count integer,
     epoch integer NOT NULL,
     epoch_times character varying,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     blog_id bigint NOT NULL
 );
 
@@ -252,8 +265,8 @@ CREATE TABLE public.blog_crawl_votes (
     id bigint NOT NULL,
     blog_id bigint NOT NULL,
     value public.blog_crawl_vote_value NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     user_id bigint
 );
 
@@ -285,8 +298,8 @@ CREATE TABLE public.blog_discarded_feed_entries (
     id bigint NOT NULL,
     blog_id bigint NOT NULL,
     url character varying NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -317,8 +330,8 @@ CREATE TABLE public.blog_missing_from_feed_entries (
     id bigint NOT NULL,
     blog_id bigint NOT NULL,
     url text NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -350,8 +363,8 @@ CREATE TABLE public.blog_post_categories (
     blog_id bigint NOT NULL,
     name text NOT NULL,
     index integer NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     is_top boolean NOT NULL
 );
 
@@ -383,8 +396,8 @@ CREATE TABLE public.blog_post_category_assignments (
     id bigint NOT NULL,
     blog_post_id bigint NOT NULL,
     category_id bigint NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -413,8 +426,8 @@ ALTER SEQUENCE public.blog_post_category_assignments_id_seq OWNED BY public.blog
 
 CREATE TABLE public.blog_post_locks (
     blog_id bigint NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -428,8 +441,8 @@ CREATE TABLE public.blog_posts (
     index integer NOT NULL,
     url character varying NOT NULL,
     title character varying NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -463,8 +476,8 @@ CREATE TABLE public.blogs (
     status public.blog_status NOT NULL,
     status_updated_at timestamp without time zone NOT NULL,
     version integer NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     update_action public.blog_update_action NOT NULL,
     url character varying
 );
@@ -485,8 +498,8 @@ CREATE TABLE public.delayed_jobs (
     failed_at timestamp without time zone,
     locked_by character varying,
     queue character varying,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()),
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now())
+    created_at timestamp(6) without time zone DEFAULT public.utc_now(),
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now()
 );
 
 
@@ -516,8 +529,8 @@ ALTER SEQUENCE public.delayed_jobs_id_seq OWNED BY public.delayed_jobs.id;
 CREATE TABLE public.postmark_bounced_users (
     user_id bigint NOT NULL,
     example_bounce_id bigint NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -530,8 +543,8 @@ CREATE TABLE public.postmark_bounces (
     bounce_type text NOT NULL,
     message_id text,
     payload json NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -542,8 +555,8 @@ CREATE TABLE public.postmark_bounces (
 CREATE TABLE public.postmark_messages (
     message_id text NOT NULL,
     subscription_post_id bigint,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     message_type public.postmark_message_type NOT NULL,
     subscription_id bigint NOT NULL
 );
@@ -560,8 +573,8 @@ CREATE TABLE public.product_events (
     user_properties json,
     user_ip text,
     dispatched_at timestamp without time zone,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     product_user_id text NOT NULL,
     browser text,
     os_name text,
@@ -597,8 +610,8 @@ CREATE TABLE public.schedules (
     id bigint NOT NULL,
     day_of_week public.day_of_week NOT NULL,
     count integer NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     subscription_id bigint NOT NULL
 );
 
@@ -638,8 +651,8 @@ CREATE TABLE public.schema_migrations (
 CREATE TABLE public.start_feeds (
     id bigint NOT NULL,
     content bytea,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     url text NOT NULL,
     final_url text,
     title text NOT NULL,
@@ -655,8 +668,8 @@ CREATE TABLE public.start_pages (
     id bigint NOT NULL,
     content bytea NOT NULL,
     url text NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     final_url text NOT NULL
 );
 
@@ -688,8 +701,8 @@ CREATE TABLE public.subscription_posts (
     id bigint NOT NULL,
     blog_post_id bigint NOT NULL,
     subscription_id bigint NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     published_at timestamp without time zone,
     published_at_local_date character varying,
     publish_status public.post_publish_status,
@@ -723,8 +736,8 @@ ALTER SEQUENCE public.subscription_posts_id_seq OWNED BY public.subscription_pos
 CREATE TABLE public.subscription_rsses (
     id bigint NOT NULL,
     body text NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     subscription_id bigint NOT NULL
 );
 
@@ -760,8 +773,8 @@ CREATE TABLE public.subscriptions (
     is_paused boolean,
     is_added_past_midnight boolean,
     discarded_at timestamp without time zone,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     finished_setup_at timestamp without time zone,
     final_item_published_at timestamp without time zone,
     user_id bigint,
@@ -779,8 +792,8 @@ CREATE TABLE public.subscriptions (
 CREATE TABLE public.test_singletons (
     key text NOT NULL,
     value text,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -795,8 +808,8 @@ CREATE TABLE public.typed_blog_urls (
     source text NOT NULL,
     result text NOT NULL,
     user_id bigint,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -825,8 +838,8 @@ ALTER SEQUENCE public.typed_blog_urls_id_seq OWNED BY public.typed_blog_urls.id;
 
 CREATE TABLE public.user_rsses (
     body text NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     user_id bigint NOT NULL
 );
 
@@ -838,8 +851,8 @@ CREATE TABLE public.user_rsses (
 CREATE TABLE public.user_settings (
     user_id bigint NOT NULL,
     timezone character varying NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     version integer NOT NULL,
     delivery_channel public.post_delivery_channel
 );
@@ -852,8 +865,8 @@ CREATE TABLE public.user_settings (
 CREATE TABLE public.users (
     email character varying NOT NULL,
     password_digest character varying NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     auth_token character varying NOT NULL,
     id bigint NOT NULL,
     name text NOT NULL,
@@ -1800,4 +1813,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20230614044411'),
 ('20230614051555'),
 ('20230623031513'),
-('20230704085733');
+('20230704085733'),
+('20230712025233'),
+('20230712025648');

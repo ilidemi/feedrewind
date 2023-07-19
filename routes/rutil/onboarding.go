@@ -104,6 +104,12 @@ func init() {
 	ScreenshotLinks[len(ScreenshotLinks)-1].IsNewest = true
 }
 
+type Suggestions struct {
+	SuggestedCategories []SuggestedCategory
+	MiscellaneousBlogs  []MiscellaneousBlog
+	WidthClass          string
+}
+
 type SuggestedCategory struct {
 	Name           string
 	IsRightAligned bool

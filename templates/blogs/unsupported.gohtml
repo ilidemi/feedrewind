@@ -1,0 +1,31 @@
+{{template "layouts/application" .}}
+
+{{define "content"}}
+<div class="flex flex-col gap-6 mb-6">
+  <div class="flex flex-col gap-1">
+    {{if .Session.IsLoggedIn}}
+      <a href="/subscriptions" class="text-sm link-secondary">← Dashboard</a>
+    {{else}}
+      <a href="/" class="text-sm link-secondary">← Main page</a>
+    {{end}}
+
+    <h2 class="break-word">{{.BlogName}}</h2>
+  </div>
+
+  <div>
+    <p>
+      FeedRewind supports over 80% of blogs, but unfortunately not this one.
+    </p>
+    <p>Would you like to try another blog?</p>
+  </div>
+
+  <div class="flex flex-row gap-4">
+    <a href="/subscriptions/add" class="btn">Try another</a>
+    {{if .Session.IsLoggedIn}}
+      <a href="/subscriptions" class="btn">Go back</a>
+    {{else}}
+      <a href="/" class="btn">Go back</a>
+    {{end}}
+  </div>
+</div>
+{{end}}

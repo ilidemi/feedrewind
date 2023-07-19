@@ -21,7 +21,7 @@ const (
 	deliveryChannelEmail deliveryChannel = "email"
 )
 
-func SettingsPage(w http.ResponseWriter, r *http.Request) {
+func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	currentUser := rutil.CurrentUser(r)
 	userSettings := models.UserSettings_MustGetById(conn, currentUser.Id)
@@ -93,7 +93,7 @@ func SettingsPage(w http.ResponseWriter, r *http.Request) {
 	templates.MustWrite(w, "users/settings", result)
 }
 
-func SettingsSaveTimezone(w http.ResponseWriter, r *http.Request) {
+func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	newTimezone := util.EnsureParamStr(r, "timezone")
 	newVersion := util.EnsureParamInt(r, "version")
@@ -106,10 +106,7 @@ func SettingsSaveTimezone(w http.ResponseWriter, r *http.Request) {
 	// Saving timezone may race with user's update rss job.
 	// If the job is already running, wait till it finishes, otherwise lock the row so it doesn't start
 	mustSaveTimezone := func() (result bool) {
-		tx, err := conn.Begin()
-		if err != nil {
-			panic(err)
-		}
+		tx := conn.MustBegin()
 		defer util.CommitOrRollback(tx, result, "Unlocked PublishPostsJob")
 
 		log.Info().Msg("Locking PublishPostsJob")
@@ -186,7 +183,7 @@ func SettingsSaveTimezone(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func SettingsSaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
+func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	currentUser := rutil.CurrentUser(r)
 	deliveryChannelStr := util.EnsureParamStr(r, "delivery_channel")
@@ -208,10 +205,7 @@ func SettingsSaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 	// Saving delivery channel may race with user's update rss job.
 	// If the job is already running, wait till it finishes, otherwise lock the row so it doesn't start
 	mustSaveDeliveryChannel := func() (result bool) {
-		tx, err := conn.Begin()
-		if err != nil {
-			panic(err)
-		}
+		tx := conn.MustBegin()
 		defer util.CommitOrRollback(tx, result, "Unlocked PublishPostsJob")
 
 		log.Info().Msg("Locking PublishPostsJob")

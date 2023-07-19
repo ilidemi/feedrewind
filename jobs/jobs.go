@@ -17,6 +17,10 @@ const defaultQueue = "default"
 
 type yamlString string
 
+func int64ToYaml(value int64) yamlString {
+	return yamlString(fmt.Sprint(value))
+}
+
 func strToYaml(str string) yamlString {
 	str = strings.ReplaceAll(str, "'", "''")
 	str = strings.ReplaceAll(str, "\n", "\\n")

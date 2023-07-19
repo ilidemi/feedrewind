@@ -23,3 +23,81 @@ Returning errors as errors loses stacktrace. Panicking scatters Must* everywhere
 
 ## Fuckups
 User and session management doesn't use transactions and that'll probably bite me in the ass at some point
+
+
+## Not great
+Date parsing is forgiving in Ruby, strict in Go.
+
+
+## Tests
+Landing loads and has suggestions and screenshot
+
+Static file works
+
+Login success
+Login for nonexistent email
+Login with wrong password
+Logout
+
+Sign up
+Sign up with password reset
+Sign up for existing email
+Sign up with password too short
+Sign up with a known timezone
+Sign up with an unknown timezone
+Sign up without timezone and offset
+Sign up assigns user id to anon sub and redirects to setup
+
+Subscriptions index loads and displays 3 categories
+Subscriptions index redirects to login if no session
+Subscription show bad id
+Subscription show not found
+Subscription show user mismatch
+Subscription show non-live redirect
+Subscription show displays paused, counts and schedule
+Subscription pause bad id
+Subscription pause not found
+Subscription pause user mismatch
+Subscription pause non-live 400
+Subscription pause works
+Subscription unpause works
+Subscription update bad id
+Subscription update not found
+Subscription update user mismatch
+Subscription update non-live 400
+Subscription update stale version 409
+Subscription update total count 0 400
+Subscription update works
+Subscription delete bad id
+Subscription delete not found
+Subscription delete user mismatch
+Subscription delete works
+Subscription delete with redirect param
+
+User settings shows timezone
+User settings timezone mismatch hint
+User settings delivery channel null
+User settings delivery channel rss
+User settings delivery channel email
+User settings save timezone unknown
+User settings save timezone rss job
+User settings save timezone email job
+User settings save timezone no job
+User settings save timezone job is running
+User settings save timezone job is running for 3+ seconds
+User settings save timezone version conflict
+User settings save delivery channel unknown
+User settings save delivery channel null to rss
+User settings save delivery channel null to email
+User settings save delivery channel rss to email
+User settings save delivery channel email to rss
+User settings save delivery channel job is running
+User settings save delivery channel job is running for 3+ seconds
+
+Onboarding add loads and displays expandable suggestions
+Onboarding add with start_url redirects to the new subscription
+Onboarding add with start_url redirects to the unsupported blog
+Onboarding add with start_url that is not a url
+Onboarding add with start_url that doesn't have feeds
+Onboarding add with start_url that is unreachable
+Onboarding add with start_url that is a bad feed

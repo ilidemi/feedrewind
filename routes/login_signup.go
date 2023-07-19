@@ -43,7 +43,7 @@ func newLoginResult(r *http.Request, error string, redirect string) loginResult 
 	}
 }
 
-func LoginPage(w http.ResponseWriter, r *http.Request) {
+func Login_Page(w http.ResponseWriter, r *http.Request) {
 	if rutil.CurrentUser(r) != nil {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
@@ -153,7 +153,7 @@ func newSignUpResult(r *http.Request, errorMsg string) signUpResult {
 	}
 }
 
-func SignUpPage(w http.ResponseWriter, r *http.Request) {
+func SignUp_Page(w http.ResponseWriter, r *http.Request) {
 	if rutil.CurrentUser(r) != nil {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
@@ -175,10 +175,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	timeOffsetStr := util.EnsureParamStr(r, "time_offset")
 
 	conn := rutil.DBConn(r)
-	tx, err := conn.Begin()
-	if err != nil {
-		panic(err)
-	}
+	tx := conn.MustBegin()
 	defer func() {
 		if err := tx.Rollback(); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 			panic(errors.Wrap(err, "rollback error"))

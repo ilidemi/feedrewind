@@ -3,6 +3,8 @@ module feedrewind
 go 1.19
 
 require (
+	github.com/antchfx/htmlquery v1.3.0
+	github.com/antchfx/xmlquery v1.3.17
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/goccy/go-json v0.10.2
 	github.com/google/uuid v1.3.0
@@ -16,11 +18,14 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.9.0
+	golang.org/x/net v0.10.0
 	golang.org/x/text v0.9.0
 )
 
 require (
+	github.com/antchfx/xpath v1.2.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect

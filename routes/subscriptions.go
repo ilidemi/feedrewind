@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func SubscriptionsIndex(w http.ResponseWriter, r *http.Request) {
+func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	currentUser := rutil.CurrentUser(r)
 	subscriptions := models.Subscription_MustListWithPostCounts(conn, currentUser.Id)
@@ -103,11 +103,11 @@ type subscriptionsScheduleJsResult struct {
 	SetNameChangeCallback template.JS
 }
 
-func SubscriptionsShow(w http.ResponseWriter, r *http.Request) {
+func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
-		subscriptionsRedirectNotFound(w, r)
+		subscriptions_RedirectNotFound(w, r)
 		return
 	}
 
@@ -115,7 +115,7 @@ func SubscriptionsShow(w http.ResponseWriter, r *http.Request) {
 	currentUser := rutil.CurrentUser(r)
 	subscription, ok := models.Subscription_MustGetWithPostCounts(conn, subscriptionId, currentUser.Id)
 	if !ok {
-		subscriptionsRedirectNotFound(w, r)
+		subscriptions_RedirectNotFound(w, r)
 		return
 	}
 
@@ -131,7 +131,7 @@ func SubscriptionsShow(w http.ResponseWriter, r *http.Request) {
 	}
 	countByDay := models.Schedule_MustGetCounts(conn, subscriptionId)
 	otherSubNamesByDay := models.Subscription_MustGetOtherNamesByDay(conn, subscriptionId, currentUser.Id)
-	preview := subscriptionsMustGetSchedulePreview(
+	preview := subscriptions_MustGetSchedulePreview(
 		conn, subscriptionId, subscription.Status, currentUser.Id, userSettings,
 	)
 
@@ -183,12 +183,19 @@ func SubscriptionsShow(w http.ResponseWriter, r *http.Request) {
 	templates.MustWrite(w, "subscriptions/show", result)
 }
 
-func SubscriptionsPause(w http.ResponseWriter, r *http.Request) {
-	subscriptionsPauseUnpause(w, r, true, "pause subscription")
+func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
+	_, err := w.Write([]byte("setup"))
+	if err != nil {
+		panic(err)
+	}
 }
 
-func SubscriptionsUnpause(w http.ResponseWriter, r *http.Request) {
-	subscriptionsPauseUnpause(w, r, false, "unpause subscription")
+func Subscriptions_Pause(w http.ResponseWriter, r *http.Request) {
+	subscriptions_PauseUnpause(w, r, true, "pause subscription")
+}
+
+func Subscriptions_Unpause(w http.ResponseWriter, r *http.Request) {
+	subscriptions_PauseUnpause(w, r, false, "unpause subscription")
 }
 
 var dayCountNames []string
@@ -199,31 +206,28 @@ func init() {
 	}
 }
 
-func SubscriptionsUpdate(w http.ResponseWriter, r *http.Request) {
-	tx, err := rutil.DBConn(r).Begin()
-	if err != nil {
-		panic(err)
-	}
+func Subscriptions_Update(w http.ResponseWriter, r *http.Request) {
+	tx := rutil.DBConn(r).MustBegin()
 	defer util.CommitOrRollback(tx, true, "")
 
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
-		subscriptionsRedirectNotFound(w, r)
+		subscriptions_RedirectNotFound(w, r)
 		return
 	}
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
 	subscription, ok := models.Subscription_MustGetUserIdStatusScheduleVersion(tx, subscriptionId)
 	if !ok {
-		subscriptionsRedirectNotFound(w, r)
+		subscriptions_RedirectNotFound(w, r)
 		return
 	}
 
-	if subscriptionsRedirectIfUserMismatch(w, r, subscription.UserId) {
+	if subscriptions_RedirectIfUserMismatch(w, r, subscription.UserId) {
 		return
 	}
 
-	if subscriptionsBadRequestIfNotLive(w, subscription.Status) {
+	if subscriptions_BadRequestIfNotLive(w, subscription.Status) {
 		return
 	}
 
@@ -270,22 +274,22 @@ func SubscriptionsUpdate(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func SubscriptionsDelete(w http.ResponseWriter, r *http.Request) {
+func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
-		subscriptionsRedirectNotFound(w, r)
+		subscriptions_RedirectNotFound(w, r)
 		return
 	}
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
 	subscription, ok := models.Subscription_MustGetUserIdStatusBlogBestUrl(conn, subscriptionId)
 	if !ok {
-		subscriptionsRedirectNotFound(w, r)
+		subscriptions_RedirectNotFound(w, r)
 		return
 	}
 
-	if subscriptionsRedirectIfUserMismatch(w, r, subscription.UserId) {
+	if subscriptions_RedirectIfUserMismatch(w, r, subscription.UserId) {
 		return
 	}
 
@@ -306,11 +310,11 @@ func SubscriptionsDelete(w http.ResponseWriter, r *http.Request) {
 	if redirect, ok := r.Form["redirect"]; ok && redirect[0] == "add" {
 		http.Redirect(w, r, "/subscriptions/add", http.StatusFound)
 	} else {
-		subscriptionsRedirectNotFound(w, r)
+		subscriptions_RedirectNotFound(w, r)
 	}
 }
 
-func subscriptionsRedirectNotFound(w http.ResponseWriter, r *http.Request) {
+func subscriptions_RedirectNotFound(w http.ResponseWriter, r *http.Request) {
 	path := "/"
 	if rutil.CurrentUser(r) != nil {
 		path = "/subscriptions"
@@ -318,7 +322,7 @@ func subscriptionsRedirectNotFound(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, path, http.StatusFound)
 }
 
-func subscriptionsRedirectIfUserMismatch(
+func subscriptions_RedirectIfUserMismatch(
 	w http.ResponseWriter, r *http.Request, subscriptionUserId *models.UserId,
 ) bool {
 	if subscriptionUserId != nil {
@@ -335,7 +339,7 @@ func subscriptionsRedirectIfUserMismatch(
 	return false
 }
 
-func subscriptionsBadRequestIfNotLive(w http.ResponseWriter, status models.SubscriptionStatus) bool {
+func subscriptions_BadRequestIfNotLive(w http.ResponseWriter, status models.SubscriptionStatus) bool {
 	if status != models.SubscriptionStatusLive {
 		w.WriteHeader(http.StatusBadRequest)
 		return true
@@ -358,7 +362,7 @@ type schedulePreview struct {
 	GroupIdByTimezoneIdJson              template.JS
 }
 
-func subscriptionsMustGetSchedulePreview(
+func subscriptions_MustGetSchedulePreview(
 	tx pgw.Queryable, subscriptionId models.SubscriptionId, subscriptionStatus models.SubscriptionStatus,
 	userId models.UserId, userSettings models.UserSettings,
 ) schedulePreview {
@@ -388,7 +392,7 @@ func subscriptionsMustGetSchedulePreview(
 	if subscriptionStatus != models.SubscriptionStatusLive && util.Schedule_IsEarlyMorning(localTime) {
 		nextScheduleDate = localDate
 	} else {
-		nextScheduleDate = subscriptionsMustGetRealisticScheduleDate(tx, userId, localTime, localDate)
+		nextScheduleDate = subscriptions_MustGetRealisticScheduleDate(tx, userId, localTime, localDate)
 	}
 	log.Info().
 		Str("date", string(nextScheduleDate)).
@@ -409,7 +413,7 @@ func subscriptionsMustGetSchedulePreview(
 	}
 }
 
-func subscriptionsMustGetRealisticScheduleDate(
+func subscriptions_MustGetRealisticScheduleDate(
 	tx pgw.Queryable, userId models.UserId, localTime time.Time, localDate util.Date,
 ) util.Date {
 	nextScheduleDate := jobs.PublishPostsJob_MustGetNextScheduledDate(tx, userId)
@@ -432,10 +436,10 @@ func subscriptionsMustGetRealisticScheduleDate(
 	}
 }
 
-func subscriptionsPauseUnpause(w http.ResponseWriter, r *http.Request, newIsPaused bool, eventName string) {
+func subscriptions_PauseUnpause(w http.ResponseWriter, r *http.Request, newIsPaused bool, eventName string) {
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
-		subscriptionsRedirectNotFound(w, r)
+		subscriptions_RedirectNotFound(w, r)
 		return
 	}
 
@@ -443,15 +447,15 @@ func subscriptionsPauseUnpause(w http.ResponseWriter, r *http.Request, newIsPaus
 	conn := rutil.DBConn(r)
 	subscription, ok := models.Subscription_MustGetUserIdStatusBlogBestUrl(conn, subscriptionId)
 	if !ok {
-		subscriptionsRedirectNotFound(w, r)
+		subscriptions_RedirectNotFound(w, r)
 		return
 	}
 
-	if subscriptionsRedirectIfUserMismatch(w, r, subscription.UserId) {
+	if subscriptions_RedirectIfUserMismatch(w, r, subscription.UserId) {
 		return
 	}
 
-	if subscriptionsBadRequestIfNotLive(w, subscription.Status) {
+	if subscriptions_BadRequestIfNotLive(w, subscription.Status) {
 		return
 	}
 

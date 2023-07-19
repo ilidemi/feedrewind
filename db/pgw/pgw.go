@@ -12,10 +12,13 @@ import (
 )
 
 type Queryable interface {
+	MustBegin() *Tx
+	Begin() (*Tx, error)
 	MustExec(sql string, args ...any) pgconn.CommandTag
 	Exec(sql string, args ...any) (pgconn.CommandTag, error)
 	Query(sql string, args ...any) (pgx.Rows, error)
 	QueryRow(sql string, args ...any) pgx.Row
+	SendBatch(batch *pgx.Batch) pgx.BatchResults
 }
 
 type Pool struct {
@@ -48,6 +51,20 @@ func (pool *Pool) Acquire(ctx context.Context) (*Conn, error) {
 type Conn struct {
 	impl *pgxpool.Conn
 	ctx  context.Context
+}
+
+func (conn *Conn) MustBegin() *Tx {
+	t1 := time.Now()
+	defer addDuration(conn.ctx, t1)()
+
+	tx, err := conn.impl.Begin(conn.ctx)
+	if err != nil {
+		panic(err)
+	}
+	return &Tx{
+		impl: tx,
+		ctx:  conn.ctx,
+	}
 }
 
 func (conn *Conn) Begin() (*Tx, error) {
@@ -96,6 +113,13 @@ func (conn *Conn) QueryRow(sql string, args ...any) pgx.Row {
 	return conn.impl.QueryRow(conn.ctx, sql, args...)
 }
 
+func (conn *Conn) SendBatch(batch *pgx.Batch) pgx.BatchResults {
+	t1 := time.Now()
+	defer addDuration(conn.ctx, t1)()
+
+	return conn.impl.SendBatch(conn.ctx, batch)
+}
+
 func (conn *Conn) Release() {
 	conn.impl.Release()
 }
@@ -103,6 +127,22 @@ func (conn *Conn) Release() {
 type Tx struct {
 	impl pgx.Tx
 	ctx  context.Context
+}
+
+// MustBegin starts a pseudo nested transaction.
+func (tx *Tx) MustBegin() *Tx {
+	t1 := time.Now()
+	defer addDuration(tx.ctx, t1)()
+
+	nested, err := tx.impl.Begin(tx.ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	return &Tx{
+		impl: nested,
+		ctx:  tx.ctx,
+	}
 }
 
 // Begin starts a pseudo nested transaction.
@@ -176,6 +216,13 @@ func (tx *Tx) QueryRow(sql string, arguments ...any) pgx.Row {
 	defer addDuration(tx.ctx, t1)()
 
 	return tx.impl.QueryRow(tx.ctx, sql, arguments...)
+}
+
+func (tx *Tx) SendBatch(batch *pgx.Batch) pgx.BatchResults {
+	t1 := time.Now()
+	defer addDuration(tx.ctx, t1)()
+
+	return tx.impl.SendBatch(tx.ctx, batch)
 }
 
 type dbDurationKeyType struct{}

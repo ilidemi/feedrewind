@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"feedrewind/db/pgw"
+	"feedrewind/models/mutil"
 	"feedrewind/util"
 	"fmt"
 
@@ -14,12 +15,9 @@ type SubscriptionId int64
 type SubscriptionStatus string
 
 const (
-	SubscriptionStatusCrawlInProgress   = "crawl_in_progress"
-	SubscriptionStatusCrawled           = "crawled"
-	SubscriptionStatusConfirmed         = "confirmed"
-	SubscriptionStatusLive              = "live"
-	SubscriptionStatusCrawlFailed       = "crawl_failed"
-	SubscriptionStatusCrawledLooksWrong = "crawled_looks_wrong"
+	SubscriptionStatusWaitingForBlog = "waiting_for_blog"
+	SubscriptionStatusSetup          = "setup"
+	SubscriptionStatusLive           = "live"
 )
 
 func Subscription_MustExists(tx pgw.Queryable, id SubscriptionId) bool {
@@ -359,4 +357,52 @@ func Subscription_MustUpdateScheduleVersion(
 	tx.MustExec(`
 		update subscriptions set schedule_version = $1 where id = $2
 	`, scheduleVersion, subscriptionId)
+}
+
+type SubscriptionCreateResult struct {
+	Id          SubscriptionId
+	BlogBestUrl string
+	BlogStatus  BlogStatus
+}
+
+func Subscription_MustCreateForBlog(
+	tx pgw.Queryable, blog Blog, currentUser *User, productUserId ProductUserId,
+) (SubscriptionCreateResult, bool) {
+	if BlogFailedStatuses[blog.Status] {
+		return SubscriptionCreateResult{}, false //nolint:exhaustruct
+	} else {
+		var userId *UserId
+		var anonProductUserId *ProductUserId
+		if currentUser != nil {
+			userId = &currentUser.Id
+			anonProductUserId = nil
+		} else {
+			userId = nil
+			anonProductUserId = &productUserId
+		}
+
+		return Subscription_MustCreate(
+			tx, userId, anonProductUserId, blog, SubscriptionStatusWaitingForBlog, false, 0,
+		), true
+	}
+}
+
+func Subscription_MustCreate(
+	tx pgw.Queryable, userId *UserId, anonProductUserId *ProductUserId, blog Blog, status SubscriptionStatus,
+	isPaused bool, scheduleVersion int64,
+) SubscriptionCreateResult {
+	id := SubscriptionId(mutil.MustGenerateRandomId(tx, "subscriptions"))
+	tx.MustExec(`
+		insert into subscriptions(
+			id, user_id, anon_product_user_id, blog_id, name, status, is_paused, schedule_version
+		) values (
+			$1, $2, $3, $4, $5, $6, $7, $8
+		)
+	`, id, userId, anonProductUserId, blog.Id, blog.Name, status, isPaused, scheduleVersion)
+
+	return SubscriptionCreateResult{
+		Id:          id,
+		BlogBestUrl: blog.BestUrl,
+		BlogStatus:  blog.Status,
+	}
 }

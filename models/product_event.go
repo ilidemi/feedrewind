@@ -46,24 +46,6 @@ func ProductEvent_MustEmitFromRequest(args ProductEventRequestArgs) {
 	)
 }
 
-func ProductEvent_MustEmitAddPage(
-	tx pgw.Queryable, r *http.Request, productUserId ProductUserId, path string, userIsAnonymous bool,
-) {
-	referer := collapseReferer(r.Referer())
-	ProductEvent_MustEmitFromRequest(ProductEventRequestArgs{
-		Tx:            tx,
-		Request:       r,
-		ProductUserId: productUserId,
-		EventType:     "visit add page",
-		EventProperties: map[string]any{
-			"path":              path,
-			"referer":           referer,
-			"user_is_anonymous": userIsAnonymous,
-		},
-		UserProperties: nil,
-	})
-}
-
 type ProductEventScheduleArgs struct {
 	Tx             pgw.Queryable
 	Request        *http.Request
@@ -87,6 +69,84 @@ func ProductEvent_MustEmitSchedule(args ProductEventScheduleArgs) {
 			"weekly_count":         args.WeeklyCount,
 			"active_days":          args.ActiveDays,
 			"posts_per_active_day": float64(args.WeeklyCount) / float64(args.ActiveDays),
+		},
+		UserProperties: nil,
+	})
+}
+
+type ProductEventVisitAddPageArgs struct {
+	Tx              pgw.Queryable
+	Request         *http.Request
+	ProductUserId   ProductUserId
+	Path            string
+	UserIsAnonymous bool
+	Extra           map[string]any
+}
+
+func ProductEvent_MustEmitVisitAddPage(args ProductEventVisitAddPageArgs) {
+	referer := collapseReferer(args.Request.Referer())
+	eventProperties := map[string]any{
+		"path":              args.Path,
+		"referer":           referer,
+		"user_is_anonymous": args.UserIsAnonymous,
+	}
+	for key, value := range args.Extra {
+		eventProperties[key] = value
+	}
+
+	ProductEvent_MustEmitFromRequest(ProductEventRequestArgs{
+		Tx:              args.Tx,
+		Request:         args.Request,
+		ProductUserId:   args.ProductUserId,
+		EventType:       "visit add page",
+		EventProperties: eventProperties,
+		UserProperties:  nil,
+	})
+}
+
+type ProductEventDiscoverFeedArgs struct {
+	Tx              pgw.Queryable
+	Request         *http.Request
+	ProductUserId   ProductUserId
+	BlogUrl         string
+	Result          TypedBlogUrlResult
+	UserIsAnonymous bool
+}
+
+func ProductEvent_MustEmitDiscoverFeeds(args ProductEventDiscoverFeedArgs) {
+	ProductEvent_MustEmitFromRequest(ProductEventRequestArgs{
+		Tx:            args.Tx,
+		Request:       args.Request,
+		ProductUserId: args.ProductUserId,
+		EventType:     "discover feeds",
+		EventProperties: map[string]any{
+			"blog_url":          args.BlogUrl,
+			"result":            args.Result,
+			"user_is_anonymous": args.UserIsAnonymous,
+		},
+		UserProperties: nil,
+	})
+}
+
+type ProductEventCreateSubscriptionArgs struct {
+	Tx              pgw.Queryable
+	Request         *http.Request
+	ProductUserId   ProductUserId
+	Subscription    SubscriptionCreateResult
+	UserIsAnonymous bool
+}
+
+func ProductEvent_MustEmitCreateSubscription(args ProductEventCreateSubscriptionArgs) {
+	ProductEvent_MustEmitFromRequest(ProductEventRequestArgs{
+		Tx:            args.Tx,
+		Request:       args.Request,
+		ProductUserId: args.ProductUserId,
+		EventType:     "create subscription",
+		EventProperties: map[string]any{
+			"subscription_id":   args.Subscription.Id,
+			"blog_url":          args.Subscription.BlogBestUrl,
+			"is_blog_crawled":   BlogCrawledStatuses[args.Subscription.BlogStatus],
+			"user_is_anonymous": args.UserIsAnonymous,
 		},
 		UserProperties: nil,
 	})

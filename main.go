@@ -62,30 +62,36 @@ func runServer() {
 		r.Use(frmiddleware.CurrentUser)
 		r.Use(frmiddleware.CSRF)
 
-		r.Get("/", routes.LandingIndex)
-		r.Get(util.LoginPath, routes.LoginPage)
+		r.Get("/", routes.Landing_Index)
+
+		r.Get(util.LoginPath, routes.Login_Page)
 		r.Post(util.LoginPath, routes.Login)
 		r.Get("/logout", routes.Logout)
-		r.Get(util.SignUpPath, routes.SignUpPage)
+		r.Get(util.SignUpPath, routes.SignUp_Page)
 		r.Post(util.SignUpPath, routes.SignUp)
+
+		r.Get("/subscriptions/add", routes.Onboarding_Add)
+		r.Get("/subscriptions/{id}/setup", routes.Subscriptions_Setup)
+
+		r.Get("/blogs/{id}/unsupported", routes.Blogs_Unsupported)
 
 		r.Group(func(authorized chi.Router) {
 			authorized.Use(frmiddleware.Authorize)
 
-			authorized.Get("/subscriptions", routes.SubscriptionsIndex)
-			authorized.Get("/subscriptions/{id}", routes.SubscriptionsShow)
-			authorized.Post("/subscriptions/{id}", routes.SubscriptionsUpdate)
-			authorized.Post("/subscriptions/{id}/pause", routes.SubscriptionsPause)
-			authorized.Post("/subscriptions/{id}/unpause", routes.SubscriptionsUnpause)
+			authorized.Get("/subscriptions", routes.Subscriptions_Index)
+			authorized.Get("/subscriptions/{id}", routes.Subscriptions_Show)
+			authorized.Post("/subscriptions/{id}", routes.Subscriptions_Update)
+			authorized.Post("/subscriptions/{id}/pause", routes.Subscriptions_Pause)
+			authorized.Post("/subscriptions/{id}/unpause", routes.Subscriptions_Unpause)
 
-			authorized.Get("/settings", routes.SettingsPage)
-			authorized.Post("/settings/save_timezone", routes.SettingsSaveTimezone)
-			authorized.Post("/settings/save_delivery_channel", routes.SettingsSaveDeliveryChannel)
+			authorized.Get("/settings", routes.UserSettings_Page)
+			authorized.Post("/settings/save_timezone", routes.UserSettings_SaveTimezone)
+			authorized.Post("/settings/save_delivery_channel", routes.UserSettings_SaveDeliveryChannel)
 		})
-		r.Post("/subscriptions/{id:\\d+}/delete", routes.SubscriptionsDelete)
+		r.Post("/subscriptions/{id:\\d+}/delete", routes.Subscriptions_Delete)
 	})
 
-	staticR.Get(util.StaticRouteTemplate, routes.StaticFile)
+	staticR.Get(util.StaticRouteTemplate, routes.Static_File)
 
 	log.Info().Msg("Started")
 	if err := http.ListenAndServe(":3000", staticR); err != nil {

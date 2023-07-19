@@ -7,6 +7,10 @@ import (
 	"net/url"
 )
 
+func BlogUnsupportedPath(blogId models.BlogId) string {
+	return fmt.Sprintf("/blogs/%d/unsupported", blogId)
+}
+
 func SubscriptionSetupPath(subscriptionId models.SubscriptionId) string {
 	return fmt.Sprintf("/subscriptions/%d/setup", subscriptionId)
 }

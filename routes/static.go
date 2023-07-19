@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func StaticFile(w http.ResponseWriter, r *http.Request) {
+func Static_File(w http.ResponseWriter, r *http.Request) {
 	staticFile, err := util.GetStaticFile(r.URL.Path)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)

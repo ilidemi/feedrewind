@@ -1,0 +1,53 @@
+{{if .Feeds}}
+  <div class="grid grid-cols-[minmax(0,_1fr)_min-content] gap-6 w-full">
+    {{range .Feeds}}
+      <div>
+        <div class="flex flex-col">
+          <div class="flex flex-row gap-[0.3125rem] items-center">
+            <button class="link font-semibold text-black feeds-choose"
+                    data-start_feed_id="{{.Id}}"
+            >
+              {{.Title}}
+            </button>
+            <div class="feeds-choose-spinner spinner spinner-light hidden"></div>
+          </div>
+          <span class="text-sm text-gray-500 break-all">
+            {{.Url}}
+          </span>
+          <span id="bad_feed_{{.Id}}"
+                class="text-sm font-semibold text-red-600 hidden"
+          >
+            Couldn't read this feed
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <button class="relative feeds-choose feeds-choose-btn btn-no-disable"
+                data-start_feed_id="{{.Id}}"
+        >
+          <div class="feeds-choose-label">Continue</div>
+          <div class="feeds-choose-spinner absolute-center hidden">
+            <div class="spinner spinner-dark"></div>
+          </div>
+        </button>
+      </div>
+    {{end}}
+  </div>
+{{else}}
+  <div id="feeds_error">
+    {{if .IsNotAUrl}}
+      <a href="https://duckduckgo.com/?q={{.StartUrlEncoded}}"
+         target="_blank"
+         class="link">
+        Search online for a link to "{{.StartUrl}}" →
+      </a>
+    {{else if .AreNoFeeds}}
+      {{.StartUrl}} doesn't appear to have a feed. Try another link?
+    {{else if .CouldNotReach}}
+      Couldn't reach {{.StartUrl}}. Try another link?
+    {{else if .IsBadFeed}}
+      Couldn't read the feed at {{.StartUrl}}. Try another link?
+    {{end}}
+  </div>
+{{end}}
