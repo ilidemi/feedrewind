@@ -94,26 +94,23 @@ func Blog_MustGetLatestByFeedUrl(tx pgw.Queryable, feedUrl string) (Blog, bool) 
 type GuidedCrawlingJobMustScheduleFunc func(tx pgw.Queryable, blogId BlogId, startFeedId StartFeedId)
 
 func Blog_MustCreateOrUpdate(
-	tx pgw.Queryable, startFeedId StartFeedId, startFeed crawler.DiscoveredFetchedFeed,
+	tx pgw.Queryable, startFeed StartFeed,
 	guidedCrawlingJobMustScheduleFunc GuidedCrawlingJobMustScheduleFunc,
 ) Blog {
-	feedUrl := startFeed.FinalUrl
-	blog, ok := Blog_MustGetLatestByFeedUrl(tx, feedUrl)
+	blog, ok := Blog_MustGetLatestByFeedUrl(tx, startFeed.Url)
 	if !ok {
 		log.Info().
-			Str("feed_url", feedUrl).
+			Str("feed_url", startFeed.Url).
 			Msg("Creating a new blog")
 		blog = func() Blog {
 			nestedTx := tx.MustBegin()
 			defer util.CommitOrRollback(nestedTx, true, "")
-			blog, ok := Blog_MustCreateWithCrawling(
-				nestedTx, startFeedId, startFeed, guidedCrawlingJobMustScheduleFunc,
-			)
+			blog, ok := Blog_MustCreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobMustScheduleFunc)
 			if !ok {
 				// Another writer must've created the record at the same time, let's use that
 				panic(fmt.Errorf(
 					"Blog %s with latest version didn't exist, then existed, now doesn't exist",
-					feedUrl,
+					startFeed.Url,
 				))
 			}
 			return blog
@@ -159,13 +156,13 @@ func Blog_MustCreateOrUpdate(
 		panic(err)
 	}
 	newLinks, newLinksOk := crawler.MustExtractNewPostsFromFeed(
-		startFeed.Content, finalUri, blogPostCuris, discardedFeedEntryUrls, missingFromFeedEntryUrls,
+		*startFeed.MaybeParsedFeed, finalUri, blogPostCuris, discardedFeedEntryUrls, missingFromFeedEntryUrls,
 		curiEqCfg, logger, logger,
 	)
 
 	if newLinksOk && len(newLinks) == 0 {
 		log.Info().
-			Str("feed_url", feedUrl).
+			Str("feed_url", startFeed.Url).
 			Msg("Blog doesn't need updating")
 		return blog
 	}
@@ -173,25 +170,23 @@ func Blog_MustCreateOrUpdate(
 	switch blog.UpdateAction {
 	case BlogUpdateActionRecrawl:
 		log.Info().
-			Str("feed_url", feedUrl).
+			Str("feed_url", startFeed.Url).
 			Msg("Blog is marked to recrawl on update")
 		nestedTx := tx.MustBegin()
 		defer util.CommitOrRollback(nestedTx, true, "")
-		if Blog_MustDowngrade(nestedTx, blog.Id, feedUrl) {
-			blog, ok := Blog_MustCreateWithCrawling(
-				nestedTx, startFeedId, startFeed, guidedCrawlingJobMustScheduleFunc,
-			)
+		if Blog_MustDowngrade(nestedTx, blog.Id, startFeed.Url) {
+			blog, ok := Blog_MustCreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobMustScheduleFunc)
 			if !ok {
-				panic(fmt.Errorf("Couldn't create blog %s with latest version", feedUrl))
+				panic(fmt.Errorf("Couldn't create blog %s with latest version", startFeed.Url))
 			}
 			return blog
 		} else {
 			// Another writer deprecated this blog at the same time
-			blog, ok := Blog_MustGetLatestByFeedUrl(nestedTx, feedUrl)
+			blog, ok := Blog_MustGetLatestByFeedUrl(nestedTx, startFeed.Url)
 			if !ok {
 				panic(fmt.Errorf(
 					"Blog %s with latest version was deprecated by another request but the latest version still doesn't exist",
-					feedUrl,
+					startFeed.Url,
 				))
 			}
 			return blog
@@ -199,7 +194,7 @@ func Blog_MustCreateOrUpdate(
 	case BlogUpdateActionUpdateFromFeedOrFail:
 		if newLinksOk {
 			log.Info().
-				Str("feed_url", feedUrl).
+				Str("feed_url", startFeed.Url).
 				Int("new_links_count", len(newLinks)).
 				Msg("Updating blog from feed")
 			row := tx.QueryRow(`
@@ -221,7 +216,7 @@ func Blog_MustCreateOrUpdate(
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.LockNotAvailable {
 				log.Info().
-					Str("feed_url", feedUrl).
+					Str("feed_url", startFeed.Url).
 					Msg("Someone else is updating the blog posts, just waiting till they're done")
 				rows, err := nestedTx.Query(`
 					select blog_id from blog_post_locks
@@ -233,7 +228,7 @@ func Blog_MustCreateOrUpdate(
 				}
 				rows.Close()
 				log.Info().
-					Str("feed_url", feedUrl).
+					Str("feed_url", startFeed.Url).
 					Msg("Done waiting")
 
 				// Assume that the other writer has put the fresh posts in
@@ -242,11 +237,11 @@ func Blog_MustCreateOrUpdate(
 				// a newer list and ends up using the older list. But if both updates came a second
 				// earlier, both would get the older list, and the new post would still get published a
 				// second later, so the UX is the same and there's nothing we could do about it.
-				blog, ok := Blog_MustGetLatestByFeedUrl(nestedTx, feedUrl)
+				blog, ok := Blog_MustGetLatestByFeedUrl(nestedTx, startFeed.Url)
 				if !ok {
 					panic(fmt.Errorf(
 						"Blog %s with latest version was updated by another request but the latest version also doesn't exist",
-						feedUrl,
+						startFeed.Url,
 					))
 				}
 				return blog
@@ -288,7 +283,7 @@ func Blog_MustCreateOrUpdate(
 			return blog
 		} else {
 			log.Warn().
-				Str("feed_url", feedUrl).
+				Str("feed_url", startFeed.Url).
 				Msg("Couldn't update blog from feed, marking as failed")
 			tx.MustExec("update blogs set status = $1 where id = $2", BlogStatusUpdateFromFeedFailed, blog.Id)
 			blog.Status = BlogStatusUpdateFromFeedFailed
@@ -296,14 +291,14 @@ func Blog_MustCreateOrUpdate(
 		}
 	case BlogUpdateActionFail:
 		log.Warn().
-			Str("feed_url", feedUrl).
+			Str("feed_url", startFeed.Url).
 			Msg("Blog is marked to fail on update")
 		tx.MustExec("update blogs set status = $1 where id = $2", BlogStatusUpdateFromFeedFailed, blog.Id)
 		blog.Status = BlogStatusUpdateFromFeedFailed
 		return blog
 	case BlogUpdateActionNoOp:
 		log.Info().
-			Str("feed_url", feedUrl).
+			Str("feed_url", startFeed.Url).
 			Msg("Blog is marked to never update")
 		return blog
 	default:
@@ -312,7 +307,7 @@ func Blog_MustCreateOrUpdate(
 }
 
 func Blog_MustCreateWithCrawling(
-	tx pgw.Queryable, startFeedId StartFeedId, startFeed crawler.DiscoveredFetchedFeed,
+	tx pgw.Queryable, startFeed StartFeed,
 	guidedCrawlingJobMustScheduleFunc GuidedCrawlingJobMustScheduleFunc,
 ) (blog Blog, ok bool) {
 	blogId := BlogId(mutil.MustGenerateRandomId(tx, "blogs"))
@@ -321,7 +316,7 @@ func Blog_MustCreateWithCrawling(
 	_, err := tx.Exec(`
 		insert into blogs (id, name, feed_url, url, status, status_updated_at, version, update_action)
 		values ($1, $2, $3, null, $4, utc_now(), $5, $6)
-	`, blogId, startFeed.Title, startFeed.FinalUrl, status, BlogLatestVersion, updateAction)
+	`, blogId, startFeed.Title, startFeed.Url, status, BlogLatestVersion, updateAction)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
 		pgErr.ConstraintName == "index_blogs_on_feed_url_and_version" {
@@ -332,14 +327,14 @@ func Blog_MustCreateWithCrawling(
 
 	BlogCrawlProgress_MustCreate(tx, blogId)
 	BlogPostLock_MustCreate(tx, blogId)
-	guidedCrawlingJobMustScheduleFunc(tx, blogId, startFeedId)
+	guidedCrawlingJobMustScheduleFunc(tx, blogId, startFeed.Id)
 
 	return Blog{
 		Id:           blogId,
 		Name:         startFeed.Title,
 		Status:       status,
 		UpdateAction: updateAction,
-		BestUrl:      startFeed.FinalUrl,
+		BestUrl:      startFeed.Url,
 	}, true
 }
 

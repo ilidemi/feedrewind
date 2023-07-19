@@ -1,0 +1,29 @@
+{{template "layouts/preview" .}}
+
+{{define "content"}}
+<div class="flex flex-col w-screen h-screen">
+  <div class="px-5 py-3 bg-primary-50 border-b border-primary-700 leading-10">
+    <a href="{{.AddFeedPath}}">
+      <div class="btn inline-flex flex-row flex-nowrap gap-1 align-baseline items-center leading-normal">
+        <svg class="w-3" viewBox="0 0 403 403" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+          <g transform="matrix(1.3333,0,0,-1.3333,-191.94,1534.5)">
+            <g>
+              <clipPath id="_clip1">
+                <path d="M363.62,1150.7C356.525,1150.04 349.497,1147.79 342.868,1143.97L256.007,1093.82L169.145,1043.67C153.12,1034.42 143.947,1018.53 143.947,1000.03C143.947,982.406 152.258,967.168 166.885,957.759C208.484,1019.65 288.765,1068.18 363.625,1068.18L363.625,1029.05C305.178,1029.05 235.245,985.824 201.805,937.531L246.767,911.572C273.381,941.168 322.368,974.835 363.627,973.557L363.627,933.669C335.1,932.703 301.987,910.69 282.495,890.944L342.875,856.083C349.504,852.256 356.532,850.011 363.627,849.351C373.682,848.414 383.874,850.659 393.27,856.083C409.294,865.336 418.468,881.224 418.468,899.727L418.468,1100.33C418.468,1118.83 409.294,1134.72 393.27,1143.97C385.258,1148.6 376.664,1150.91 368.07,1150.91C366.588,1150.91 365.106,1150.84 363.627,1150.7"/>
+              </clipPath>
+              <g clip-path="url(#_clip1)">
+                <g transform="matrix(0.628828,0,0,-0.725695,185.837,1155.65)">
+                  <rect x="-66.597" y="6.54" width="479.952" height="415.887" style="fill:white;"/>
+                </g>
+              </g>
+            </g>
+          </g>
+        </svg>
+        <div>Rewind</div>
+      </div>
+    </a>
+    <span class="ml-1">this blog with FeedRewind</span>
+  </div>
+  <iframe src="{{.Url}}" width="100%" height="100%" class="flex-1 overflow-hidden"></iframe>
+</div>
+{{end}}

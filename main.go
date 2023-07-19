@@ -71,7 +71,13 @@ func runServer() {
 		r.Post(util.SignUpPath, routes.SignUp)
 
 		r.Get("/subscriptions/add", routes.Onboarding_Add)
+		r.Get("/subscriptions/add/{start_url}", routes.Onboarding_Add)
+		r.Post("/subscriptions/add", routes.Onboarding_AddLanding)
+		r.Post("/subscriptions/discover_feeds", routes.Onboarding_DiscoverFeeds)
+		r.Get("/preview/{slug}", routes.Onboarding_Preview)
+
 		r.Get("/subscriptions/{id}/setup", routes.Subscriptions_Setup)
+		r.Post("/subscriptions", routes.Subscriptions_Create)
 
 		r.Get("/blogs/{id}/unsupported", routes.Blogs_Unsupported)
 

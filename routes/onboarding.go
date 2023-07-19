@@ -15,21 +15,51 @@ import (
 	"strings"
 )
 
+type feedsData struct {
+	StartUrl        string
+	StartUrlEncoded string
+	Feeds           []models.StartFeed
+	IsNotAUrl       bool
+	AreNoFeeds      bool
+	CouldNotReach   bool
+	IsBadFeed       bool
+}
+
+func feedsDataFromTypedResult(startUrl string, typedResult models.TypedBlogUrlResult) feedsData {
+	switch typedResult {
+	case models.TypedBlogUrlResultNotAUrl:
+		startUrlEncoded := url.QueryEscape(startUrl)
+		return feedsData{ //nolint:exhaustruct
+			StartUrl:        startUrl,
+			StartUrlEncoded: startUrlEncoded,
+			IsNotAUrl:       true,
+		}
+	case models.TypedBlogUrlResultNoFeeds:
+		return feedsData{ //nolint:exhaustruct
+			StartUrl:   startUrl,
+			AreNoFeeds: true,
+		}
+	case models.TypedBlogUrlResultCouldNotReach:
+		return feedsData{ //nolint:exhaustruct
+			StartUrl:      startUrl,
+			CouldNotReach: true,
+		}
+	case models.TypedBlogUrlResultBadFeed:
+		return feedsData{ //nolint:exhaustruct
+			StartUrl:  startUrl,
+			IsBadFeed: true,
+		}
+	default:
+		panic(fmt.Errorf("unknown typed result: %s", typedResult))
+	}
+}
+
 func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	currentUser := rutil.CurrentUser(r)
 	productUserId := rutil.CurrentProductUserId(r)
 	userIsAnonymous := currentUser == nil
 
-	type feedsData struct {
-		StartUrl        string
-		StartUrlEncoded string
-		Feeds           []crawler.DiscoveredFeed
-		IsNotAUrl       bool
-		AreNoFeeds      bool
-		CouldNotReach   bool
-		IsBadFeed       bool
-	}
 	type onboardingResult struct {
 		Session     *util.Session
 		FeedsData   *feedsData
@@ -37,11 +67,13 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 	}
 	var result onboardingResult
 
-	startUrls, ok := r.Form["start_url"]
-	if ok {
-		typedUrl := startUrls[0]
+	escapedUrl := util.URLParamStr(r, "start_url")
+	typedUrl, err := url.PathUnescape(escapedUrl)
+	if err != nil {
+		typedUrl = escapedUrl
+	}
+	if typedUrl != "" {
 		startUrl := strings.TrimSpace(typedUrl)
-		startUrlEncoded := url.QueryEscape(startUrl)
 		path := "/subscriptions/add?start_url="
 		models.ProductEvent_MustEmitVisitAddPage(models.ProductEventVisitAddPageArgs{
 			Tx:              conn,
@@ -64,11 +96,11 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 			Result:          typedResult,
 			UserIsAnonymous: userIsAnonymous,
 		})
-		var userId *models.UserId
+		var maybeUserId *models.UserId
 		if currentUser != nil {
-			userId = &currentUser.Id
+			maybeUserId = &currentUser.Id
 		}
-		models.TypedBlogUrl_MustCreate(conn, typedUrl, startUrl, path, typedResult, userId)
+		models.TypedBlogUrl_MustCreate(conn, typedUrl, startUrl, path, typedResult, maybeUserId)
 		switch discoverResult := discoverFeedsResult.(type) {
 		case *discoveredSubscription:
 			models.ProductEvent_MustEmitCreateSubscription(models.ProductEventCreateSubscriptionArgs{
@@ -87,45 +119,16 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 			result = onboardingResult{
 				Session: rutil.Session(r),
 				FeedsData: &feedsData{ //nolint:exhaustruct
-					StartUrl:        startUrl,
-					StartUrlEncoded: startUrlEncoded,
-					Feeds:           discoverResult.feeds,
+					StartUrl: startUrl,
+					Feeds:    discoverResult.feeds,
 				},
 				Suggestions: nil,
 			}
 		case *discoverError:
-			var feeds *feedsData
-			switch typedResult {
-			case models.TypedBlogUrlResultNotAUrl:
-				feeds = &feedsData{ //nolint:exhaustruct
-					StartUrl:        startUrl,
-					StartUrlEncoded: startUrlEncoded,
-					IsNotAUrl:       true,
-				}
-			case models.TypedBlogUrlResultNoFeeds:
-				feeds = &feedsData{ //nolint:exhaustruct
-					StartUrl:        startUrl,
-					StartUrlEncoded: startUrlEncoded,
-					AreNoFeeds:      true,
-				}
-			case models.TypedBlogUrlResultCouldNotReach:
-				feeds = &feedsData{ //nolint:exhaustruct
-					StartUrl:        startUrl,
-					StartUrlEncoded: startUrlEncoded,
-					CouldNotReach:   true,
-				}
-			case models.TypedBlogUrlResultBadFeed:
-				feeds = &feedsData{ //nolint:exhaustruct
-					StartUrl:        startUrl,
-					StartUrlEncoded: startUrlEncoded,
-					IsBadFeed:       true,
-				}
-			default:
-				panic(fmt.Errorf("unknown typed result: %s", typedResult))
-			}
+			feeds := feedsDataFromTypedResult(startUrl, typedResult)
 			result = onboardingResult{
 				Session:     rutil.Session(r),
-				FeedsData:   feeds,
+				FeedsData:   &feeds,
 				Suggestions: nil,
 			}
 		default:
@@ -155,6 +158,159 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 	templates.MustWrite(w, "onboarding/add", result)
 }
 
+func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
+	currentUser := rutil.CurrentUser(r)
+	productUserId := rutil.CurrentProductUserId(r)
+	userIsAnonymous := currentUser == nil
+
+	type onboardingResult struct {
+		Session     *util.Session
+		FeedsData   *feedsData
+		Suggestions *rutil.Suggestions
+	}
+	var result onboardingResult
+
+	typedUrl := util.EnsureParamStr(r, "start_url")
+	startUrl := strings.TrimSpace(typedUrl)
+	discoverFeedsResult, typedResult := onboarding_MustDiscoverFeeds(
+		conn, startUrl, currentUser, productUserId,
+	)
+	models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
+		Tx:              conn,
+		Request:         r,
+		ProductUserId:   productUserId,
+		BlogUrl:         startUrl,
+		Result:          typedResult,
+		UserIsAnonymous: userIsAnonymous,
+	})
+	var maybeUserId *models.UserId
+	if currentUser != nil {
+		maybeUserId = &currentUser.Id
+	}
+	models.TypedBlogUrl_MustCreate(conn, typedUrl, startUrl, "/", typedResult, maybeUserId)
+	switch discoverResult := discoverFeedsResult.(type) {
+	case *discoveredSubscription:
+		models.ProductEvent_MustEmitCreateSubscription(models.ProductEventCreateSubscriptionArgs{
+			Tx:              conn,
+			Request:         r,
+			ProductUserId:   productUserId,
+			Subscription:    discoverResult.subscription,
+			UserIsAnonymous: userIsAnonymous,
+		})
+		redirectPath := rutil.SubscriptionSetupPath(discoverResult.subscription.Id)
+		http.Redirect(w, r, redirectPath, http.StatusFound)
+		return
+	case *discoveredUnsupportedBlog:
+		redirectPath := rutil.BlogUnsupportedPath(discoverResult.blog.Id)
+		http.Redirect(w, r, redirectPath, http.StatusFound)
+		return
+	case *discoveredFeeds:
+		result = onboardingResult{
+			Session: rutil.Session(r),
+			FeedsData: &feedsData{ //nolint:exhaustruct
+				StartUrl: startUrl,
+				Feeds:    discoverResult.feeds,
+			},
+			Suggestions: nil,
+		}
+	case *discoverError:
+		feeds := feedsDataFromTypedResult(startUrl, typedResult)
+		result = onboardingResult{
+			Session:     rutil.Session(r),
+			FeedsData:   &feeds,
+			Suggestions: nil,
+		}
+	default:
+		panic("Unknown discover feeds result type")
+	}
+
+	templates.MustWrite(w, "onboarding/add", result)
+}
+
+func Onboarding_DiscoverFeeds(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
+	currentUser := rutil.CurrentUser(r)
+	productUserId := rutil.CurrentProductUserId(r)
+	userIsAnonymous := currentUser == nil
+
+	var result feedsData
+
+	typedUrl := util.EnsureParamStr(r, "start_url")
+	startUrl := strings.TrimSpace(typedUrl)
+	discoverFeedsResult, typedResult := onboarding_MustDiscoverFeeds(
+		conn, startUrl, currentUser, productUserId,
+	)
+	models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
+		Tx:              conn,
+		Request:         r,
+		ProductUserId:   productUserId,
+		BlogUrl:         startUrl,
+		Result:          typedResult,
+		UserIsAnonymous: userIsAnonymous,
+	})
+	var maybeUserId *models.UserId
+	if currentUser != nil {
+		maybeUserId = &currentUser.Id
+	}
+	models.TypedBlogUrl_MustCreate(conn, typedUrl, startUrl, "/subscriptions/add", typedResult, maybeUserId)
+	switch discoverResult := discoverFeedsResult.(type) {
+	case *discoveredSubscription:
+		models.ProductEvent_MustEmitCreateSubscription(models.ProductEventCreateSubscriptionArgs{
+			Tx:              conn,
+			Request:         r,
+			ProductUserId:   productUserId,
+			Subscription:    discoverResult.subscription,
+			UserIsAnonymous: userIsAnonymous,
+		})
+		_, err := w.Write([]byte(rutil.SubscriptionSetupPath(discoverResult.subscription.Id)))
+		if err != nil {
+			panic(err)
+		}
+		return
+	case *discoveredUnsupportedBlog:
+		_, err := w.Write([]byte(rutil.BlogUnsupportedPath(discoverResult.blog.Id)))
+		if err != nil {
+			panic(err)
+		}
+		return
+	case *discoveredFeeds:
+		result = feedsData{ //nolint:exhaustruct
+			StartUrl: startUrl,
+			Feeds:    discoverResult.feeds,
+		}
+	case *discoverError:
+		result = feedsDataFromTypedResult(startUrl, typedResult)
+	default:
+		panic("Unknown discover feeds result type")
+	}
+
+	templates.MustWrite(w, "onboarding/partial_feeds", result)
+}
+
+func Onboarding_Preview(w http.ResponseWriter, r *http.Request) {
+	slug := util.URLParamStr(r, "slug")
+	link, ok := rutil.ScreenshotLinksBySlug[slug]
+	if !ok {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
+	type previewResult struct {
+		Session     *util.Session
+		Title       string
+		Url         string
+		AddFeedPath string
+	}
+	result := previewResult{
+		Session:     rutil.Session(r),
+		Title:       link.TitleStr,
+		Url:         link.Url,
+		AddFeedPath: rutil.SubscriptionAddFeedPath(link.FeedUrl),
+	}
+	templates.MustWrite(w, "onboarding/preview", result)
+}
+
 type discoveredSubscription struct {
 	subscription models.SubscriptionCreateResult
 }
@@ -164,7 +320,7 @@ type discoveredUnsupportedBlog struct {
 }
 
 type discoveredFeeds struct {
-	feeds []crawler.DiscoveredFeed
+	feeds []models.StartFeed
 }
 
 type discoverError struct{}
@@ -203,10 +359,8 @@ func onboarding_MustDiscoverFeeds(
 	switch r := discoverFeedsResult.(type) {
 	case *crawler.DiscoveredSingleFeed:
 		startPageId := models.StartPage_MustCreate(tx, r.StartPage)
-		startFeedId := models.StartFeed_MustCreateFetched(tx, startPageId, r.Feed)
-		updatedBlog := models.Blog_MustCreateOrUpdate(
-			tx, startFeedId, r.Feed, jobs.GuidedCrawlingJob_MustPerformNow,
-		)
+		startFeed := models.StartFeed_MustCreateFetched(tx, startPageId, r.Feed)
+		updatedBlog := models.Blog_MustCreateOrUpdate(tx, startFeed, jobs.GuidedCrawlingJob_MustPerformNow)
 		subscription, ok := models.Subscription_MustCreateForBlog(tx, updatedBlog, currentUser, productUserId)
 		if ok {
 			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultFeed
@@ -215,10 +369,12 @@ func onboarding_MustDiscoverFeeds(
 		}
 	case *crawler.DiscoveredMultipleFeeds:
 		startPageId := models.StartPage_MustCreate(tx, r.StartPage)
+		var startFeeds []models.StartFeed
 		for _, discoveredFeed := range r.Feeds {
-			models.StartFeed_MustCreate(tx, startPageId, discoveredFeed)
+			startFeed := models.StartFeed_MustCreate(tx, startPageId, discoveredFeed)
+			startFeeds = append(startFeeds, startFeed)
 		}
-		return &discoveredFeeds{feeds: r.Feeds}, models.TypedBlogUrlResultPageWithMultipleFeeds
+		return &discoveredFeeds{feeds: startFeeds}, models.TypedBlogUrlResultPageWithMultipleFeeds
 	case *crawler.DiscoverFeedsErrorNotAUrl:
 		return &discoverError{}, models.TypedBlogUrlResultNotAUrl
 	case *crawler.DiscoverFeedsErrorCouldNotReach:

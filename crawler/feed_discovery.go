@@ -20,10 +20,11 @@ type DiscoveredStartPage struct {
 }
 
 type DiscoveredFetchedFeed struct {
-	Title    string
-	Url      string
-	FinalUrl string
-	Content  string
+	Title      string
+	Url        string
+	FinalUrl   string
+	Content    string
+	ParsedFeed ParsedFeed
 }
 
 type DiscoveredMultipleFeeds struct {
@@ -110,7 +111,7 @@ func MustDiscoverFeedsAtUrl(
 
 		startResult = mustCrawlFeedWithTimeout(startLink, enforceTimeout, crawlCtx, httpClient, logger)
 
-		if startResult.content == "" {
+		if startResult.Content == "" {
 			logger.Info("Page without content: %+v", startResult)
 			result = &DiscoverFeedsErrorNoFeeds{}
 			return
@@ -122,35 +123,36 @@ func MustDiscoverFeedsAtUrl(
 		return result
 	}
 
-	if isFeed(startResult.content, logger) {
-		parsedFeed, err := ParseFeed(startResult.content, startLink.Uri, logger)
+	if isFeed(startResult.Content, logger) {
+		parsedFeed, err := ParseFeed(startResult.Content, startLink.Uri, logger)
 		if err != nil {
 			logger.Info("Parse feed error: %v", err)
 			return &DiscoverFeedsErrorBadFeed{}
 		}
 
 		feed := DiscoveredFetchedFeed{
-			Title:    parsedFeed.Title,
-			Url:      startLink.Url,
-			FinalUrl: startResult.fetchUri.String(),
-			Content:  startResult.content,
+			Title:      parsedFeed.Title,
+			Url:        startLink.Url,
+			FinalUrl:   startResult.FetchUri.String(),
+			Content:    startResult.Content,
+			ParsedFeed: parsedFeed,
 		}
 		return &DiscoveredSingleFeed{
 			StartPage: DiscoveredStartPage{}, //nolint:exhaustruct
 			Feed:      feed,
 		}
-	} else if startResult.document == nil {
+	} else if startResult.Document == nil {
 		logger.Info("Page without document")
 		return &DiscoverFeedsErrorNoFeeds{}
 	} else {
 		startPage := DiscoveredStartPage{
 			Url:      startLink.Url,
-			FinalUrl: startResult.fetchUri.String(),
-			Content:  startResult.content,
+			FinalUrl: startResult.FetchUri.String(),
+			Content:  startResult.Content,
 		}
 
 		linkNodes := htmlquery.Find(
-			startResult.document,
+			startResult.Document,
 			"//*[self::a or self::area or self::link][@rel='alternate'][@type='application/rss+xml' or @type='application/atom+xml']",
 		)
 		var feeds []DiscoveredFeed
@@ -218,13 +220,14 @@ func MustDiscoverFeedsAtUrl(
 			seenUrls[lowercaseUrl] = true
 		}
 
-		for _, feed := range dedupFeeds {
+		for i := range dedupFeeds {
+			feed := &dedupFeeds[i]
 			lowercaseTitle := strings.ToLower(feed.Title)
 			if feed.Title == "" || lowercaseTitle == "rss" || lowercaseTitle == "atom" {
-				feed.Title = findTitle(startResult.document)
+				feed.Title = findTitle(startResult.Document)
 			}
 			if feed.Title == "" {
-				feed.Title = startResult.fetchUri.Host
+				feed.Title = startResult.FetchUri.Host
 			}
 		}
 
@@ -236,15 +239,16 @@ func MustDiscoverFeedsAtUrl(
 			)
 			switch r := singleFeedResult.(type) {
 			case *FetchedPage:
-				parsedFeed, err := ParseFeed(r.Page.content, r.Page.fetchUri, logger)
+				parsedFeed, err := ParseFeed(r.Page.Content, r.Page.FetchUri, logger)
 				if err != nil {
 					return &DiscoverFeedsErrorBadFeed{}
 				}
 				fetchedFeed := DiscoveredFetchedFeed{
-					Title:    parsedFeed.Title,
-					Url:      dedupFeeds[0].Url,
-					FinalUrl: r.Page.fetchUri.String(),
-					Content:  r.Page.content,
+					Title:      parsedFeed.Title,
+					Url:        dedupFeeds[0].Url,
+					FinalUrl:   r.Page.FetchUri.String(),
+					Content:    r.Page.Content,
+					ParsedFeed: parsedFeed,
 				}
 				return &DiscoveredSingleFeed{
 					StartPage: startPage,
@@ -305,13 +309,13 @@ func FetchFeedAtUrl(
 		crawlResult := mustCrawlFeedWithTimeout(feedLink, enforceTimeout, crawlCtx, httpClient, logger)
 
 		// TODO: DiscoverFeedsErrorBadFeed if not a page
-		if crawlResult.content == "" {
+		if crawlResult.Content == "" {
 			logger.Info("Unexpected crawl result")
 			result = &FetchFeedErrorBadFeed{}
 			return
 		}
 
-		if !isFeed(crawlResult.content, logger) {
+		if !isFeed(crawlResult.Content, logger) {
 			logger.Info("Page is not a feed")
 			result = &FetchFeedErrorBadFeed{}
 			return

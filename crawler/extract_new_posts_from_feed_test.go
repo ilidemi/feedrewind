@@ -286,8 +286,10 @@ func TestExtractNewPostsFromFeed(t *testing.T) {
 			assert.True(t, ok, tc.description)
 			existingPostCuris = append(existingPostCuris, link.Curi)
 		}
+		parsedFeed, err := ParseFeed(tc.feed, feedUri, logger)
+		assert.NoError(t, err, tc.description)
 		newLinks, ok := MustExtractNewPostsFromFeed(
-			tc.feed, feedUri, existingPostCuris, tc.discardedFeedEntryUrls, tc.missingFromFeedEntryUrls,
+			parsedFeed, feedUri, existingPostCuris, tc.discardedFeedEntryUrls, tc.missingFromFeedEntryUrls,
 			curiEqCfg, logger, logger,
 		)
 		assert.Equal(t, tc.expectedOk, ok, tc.description)

@@ -31,6 +31,7 @@ Date parsing is forgiving in Ruby, strict in Go.
 
 ## Tests
 Landing loads and has suggestions and screenshot
+Landing screenshot links work and create subscription
 
 Static file works
 
@@ -95,9 +96,34 @@ User settings save delivery channel job is running
 User settings save delivery channel job is running for 3+ seconds
 
 Onboarding add loads and displays expandable suggestions
-Onboarding add with start_url redirects to the new subscription
-Onboarding add with start_url redirects to the unsupported blog
+Onboarding add with start_url redirects to the new subscription https://danluu.com
+Onboarding add with start_url redirects to the unsupported blog https://ldirer.com/feed.xml
+Onboarding add with start_url shows multiple feeds https://ilidemi.github.io/dummy-blogs/multiple-feeds/multiple/
 Onboarding add with start_url that is not a url
 Onboarding add with start_url that doesn't have feeds
 Onboarding add with start_url that is unreachable
-Onboarding add with start_url that is a bad feed
+Onboarding add with start_url that is a bad feed https://ilidemi.github.io/dummy-blogs/multiple-feeds/bad/bad_rss.xml
+Onboarding typed url redirects to the new subscription https://danluu.com
+Onboarding typed url redirects to the unsupported blog https://ldirer.com/feed.xml
+Onboarding typed url shows multiple feeds https://ilidemi.github.io/dummy-blogs/multiple-feeds/multiple/
+Onboarding typed url that is not a url
+Onboarding typed url that doesn't have feeds
+Onboarding typed url that is unreachable
+Onboarding typed url that is timing out https://httpstat.us/200?sleep=20000
+Onboarding typed url leads to a feed that is timing out https://ilidemi.github.io/dummy-blogs/1ftimeout/
+Onboarding typed url that is a bad feed https://ilidemi.github.io/dummy-blogs/multiple-feeds/bad/bad_rss.xml
+Landing typed url redirects to the new subscription https://danluu.com
+Landing typed url redirects to the unsupported blog https://ldirer.com/feed.xml
+Landing typed url shows multiple feeds https://ilidemi.github.io/dummy-blogs/multiple-feeds/multiple/
+Landing typed url that is not a url
+Landing typed url that doesn't have feeds
+Landing typed url that is unreachable
+Landing typed url that is a bad feed https://ilidemi.github.io/dummy-blogs/multiple-feeds/bad/bad_rss.xml
+Onboarding picking a feed out of multiple creates a subscription
+Onboarding picking a feed out ot multiple redirects to the unsupported blog
+Onboarding picking a feed out of multiple that is unreachable https://ilidemi.github.io/dummy-blogs/multiple-feeds/bad/
+Onboarding picking a feed out of multiple that is a bad feed https://ilidemi.github.io/dummy-blogs/multiple-feeds/bad/
+Onboarding multiple feeds with different tags https://ilidemi.github.io/dummy-blogs/multiple-feeds/tags/
+Onboarding multiple feeds dedup https://ilidemi.github.io/dummy-blogs/multiple-feeds/dedup/
+Onboarding multiple feeds renamed to page title https://ilidemi.github.io/dummy-blogs/multiple-feeds/rename-title/
+Onboarding multiple feeds renamed to page host https://ilidemi.github.io/dummy-blogs/multiple-feeds/rename-host

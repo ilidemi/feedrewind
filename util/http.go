@@ -77,6 +77,10 @@ func URLParamInt64(r *http.Request, name string) (int64, bool) {
 	return result, true
 }
 
+func URLParamStr(r *http.Request, name string) string {
+	return chi.URLParam(r, name)
+}
+
 func FindCookie(r *http.Request, name string) (string, bool) {
 	for _, cookie := range r.Cookies() {
 		if cookie.Name != name {

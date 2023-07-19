@@ -2,6 +2,7 @@ package routes
 
 import (
 	"bytes"
+	"feedrewind/crawler"
 	"feedrewind/db/pgw"
 	"feedrewind/jobs"
 	"feedrewind/log"
@@ -87,6 +88,106 @@ func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	templates.MustWrite(w, "subscriptions/index", result)
+}
+
+func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
+	currentUser := rutil.CurrentUser(r)
+	productUserId := rutil.CurrentProductUserId(r)
+	userIsAnonymous := currentUser == nil
+	startFeedId := models.StartFeedId(util.EnsureParamInt64(r, "start_feed_id"))
+	startFeed := models.StartFeed_MustGetUnfetched(conn, startFeedId)
+
+	// Feeds that were fetched were handled in onboarding, this one needs to be fetched
+	crawlCtx := &crawler.CrawlContext{}
+	httpClient := &crawler.HttpClient{EnableThrottling: false}
+	logger := &crawler.ZeroLogger{}
+	fetchFeedResult := crawler.FetchFeedAtUrl(startFeed.Url, true, crawlCtx, httpClient, logger)
+	switch fetchResult := fetchFeedResult.(type) {
+	case *crawler.FetchedPage:
+		finalUrl := fetchResult.Page.FetchUri.String()
+		parsedFeed, err := crawler.ParseFeed(fetchResult.Page.Content, fetchResult.Page.FetchUri, logger)
+		if err != nil {
+			models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
+				Tx:              conn,
+				Request:         r,
+				ProductUserId:   productUserId,
+				BlogUrl:         startFeed.Url,
+				Result:          models.TypedBlogUrlResultBadFeed,
+				UserIsAnonymous: userIsAnonymous,
+			})
+			w.WriteHeader(http.StatusUnsupportedMediaType)
+			return
+		}
+		startFeed = models.StartFeed_MustUpdateFetched(
+			conn, startFeed, finalUrl, fetchResult.Page.Content, &parsedFeed,
+		)
+
+		updatedBlog := models.Blog_MustCreateOrUpdate(conn, startFeed, jobs.GuidedCrawlingJob_MustPerformNow)
+		subscriptionCreateResult, ok := models.Subscription_MustCreateForBlog(
+			conn, updatedBlog, currentUser, productUserId,
+		)
+		if !ok {
+			models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
+				Tx:              conn,
+				Request:         r,
+				ProductUserId:   productUserId,
+				BlogUrl:         startFeed.Url,
+				Result:          models.TypedBlogUrlResultKnownUnsupported,
+				UserIsAnonymous: userIsAnonymous,
+			})
+			_, err := w.Write([]byte(rutil.BlogUnsupportedPath(updatedBlog.Id)))
+			if err != nil {
+				panic(err)
+			}
+			return
+		}
+
+		models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
+			Tx:              conn,
+			Request:         r,
+			ProductUserId:   productUserId,
+			BlogUrl:         startFeed.Url,
+			Result:          models.TypedBlogUrlResultFeed,
+			UserIsAnonymous: userIsAnonymous,
+		})
+		models.ProductEvent_MustEmitCreateSubscription(models.ProductEventCreateSubscriptionArgs{
+			Tx:              conn,
+			Request:         r,
+			ProductUserId:   productUserId,
+			Subscription:    subscriptionCreateResult,
+			UserIsAnonymous: userIsAnonymous,
+		})
+		_, err = w.Write([]byte(rutil.SubscriptionSetupPath(subscriptionCreateResult.Id)))
+		if err != nil {
+			panic(err)
+		}
+		return
+	case *crawler.FetchFeedErrorBadFeed:
+		models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
+			Tx:              conn,
+			Request:         r,
+			ProductUserId:   productUserId,
+			BlogUrl:         startFeed.Url,
+			Result:          models.TypedBlogUrlResultBadFeed,
+			UserIsAnonymous: userIsAnonymous,
+		})
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+		return
+	case *crawler.FetchFeedErrorCouldNotReach:
+		models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
+			Tx:              conn,
+			Request:         r,
+			ProductUserId:   productUserId,
+			BlogUrl:         startFeed.Url,
+			Result:          models.TypedBlogUrlResultCouldNotReach,
+			UserIsAnonymous: userIsAnonymous,
+		})
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+		return
+	default:
+		panic("Unexpected fetch feed result type")
+	}
 }
 
 type subscriptionsScheduleResult struct {

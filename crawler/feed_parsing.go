@@ -20,7 +20,6 @@ func isFeed(body string, logger Logger) bool {
 	reader := strings.NewReader(body)
 	xml, err := xmlquery.Parse(reader)
 	if err != nil {
-		logger.Info("Tried to parse as XML but looks malformed")
 		return false
 	}
 
@@ -120,8 +119,11 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (ParsedFeed,
 				text := pubDateNodes[0].InnerText()
 				pubDate, err = time.Parse(time.RFC1123, text)
 				if err != nil {
-					logger.Info("Invalid pubDate: %s", text)
-					pubDate = time.Time{} //nolint:exhaustruct
+					pubDate, err = time.Parse(time.RFC1123Z, text)
+					if err != nil {
+						logger.Info("Invalid pubDate: %s", text)
+						pubDate = time.Time{} //nolint:exhaustruct
+					}
 				}
 			}
 

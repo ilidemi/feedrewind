@@ -6,7 +6,7 @@ import (
 )
 
 func MustExtractNewPostsFromFeed(
-	feedContent string, feedUri *neturl.URL, existingPostCuris []CanonicalUri,
+	parsedFeed ParsedFeed, feedUri *neturl.URL, existingPostCuris []CanonicalUri,
 	discardedFeedEntryUrls map[string]bool, missingFromFeedEntryUrls map[string]bool,
 	curiEqCfg CanonicalEqualityConfig, logger Logger,
 	parseFeedLogger Logger,
@@ -40,10 +40,6 @@ func MustExtractNewPostsFromFeed(
 		discardedFeedEntryCurisSet.add(canonicalLink.Curi)
 	}
 
-	parsedFeed, err := ParseFeed(feedContent, feedUri, parseFeedLogger)
-	if err != nil {
-		panic(err)
-	}
 	feedEntryLinks := parsedFeed.EntryLinks.Except(discardedFeedEntryCurisSet)
 	feedEntryLinksSlice := feedEntryLinks.ToSlice()
 	newPostsCount := 0

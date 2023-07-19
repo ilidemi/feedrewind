@@ -92,6 +92,8 @@ var ScreenshotLinks = []ScreenshotLink{
 	},
 }
 
+var ScreenshotLinksBySlug = make(map[string]*ScreenshotLink)
+
 func init() {
 	for i := range ScreenshotLinks {
 		link := &ScreenshotLinks[i]
@@ -99,6 +101,8 @@ func init() {
 		titleMobileStr := strings.ReplaceAll(link.TitleStr, "<br>", " ")
 		link.TitleMobile = template.HTML(titleMobileStr)
 		link.PreviewPath = fmt.Sprintf("/preview/%s", link.Slug)
+
+		ScreenshotLinksBySlug[link.Slug] = link
 	}
 	ScreenshotLinks[0].IsEarliest = true
 	ScreenshotLinks[len(ScreenshotLinks)-1].IsNewest = true
@@ -237,7 +241,7 @@ func init() {
 	for _, category := range SuggestedCategories {
 		for i := range category.Blogs {
 			blog := &category.Blogs[i]
-			blog.AddFeedPath = addFeedPath(blog.FeedUrl)
+			blog.AddFeedPath = SubscriptionAddFeedPath(blog.FeedUrl)
 		}
 	}
 }
@@ -302,7 +306,7 @@ var MiscellaneousBlogs = []MiscellaneousBlog{
 func init() {
 	for i := range MiscellaneousBlogs {
 		blog := &MiscellaneousBlogs[i]
-		blog.AddFeedPath = addFeedPath(blog.FeedUrl)
+		blog.AddFeedPath = SubscriptionAddFeedPath(blog.FeedUrl)
 		blog.NonBreakingTag = strings.ReplaceAll(blog.Tag, " ", "\u00A0")
 	}
 }

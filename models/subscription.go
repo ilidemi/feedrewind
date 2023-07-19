@@ -367,7 +367,7 @@ type SubscriptionCreateResult struct {
 
 func Subscription_MustCreateForBlog(
 	tx pgw.Queryable, blog Blog, currentUser *User, productUserId ProductUserId,
-) (SubscriptionCreateResult, bool) {
+) (result SubscriptionCreateResult, ok bool) {
 	if BlogFailedStatuses[blog.Status] {
 		return SubscriptionCreateResult{}, false //nolint:exhaustruct
 	} else {

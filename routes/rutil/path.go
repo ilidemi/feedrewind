@@ -19,6 +19,10 @@ func SubscriptionDeletePath(subscriptionId models.SubscriptionId) string {
 	return fmt.Sprintf("/subscriptions/%d/delete", subscriptionId)
 }
 
+func SubscriptionAddFeedPath(feedUrl string) string {
+	return fmt.Sprintf("/subscriptions/add/%s", url.PathEscape(feedUrl))
+}
+
 func SubscriptionShowPath(subscriptionId models.SubscriptionId) string {
 	return fmt.Sprintf("/subscriptions/%d", subscriptionId)
 }
@@ -46,9 +50,4 @@ func SubscriptionFeedUrl(r *http.Request, subscriptionId models.SubscriptionId) 
 	}
 
 	return fmt.Sprintf("%s://%s%s/subscriptions/%d/feed", proto, r.Host, port, subscriptionId)
-}
-
-func addFeedPath(feedUrl string) string {
-	escapedUrl := url.QueryEscape(feedUrl)
-	return fmt.Sprintf("/subscriptions/add/%s", escapedUrl)
 }

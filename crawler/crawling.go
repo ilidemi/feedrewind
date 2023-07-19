@@ -15,9 +15,9 @@ import (
 type CrawlContext struct{}
 
 type page struct {
-	content  string
-	document *html.Node
-	fetchUri *url.URL
+	Content  string
+	Document *html.Node
+	FetchUri *url.URL
 }
 
 // TODO ProgressLogger
@@ -77,8 +77,8 @@ func crawlRequest(
 	// TODO crawl_ctx and log
 
 	return page{
-		content:  content,
-		document: document,
-		fetchUri: initialLink.Uri,
+		Content:  content,
+		Document: document,
+		FetchUri: initialLink.Uri,
 	}, nil
 }
