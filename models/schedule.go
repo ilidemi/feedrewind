@@ -7,14 +7,14 @@ import (
 	"fmt"
 )
 
-func Schedule_MustGetCounts(tx pgw.Queryable, subscriptionId SubscriptionId) map[util.DayOfWeek]int {
+func Schedule_GetCounts(tx pgw.Queryable, subscriptionId SubscriptionId) (map[util.DayOfWeek]int, error) {
 	rows, err := tx.Query(`
 		select day_of_week, count
 		from schedules
 		where subscription_id = $1
 	`, subscriptionId)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	countByDay := make(map[util.DayOfWeek]int)
@@ -23,21 +23,21 @@ func Schedule_MustGetCounts(tx pgw.Queryable, subscriptionId SubscriptionId) map
 		var count int
 		err := rows.Scan(&day, &count)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		countByDay[day] = count
 	}
 	if err := rows.Err(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return countByDay
+	return countByDay, nil
 }
 
-func Schedule_MustUpdate(
+func Schedule_Update(
 	tx pgw.Queryable, subscriptionId SubscriptionId, countsByDay map[util.DayOfWeek]int,
-) {
+) error {
 	var queryBuf bytes.Buffer
 	queryBuf.WriteString(`
 		update schedules as s set count = n.count
@@ -58,5 +58,6 @@ func Schedule_MustUpdate(
 	`)
 	query := queryBuf.String()
 
-	tx.MustExec(query, subscriptionId)
+	_, err := tx.Exec(query, subscriptionId)
+	return err
 }

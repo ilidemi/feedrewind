@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"feedrewind/models"
 	"net/http"
 )
@@ -11,7 +12,12 @@ func CurrentUser(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		conn := GetDBConn(r)
 		authToken := GetSessionAuthToken(r)
-		currentUser := models.User_MustFindByAuthToken(conn, authToken)
+		currentUser, err := models.User_FindByAuthToken(conn, authToken)
+		if errors.Is(err, models.ErrUserNotFound) {
+			currentUser = nil
+		} else if err != nil {
+			panic(err)
+		}
 
 		var productUserId models.ProductUserId
 		if currentUser != nil {
@@ -19,13 +25,21 @@ func CurrentUser(next http.Handler) http.Handler {
 		} else if sessionProductUserId := GetSessionProductUserId(r); sessionProductUserId != "" {
 			productUserId = sessionProductUserId
 		} else {
-			productUserId = models.ProductUserId_MustNew()
+			var err error
+			productUserId, err = models.ProductUserId_New()
+			if err != nil {
+				panic(err)
+			}
 			MustSetSessionProductUserId(w, r, productUserId)
 		}
 
 		var currentUserHasBounced bool
 		if currentUser != nil {
-			currentUserHasBounced = models.PostmarkBouncedUser_MustExists(conn, currentUser.Id)
+			var err error
+			currentUserHasBounced, err = models.PostmarkBouncedUser_Exists(conn, currentUser.Id)
+			if err != nil {
+				panic(err)
+			}
 		} else {
 			currentUserHasBounced = false
 		}

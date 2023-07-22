@@ -1,11 +1,10 @@
 package middleware
 
 import (
+	"feedrewind/oops"
 	"feedrewind/util"
 	"fmt"
 	"net/http"
-
-	"github.com/pkg/errors"
 )
 
 func Recoverer(next http.Handler) http.Handler {
@@ -24,7 +23,11 @@ func Recoverer(next http.Handler) http.Handler {
 				}
 
 				w.WriteHeader(status)
-				setError(r, errors.WithStack(err))
+				sterr, ok := err.(*oops.Error)
+				if !ok {
+					sterr = oops.Wrap(err).(*oops.Error)
+				}
+				setError(r, sterr)
 			}
 		}()
 

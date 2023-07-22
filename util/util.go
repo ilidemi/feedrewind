@@ -26,7 +26,7 @@ type Session struct {
 	UserName       string
 }
 
-func CommitOrRollback(tx *pgw.Tx, isSuccess bool, successMsg string) {
+func CommitOrRollbackMsg(tx *pgw.Tx, isSuccess bool, successMsg string) {
 	if rvr := recover(); rvr != nil {
 		if err := tx.Rollback(); err != nil {
 			log.Error().
@@ -46,4 +46,16 @@ func CommitOrRollback(tx *pgw.Tx, isSuccess bool, successMsg string) {
 			panic(err)
 		}
 	}
+}
+
+func CommitOrRollback(tx *pgw.Tx, isSuccess bool) {
+	CommitOrRollbackMsg(tx, isSuccess, "")
+}
+
+func CommitOrRollbackErr(tx *pgw.Tx, err error) {
+	CommitOrRollbackMsg(tx, err != nil, "")
+}
+
+func CommitOrRollbackOnPanic(tx *pgw.Tx) {
+	CommitOrRollbackMsg(tx, true, "")
 }

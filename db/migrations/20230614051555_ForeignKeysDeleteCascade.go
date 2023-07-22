@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"feedrewind/db/pgw"
 	"fmt"
 )
 
@@ -171,7 +170,7 @@ func (m *ForeignKeysDeleteCascade) Version() string {
 	return "20230614051555"
 }
 
-func (m *ForeignKeysDeleteCascade) Up(tx *pgw.Tx) {
+func (m *ForeignKeysDeleteCascade) Up(tx *Tx) {
 	for _, fKey := range m.foreignKeys {
 		tx.MustExec("alter table " + fKey.table + " drop constraint " + fKey.name)
 
@@ -183,7 +182,7 @@ func (m *ForeignKeysDeleteCascade) Up(tx *pgw.Tx) {
 	}
 }
 
-func (m *ForeignKeysDeleteCascade) Down(tx *pgw.Tx) {
+func (m *ForeignKeysDeleteCascade) Down(tx *Tx) {
 	for _, fKey := range m.foreignKeys {
 		tx.MustExec("alter table " + fKey.table + " drop constraint " + fKey.name)
 

@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"time"
@@ -24,7 +25,7 @@ type DiscoveredFetchedFeed struct {
 	Url        string
 	FinalUrl   string
 	Content    string
-	ParsedFeed ParsedFeed
+	ParsedFeed *ParsedFeed
 }
 
 type DiscoveredMultipleFeeds struct {
@@ -69,7 +70,7 @@ func init() {
 const atomUrlReplacement = "$1atom$2"
 const rssUrlReplacement = "$1rss$2"
 
-func MustDiscoverFeedsAtUrl(
+func DiscoverFeedsAtUrl(
 	startUrl string, enforceTimeout bool, crawlCtx *CrawlContext, httpClient *HttpClient, logger Logger,
 ) DiscoverFeedsResult {
 	var fullStartUrl string
@@ -99,29 +100,18 @@ func MustDiscoverFeedsAtUrl(
 	}
 
 	// TODO mock_progress_logger
-	var startResult page
-	var result DiscoverFeedsResult
-	func() {
-		defer func() {
-			if err := recover(); err != nil {
-				logger.Info("Error while getting start_link: %v", err)
-				result = &DiscoverFeedsErrorCouldNotReach{}
-			}
-		}()
-
-		startResult = mustCrawlFeedWithTimeout(startLink, enforceTimeout, crawlCtx, httpClient, logger)
-
-		if startResult.Content == "" {
-			logger.Info("Page without content: %+v", startResult)
-			result = &DiscoverFeedsErrorNoFeeds{}
-			return
-		}
-
-		// TODO: DiscoverFeedsErrorCouldNotReach if not a page
-	}()
-	if result != nil {
-		return result
+	startResult, err := crawlFeedWithTimeout(startLink, enforceTimeout, crawlCtx, httpClient, logger)
+	if err != nil {
+		logger.Info("Error while getting start_link: %v", err)
+		return &DiscoverFeedsErrorCouldNotReach{}
 	}
+
+	if startResult.Content == "" {
+		logger.Info("Page without content: %+v", startResult)
+		return &DiscoverFeedsErrorNoFeeds{}
+	}
+
+	// TODO: DiscoverFeedsErrorCouldNotReach if not a page
 
 	if isFeed(startResult.Content, logger) {
 		parsedFeed, err := ParseFeed(startResult.Content, startLink.Uri, logger)
@@ -271,7 +261,7 @@ func MustDiscoverFeedsAtUrl(
 }
 
 type FetchedPage struct {
-	Page page
+	Page *page
 }
 
 type FetchFeedErrorBadFeed struct{}
@@ -297,42 +287,34 @@ func FetchFeedAtUrl(
 		return &FetchFeedErrorBadFeed{}
 	}
 
-	var result FetchFeedResult
-	func() {
-		defer func() {
-			if err := recover(); err != nil {
-				logger.Info("Error while getting start_link: %v", err)
-				result = &FetchFeedErrorCouldNotReach{}
-			}
-		}()
+	crawlResult, err := crawlFeedWithTimeout(feedLink, enforceTimeout, crawlCtx, httpClient, logger)
+	if err != nil {
+		return &FetchFeedErrorCouldNotReach{}
+	}
 
-		crawlResult := mustCrawlFeedWithTimeout(feedLink, enforceTimeout, crawlCtx, httpClient, logger)
+	// TODO: DiscoverFeedsErrorBadFeed if not a page
+	if crawlResult.Content == "" {
+		logger.Info("Unexpected crawl result")
+		return &FetchFeedErrorBadFeed{}
+	}
 
-		// TODO: DiscoverFeedsErrorBadFeed if not a page
-		if crawlResult.Content == "" {
-			logger.Info("Unexpected crawl result")
-			result = &FetchFeedErrorBadFeed{}
-			return
-		}
+	if !isFeed(crawlResult.Content, logger) {
+		logger.Info("Page is not a feed")
+		return &FetchFeedErrorBadFeed{}
+	}
 
-		if !isFeed(crawlResult.Content, logger) {
-			logger.Info("Page is not a feed")
-			result = &FetchFeedErrorBadFeed{}
-			return
-		}
-
-		result = &FetchedPage{Page: crawlResult}
-	}()
-	return result
+	return &FetchedPage{Page: crawlResult}
 }
 
+var ErrTimeout = errors.New("timeout")
+
 // TODO ProgressLogger
-func mustCrawlFeedWithTimeout(
-	link Link, enforceTimeout bool, crawlCtx *CrawlContext, httpClient *HttpClient, logger Logger,
-) page {
+func crawlFeedWithTimeout(
+	link *Link, enforceTimeout bool, crawlCtx *CrawlContext, httpClient *HttpClient, logger Logger,
+) (*page, error) {
 	if enforceTimeout {
 		type crawlResult struct {
-			Page  page
+			Page  *page
 			Error error
 		}
 		ch := make(chan crawlResult)
@@ -346,18 +328,11 @@ func mustCrawlFeedWithTimeout(
 
 		select {
 		case <-time.After(10 * time.Second):
-			panic("timeout")
+			return nil, ErrTimeout
 		case result := <-ch:
-			if result.Error != nil {
-				panic(result.Error)
-			}
-			return result.Page
+			return result.Page, result.Error
 		}
 	} else {
-		page, err := crawlRequest(link, true, crawlCtx, httpClient, logger)
-		if err != nil {
-			panic(err)
-		}
-		return page
+		return crawlRequest(link, true, crawlCtx, httpClient, logger)
 	}
 }

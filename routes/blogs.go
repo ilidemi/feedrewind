@@ -17,7 +17,10 @@ func Blogs_Unsupported(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	blogId := models.BlogId(blogIdInt)
-	blogName, blogStatus := models.Blog_MustGetNameStatusById(conn, blogId)
+	blogName, blogStatus, err := models.Blog_GetNameStatusById(conn, blogId)
+	if err != nil {
+		panic(err)
+	}
 	if !(blogStatus == models.BlogStatusCrawlFailed || blogStatus == models.BlogStatusCrawledLooksWrong) {
 		w.WriteHeader(http.StatusBadRequest)
 		return

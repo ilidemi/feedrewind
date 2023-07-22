@@ -13,12 +13,14 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type feedsData struct {
 	StartUrl        string
 	StartUrlEncoded string
-	Feeds           []models.StartFeed
+	Feeds           []*models.StartFeed
 	IsNotAUrl       bool
 	AreNoFeeds      bool
 	CouldNotReach   bool
@@ -100,7 +102,10 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 		if currentUser != nil {
 			maybeUserId = &currentUser.Id
 		}
-		models.TypedBlogUrl_MustCreate(conn, typedUrl, startUrl, path, typedResult, maybeUserId)
+		err := models.TypedBlogUrl_Create(conn, typedUrl, startUrl, path, typedResult, maybeUserId)
+		if err != nil {
+			panic(err)
+		}
 		switch discoverResult := discoverFeedsResult.(type) {
 		case *discoveredSubscription:
 			models.ProductEvent_MustEmitCreateSubscription(models.ProductEventCreateSubscriptionArgs{
@@ -188,7 +193,10 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 	if currentUser != nil {
 		maybeUserId = &currentUser.Id
 	}
-	models.TypedBlogUrl_MustCreate(conn, typedUrl, startUrl, "/", typedResult, maybeUserId)
+	err := models.TypedBlogUrl_Create(conn, typedUrl, startUrl, "/", typedResult, maybeUserId)
+	if err != nil {
+		panic(err)
+	}
 	switch discoverResult := discoverFeedsResult.(type) {
 	case *discoveredSubscription:
 		models.ProductEvent_MustEmitCreateSubscription(models.ProductEventCreateSubscriptionArgs{
@@ -253,7 +261,12 @@ func Onboarding_DiscoverFeeds(w http.ResponseWriter, r *http.Request) {
 	if currentUser != nil {
 		maybeUserId = &currentUser.Id
 	}
-	models.TypedBlogUrl_MustCreate(conn, typedUrl, startUrl, "/subscriptions/add", typedResult, maybeUserId)
+	err := models.TypedBlogUrl_Create(
+		conn, typedUrl, startUrl, "/subscriptions/add", typedResult, maybeUserId,
+	)
+	if err != nil {
+		panic(err)
+	}
 	switch discoverResult := discoverFeedsResult.(type) {
 	case *discoveredSubscription:
 		models.ProductEvent_MustEmitCreateSubscription(models.ProductEventCreateSubscriptionArgs{
@@ -312,15 +325,15 @@ func Onboarding_Preview(w http.ResponseWriter, r *http.Request) {
 }
 
 type discoveredSubscription struct {
-	subscription models.SubscriptionCreateResult
+	subscription *models.SubscriptionCreateResult
 }
 
 type discoveredUnsupportedBlog struct {
-	blog models.Blog
+	blog *models.Blog
 }
 
 type discoveredFeeds struct {
-	feeds []models.StartFeed
+	feeds []*models.StartFeed
 }
 
 type discoverError struct{}
@@ -338,15 +351,19 @@ func onboarding_MustDiscoverFeeds(
 	tx pgw.Queryable, startUrl string, currentUser *models.User, productUserId models.ProductUserId,
 ) (discoverResult, models.TypedBlogUrlResult) {
 	if startUrl == hardcodedblogs.OurMachinery {
-		blog, ok := models.Blog_MustGetLatestByFeedUrl(tx, hardcodedblogs.OurMachinery)
-		if !ok {
+		blog, err := models.Blog_GetLatestByFeedUrl(tx, hardcodedblogs.OurMachinery)
+		if errors.Is(err, models.ErrBlogNotFound) {
 			panic("Our Machinery not found")
+		} else if err != nil {
+			panic(err)
 		}
-		subscription, ok := models.Subscription_MustCreateForBlog(tx, blog, currentUser, productUserId)
-		if ok {
-			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultHardcoded
-		} else {
+		subscription, err := models.Subscription_CreateForBlog(tx, blog, currentUser, productUserId)
+		if errors.Is(err, models.ErrBlogFailed) {
 			return &discoveredUnsupportedBlog{blog: blog}, models.TypedBlogUrlResultHardcoded
+		} else if err != nil {
+			panic(err)
+		} else {
+			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultHardcoded
 		}
 	}
 
@@ -355,23 +372,40 @@ func onboarding_MustDiscoverFeeds(
 		EnableThrottling: false,
 	}
 	logger := crawler.ZeroLogger{}
-	discoverFeedsResult := crawler.MustDiscoverFeedsAtUrl(startUrl, true, &crawlCtx, &httpClient, &logger)
+	discoverFeedsResult := crawler.DiscoverFeedsAtUrl(startUrl, true, &crawlCtx, &httpClient, &logger)
 	switch r := discoverFeedsResult.(type) {
 	case *crawler.DiscoveredSingleFeed:
-		startPageId := models.StartPage_MustCreate(tx, r.StartPage)
-		startFeed := models.StartFeed_MustCreateFetched(tx, startPageId, r.Feed)
-		updatedBlog := models.Blog_MustCreateOrUpdate(tx, startFeed, jobs.GuidedCrawlingJob_MustPerformNow)
-		subscription, ok := models.Subscription_MustCreateForBlog(tx, updatedBlog, currentUser, productUserId)
-		if ok {
-			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultFeed
-		} else {
+		startPageId, err := models.StartPage_Create(tx, r.StartPage)
+		if err != nil {
+			panic(err)
+		}
+		startFeed, err := models.StartFeed_CreateFetched(tx, startPageId, r.Feed)
+		if err != nil {
+			panic(err)
+		}
+		updatedBlog, err := models.Blog_CreateOrUpdate(tx, startFeed, jobs.GuidedCrawlingJob_PerformNow)
+		if err != nil {
+			panic(err)
+		}
+		subscription, err := models.Subscription_CreateForBlog(tx, updatedBlog, currentUser, productUserId)
+		if errors.Is(err, models.ErrBlogFailed) {
 			return &discoveredUnsupportedBlog{blog: updatedBlog}, models.TypedBlogUrlResultKnownUnsupported
+		} else if err != nil {
+			panic(err)
+		} else {
+			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultFeed
 		}
 	case *crawler.DiscoveredMultipleFeeds:
-		startPageId := models.StartPage_MustCreate(tx, r.StartPage)
-		var startFeeds []models.StartFeed
+		startPageId, err := models.StartPage_Create(tx, r.StartPage)
+		if err != nil {
+			panic(err)
+		}
+		var startFeeds []*models.StartFeed
 		for _, discoveredFeed := range r.Feeds {
-			startFeed := models.StartFeed_MustCreate(tx, startPageId, discoveredFeed)
+			startFeed, err := models.StartFeed_Create(tx, startPageId, discoveredFeed)
+			if err != nil {
+				panic(err)
+			}
 			startFeeds = append(startFeeds, startFeed)
 		}
 		return &discoveredFeeds{feeds: startFeeds}, models.TypedBlogUrlResultPageWithMultipleFeeds

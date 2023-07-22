@@ -1,9 +1,5 @@
 package migrations
 
-import (
-	"feedrewind/db/pgw"
-)
-
 type TimestampsUtcNow struct {
 	tables []string
 }
@@ -48,7 +44,7 @@ func (m *TimestampsUtcNow) Version() string {
 	return "20230712025648"
 }
 
-func (m *TimestampsUtcNow) Up(tx *pgw.Tx) {
+func (m *TimestampsUtcNow) Up(tx *Tx) {
 	tx.MustExec(`
 create or replace function bump_updated_at_utc()
 returns trigger as $$
@@ -65,6 +61,6 @@ $$ language 'plpgsql'
 	}
 }
 
-func (m *TimestampsUtcNow) Down(tx *pgw.Tx) {
+func (m *TimestampsUtcNow) Down(tx *Tx) {
 	panic("Not implemented")
 }

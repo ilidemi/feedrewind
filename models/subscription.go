@@ -1,11 +1,12 @@
 package models
 
 import (
-	"errors"
 	"feedrewind/db/pgw"
 	"feedrewind/models/mutil"
 	"feedrewind/util"
 	"fmt"
+
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -20,21 +21,22 @@ const (
 	SubscriptionStatusLive           = "live"
 )
 
-func Subscription_MustExists(tx pgw.Queryable, id SubscriptionId) bool {
+func Subscription_Exists(tx pgw.Queryable, id SubscriptionId) (bool, error) {
 	row := tx.QueryRow("select 1 from subscriptions where id = $1", id)
 	var one int
 	err := row.Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false
+		return false, nil
 	} else if err != nil {
-		panic(err)
+		return false, err
 	}
 
-	return true
+	return true, nil
 }
 
-func Subscription_MustSetUserId(tx pgw.Queryable, id SubscriptionId, userId UserId) {
-	tx.MustExec("update subscriptions set user_id = $1 where id = $2", userId, id)
+func Subscription_SetUserId(tx pgw.Queryable, id SubscriptionId, userId UserId) error {
+	_, err := tx.Exec("update subscriptions set user_id = $1 where id = $2", userId, id)
+	return err
 }
 
 type SubscriptionWithPostCounts struct {
@@ -46,7 +48,9 @@ type SubscriptionWithPostCounts struct {
 	TotalCount     int
 }
 
-func Subscription_MustListWithPostCounts(tx pgw.Queryable, userId UserId) []SubscriptionWithPostCounts {
+func Subscription_ListWithPostCounts(
+	tx pgw.Queryable, userId UserId,
+) ([]SubscriptionWithPostCounts, error) {
 	rows, err := tx.Query(`
 		with user_subscriptions as (
 			select id, name, status, is_paused, finished_setup_at, created_at from subscriptions
@@ -65,7 +69,7 @@ func Subscription_MustListWithPostCounts(tx pgw.Queryable, userId UserId) []Subs
 		order by finished_setup_at desc, created_at desc
 	`, userId)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	var result []SubscriptionWithPostCounts
@@ -74,7 +78,7 @@ func Subscription_MustListWithPostCounts(tx pgw.Queryable, userId UserId) []Subs
 		var publishedCount, totalCount *int
 		err := rows.Scan(&s.Id, &s.Name, &s.Status, &s.IsPaused, &publishedCount, &totalCount)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		if publishedCount != nil {
 			s.PublishedCount = *publishedCount
@@ -85,10 +89,10 @@ func Subscription_MustListWithPostCounts(tx pgw.Queryable, userId UserId) []Subs
 		result = append(result, s)
 	}
 	if err := rows.Err(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return result
+	return result, nil
 }
 
 type SubscriptionFullWithPostCounts struct {
@@ -103,9 +107,11 @@ type SubscriptionFullWithPostCounts struct {
 	TotalCount          int
 }
 
-func Subscription_MustGetWithPostCounts(
+var ErrSubscriptionNotFound = errors.New("subscription not found")
+
+func Subscription_GetWithPostCounts(
 	tx pgw.Queryable, subscriptionId SubscriptionId, userId UserId,
-) (SubscriptionFullWithPostCounts, bool) {
+) (*SubscriptionFullWithPostCounts, error) {
 	row := tx.QueryRow(`
 		select id, name, is_paused, status, schedule_version, is_added_past_midnight,
 			(select url from blogs where id = blog_id) as url,
@@ -123,12 +129,12 @@ func Subscription_MustGetWithPostCounts(
 		&s.PublishedCount, &s.TotalCount,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return SubscriptionFullWithPostCounts{}, false //nolint:exhaustruct
+		return nil, ErrSubscriptionNotFound
 	} else if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return s, true
+	return &s, nil
 }
 
 type SubscriptionUserIdBlogBestUrl struct {
@@ -137,9 +143,9 @@ type SubscriptionUserIdBlogBestUrl struct {
 	BlogBestUrl string
 }
 
-func Subscription_MustGetUserIdStatusBlogBestUrl(
+func Subscription_GetUserIdStatusBlogBestUrl(
 	tx pgw.Queryable, subscriptionId SubscriptionId,
-) (SubscriptionUserIdBlogBestUrl, bool) {
+) (*SubscriptionUserIdBlogBestUrl, error) {
 	row := tx.QueryRow(`
 		select user_id, status, (
 			select coalesce(url, feed_url) from blogs
@@ -149,25 +155,27 @@ func Subscription_MustGetUserIdStatusBlogBestUrl(
 	var s SubscriptionUserIdBlogBestUrl
 	err := row.Scan(&s.UserId, &s.Status, &s.BlogBestUrl)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return SubscriptionUserIdBlogBestUrl{}, false //nolint:exhaustruct
+		return nil, ErrSubscriptionNotFound
 	} else if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return s, true
+	return &s, nil
 }
 
-func Subscription_MustSetIsPaused(tx pgw.Queryable, subscriptionId SubscriptionId, isPaused bool) {
-	tx.MustExec("update subscriptions set is_paused = $1 where id = $2", isPaused, subscriptionId)
+func Subscription_SetIsPaused(tx pgw.Queryable, subscriptionId SubscriptionId, isPaused bool) error {
+	_, err := tx.Exec("update subscriptions set is_paused = $1 where id = $2", isPaused, subscriptionId)
+	return err
 }
 
-func Subscription_MustDelete(tx pgw.Queryable, subscriptionId SubscriptionId) {
-	tx.MustExec("delete from subscriptions where id = $1", subscriptionId)
+func Subscription_Delete(tx pgw.Queryable, subscriptionId SubscriptionId) error {
+	_, err := tx.Exec("delete from subscriptions where id = $1", subscriptionId)
+	return err
 }
 
-func Subscription_MustGetOtherNamesByDay(
+func Subscription_GetOtherNamesByDay(
 	tx pgw.Queryable, currentSubscriptionId SubscriptionId, userId UserId,
-) map[util.DayOfWeek][]string {
+) (map[util.DayOfWeek][]string, error) {
 	rows, err := tx.Query(`
 		with user_subscriptions as (
 			select id, name, created_at from subscriptions
@@ -194,7 +202,7 @@ func Subscription_MustGetOtherNamesByDay(
 		order by created_at desc
 	`, userId, currentSubscriptionId)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	result := make(map[util.DayOfWeek][]string)
@@ -204,7 +212,7 @@ func Subscription_MustGetOtherNamesByDay(
 		var count int
 		err := rows.Scan(&name, &dayOfWeek, &count)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		for i := 0; i < count; i++ {
@@ -212,10 +220,10 @@ func Subscription_MustGetOtherNamesByDay(
 		}
 	}
 	if err := rows.Err(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return result
+	return result, nil
 }
 
 type SchedulePreview struct {
@@ -236,7 +244,9 @@ type SchedulePreviewNextPost struct {
 	Title string
 }
 
-func Subscription_MustGetSchedulePreview(tx pgw.Queryable, subscriptionId SubscriptionId) SchedulePreview {
+func Subscription_GetSchedulePreview(
+	tx pgw.Queryable, subscriptionId SubscriptionId,
+) (*SchedulePreview, error) {
 	rows, err := tx.Query(`(
 		select
 			'prev_post' as tag,
@@ -264,7 +274,7 @@ func Subscription_MustGetSchedulePreview(tx pgw.Queryable, subscriptionId Subscr
 		where subscription_id = $1
 	)`, subscriptionId)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	var result SchedulePreview
@@ -276,7 +286,7 @@ func Subscription_MustGetSchedulePreview(tx pgw.Queryable, subscriptionId Subscr
 		var count *int
 		err := rows.Scan(&tag, &url, &title, &publishDate, &count)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		switch tag {
@@ -300,7 +310,7 @@ func Subscription_MustGetSchedulePreview(tx pgw.Queryable, subscriptionId Subscr
 		}
 	}
 	if err := rows.Err(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	for i, j := 0, len(result.PrevPosts)-1; i < j; i, j = i+1, j-1 {
@@ -321,7 +331,7 @@ func Subscription_MustGetSchedulePreview(tx pgw.Queryable, subscriptionId Subscr
 		result.NextPosts = result.NextPosts[:len(result.NextPosts)-1]
 	}
 
-	return result
+	return &result, nil
 }
 
 type SubscriptionUserIdStatusScheduleVersionBlogBestUrl struct {
@@ -331,9 +341,9 @@ type SubscriptionUserIdStatusScheduleVersionBlogBestUrl struct {
 	BlogBestUrl     string
 }
 
-func Subscription_MustGetUserIdStatusScheduleVersion(
+func Subscription_GetUserIdStatusScheduleVersion(
 	tx pgw.Queryable, subscriptionId SubscriptionId,
-) (SubscriptionUserIdStatusScheduleVersionBlogBestUrl, bool) {
+) (*SubscriptionUserIdStatusScheduleVersionBlogBestUrl, error) {
 	row := tx.QueryRow(`
 		select user_id, status, schedule_version, (
 			select coalesce(url, feed_url) from blogs
@@ -343,20 +353,21 @@ func Subscription_MustGetUserIdStatusScheduleVersion(
 	var s SubscriptionUserIdStatusScheduleVersionBlogBestUrl
 	err := row.Scan(&s.UserId, &s.Status, &s.ScheduleVersion, &s.BlogBestUrl)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return SubscriptionUserIdStatusScheduleVersionBlogBestUrl{}, false //nolint:exhaustruct
+		return nil, ErrSubscriptionNotFound
 	} else if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return s, true
+	return &s, nil
 }
 
-func Subscription_MustUpdateScheduleVersion(
+func Subscription_UpdateScheduleVersion(
 	tx pgw.Queryable, subscriptionId SubscriptionId, scheduleVersion int64,
-) {
-	tx.MustExec(`
+) error {
+	_, err := tx.Exec(`
 		update subscriptions set schedule_version = $1 where id = $2
 	`, scheduleVersion, subscriptionId)
+	return err
 }
 
 type SubscriptionCreateResult struct {
@@ -365,11 +376,13 @@ type SubscriptionCreateResult struct {
 	BlogStatus  BlogStatus
 }
 
-func Subscription_MustCreateForBlog(
-	tx pgw.Queryable, blog Blog, currentUser *User, productUserId ProductUserId,
-) (result SubscriptionCreateResult, ok bool) {
+var ErrBlogFailed = errors.New("blog has failed status")
+
+func Subscription_CreateForBlog(
+	tx pgw.Queryable, blog *Blog, currentUser *User, productUserId ProductUserId,
+) (*SubscriptionCreateResult, error) {
 	if BlogFailedStatuses[blog.Status] {
-		return SubscriptionCreateResult{}, false //nolint:exhaustruct
+		return nil, ErrBlogFailed
 	} else {
 		var userId *UserId
 		var anonProductUserId *ProductUserId
@@ -381,28 +394,35 @@ func Subscription_MustCreateForBlog(
 			anonProductUserId = &productUserId
 		}
 
-		return Subscription_MustCreate(
+		return Subscription_Create(
 			tx, userId, anonProductUserId, blog, SubscriptionStatusWaitingForBlog, false, 0,
-		), true
+		)
 	}
 }
 
-func Subscription_MustCreate(
-	tx pgw.Queryable, userId *UserId, anonProductUserId *ProductUserId, blog Blog, status SubscriptionStatus,
+func Subscription_Create(
+	tx pgw.Queryable, userId *UserId, anonProductUserId *ProductUserId, blog *Blog, status SubscriptionStatus,
 	isPaused bool, scheduleVersion int64,
-) SubscriptionCreateResult {
-	id := SubscriptionId(mutil.MustGenerateRandomId(tx, "subscriptions"))
-	tx.MustExec(`
+) (*SubscriptionCreateResult, error) {
+	idInt, err := mutil.GenerateRandomId(tx, "subscriptions")
+	if err != nil {
+		return nil, err
+	}
+	id := SubscriptionId(idInt)
+	_, err = tx.Exec(`
 		insert into subscriptions(
 			id, user_id, anon_product_user_id, blog_id, name, status, is_paused, schedule_version
 		) values (
 			$1, $2, $3, $4, $5, $6, $7, $8
 		)
 	`, id, userId, anonProductUserId, blog.Id, blog.Name, status, isPaused, scheduleVersion)
+	if err != nil {
+		return nil, err
+	}
 
-	return SubscriptionCreateResult{
+	return &SubscriptionCreateResult{
 		Id:          id,
 		BlogBestUrl: blog.BestUrl,
 		BlogStatus:  blog.Status,
-	}
+	}, nil
 }

@@ -274,7 +274,7 @@ func TestExtractNewPostsFromFeed(t *testing.T) {
 
 	feedUri, _ := neturl.Parse("https://blog/feed")
 	logger := &DummyLogger{}
-	curiEqCfg := CanonicalEqualityConfig{
+	curiEqCfg := &CanonicalEqualityConfig{
 		SameHosts:         nil,
 		ExpectTumblrPaths: false,
 	}
@@ -288,11 +288,15 @@ func TestExtractNewPostsFromFeed(t *testing.T) {
 		}
 		parsedFeed, err := ParseFeed(tc.feed, feedUri, logger)
 		assert.NoError(t, err, tc.description)
-		newLinks, ok := MustExtractNewPostsFromFeed(
+		newLinks, err := ExtractNewPostsFromFeed(
 			parsedFeed, feedUri, existingPostCuris, tc.discardedFeedEntryUrls, tc.missingFromFeedEntryUrls,
 			curiEqCfg, logger, logger,
 		)
-		assert.Equal(t, tc.expectedOk, ok, tc.description)
+		if tc.expectedOk {
+			assert.NoError(t, err, tc.description)
+		} else {
+			assert.ErrorIs(t, err, ErrExtractNewPostsNoMatch, tc.description)
+		}
 		var newUrls []string
 		for _, link := range newLinks {
 			newUrls = append(newUrls, link.Url)

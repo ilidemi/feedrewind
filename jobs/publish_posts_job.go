@@ -12,9 +12,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func PublishPostsJob_MustInitialSchedule(
-	tx pgw.Queryable, userId models.UserId, userSettings models.UserSettings,
-) {
+func PublishPostsJob_ScheduleInitial(
+	tx pgw.Queryable, userId models.UserId, userSettings *models.UserSettings,
+) error {
 	utcNow := time.Now().UTC()
 	location := tzdata.LocationByName[userSettings.Timezone]
 	date := time.Date(utcNow.Year(), utcNow.Month(), utcNow.Day(), 0, 0, 0, 0, location).AddDate(0, 0, -1)
@@ -24,12 +24,16 @@ func PublishPostsJob_MustInitialSchedule(
 		date = date.AddDate(0, 0, 1)
 		nextRun = date.Add(time.Duration(hourOfDay) * time.Hour).UTC()
 	}
+	nextRunDate, err := util.Schedule_ToUTCStr(nextRun)
+	if err != nil {
+		return err
+	}
 
-	mustPerformAt(
+	return performAt(
 		tx, nextRun, "PublishPostsJob", defaultQueue,
 		yamlString(fmt.Sprint(userId)),
 		strToYaml(string(util.Schedule_Date(date))),
-		strToYaml(util.Schedule_MustUTCStr(nextRun)),
+		strToYaml(nextRunDate),
 	)
 }
 
@@ -38,7 +42,7 @@ type LockedPublishPostsJob struct {
 	LockedBy string
 }
 
-func PublishPostsJob_MustLock(tx pgw.Queryable, userId models.UserId) []LockedPublishPostsJob {
+func PublishPostsJob_Lock(tx pgw.Queryable, userId models.UserId) ([]LockedPublishPostsJob, error) {
 	rows, err := tx.Query(`
 		select id, locked_by
 		from delayed_jobs
@@ -47,7 +51,7 @@ func PublishPostsJob_MustLock(tx pgw.Queryable, userId models.UserId) []LockedPu
 		for update
 	`, fmt.Sprint(userId))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	var locks []LockedPublishPostsJob
@@ -56,7 +60,7 @@ func PublishPostsJob_MustLock(tx pgw.Queryable, userId models.UserId) []LockedPu
 		var lockedBy *string
 		err := rows.Scan(&lock.Id, &lockedBy)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		if lockedBy != nil {
 			lock.LockedBy = *lockedBy
@@ -64,14 +68,14 @@ func PublishPostsJob_MustLock(tx pgw.Queryable, userId models.UserId) []LockedPu
 		locks = append(locks, lock)
 	}
 	if err := rows.Err(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return locks
+	return locks, nil
 }
 
 // Returns zero value if the job was not found
-func PublishPostsJob_MustGetNextScheduledDate(tx pgw.Queryable, userId models.UserId) util.Date {
+func PublishPostsJob_GetNextScheduledDate(tx pgw.Queryable, userId models.UserId) (util.Date, error) {
 	row := tx.QueryRow(`
 		select (regexp_match(handler, concat(E'arguments:\n  - ', $1::text, E'\n  - ''([0-9-]+)''')))[1]
 		from delayed_jobs
@@ -82,12 +86,12 @@ func PublishPostsJob_MustGetNextScheduledDate(tx pgw.Queryable, userId models.Us
 	var date util.Date
 	err := row.Scan(&date)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ""
+		return "", nil
 	} else if err != nil {
-		panic(err)
+		return "", err
 	}
 
-	return date
+	return date, nil
 }
 
 func PublishPostsJob_GetHourOfDay(deliveryChannel models.DeliveryChannel) int {
@@ -101,8 +105,9 @@ func PublishPostsJob_GetHourOfDay(deliveryChannel models.DeliveryChannel) int {
 	}
 }
 
-func PublishPostsJob_MustUpdateRunAt(tx pgw.Queryable, jobId JobId, runAt time.Time) {
-	tx.MustExec(`
+func PublishPostsJob_UpdateRunAt(tx pgw.Queryable, jobId JobId, runAt time.Time) error {
+	_, err := tx.Exec(`
 		update delayed_jobs set run_at = $1 where id = $2
 	`, runAt.Format(runAtFormat), jobId)
+	return err
 }

@@ -15,12 +15,13 @@ const (
 	TypedBlogUrlResultBadFeed               TypedBlogUrlResult = "bad_feed"
 )
 
-func TypedBlogUrl_MustCreate(
+func TypedBlogUrl_Create(
 	tx pgw.Queryable, typedUrl string, strippedUrl string, source string, result TypedBlogUrlResult,
 	maybeUserId *UserId,
-) {
-	tx.MustExec(`
+) error {
+	_, err := tx.Exec(`
 		insert into typed_blog_urls (typed_url, stripped_url, source, result, user_id)
 		values ($1, $2, $3, $4, $5)
 	`, typedUrl, strippedUrl, source, result, maybeUserId)
+	return err
 }

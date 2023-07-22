@@ -6,6 +6,7 @@ import (
 	"feedrewind/db/pgw"
 	"feedrewind/log"
 	"feedrewind/models"
+	"feedrewind/oops"
 	"fmt"
 )
 
@@ -29,17 +30,24 @@ type item struct {
 	PubDate     string `xml:"pubDate"`
 }
 
-func MustCreateEmptyUserFeed(tx pgw.Queryable, userId models.UserId) {
-	userRssText := mustGenerateUserRss(nil)
-	models.UserRss_MustCreate(tx, userId, userRssText)
+func CreateEmptyUserFeed(tx pgw.Queryable, userId models.UserId) error {
+	userRssText, err := generateUserRss(nil)
+	if err != nil {
+		return err
+	}
+	err = models.UserRss_Create(tx, userId, userRssText)
+	if err != nil {
+		return err
+	}
 	log.Info().Msg("Created empty user RSS")
+	return nil
 }
 
-func mustGenerateUserRss(items []item) string {
-	return mustGenerateRss("FeedRewind", "https://feedrewind.com", items)
+func generateUserRss(items []item) (string, error) {
+	return generateRss("FeedRewind", "https://feedrewind.com", items)
 }
 
-func mustGenerateRss(title string, url string, items []item) string {
+func generateRss(title string, url string, items []item) (string, error) {
 	var buf bytes.Buffer
 	_, _ = fmt.Fprint(&buf, xml.Header)
 	encoder := xml.NewEncoder(&buf)
@@ -54,8 +62,8 @@ func mustGenerateRss(title string, url string, items []item) string {
 		},
 	})
 	if err != nil {
-		panic(err)
+		return "", oops.Wrap(err)
 	}
 
-	return buf.String()
+	return buf.String(), nil
 }

@@ -7,7 +7,9 @@ import (
 
 type StartPageId int64
 
-func StartPage_MustCreate(tx pgw.Queryable, discoveredStartPage crawler.DiscoveredStartPage) StartPageId {
+func StartPage_Create(
+	tx pgw.Queryable, discoveredStartPage crawler.DiscoveredStartPage,
+) (StartPageId, error) {
 	row := tx.QueryRow(`
 		insert into start_pages (url, final_url, content)
 		values ($1, $2, $3)
@@ -16,8 +18,8 @@ func StartPage_MustCreate(tx pgw.Queryable, discoveredStartPage crawler.Discover
 	var id StartPageId
 	err := row.Scan(&id)
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 
-	return id
+	return id, nil
 }

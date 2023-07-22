@@ -3,6 +3,7 @@ package pgw
 
 import (
 	"context"
+	"feedrewind/oops"
 	"net/http"
 	"time"
 
@@ -12,13 +13,11 @@ import (
 )
 
 type Queryable interface {
-	MustBegin() *Tx
 	Begin() (*Tx, error)
-	MustExec(sql string, args ...any) pgconn.CommandTag
 	Exec(sql string, args ...any) (pgconn.CommandTag, error)
-	Query(sql string, args ...any) (pgx.Rows, error)
-	QueryRow(sql string, args ...any) pgx.Row
-	SendBatch(batch *pgx.Batch) pgx.BatchResults
+	Query(sql string, args ...any) (*Rows, error)
+	QueryRow(sql string, args ...any) *Row
+	SendBatch(batch *pgx.Batch) *BatchResults
 }
 
 type Pool struct {
@@ -28,7 +27,7 @@ type Pool struct {
 func NewPool(ctx context.Context, connString string) (*Pool, error) {
 	pool, err := pgxpool.New(ctx, connString)
 	if err != nil {
-		return nil, err
+		return nil, oops.Wrap(err)
 	}
 	return &Pool{pool}, nil
 }
@@ -39,7 +38,7 @@ func (pool *Pool) Acquire(ctx context.Context) (*Conn, error) {
 
 	conn, err := pool.impl.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return nil, oops.Wrap(err)
 	}
 
 	return &Conn{
@@ -53,27 +52,13 @@ type Conn struct {
 	ctx  context.Context
 }
 
-func (conn *Conn) MustBegin() *Tx {
-	t1 := time.Now()
-	defer addDuration(conn.ctx, t1)()
-
-	tx, err := conn.impl.Begin(conn.ctx)
-	if err != nil {
-		panic(err)
-	}
-	return &Tx{
-		impl: tx,
-		ctx:  conn.ctx,
-	}
-}
-
 func (conn *Conn) Begin() (*Tx, error) {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
 
 	tx, err := conn.impl.Begin(conn.ctx)
 	if err != nil {
-		return nil, err
+		return nil, oops.Wrap(err)
 	}
 	return &Tx{
 		impl: tx,
@@ -81,43 +66,35 @@ func (conn *Conn) Begin() (*Tx, error) {
 	}, nil
 }
 
-func (conn *Conn) MustExec(sql string, args ...any) pgconn.CommandTag {
-	t1 := time.Now()
-	defer addDuration(conn.ctx, t1)()
-
-	tag, err := conn.impl.Exec(conn.ctx, sql, args...)
-	if err != nil {
-		panic(err)
-	}
-	return tag
-}
-
 func (conn *Conn) Exec(sql string, args ...any) (pgconn.CommandTag, error) {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
 
-	return conn.impl.Exec(conn.ctx, sql, args...)
+	result, err := conn.impl.Exec(conn.ctx, sql, args...)
+	return result, oops.Wrap(err)
 }
 
-func (conn *Conn) Query(sql string, args ...any) (pgx.Rows, error) {
+func (conn *Conn) Query(sql string, args ...any) (*Rows, error) {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
 
-	return conn.impl.Query(conn.ctx, sql, args...)
+	rows, err := conn.impl.Query(conn.ctx, sql, args...)
+	return newRows(rows), oops.Wrap(err)
 }
 
-func (conn *Conn) QueryRow(sql string, args ...any) pgx.Row {
+func (conn *Conn) QueryRow(sql string, args ...any) *Row {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
 
-	return conn.impl.QueryRow(conn.ctx, sql, args...)
+	row := conn.impl.QueryRow(conn.ctx, sql, args...)
+	return newRow(row)
 }
 
-func (conn *Conn) SendBatch(batch *pgx.Batch) pgx.BatchResults {
+func (conn *Conn) SendBatch(batch *pgx.Batch) *BatchResults {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
 
-	return conn.impl.SendBatch(conn.ctx, batch)
+	return newBatchResults(conn.impl.SendBatch(conn.ctx, batch))
 }
 
 func (conn *Conn) Release() {
@@ -129,22 +106,6 @@ type Tx struct {
 	ctx  context.Context
 }
 
-// MustBegin starts a pseudo nested transaction.
-func (tx *Tx) MustBegin() *Tx {
-	t1 := time.Now()
-	defer addDuration(tx.ctx, t1)()
-
-	nested, err := tx.impl.Begin(tx.ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	return &Tx{
-		impl: nested,
-		ctx:  tx.ctx,
-	}
-}
-
 // Begin starts a pseudo nested transaction.
 func (tx *Tx) Begin() (*Tx, error) {
 	t1 := time.Now()
@@ -152,7 +113,7 @@ func (tx *Tx) Begin() (*Tx, error) {
 
 	nested, err := tx.impl.Begin(tx.ctx)
 	if err != nil {
-		return nil, err
+		return nil, oops.Wrap(err)
 	}
 
 	return &Tx{
@@ -169,7 +130,8 @@ func (tx *Tx) Commit() error {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
-	return tx.impl.Commit(tx.ctx)
+	err := tx.impl.Commit(tx.ctx)
+	return oops.Wrap(err)
 }
 
 // Rollback rolls back the transaction if this is a real transaction or rolls back to the savepoint if this is a
@@ -181,48 +143,39 @@ func (tx *Tx) Rollback() error {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
-	return tx.impl.Rollback(tx.ctx)
+	err := tx.impl.Rollback(tx.ctx)
+	return oops.Wrap(err)
 }
 
-func (tx *Tx) Exec(sql string, arguments ...any) (
-	commandTag pgconn.CommandTag, err error,
-) {
+func (tx *Tx) Exec(sql string, arguments ...any) (pgconn.CommandTag, error) {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
-	return tx.impl.Exec(tx.ctx, sql, arguments...)
+	result, err := tx.impl.Exec(tx.ctx, sql, arguments...)
+	return result, oops.Wrap(err)
 }
 
-func (tx *Tx) MustExec(sql string, arguments ...any) pgconn.CommandTag {
+func (tx *Tx) Query(sql string, arguments ...any) (*Rows, error) {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
-	tag, err := tx.impl.Exec(tx.ctx, sql, arguments...)
-	if err != nil {
-		panic(err)
-	}
-	return tag
+	rows, err := tx.impl.Query(tx.ctx, sql, arguments...)
+	return newRows(rows), oops.Wrap(err)
 }
 
-func (tx *Tx) Query(sql string, arguments ...any) (pgx.Rows, error) {
+func (tx *Tx) QueryRow(sql string, arguments ...any) *Row {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
-	return tx.impl.Query(tx.ctx, sql, arguments...)
+	row := tx.impl.QueryRow(tx.ctx, sql, arguments...)
+	return newRow(row)
 }
 
-func (tx *Tx) QueryRow(sql string, arguments ...any) pgx.Row {
+func (tx *Tx) SendBatch(batch *pgx.Batch) *BatchResults {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
-	return tx.impl.QueryRow(tx.ctx, sql, arguments...)
-}
-
-func (tx *Tx) SendBatch(batch *pgx.Batch) pgx.BatchResults {
-	t1 := time.Now()
-	defer addDuration(tx.ctx, t1)()
-
-	return tx.impl.SendBatch(tx.ctx, batch)
+	return newBatchResults(tx.impl.SendBatch(tx.ctx, batch))
 }
 
 type dbDurationKeyType struct{}
@@ -253,4 +206,63 @@ func WithDBDuration(r *http.Request) *http.Request {
 	dbDuration := time.Duration(0)
 	r = r.WithContext(context.WithValue(r.Context(), dbDurationKey, &dbDuration))
 	return r
+}
+
+type Rows struct {
+	impl pgx.Rows
+}
+
+func newRows(rows pgx.Rows) *Rows {
+	if rows == nil {
+		return nil
+	}
+
+	return &Rows{impl: rows}
+}
+
+func (rows *Rows) Next() bool {
+	return rows.impl.Next()
+}
+
+func (rows *Rows) Scan(dest ...any) error {
+	err := rows.impl.Scan(dest...)
+	return oops.Wrap(err)
+}
+
+func (rows *Rows) Err() error {
+	err := rows.impl.Err()
+	return oops.Wrap(err)
+}
+
+func (rows *Rows) Close() {
+	rows.impl.Close()
+}
+
+type Row struct {
+	impl pgx.Row
+}
+
+func newRow(row pgx.Row) *Row {
+	if row == nil {
+		return nil
+	}
+
+	return &Row{impl: row}
+}
+
+func (row *Row) Scan(dest ...any) error {
+	err := row.impl.Scan(dest...)
+	return oops.Wrap(err)
+}
+
+type BatchResults struct {
+	impl pgx.BatchResults
+}
+
+func newBatchResults(impl pgx.BatchResults) *BatchResults {
+	return &BatchResults{impl: impl}
+}
+
+func (r *BatchResults) Close() error {
+	return oops.Wrap(r.impl.Close())
 }

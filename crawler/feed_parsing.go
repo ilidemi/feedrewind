@@ -56,7 +56,7 @@ func isAtom(xml *xmlquery.Node) bool {
 
 type ParsedFeed struct {
 	Title      string
-	RootLink   Link
+	RootLink   *Link
 	EntryLinks FeedEntryLinks
 	Generator  FeedGenerator
 }
@@ -76,11 +76,11 @@ type feedEntry struct {
 	url     string
 }
 
-func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (ParsedFeed, error) {
+func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed, error) {
 	reader := strings.NewReader(content)
 	xml, err := xmlquery.Parse(reader)
 	if err != nil {
-		return ParsedFeed{}, err //nolint:exhaustruct
+		return nil, err
 	}
 
 	hasFeedburnerNamespace := xmlquery.FindOne(xml, " //*[@xmlns:feedburner]") != nil
@@ -161,7 +161,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (ParsedFeed,
 				continue
 			}
 
-			return ParsedFeed{}, errors.New("couldn't extract item urls from RSS") //nolint:exhaustruct
+			return nil, errors.New("couldn't extract item urls from RSS")
 		}
 
 		if isPermalinkGuidUsed {
@@ -226,7 +226,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (ParsedFeed,
 				continue
 			}
 
-			return ParsedFeed{}, errors.New("couldn't extract item urls from RDF") //nolint:exhaustruct
+			return nil, errors.New("couldn't extract item urls from RDF")
 		}
 
 		// Generator stays uninitialized
@@ -280,7 +280,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (ParsedFeed,
 
 			url, err := getAtomUrl(entryNode, hasFeedburnerNamespace)
 			if err != nil {
-				return ParsedFeed{}, fmt.Errorf("couldn't extract entry urls from Atom: %w", err) //nolint:exhaustruct
+				return nil, fmt.Errorf("couldn't extract entry urls from Atom: %w", err)
 			}
 
 			entries = append(entries, feedEntry{
@@ -325,15 +325,15 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (ParsedFeed,
 	}
 	logger.Info("Feed title: %s", normalizedFeedTitle)
 
-	var rootLink Link
+	var rootLink *Link
 	if rootUrl != "" {
 		var ok bool
 		rootLink, ok = ToCanonicalLink(rootUrl, logger, fetchUri)
 		if !ok {
-			rootLink = Link{} //nolint:exhaustruct
+			rootLink = nil
 		}
 	}
-	if rootLink != (Link{}) { //nolint:exhaustruct
+	if rootLink != nil {
 		logger.Info("Feed root url: %s", rootLink.Url)
 	} else {
 		logger.Info("Feed root url is absent")
@@ -346,7 +346,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (ParsedFeed,
 	for _, entry := range sortedEntries {
 		link, ok := ToCanonicalLink(entry.url, logger, fetchUri)
 		if !ok {
-			return ParsedFeed{}, fmt.Errorf("couldn't parse link: %s", entry.url) //nolint:exhaustruct
+			return nil, fmt.Errorf("couldn't parse link: %s", entry.url)
 		}
 		decodedEntryTitle := decodeHtmlTitle(entry.title)
 		if decodedEntryTitle != entry.title {
@@ -360,7 +360,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (ParsedFeed,
 			maybeLinkTitle = &linkTitle
 		}
 		entryLinks = append(entryLinks, MaybeTitledLink{
-			Link:       link,
+			Link:       *link,
 			MaybeTitle: maybeLinkTitle,
 		})
 	}
@@ -377,7 +377,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (ParsedFeed,
 	logger.Info("Feed entry titles needed HTML decoding: %d", entryTitleNeedsDecodingCount)
 	logger.Info("Feed entry order certain: %t", feedEntryLinks.IsOrderCertain)
 
-	return ParsedFeed{
+	return &ParsedFeed{
 		Title:      normalizedFeedTitle,
 		RootLink:   rootLink,
 		EntryLinks: feedEntryLinks,

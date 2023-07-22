@@ -7,7 +7,7 @@ import (
 	"feedrewind/config"
 	"feedrewind/db/pgw"
 	"feedrewind/models/mutil"
-	"fmt"
+	"feedrewind/oops"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -28,19 +28,17 @@ type User struct {
 
 var ErrPasswordTooShort = errors.New("password is too short")
 var ErrUserAlreadyExists = errors.New("user already exists")
+var ErrUserNotFound = errors.New("user not found")
 
-// Returns nil if not found
-func User_MustFindByEmail(tx pgw.Queryable, email string) *User {
-	return user_mustFindBy(tx, "email", email)
+func User_FindByEmail(tx pgw.Queryable, email string) (*User, error) {
+	return user_FindBy(tx, "email", email)
 }
 
-// Returns nil if not found
-func User_MustFindByAuthToken(tx pgw.Queryable, authToken string) *User {
-	return user_mustFindBy(tx, "auth_token", authToken)
+func User_FindByAuthToken(tx pgw.Queryable, authToken string) (*User, error) {
+	return user_FindBy(tx, "auth_token", authToken)
 }
 
-// Returns nil if not found
-func user_mustFindBy(tx pgw.Queryable, column string, value string) *User {
+func user_FindBy(tx pgw.Queryable, column string, value string) (*User, error) {
 	row := tx.QueryRow(`
 		select id, email, password_digest, auth_token, name, product_user_id
 		from users
@@ -51,25 +49,25 @@ func user_mustFindBy(tx pgw.Queryable, column string, value string) *User {
 		&user.Id, &user.Email, &user.PasswordDigest, &user.AuthToken, &user.Name, &user.ProductUserId,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
+		return nil, ErrUserNotFound
 	} else if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return &user
+	return &user, nil
 }
 
-func User_MustExistsByProductUserId(tx pgw.Queryable, productUserId ProductUserId) bool {
+func User_ExistsByProductUserId(tx pgw.Queryable, productUserId ProductUserId) (bool, error) {
 	row := tx.QueryRow("select 1 from users where product_user_id = $1", productUserId)
 	var one int
 	err := row.Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false
+		return false, nil
 	} else if err != nil {
-		panic(err)
+		return false, err
 	}
 
-	return true
+	return true, nil
 }
 
 func User_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*User, error) {
@@ -93,7 +91,7 @@ func User_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*User, e
 		&user.Id, &user.Email, &user.PasswordDigest, &user.AuthToken, &user.Name, &user.ProductUserId,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't update password in db: %v", err)
+		return nil, err
 	}
 	return &user, nil
 }
@@ -103,15 +101,19 @@ func User_Create(
 ) (*User, error) {
 	passwordDigest, err := generatePasswordDigest(password)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't generate password digest: %v", err)
+		return nil, err
 	}
 
 	authToken, err := generateAuthToken(tx)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't generate auth token: %v", err)
+		return nil, err
 	}
 
-	id := UserId(mutil.MustGenerateRandomId(tx, "users"))
+	idInt, err := mutil.GenerateRandomId(tx, "users")
+	if err != nil {
+		return nil, err
+	}
+	id := UserId(idInt)
 
 	_, err = tx.Exec(`
 		insert into users(id, email, password_digest, auth_token, name, product_user_id)
@@ -122,7 +124,7 @@ func User_Create(
 		pgErr.ConstraintName == "users_email_unique" {
 		return nil, ErrUserAlreadyExists
 	} else if err != nil {
-		return nil, fmt.Errorf("couldn't create user: %v", err)
+		return nil, err
 	}
 
 	return &User{
@@ -142,7 +144,7 @@ func generatePasswordDigest(password string) (string, error) {
 
 	passwordDigestBytes, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
-		return "", fmt.Errorf("couldn't hash password: %v", err)
+		return "", oops.Wrap(err)
 	}
 	return string(passwordDigestBytes), nil
 }
@@ -152,7 +154,7 @@ func generateAuthToken(tx pgw.Queryable) (string, error) {
 	for {
 		_, err := rand.Reader.Read(authTokenBytes)
 		if err != nil {
-			return "", fmt.Errorf("couldn't read random bytes: %v", err)
+			return "", oops.Wrap(err)
 		}
 		authTokenStr := base64.RawStdEncoding.EncodeToString(authTokenBytes)
 
@@ -162,7 +164,7 @@ func generateAuthToken(tx pgw.Queryable) (string, error) {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return authTokenStr, nil
 		} else if err != nil {
-			return "", fmt.Errorf("couldn't query auth token: %v", err)
+			return "", err
 		}
 
 		// continue

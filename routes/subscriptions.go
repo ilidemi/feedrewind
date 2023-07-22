@@ -15,12 +15,17 @@ import (
 	"html/template"
 	"net/http"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	currentUser := rutil.CurrentUser(r)
-	subscriptions := models.Subscription_MustListWithPostCounts(conn, currentUser.Id)
+	subscriptions, err := models.Subscription_ListWithPostCounts(conn, currentUser.Id)
+	if err != nil {
+		panic(err)
+	}
 
 	var settingUpSubscriptions []models.SubscriptionWithPostCounts
 	var activeSubscriptions []models.SubscriptionWithPostCounts
@@ -96,7 +101,10 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 	productUserId := rutil.CurrentProductUserId(r)
 	userIsAnonymous := currentUser == nil
 	startFeedId := models.StartFeedId(util.EnsureParamInt64(r, "start_feed_id"))
-	startFeed := models.StartFeed_MustGetUnfetched(conn, startFeedId)
+	startFeed, err := models.StartFeed_GetUnfetched(conn, startFeedId)
+	if err != nil {
+		panic(err)
+	}
 
 	// Feeds that were fetched were handled in onboarding, this one needs to be fetched
 	crawlCtx := &crawler.CrawlContext{}
@@ -119,15 +127,20 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusUnsupportedMediaType)
 			return
 		}
-		startFeed = models.StartFeed_MustUpdateFetched(
-			conn, startFeed, finalUrl, fetchResult.Page.Content, &parsedFeed,
+		startFeed, err = models.StartFeed_UpdateFetched(
+			conn, startFeed, finalUrl, fetchResult.Page.Content, parsedFeed,
 		)
-
-		updatedBlog := models.Blog_MustCreateOrUpdate(conn, startFeed, jobs.GuidedCrawlingJob_MustPerformNow)
-		subscriptionCreateResult, ok := models.Subscription_MustCreateForBlog(
+		if err != nil {
+			panic(err)
+		}
+		updatedBlog, err := models.Blog_CreateOrUpdate(conn, startFeed, jobs.GuidedCrawlingJob_PerformNow)
+		if err != nil {
+			panic(err)
+		}
+		subscriptionCreateResult, err := models.Subscription_CreateForBlog(
 			conn, updatedBlog, currentUser, productUserId,
 		)
-		if !ok {
+		if errors.Is(err, models.ErrBlogFailed) {
 			models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
 				Tx:              conn,
 				Request:         r,
@@ -141,6 +154,8 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 			return
+		} else if err != nil {
+			panic(err)
 		}
 
 		models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
@@ -214,10 +229,12 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
 	currentUser := rutil.CurrentUser(r)
-	subscription, ok := models.Subscription_MustGetWithPostCounts(conn, subscriptionId, currentUser.Id)
-	if !ok {
+	subscription, err := models.Subscription_GetWithPostCounts(conn, subscriptionId, currentUser.Id)
+	if errors.Is(err, models.ErrSubscriptionNotFound) {
 		subscriptions_RedirectNotFound(w, r)
 		return
+	} else if err != nil {
+		panic(err)
 	}
 
 	if subscription.Status != models.SubscriptionStatusLive {
@@ -225,13 +242,22 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userSettings := models.UserSettings_MustGetById(conn, currentUser.Id)
+	userSettings, err := models.UserSettings_GetById(conn, currentUser.Id)
+	if err != nil {
+		panic(err)
+	}
 	feedUrl := ""
 	if *userSettings.DeliveryChannel != models.DeliveryChannelEmail {
 		feedUrl = rutil.SubscriptionFeedUrl(r, subscriptionId)
 	}
-	countByDay := models.Schedule_MustGetCounts(conn, subscriptionId)
-	otherSubNamesByDay := models.Subscription_MustGetOtherNamesByDay(conn, subscriptionId, currentUser.Id)
+	countByDay, err := models.Schedule_GetCounts(conn, subscriptionId)
+	if err != nil {
+		panic(err)
+	}
+	otherSubNamesByDay, err := models.Subscription_GetOtherNamesByDay(conn, subscriptionId, currentUser.Id)
+	if err != nil {
+		panic(err)
+	}
 	preview := subscriptions_MustGetSchedulePreview(
 		conn, subscriptionId, subscription.Status, currentUser.Id, userSettings,
 	)
@@ -292,11 +318,11 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 }
 
 func Subscriptions_Pause(w http.ResponseWriter, r *http.Request) {
-	subscriptions_PauseUnpause(w, r, true, "pause subscription")
+	subscriptions_MustPauseUnpause(w, r, true, "pause subscription")
 }
 
 func Subscriptions_Unpause(w http.ResponseWriter, r *http.Request) {
-	subscriptions_PauseUnpause(w, r, false, "unpause subscription")
+	subscriptions_MustPauseUnpause(w, r, false, "unpause subscription")
 }
 
 var dayCountNames []string
@@ -308,8 +334,11 @@ func init() {
 }
 
 func Subscriptions_Update(w http.ResponseWriter, r *http.Request) {
-	tx := rutil.DBConn(r).MustBegin()
-	defer util.CommitOrRollback(tx, true, "")
+	tx, err := rutil.DBConn(r).Begin()
+	if err != nil {
+		panic(err)
+	}
+	defer util.CommitOrRollbackOnPanic(tx)
 
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
@@ -318,10 +347,12 @@ func Subscriptions_Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
-	subscription, ok := models.Subscription_MustGetUserIdStatusScheduleVersion(tx, subscriptionId)
-	if !ok {
+	subscription, err := models.Subscription_GetUserIdStatusScheduleVersion(tx, subscriptionId)
+	if errors.Is(err, models.ErrSubscriptionNotFound) {
 		subscriptions_RedirectNotFound(w, r)
 		return
+	} else if err != nil {
+		panic(err)
 	}
 
 	if subscriptions_RedirectIfUserMismatch(w, r, subscription.UserId) {
@@ -360,8 +391,14 @@ func Subscriptions_Update(w http.ResponseWriter, r *http.Request) {
 			productActiveDays++
 		}
 	}
-	models.Schedule_MustUpdate(tx, subscriptionId, countsByDay)
-	models.Subscription_MustUpdateScheduleVersion(tx, subscriptionId, newVersion)
+	err = models.Schedule_Update(tx, subscriptionId, countsByDay)
+	if err != nil {
+		panic(err)
+	}
+	err = models.Subscription_UpdateScheduleVersion(tx, subscriptionId, newVersion)
+	if err != nil {
+		panic(err)
+	}
 
 	models.ProductEvent_MustEmitSchedule(models.ProductEventScheduleArgs{
 		Tx:             tx,
@@ -384,17 +421,22 @@ func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
-	subscription, ok := models.Subscription_MustGetUserIdStatusBlogBestUrl(conn, subscriptionId)
-	if !ok {
+	subscription, err := models.Subscription_GetUserIdStatusBlogBestUrl(conn, subscriptionId)
+	if errors.Is(err, models.ErrSubscriptionNotFound) {
 		subscriptions_RedirectNotFound(w, r)
 		return
+	} else if err != nil {
+		panic(err)
 	}
 
 	if subscriptions_RedirectIfUserMismatch(w, r, subscription.UserId) {
 		return
 	}
 
-	models.Subscription_MustDelete(conn, subscriptionId)
+	err = models.Subscription_Delete(conn, subscriptionId)
+	if err != nil {
+		panic(err)
+	}
 
 	models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
 		Tx:            conn,
@@ -465,9 +507,12 @@ type schedulePreview struct {
 
 func subscriptions_MustGetSchedulePreview(
 	tx pgw.Queryable, subscriptionId models.SubscriptionId, subscriptionStatus models.SubscriptionStatus,
-	userId models.UserId, userSettings models.UserSettings,
+	userId models.UserId, userSettings *models.UserSettings,
 ) schedulePreview {
-	preview := models.Subscription_MustGetSchedulePreview(tx, subscriptionId)
+	preview, err := models.Subscription_GetSchedulePreview(tx, subscriptionId)
+	if err != nil {
+		panic(err)
+	}
 	var datesBuf bytes.Buffer
 	datesBuf.WriteString("[")
 	for i, prevPost := range preview.PrevPosts {
@@ -493,7 +538,11 @@ func subscriptions_MustGetSchedulePreview(
 	if subscriptionStatus != models.SubscriptionStatusLive && util.Schedule_IsEarlyMorning(localTime) {
 		nextScheduleDate = localDate
 	} else {
-		nextScheduleDate = subscriptions_MustGetRealisticScheduleDate(tx, userId, localTime, localDate)
+		var err error
+		nextScheduleDate, err = subscriptions_GetRealisticScheduleDate(tx, userId, localTime, localDate)
+		if err != nil {
+			panic(err)
+		}
 	}
 	log.Info().
 		Str("date", string(nextScheduleDate)).
@@ -514,16 +563,19 @@ func subscriptions_MustGetSchedulePreview(
 	}
 }
 
-func subscriptions_MustGetRealisticScheduleDate(
+func subscriptions_GetRealisticScheduleDate(
 	tx pgw.Queryable, userId models.UserId, localTime time.Time, localDate util.Date,
-) util.Date {
-	nextScheduleDate := jobs.PublishPostsJob_MustGetNextScheduledDate(tx, userId)
+) (util.Date, error) {
+	nextScheduleDate, err := jobs.PublishPostsJob_GetNextScheduledDate(tx, userId)
+	if err != nil {
+		return "", err
+	}
 	if nextScheduleDate == "" {
 		if util.Schedule_IsEarlyMorning(localTime) {
-			return localDate
+			return localDate, nil
 		} else {
 			nextDay := localTime.AddDate(0, 0, 1)
-			return util.Schedule_Date(nextDay)
+			return util.Schedule_Date(nextDay), nil
 		}
 	} else if nextScheduleDate < localDate {
 		log.Warn().
@@ -531,13 +583,15 @@ func subscriptions_MustGetRealisticScheduleDate(
 			Str("next_schedule_date", string(nextScheduleDate)).
 			Str("today", string(localDate)).
 			Msg("Job is scheduled in the past")
-		return localDate
+		return localDate, nil
 	} else {
-		return nextScheduleDate
+		return nextScheduleDate, nil
 	}
 }
 
-func subscriptions_PauseUnpause(w http.ResponseWriter, r *http.Request, newIsPaused bool, eventName string) {
+func subscriptions_MustPauseUnpause(
+	w http.ResponseWriter, r *http.Request, newIsPaused bool, eventName string,
+) {
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -546,10 +600,12 @@ func subscriptions_PauseUnpause(w http.ResponseWriter, r *http.Request, newIsPau
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
 	conn := rutil.DBConn(r)
-	subscription, ok := models.Subscription_MustGetUserIdStatusBlogBestUrl(conn, subscriptionId)
-	if !ok {
+	subscription, err := models.Subscription_GetUserIdStatusBlogBestUrl(conn, subscriptionId)
+	if errors.Is(err, models.ErrSubscriptionNotFound) {
 		subscriptions_RedirectNotFound(w, r)
 		return
+	} else if err != nil {
+		panic(err)
 	}
 
 	if subscriptions_RedirectIfUserMismatch(w, r, subscription.UserId) {
@@ -560,7 +616,10 @@ func subscriptions_PauseUnpause(w http.ResponseWriter, r *http.Request, newIsPau
 		return
 	}
 
-	models.Subscription_MustSetIsPaused(conn, subscriptionId, newIsPaused)
+	err = models.Subscription_SetIsPaused(conn, subscriptionId, newIsPaused)
+	if err != nil {
+		panic(err)
+	}
 
 	models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
 		Tx:            conn,

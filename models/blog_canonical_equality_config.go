@@ -5,7 +5,9 @@ import (
 	"feedrewind/db/pgw"
 )
 
-func BlogCanonicalEqualityConfig_MustGet(tx pgw.Queryable, blogId BlogId) crawler.CanonicalEqualityConfig {
+func blogCanonicalEqualityConfig_Get(
+	tx pgw.Queryable, blogId BlogId,
+) (*crawler.CanonicalEqualityConfig, error) {
 	row := tx.QueryRow(`
 		select same_hosts, expect_tumblr_paths from blog_canonical_equality_configs
 		where blog_id = $1
@@ -14,14 +16,14 @@ func BlogCanonicalEqualityConfig_MustGet(tx pgw.Queryable, blogId BlogId) crawle
 	var expectTumblrPaths bool
 	err := row.Scan(&sameHostsSlice, &expectTumblrPaths)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	sameHosts := make(map[string]bool)
 	for _, sameHost := range sameHostsSlice {
 		sameHosts[sameHost] = true
 	}
-	return crawler.CanonicalEqualityConfig{
+	return &crawler.CanonicalEqualityConfig{
 		SameHosts:         sameHosts,
 		ExpectTumblrPaths: expectTumblrPaths,
-	}
+	}, nil
 }

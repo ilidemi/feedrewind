@@ -19,14 +19,15 @@ type UserSettings struct {
 	DeliveryChannel *DeliveryChannel
 }
 
-func UserSettings_MustCreate(tx pgw.Queryable, userId UserId, timezone string) {
-	tx.MustExec(`
+func UserSettings_Create(tx pgw.Queryable, userId UserId, timezone string) error {
+	_, err := tx.Exec(`
 		insert into user_settings(user_id, timezone, delivery_channel, version)
 		values ($1, $2, null, 1)
 	`, userId, timezone)
+	return err
 }
 
-func UserSettings_MustGetById(tx pgw.Queryable, userId UserId) UserSettings {
+func UserSettings_GetById(tx pgw.Queryable, userId UserId) (*UserSettings, error) {
 	row := tx.QueryRow(`
 		select timezone, version, delivery_channel from user_settings where user_id = $1
 	`, userId)
@@ -34,23 +35,26 @@ func UserSettings_MustGetById(tx pgw.Queryable, userId UserId) UserSettings {
 	us.UserId = userId
 	err := row.Scan(&us.Timezone, &us.Version, &us.DeliveryChannel)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return us
+
+	return &us, nil
 }
 
-func UserSettings_MustSaveTimezone(
+func UserSettings_SaveTimezone(
 	tx pgw.Queryable, userId UserId, timezone string, version int,
-) {
-	tx.MustExec(`
+) error {
+	_, err := tx.Exec(`
 		update user_settings set timezone = $1, version = $2 where user_id = $3
 	`, timezone, version, userId)
+	return err
 }
 
-func UserSettings_MustSaveDeliveryChannel(
+func UserSettings_SaveDeliveryChannel(
 	tx pgw.Queryable, userId UserId, deliveryChannel DeliveryChannel, version int,
-) {
-	tx.MustExec(`
+) error {
+	_, err := tx.Exec(`
 		update user_settings set delivery_channel = $1, version = $2 where user_id = $3
 	`, deliveryChannel, version, userId)
+	return err
 }

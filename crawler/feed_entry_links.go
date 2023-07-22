@@ -40,13 +40,13 @@ func feedEntryLinksFromLinksDates(links []MaybeTitledLink, dates []time.Time) Fe
 }
 
 func (l *FeedEntryLinks) sequenceMatch(
-	seqCuris []CanonicalUri, curiEqCfg CanonicalEqualityConfig,
+	seqCuris []CanonicalUri, curiEqCfg *CanonicalEqualityConfig,
 ) []MaybeTitledLink {
 	return l.subsequenceMatch(seqCuris, 0, curiEqCfg)
 }
 
 func (l *FeedEntryLinks) subsequenceMatch(
-	seqCuris []CanonicalUri, offset int, curiEqCfg CanonicalEqualityConfig,
+	seqCuris []CanonicalUri, offset int, curiEqCfg *CanonicalEqualityConfig,
 ) []MaybeTitledLink {
 	if offset >= l.Length {
 		return nil
@@ -87,7 +87,7 @@ func (l *FeedEntryLinks) subsequenceMatch(
 }
 
 func (l *FeedEntryLinks) sequenceSuffixLength(
-	seqCuris []CanonicalUri, curiEqCfg CanonicalEqualityConfig,
+	seqCuris []CanonicalUri, curiEqCfg *CanonicalEqualityConfig,
 ) int {
 	if len(seqCuris) == 0 {
 		return 0

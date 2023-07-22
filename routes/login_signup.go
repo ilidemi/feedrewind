@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -74,8 +73,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	redirect := util.EnsureParamStr(r, "redirect")
 
 	conn := rutil.DBConn(r)
-	user := models.User_MustFindByEmail(conn, email)
-	if user != nil {
+	user, err := models.User_FindByEmail(conn, email)
+	if errors.Is(err, models.ErrUserNotFound) {
+		log.Info().Msg("User not found")
+	} else if err != nil {
+		panic(err)
+	} else {
 		err := bcrypt.CompareHashAndPassword([]byte(user.PasswordDigest), []byte(password))
 		if err == nil {
 			middleware.MustSetSessionAuthToken(w, r, user.AuthToken)
@@ -105,9 +108,18 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			})
 
 			subscriptionId := rutil.MustExtractAnonymousSubscriptionId(w, r)
-			if subscriptionId != 0 && models.Subscription_MustExists(conn, subscriptionId) {
-				models.Subscription_MustSetUserId(conn, subscriptionId, user.Id)
-				http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
+			if subscriptionId != 0 {
+				exists, err := models.Subscription_Exists(conn, subscriptionId)
+				if err != nil {
+					panic(err)
+				}
+				if exists {
+					err := models.Subscription_SetUserId(conn, subscriptionId, user.Id)
+					if err != nil {
+						panic(err)
+					}
+					http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
+				}
 			}
 
 			if redirect == "" {
@@ -118,8 +130,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		} else {
 			log.Info().Err(err).Msg("Password doesn't match")
 		}
-	} else {
-		log.Info().Msg("User not found")
 	}
 
 	result := newLoginResult(r, "Email or password is invalid", redirect)
@@ -174,25 +184,24 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	timezone := util.EnsureParamStr(r, "timezone")
 	timeOffsetStr := util.EnsureParamStr(r, "time_offset")
 
-	conn := rutil.DBConn(r)
-	tx := conn.MustBegin()
-	defer func() {
-		if err := tx.Rollback(); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			panic(errors.Wrap(err, "rollback error"))
-		}
-	}()
-	defer func() {
-		if err := tx.Commit(); err != nil {
-			panic(err)
-		}
-	}()
+	tx, err := rutil.DBConn(r).Begin()
+	if err != nil {
+		panic(err)
+	}
+	defer util.CommitOrRollbackOnPanic(tx)
 
 	const passwordTooShort = "Password is too short (minimum is 8 characters)"
 	const userAlreadyExists = "We already have an account registered with that email address"
-	existingUser := models.User_MustFindByEmail(tx, email)
+	existingUser, err := models.User_FindByEmail(tx, email)
+	userExists := true
+	if errors.Is(err, models.ErrUserNotFound) {
+		userExists = false
+	} else if err != nil {
+		panic(err)
+	}
+
 	var user *models.User
-	if existingUser != nil && existingUser.PasswordDigest == "" {
-		var err error
+	if userExists && existingUser.PasswordDigest == "" {
 		user, err = models.User_UpdatePassword(tx, existingUser.Id, password)
 		if errors.Is(err, models.ErrPasswordTooShort) {
 			result := newSignUpResult(r, passwordTooShort)
@@ -204,10 +213,17 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	} else {
 		name := email[:strings.Index(email, "@")]
 		productUserId := rutil.CurrentProductUserId(r)
-		if productUserId != "" && models.User_MustExistsByProductUserId(tx, productUserId) {
-			productUserId = models.ProductUserId_MustNew()
+		productUserExists, err := models.User_ExistsByProductUserId(tx, productUserId)
+		if err != nil {
+			panic(err)
 		}
-		var err error
+		if productUserExists {
+			var err error
+			productUserId, err = models.ProductUserId_New()
+			if err != nil {
+				panic(err)
+			}
+		}
 		user, err = models.User_Create(tx, email, password, name, productUserId)
 		if errors.Is(err, models.ErrUserAlreadyExists) {
 			result := newSignUpResult(r, userAlreadyExists)
@@ -241,9 +257,15 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Info().Msgf("Timezone out: %s", timezoneOut)
 
-		models.UserSettings_MustCreate(tx, user.Id, timezoneOut)
+		err = models.UserSettings_Create(tx, user.Id, timezoneOut)
+		if err != nil {
+			panic(err)
+		}
 
-		publish.MustCreateEmptyUserFeed(tx, user.Id)
+		err = publish.CreateEmptyUserFeed(tx, user.Id)
+		if err != nil {
+			panic(err)
+		}
 
 		models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
 			Tx:              tx,
@@ -255,16 +277,31 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		})
 
 		slackMessage := fmt.Sprintf("*%s* signed up", jobs.NotifySlackJob_Escape(user.Email))
-		jobs.NotifySlackJob_MustPerformNow(tx, slackMessage)
+		err = jobs.NotifySlackJob_PerformNow(tx, slackMessage)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	middleware.MustSetSessionAuthToken(w, r, user.AuthToken)
 
 	subscriptionId := rutil.MustExtractAnonymousSubscriptionId(w, r)
-	if subscriptionId != 0 && models.Subscription_MustExists(tx, subscriptionId) {
-		models.Subscription_MustSetUserId(tx, subscriptionId, user.Id)
-		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
-		return
+	if subscriptionId != 0 {
+		subscriptionExists, err := models.Subscription_Exists(tx, subscriptionId)
+		if err != nil {
+			panic(err)
+		}
+		if subscriptionExists {
+			err := models.Subscription_SetUserId(tx, subscriptionId, user.Id)
+			if err != nil {
+				panic(err)
+			}
+			http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
+			return
+		} else {
+			http.Redirect(w, r, "/subscriptions", http.StatusFound)
+			return
+		}
 	} else {
 		http.Redirect(w, r, "/subscriptions", http.StatusFound)
 		return

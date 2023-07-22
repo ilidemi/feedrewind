@@ -166,13 +166,17 @@ func TestParseFeedRootUrl(t *testing.T) {
 	fetchUri, err := neturl.Parse("https://root/feed")
 	assert.NoError(t, err)
 	for _, tc := range tests {
-		var parsedFeed ParsedFeed
+		var parsedFeed *ParsedFeed
 		var err error
 		assert.NotPanics(t, func() {
 			parsedFeed, err = ParseFeed(tc.content, fetchUri, logger)
 		}, tc.description)
 		assert.NoError(t, err, tc.description)
-		assert.Equal(t, parsedFeed.RootLink.Url, tc.expectedRootUrl)
+		if tc.expectedRootUrl == "" {
+			assert.Nil(t, parsedFeed.RootLink)
+		} else {
+			assert.Equal(t, parsedFeed.RootLink.Url, tc.expectedRootUrl)
+		}
 	}
 }
 
@@ -314,7 +318,7 @@ func TestParseFeedTitle(t *testing.T) {
 	fetchUri, err := neturl.Parse("https://root/feed")
 	assert.NoError(t, err)
 	for _, tc := range tests {
-		var parsedFeed ParsedFeed
+		var parsedFeed *ParsedFeed
 		var err error
 		assert.NotPanics(t, func() {
 			parsedFeed, err = ParseFeed(tc.content, fetchUri, logger)
@@ -913,7 +917,7 @@ func TestParseFeedEntryUrls(t *testing.T) {
 	fetchUri, err := neturl.Parse("https://root/feed")
 	assert.NoError(t, err)
 	for _, tc := range tests {
-		var parsedFeed ParsedFeed
+		var parsedFeed *ParsedFeed
 		var err error
 		assert.NotPanics(t, func() {
 			parsedFeed, err = ParseFeed(tc.content, fetchUri, logger)
@@ -925,7 +929,7 @@ func TestParseFeedEntryUrls(t *testing.T) {
 		} else {
 			assert.NoError(t, err, tc.description)
 
-			curiEqCfg := CanonicalEqualityConfig{
+			curiEqCfg := &CanonicalEqualityConfig{
 				SameHosts:         nil,
 				ExpectTumblrPaths: false,
 			}
@@ -1056,7 +1060,7 @@ func TestParseFeedGenerator(t *testing.T) {
 	fetchUri, err := neturl.Parse("https://root/feed")
 	assert.NoError(t, err)
 	for _, tc := range tests {
-		var parsedFeed ParsedFeed
+		var parsedFeed *ParsedFeed
 		var err error
 		assert.NotPanics(t, func() {
 			parsedFeed, err = ParseFeed(tc.content, fetchUri, logger)

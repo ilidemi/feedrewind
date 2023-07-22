@@ -22,21 +22,21 @@ type page struct {
 
 // TODO ProgressLogger
 func crawlRequest(
-	initialLink Link, isFeedExpected bool, crawlCtx *CrawlContext, httpClient *HttpClient, logger Logger,
-) (page, error) {
+	initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, httpClient *HttpClient, logger Logger,
+) (*page, error) {
 	// TODO
 
 	resp, err := http.Get(initialLink.Url)
 	if err != nil {
-		return page{}, err //nolint:exhaustruct
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return page{}, fmt.Errorf("crawl status %d", resp.StatusCode) //nolint:exhaustruct
+		return nil, fmt.Errorf("crawl status %d", resp.StatusCode)
 	}
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return page{}, err //nolint:exhaustruct
+		return nil, err
 	}
 
 	var contentType string
@@ -76,7 +76,7 @@ func crawlRequest(
 	// TODO meta_refresh_content
 	// TODO crawl_ctx and log
 
-	return page{
+	return &page{
 		Content:  content,
 		Document: document,
 		FetchUri: initialLink.Uri,

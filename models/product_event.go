@@ -13,13 +13,13 @@ import (
 
 type ProductUserId string
 
-func ProductUserId_MustNew() ProductUserId {
+func ProductUserId_New() (ProductUserId, error) {
 	guid, err := uuid.NewRandom()
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
-	return ProductUserId(guid.String())
+	return ProductUserId(guid.String()), nil
 }
 
 type ProductEventRequestArgs struct {
@@ -34,7 +34,7 @@ type ProductEventRequestArgs struct {
 func ProductEvent_MustEmitFromRequest(args ProductEventRequestArgs) {
 	platform := resolveUserAgent(args.Request.UserAgent())
 	anonIp := anonymizeUserIp(util.UserIp(args.Request))
-	args.Tx.MustExec(`
+	_, err := args.Tx.Exec(`
 		insert into product_events (
 			event_type, event_properties, user_properties, user_ip, product_user_id, browser, os_name,
 			os_version, bot_name
@@ -44,6 +44,9 @@ func ProductEvent_MustEmitFromRequest(args ProductEventRequestArgs) {
 		args.EventType, args.EventProperties, args.UserProperties, anonIp, args.ProductUserId,
 		platform.Browser, platform.OsName, platform.OsVersion, platform.BotName,
 	)
+	if err != nil {
+		panic(err)
+	}
 }
 
 type ProductEventScheduleArgs struct {
@@ -132,7 +135,7 @@ type ProductEventCreateSubscriptionArgs struct {
 	Tx              pgw.Queryable
 	Request         *http.Request
 	ProductUserId   ProductUserId
-	Subscription    SubscriptionCreateResult
+	Subscription    *SubscriptionCreateResult
 	UserIsAnonymous bool
 }
 

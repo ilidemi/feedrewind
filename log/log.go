@@ -2,6 +2,7 @@
 package log
 
 import (
+	"feedrewind/oops"
 	"os"
 	"time"
 
@@ -63,10 +64,7 @@ func frameField(f errors.Frame, s *state, c rune) string {
 }
 
 func marshalStack(err error) interface{} {
-	type stackTracer interface {
-		StackTrace() errors.StackTrace
-	}
-	sterr, ok := err.(stackTracer)
+	sterr, ok := err.(*oops.Error)
 	if !ok {
 		return nil
 	}
@@ -79,11 +77,15 @@ func marshalStack(err error) interface{} {
 		line := frameField(frame, &s, 'd')
 		funcName := frameField(frame, &s, 'n')
 
-		if i == 0 && source == "recoverer.go" && funcName == "Recoverer.func1.1" {
+		if i == 0 && source == "oops.go" {
 			continue
 		}
 
-		if i == 1 && source == "panic.go" && funcName == "gopanic" {
+		if (i == 0 || i == 1) && source == "recoverer.go" && funcName == "Recoverer.func1.1" {
+			continue
+		}
+
+		if (i == 1 || i == 2) && source == "panic.go" && funcName == "gopanic" {
 			continue
 		}
 

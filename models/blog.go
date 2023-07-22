@@ -6,6 +6,7 @@ import (
 	"feedrewind/db/pgw"
 	"feedrewind/log"
 	"feedrewind/models/mutil"
+	"feedrewind/oops"
 	"feedrewind/util"
 	"fmt"
 	"net/url"
@@ -72,7 +73,9 @@ const BlogLatestVersion = 1000000
 // Invariant for a given feed_url + version:
 // Either status is crawl_in_progress/crawl_failed/crawled_looks_wrong or blog posts are filled out
 
-func Blog_MustGetLatestByFeedUrl(tx pgw.Queryable, feedUrl string) (Blog, bool) {
+var ErrBlogNotFound = errors.New("blog not found")
+
+func Blog_GetLatestByFeedUrl(tx pgw.Queryable, feedUrl string) (*Blog, error) {
 	row := tx.QueryRow(`
 		select id, name, status, update_action, coalesce(url, feed_url) from blogs
 		where feed_url = $1 and version = $2
@@ -81,40 +84,53 @@ func Blog_MustGetLatestByFeedUrl(tx pgw.Queryable, feedUrl string) (Blog, bool) 
 	var b Blog
 	err := row.Scan(&b.Id, &b.Name, &b.Status, &b.UpdateAction, &b.BestUrl)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Blog{}, false //nolint:exhaustruct
+		return nil, ErrBlogNotFound
 	} else if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return b, true
+	return &b, nil
 }
 
 // Break circular dependency between models and jobs. Jobs will be using models, models only sometimes need to
 // schedule a job.
-type GuidedCrawlingJobMustScheduleFunc func(tx pgw.Queryable, blogId BlogId, startFeedId StartFeedId)
+type GuidedCrawlingJobScheduleFunc func(tx pgw.Queryable, blogId BlogId, startFeedId StartFeedId) error
 
-func Blog_MustCreateOrUpdate(
-	tx pgw.Queryable, startFeed StartFeed,
-	guidedCrawlingJobMustScheduleFunc GuidedCrawlingJobMustScheduleFunc,
-) Blog {
-	blog, ok := Blog_MustGetLatestByFeedUrl(tx, startFeed.Url)
-	if !ok {
+func Blog_CreateOrUpdate(
+	tx pgw.Queryable, startFeed *StartFeed, guidedCrawlingJobScheduleFunc GuidedCrawlingJobScheduleFunc,
+) (*Blog, error) {
+	blog, err := Blog_GetLatestByFeedUrl(tx, startFeed.Url)
+	if errors.Is(err, ErrBlogNotFound) {
 		log.Info().
 			Str("feed_url", startFeed.Url).
 			Msg("Creating a new blog")
-		blog = func() Blog {
-			nestedTx := tx.MustBegin()
-			defer util.CommitOrRollback(nestedTx, true, "")
-			blog, ok := Blog_MustCreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobMustScheduleFunc)
-			if !ok {
-				// Another writer must've created the record at the same time, let's use that
-				panic(fmt.Errorf(
-					"Blog %s with latest version didn't exist, then existed, now doesn't exist",
-					startFeed.Url,
-				))
+		blog, err = func() (blog *Blog, err error) {
+			nestedTx, err := tx.Begin()
+			if err != nil {
+				return nil, err
 			}
-			return blog
+			defer util.CommitOrRollbackErr(nestedTx, err)
+			blog, err = blog_CreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobScheduleFunc)
+			if errors.Is(err, errBlogAlreadyExists) {
+				// Another writer must've created the record at the same time, let's use that
+				blog, err = Blog_GetLatestByFeedUrl(nestedTx, startFeed.Url)
+				if err != nil {
+					return nil, oops.Wrapf(
+						err,
+						"Blog %s with latest version didn't exist, then existed, now doesn't exist",
+						startFeed.Url,
+					)
+				}
+			} else if err != nil {
+				return nil, err
+			}
+			return blog, nil
 		}()
+		if err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
 	}
 
 	// A blog that is currently being crawled will come out fresh
@@ -123,7 +139,7 @@ func Blog_MustCreateOrUpdate(
 	if blog.Status == BlogStatusCrawlInProgress ||
 		blog.Status == BlogStatusCrawlFailed ||
 		blog.Status == BlogStatusCrawledLooksWrong {
-		return blog
+		return blog, nil
 	}
 
 	// Update blog from feed
@@ -131,40 +147,55 @@ func Blog_MustCreateOrUpdate(
 	logger := &crawler.ZeroLogger{}
 	rows, err := tx.Query(`select url from blog_posts where blog_id = $1 order by index desc`, blog.Id)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	for rows.Next() {
 		var blogPostUrl string
 		err := rows.Scan(&blogPostUrl)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		blogPostLink, ok := crawler.ToCanonicalLink(blogPostUrl, logger, nil)
 		if !ok {
-			panic(fmt.Errorf("couldn't parse blog post url: %s", blogPostUrl))
+			return nil, oops.Newf("couldn't parse blog post url: %s", blogPostUrl)
 		}
 		blogPostCuris = append(blogPostCuris, blogPostLink.Curi)
 	}
 	if err := rows.Err(); err != nil {
-		panic(err)
+		return nil, err
 	}
-	curiEqCfg := BlogCanonicalEqualityConfig_MustGet(tx, blog.Id)
-	discardedFeedEntryUrls := BlogDiscardedFeedEntry_MustListUrls(tx, blog.Id)
-	missingFromFeedEntryUrls := BlogMissingFromFeedEntry_MustListUrls(tx, blog.Id)
+	curiEqCfg, err := blogCanonicalEqualityConfig_Get(tx, blog.Id)
+	if err != nil {
+		return nil, err
+	}
+	discardedFeedEntryUrls, err := blogDiscardedFeedEntry_ListUrls(tx, blog.Id)
+	if err != nil {
+		return nil, err
+	}
+	missingFromFeedEntryUrls, err := blogMissingFromFeedEntry_ListUrls(tx, blog.Id)
+	if err != nil {
+		return nil, err
+	}
 	finalUri, err := url.Parse(startFeed.Url)
 	if err != nil {
-		panic(err)
+		return nil, oops.Wrap(err)
 	}
-	newLinks, newLinksOk := crawler.MustExtractNewPostsFromFeed(
-		*startFeed.MaybeParsedFeed, finalUri, blogPostCuris, discardedFeedEntryUrls, missingFromFeedEntryUrls,
+	newLinks, err := crawler.ExtractNewPostsFromFeed(
+		startFeed.MaybeParsedFeed, finalUri, blogPostCuris, discardedFeedEntryUrls, missingFromFeedEntryUrls,
 		curiEqCfg, logger, logger,
 	)
+	newLinksOk := true
+	if errors.Is(err, crawler.ErrExtractNewPostsNoMatch) {
+		newLinksOk = false
+	} else if err != nil {
+		return nil, err
+	}
 
 	if newLinksOk && len(newLinks) == 0 {
 		log.Info().
 			Str("feed_url", startFeed.Url).
 			Msg("Blog doesn't need updating")
-		return blog
+		return blog, nil
 	}
 
 	switch blog.UpdateAction {
@@ -172,25 +203,34 @@ func Blog_MustCreateOrUpdate(
 		log.Info().
 			Str("feed_url", startFeed.Url).
 			Msg("Blog is marked to recrawl on update")
-		nestedTx := tx.MustBegin()
-		defer util.CommitOrRollback(nestedTx, true, "")
-		if Blog_MustDowngrade(nestedTx, blog.Id, startFeed.Url) {
-			blog, ok := Blog_MustCreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobMustScheduleFunc)
-			if !ok {
-				panic(fmt.Errorf("Couldn't create blog %s with latest version", startFeed.Url))
+		return func() (newBlog *Blog, err error) {
+			nestedTx, err := tx.Begin()
+			if err != nil {
+				return nil, err
 			}
-			return blog
-		} else {
-			// Another writer deprecated this blog at the same time
-			blog, ok := Blog_MustGetLatestByFeedUrl(nestedTx, startFeed.Url)
-			if !ok {
-				panic(fmt.Errorf(
-					"Blog %s with latest version was deprecated by another request but the latest version still doesn't exist",
-					startFeed.Url,
-				))
+			defer util.CommitOrRollbackErr(nestedTx, err)
+
+			err = Blog_Downgrade(nestedTx, blog.Id, startFeed.Url)
+			if err != nil {
+				newBlog, err = blog_CreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobScheduleFunc)
 			}
-			return blog
-		}
+			if errors.Is(err, ErrNoLatestVersion) || errors.Is(err, errBlogAlreadyExists) {
+				// Another writer deprecated this blog at the same time
+				newBlog, err = Blog_GetLatestByFeedUrl(nestedTx, startFeed.Url)
+				if errors.Is(err, ErrBlogNotFound) {
+					return nil, oops.Newf(
+						"Blog %s with latest version was deprecated by another request but the latest version still doesn't exist",
+						startFeed.Url,
+					)
+				} else if err != nil {
+					return nil, err
+				}
+			} else if err != nil {
+				return nil, err
+			}
+
+			return newBlog, nil
+		}()
 	case BlogUpdateActionUpdateFromFeedOrFail:
 		if newLinksOk {
 			log.Info().
@@ -204,147 +244,184 @@ func Blog_MustCreateOrUpdate(
 			var everythingId BlogPostCategoryId
 			err := row.Scan(&everythingId)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
-			nestedTx := tx.MustBegin()
-			defer util.CommitOrRollback(nestedTx, true, "")
-			rows, err = nestedTx.Query(`
-				select blog_id from blog_post_locks
-				where blog_id = $1
-				for update nowait
-			`, blog.Id)
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.LockNotAvailable {
-				log.Info().
-					Str("feed_url", startFeed.Url).
-					Msg("Someone else is updating the blog posts, just waiting till they're done")
-				rows, err := nestedTx.Query(`
+
+			return func() (newBlog *Blog, err error) {
+				nestedTx, err := tx.Begin()
+				if err != nil {
+					return nil, err
+				}
+				defer util.CommitOrRollbackErr(nestedTx, err)
+
+				rows, err = nestedTx.Query(`
 					select blog_id from blog_post_locks
 					where blog_id = $1
-					for update
+					for update nowait
 				`, blog.Id)
-				if err != nil {
-					panic(err)
+				var pgErr *pgconn.PgError
+				if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.LockNotAvailable {
+					log.Info().
+						Str("feed_url", startFeed.Url).
+						Msg("Someone else is updating the blog posts, just waiting till they're done")
+					rows, err := nestedTx.Query(`
+						select blog_id from blog_post_locks
+						where blog_id = $1
+						for update
+					`, blog.Id)
+					if err != nil {
+						return nil, err
+					}
+					rows.Close()
+					log.Info().
+						Str("feed_url", startFeed.Url).
+						Msg("Done waiting")
+
+					// Assume that the other writer has put the fresh posts in
+					// There could be a race condition where two updates and a post publish happened at the
+					// same time, the other writer succeeds with an older list, the current writer fails with
+					// a newer list and ends up using the older list. But if both updates came a second
+					// earlier, both would get the older list, and the new post would still get published a
+					// second later, so the UX is the same and there's nothing we could do about it.
+					newBlog, err = Blog_GetLatestByFeedUrl(nestedTx, startFeed.Url)
+					if errors.Is(err, ErrBlogNotFound) {
+						return nil, oops.Newf(
+							"Blog %s with latest version was updated by another request but the latest version also doesn't exist",
+							startFeed.Url,
+						)
+					} else if err != nil {
+						return nil, err
+					}
+					return newBlog, nil
+				} else if err != nil {
+					return nil, err
 				}
 				rows.Close()
-				log.Info().
-					Str("feed_url", startFeed.Url).
-					Msg("Done waiting")
 
-				// Assume that the other writer has put the fresh posts in
-				// There could be a race condition where two updates and a post publish happened at the
-				// same time, the other writer succeeds with an older list, the current writer fails with
-				// a newer list and ends up using the older list. But if both updates came a second
-				// earlier, both would get the older list, and the new post would still get published a
-				// second later, so the UX is the same and there's nothing we could do about it.
-				blog, ok := Blog_MustGetLatestByFeedUrl(nestedTx, startFeed.Url)
-				if !ok {
-					panic(fmt.Errorf(
-						"Blog %s with latest version was updated by another request but the latest version also doesn't exist",
-						startFeed.Url,
-					))
+				row = nestedTx.QueryRow("select max(index) from blog_posts where blog_id = $1", blog.Id)
+				var maxIndex int
+				err = row.Scan(&maxIndex)
+				if err != nil {
+					return nil, err
 				}
-				return blog
-			} else if err != nil {
-				panic(err)
-			}
-			rows.Close()
-
-			row = nestedTx.QueryRow("select max(index) from blog_posts where blog_id = $1", blog.Id)
-			var maxIndex int
-			err = row.Scan(&maxIndex)
-			if err != nil {
-				panic(err)
-			}
-			batch := &pgx.Batch{} //nolint:exhaustruct
-			for i := 0; i < len(newLinks); i++ {
-				index := maxIndex + 1 + i
-				link := newLinks[len(newLinks)-1-i]
-				var title string
-				if link.MaybeTitle != nil {
-					title = link.MaybeTitle.Value
-				} else {
-					title = link.Url
-				}
-				batch.Queue(`
+				batch := &pgx.Batch{} //nolint:exhaustruct
+				for i := 0; i < len(newLinks); i++ {
+					index := maxIndex + 1 + i
+					link := newLinks[len(newLinks)-1-i]
+					var title string
+					if link.MaybeTitle != nil {
+						title = link.MaybeTitle.Value
+					} else {
+						title = link.Url
+					}
+					batch.Queue(`
 					with blog_post_ids as (
 						insert into blog_posts (blog_id, index, url, title)
 						values ($1, $2, $3, $4)
 						returning id
 					)
 					insert into blog_post_category_assignments (blog_post_id, category_id)
-					values (blog_post_ids.id, $5)
+					select id, $5 from blog_post_ids
 				`, blog.Id, index, link.Url, title, everythingId)
-			}
-			err = nestedTx.SendBatch(batch).Close()
-			if err != nil {
-				panic(err)
-			}
-			return blog
+				}
+				err = nestedTx.SendBatch(batch).Close()
+				if err != nil {
+					return nil, err
+				}
+				return blog, nil
+			}()
 		} else {
 			log.Warn().
 				Str("feed_url", startFeed.Url).
 				Msg("Couldn't update blog from feed, marking as failed")
-			tx.MustExec("update blogs set status = $1 where id = $2", BlogStatusUpdateFromFeedFailed, blog.Id)
+			_, err := tx.Exec(`
+				update blogs set status = $1 where id = $2
+			`, BlogStatusUpdateFromFeedFailed, blog.Id)
+			if err != nil {
+				return nil, err
+			}
 			blog.Status = BlogStatusUpdateFromFeedFailed
-			return blog
+			return blog, nil
 		}
 	case BlogUpdateActionFail:
 		log.Warn().
 			Str("feed_url", startFeed.Url).
 			Msg("Blog is marked to fail on update")
-		tx.MustExec("update blogs set status = $1 where id = $2", BlogStatusUpdateFromFeedFailed, blog.Id)
+		_, err := tx.Exec(`
+			update blogs set status = $1 where id = $2
+		`, BlogStatusUpdateFromFeedFailed, blog.Id)
+		if err != nil {
+			return nil, err
+		}
 		blog.Status = BlogStatusUpdateFromFeedFailed
-		return blog
+		return blog, nil
 	case BlogUpdateActionNoOp:
 		log.Info().
 			Str("feed_url", startFeed.Url).
 			Msg("Blog is marked to never update")
-		return blog
+		return blog, nil
 	default:
 		panic(fmt.Errorf("unexpected blog update action: %s", blog.UpdateAction))
 	}
 }
 
-func Blog_MustCreateWithCrawling(
-	tx pgw.Queryable, startFeed StartFeed,
-	guidedCrawlingJobMustScheduleFunc GuidedCrawlingJobMustScheduleFunc,
-) (blog Blog, ok bool) {
-	blogId := BlogId(mutil.MustGenerateRandomId(tx, "blogs"))
+var errBlogAlreadyExists = errors.New("blog already exists")
+
+func blog_CreateWithCrawling(
+	tx pgw.Queryable, startFeed *StartFeed,
+	guidedCrawlingJobScheduleFunc GuidedCrawlingJobScheduleFunc,
+) (*Blog, error) {
+	blogIdInt, err := mutil.GenerateRandomId(tx, "blogs")
+	if err != nil {
+		return nil, err
+	}
+	blogId := BlogId(blogIdInt)
 	status := BlogStatusCrawlInProgress
 	updateAction := BlogUpdateActionRecrawl
-	_, err := tx.Exec(`
+	_, err = tx.Exec(`
 		insert into blogs (id, name, feed_url, url, status, status_updated_at, version, update_action)
 		values ($1, $2, $3, null, $4, utc_now(), $5, $6)
 	`, blogId, startFeed.Title, startFeed.Url, status, BlogLatestVersion, updateAction)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
 		pgErr.ConstraintName == "index_blogs_on_feed_url_and_version" {
-		return Blog{}, false //nolint:exhaustruct
+		return nil, errBlogAlreadyExists
 	} else if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	BlogCrawlProgress_MustCreate(tx, blogId)
-	BlogPostLock_MustCreate(tx, blogId)
-	guidedCrawlingJobMustScheduleFunc(tx, blogId, startFeed.Id)
+	err = blogCrawlProgress_Create(tx, blogId)
+	if err != nil {
+		return nil, err
+	}
+	err = blogPostLock_Create(tx, blogId)
+	if err != nil {
+		return nil, err
+	}
+	err = guidedCrawlingJobScheduleFunc(tx, blogId, startFeed.Id)
+	if err != nil {
+		return nil, err
+	}
 
-	return Blog{
+	return &Blog{
 		Id:           blogId,
 		Name:         startFeed.Title,
 		Status:       status,
 		UpdateAction: updateAction,
 		BestUrl:      startFeed.Url,
-	}, true
+	}, nil
 }
 
-func BlogPostLock_MustCreate(tx pgw.Queryable, blogId BlogId) {
-	tx.MustExec(`
+func blogPostLock_Create(tx pgw.Queryable, blogId BlogId) error {
+	_, err := tx.Exec(`
 		insert into blog_post_locks (blog_id) values ($1)
 	`, blogId)
+	return err
 }
 
-func Blog_MustDowngrade(tx pgw.Queryable, blogId BlogId, feedUrl string) (success bool) {
+var ErrNoLatestVersion = errors.New("blog with latest version not found")
+
+func Blog_Downgrade(tx pgw.Queryable, blogId BlogId, feedUrl string) error {
 	row := tx.QueryRow(`
 		update blogs
 		set version = (select count(1) from blogs where feed_url = $1)
@@ -354,20 +431,20 @@ func Blog_MustDowngrade(tx pgw.Queryable, blogId BlogId, feedUrl string) (succes
 	var version int64
 	err := row.Scan(&version)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false
+		return ErrNoLatestVersion
 	} else if err != nil {
-		panic(err)
+		return err
 	}
 
-	return true
+	return nil
 }
 
-func Blog_MustGetNameStatusById(tx pgw.Queryable, blogId BlogId) (name string, status BlogStatus) {
+func Blog_GetNameStatusById(tx pgw.Queryable, blogId BlogId) (name string, status BlogStatus, err error) {
 	row := tx.QueryRow("select name, status from blogs where id = $1", blogId)
-	err := row.Scan(&name, &status)
+	err = row.Scan(&name, &status)
 	if err != nil {
-		panic(err)
+		return "", "", err
 	}
 
-	return name, status
+	return name, status, nil
 }

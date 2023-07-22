@@ -6,8 +6,6 @@ ensure -> defer func(){}()
 to_s -> String()
 Links.each_with_index -> {{range $i, $ := .Links}}
 
-Returning errors as errors loses stacktrace. Panicking scatters Must* everywhere. Some funcs eventually need to panic on db but return err on duplicate user and midway solution is required there. Currently sticking with nested error messages.
-
 ## View helpers
 <%= link_to "Link", "/path" -> <a href="/path">Link</a>
 <%= form_with url: "subscriptions/add" -> <form action="subscriptions/add" accept-charset="UTF-8"

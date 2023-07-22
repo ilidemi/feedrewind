@@ -4,6 +4,7 @@ import (
 	"context"
 	"feedrewind/db/pgw"
 	"feedrewind/log"
+	"feedrewind/oops"
 	"feedrewind/util"
 	"net/http"
 	"regexp"
@@ -131,7 +132,7 @@ type errorWrapperKeyType struct{}
 var errorWrapperKey = &errorWrapperKeyType{}
 
 type errorWrapper struct {
-	err error
+	err *oops.Error
 }
 
 func withErrorWrapper(r *http.Request, errorWrapper *errorWrapper) *http.Request {
@@ -139,7 +140,7 @@ func withErrorWrapper(r *http.Request, errorWrapper *errorWrapper) *http.Request
 	return r
 }
 
-func setError(r *http.Request, error error) {
+func setError(r *http.Request, error *oops.Error) {
 	errorWrapper, _ := r.Context().Value(errorWrapperKey).(*errorWrapper)
 	errorWrapper.err = error
 }

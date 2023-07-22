@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-func NotifySlackJob_MustPerformNow(tx pgw.Queryable, text string) {
-	mustPerformNow(tx, "NotifySlackJob", defaultQueue, strToYaml(text))
+func NotifySlackJob_PerformNow(tx pgw.Queryable, text string) error {
+	return performNow(tx, "NotifySlackJob", defaultQueue, strToYaml(text))
 }
 
 func NotifySlackJob_Escape(text string) string {

@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"feedrewind/db/pgw"
 	"fmt"
 )
 
@@ -49,7 +48,7 @@ func (m *FixDBTimezone) Version() string {
 	return "20230704085733"
 }
 
-func (m *FixDBTimezone) Up(tx *pgw.Tx) {
+func (m *FixDBTimezone) Up(tx *Tx) {
 	tx.MustExec(`
 create function bump_updated_at_utc()
 returns trigger as $$
@@ -78,6 +77,6 @@ $$ language 'plpgsql'
 	tx.MustExec("drop function bump_updated_at")
 }
 
-func (m *FixDBTimezone) Down(tx *pgw.Tx) {
+func (m *FixDBTimezone) Down(tx *Tx) {
 	panic("Not implemented")
 }

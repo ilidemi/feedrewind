@@ -7,15 +7,15 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func PostmarkBouncedUser_MustExists(tx pgw.Queryable, userId UserId) bool {
+func PostmarkBouncedUser_Exists(tx pgw.Queryable, userId UserId) (bool, error) {
 	row := tx.QueryRow("select 1 from postmark_bounced_users where user_id = $1", userId)
 	var one int
 	err := row.Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false
+		return false, nil
 	} else if err != nil {
-		panic(err)
+		return false, err
 	}
 
-	return true
+	return true, nil
 }

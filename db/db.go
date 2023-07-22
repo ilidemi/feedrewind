@@ -157,8 +157,6 @@ func generateMigration(name string) {
 
 	templateText := `package migrations
 
-import "feedrewind/db/pgw"
-
 type {{.StructName}} struct {}
 
 func init() {
@@ -169,11 +167,11 @@ func (m *{{.StructName}}) Version() string {
 	return "{{.Version}}"
 }
 
-func (m *{{.StructName}}) Up(tx *pgw.Tx) {
+func (m *{{.StructName}}) Up(tx *Tx) {
 	panic("Not implemented")
 }
 
-func (m *{{.StructName}}) Down(tx *pgw.Tx) {
+func (m *{{.StructName}}) Down(tx *Tx) {
 	panic("Not implemented")
 }
 `
@@ -239,14 +237,17 @@ func migrate() {
 			continue
 		}
 
-		tx := conn.MustBegin()
+		tx, err := conn.Begin()
+		if err != nil {
+			panic(err)
+		}
 		defer func() {
 			if err := tx.Rollback(); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 				panic(errors.Wrap(err, "rollback error"))
 			}
 		}()
 
-		migration.Up(tx)
+		migration.Up(migrations.WrapTx(tx))
 		_, err = tx.Exec("insert into schema_migrations (version) values ($1)", version)
 		if err != nil {
 			panic(err)
@@ -284,14 +285,17 @@ func rollback() {
 		}
 		found = true
 
-		tx := conn.MustBegin()
+		tx, err := conn.Begin()
+		if err != nil {
+			panic(err)
+		}
 		defer func() {
 			if err := tx.Rollback(); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 				panic(errors.Wrap(err, "rollback error"))
 			}
 		}()
 
-		migration.Down(tx)
+		migration.Down(migrations.WrapTx(tx))
 		tag, err := tx.Exec("delete from schema_migrations where version = $1", maxVersion)
 		if err != nil {
 			panic(err)

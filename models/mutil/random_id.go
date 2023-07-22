@@ -9,12 +9,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func MustGenerateRandomId(tx pgw.Queryable, tableName string) int64 {
+func GenerateRandomId(tx pgw.Queryable, tableName string) (int64, error) {
 	buf := make([]byte, 8)
 	for {
 		_, err := rand.Read(buf)
 		if err != nil {
-			panic(err)
+			return 0, err
 		}
 		uId := binary.LittleEndian.Uint64(buf)
 		id := int64(uId & ((1 << 63) - 1))
@@ -26,9 +26,9 @@ func MustGenerateRandomId(tx pgw.Queryable, tableName string) int64 {
 		var one int
 		err = row.Scan(&one)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return id
+			return id, nil
 		} else if err != nil {
-			panic(err)
+			return 0, err
 		}
 
 		// continue

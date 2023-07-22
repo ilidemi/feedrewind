@@ -27,11 +27,11 @@ func strToYaml(str string) yamlString {
 	return yamlString(fmt.Sprintf("'%s'", str))
 }
 
-func mustPerformNow(tx pgw.Queryable, class string, queue string, arguments ...yamlString) {
-	mustPerformAt(tx, time.Now().UTC(), class, queue, arguments...)
+func performNow(tx pgw.Queryable, class string, queue string, arguments ...yamlString) error {
+	return performAt(tx, time.Now().UTC(), class, queue, arguments...)
 }
 
-func mustPerformAt(tx pgw.Queryable, runAt time.Time, class string, queue string, arguments ...yamlString) {
+func performAt(tx pgw.Queryable, runAt time.Time, class string, queue string, arguments ...yamlString) error {
 	const format1 = `--- !ruby/object:ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper
 job_data:
   job_class: %s
@@ -59,8 +59,9 @@ job_data:
 	fmt.Fprintf(&handler, format2, runAt.Format(time.RFC3339))
 
 	runAtStr := runAt.Format(runAtFormat)
-	tx.MustExec(`
+	_, err := tx.Exec(`
 		insert into delayed_jobs (handler, run_at, queue)
 		values ($1, $2, $3)
 	`, handler.String(), runAtStr, queue)
+	return err
 }

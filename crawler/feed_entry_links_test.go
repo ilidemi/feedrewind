@@ -130,7 +130,7 @@ func TestSequenceSuffixLength(t *testing.T) {
 	}
 
 	logger := &DummyLogger{}
-	curiEqCfg := CanonicalEqualityConfig{
+	curiEqCfg := &CanonicalEqualityConfig{
 		SameHosts:         nil,
 		ExpectTumblrPaths: false,
 	}
@@ -142,9 +142,9 @@ func TestSequenceSuffixLength(t *testing.T) {
 			var linkBucket []MaybeTitledLink
 			for _, url := range bucket {
 				link, ok := ToCanonicalLink(url, logger, nil)
-				assert.True(t, ok)
+				assert.True(t, ok, tc.description)
 				linkBucket = append(linkBucket, MaybeTitledLink{
-					Link:       link,
+					Link:       *link,
 					MaybeTitle: nil,
 				})
 			}
@@ -160,7 +160,7 @@ func TestSequenceSuffixLength(t *testing.T) {
 		var seqCuris []CanonicalUri
 		for _, seqUrl := range tc.sequence {
 			seqLink, ok := ToCanonicalLink(seqUrl, logger, nil)
-			assert.True(t, ok)
+			assert.True(t, ok, tc.description)
 			seqCuris = append(seqCuris, seqLink.Curi)
 		}
 

@@ -1,7 +1,5 @@
 package migrations
 
-import "feedrewind/db/pgw"
-
 type UtcNow struct{}
 
 func init() {
@@ -12,7 +10,7 @@ func (m *UtcNow) Version() string {
 	return "20230712025233"
 }
 
-func (m *UtcNow) Up(tx *pgw.Tx) {
+func (m *UtcNow) Up(tx *Tx) {
 	tx.MustExec(`
 create function utc_now()
 returns timestamp(6) without time zone as $$
@@ -23,6 +21,6 @@ $$ language 'plpgsql'
 `)
 }
 
-func (m *UtcNow) Down(tx *pgw.Tx) {
+func (m *UtcNow) Down(tx *Tx) {
 	tx.MustExec(`drop function utc_now`)
 }

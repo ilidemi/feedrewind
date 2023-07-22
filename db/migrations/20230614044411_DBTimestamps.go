@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"feedrewind/db/pgw"
 	"fmt"
 )
 
@@ -49,7 +48,7 @@ func (m *DBTimestamps) Version() string {
 	return "20230614044411"
 }
 
-func (m *DBTimestamps) Up(tx *pgw.Tx) {
+func (m *DBTimestamps) Up(tx *Tx) {
 	tx.MustExec(`
 create function bump_updated_at()
 returns trigger as $$
@@ -73,7 +72,7 @@ $$ language 'plpgsql'
 	}
 }
 
-func (m *DBTimestamps) Down(tx *pgw.Tx) {
+func (m *DBTimestamps) Down(tx *Tx) {
 	for _, table := range m.tables {
 		tx.MustExec("alter table " + table + " alter column created_at drop default")
 		tx.MustExec("alter table " + table + " alter column updated_at drop default")

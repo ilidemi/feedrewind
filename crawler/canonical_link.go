@@ -18,7 +18,7 @@ func init() {
 		regexp.MustCompile("(?i)( |\t|\n|\x00|\v|\f|\r|%20|%09|%0a|%00|%0b|%0c|%0d)+\\z")
 }
 
-func ToCanonicalLink(url string, logger Logger, fetchUri *neturl.URL) (Link, bool) {
+func ToCanonicalLink(url string, logger Logger, fetchUri *neturl.URL) (link *Link, ok bool) {
 	urlStripped := leadingWhitespaceRegex.ReplaceAllString(url, "")
 	urlStripped = trailingWhitespaceRegex.ReplaceAllString(urlStripped, "")
 	urlNewlinesRemoved := strings.ReplaceAll(urlStripped, "\n", "")
@@ -31,15 +31,15 @@ func ToCanonicalLink(url string, logger Logger, fetchUri *neturl.URL) (Link, boo
 	uri, err := neturl.Parse(urlNewlinesRemoved)
 	if err != nil {
 		logger.Info("Invalid URL: %q%s has %v", url, fetchUriStr, err)
-		return Link{}, false //nolint:exhaustruct
+		return nil, false
 	}
 
 	if uri.Scheme == "mailto" {
-		return Link{}, false //nolint:exhaustruct
+		return nil, false
 	}
 
 	if uri.Scheme != "" && uri.Host == "" && uri.Path == "" {
-		return Link{}, false //nolint:exhaustruct
+		return nil, false
 	}
 
 	if uri.Scheme == "" && fetchUri != nil {
@@ -48,16 +48,16 @@ func ToCanonicalLink(url string, logger Logger, fetchUri *neturl.URL) (Link, boo
 	}
 
 	if uri.Scheme != "http" && uri.Scheme != "https" {
-		return Link{}, false //nolint:exhaustruct
+		return nil, false
 	}
 
 	if uri.User != nil {
 		logger.Info("Invalid URL: %q%s has userinfo: %s", uri, uri.User)
-		return Link{}, false //nolint:exhaustruct
+		return nil, false
 	}
 	if uri.Opaque != "" {
 		logger.Info("Invalid URL: %q%s has opaque: %s", uri, uri.Opaque)
-		return Link{}, false //nolint:exhaustruct
+		return nil, false
 	}
 
 	if uri.Scheme == "http" {
@@ -72,7 +72,7 @@ func ToCanonicalLink(url string, logger Logger, fetchUri *neturl.URL) (Link, boo
 	uri.RawFragment = ""
 
 	curi := CanonicalUriFromUri(uri)
-	return Link{
+	return &Link{
 		Curi: curi,
 		Uri:  uri,
 		Url:  uri.String(),
@@ -183,7 +183,7 @@ type CanonicalEqualityConfig struct {
 	ExpectTumblrPaths bool
 }
 
-func CanonicalEqualityConfigEqual(curiEqCfg1, curiEqCfg2 CanonicalEqualityConfig) bool {
+func CanonicalEqualityConfigEqual(curiEqCfg1, curiEqCfg2 *CanonicalEqualityConfig) bool {
 	if curiEqCfg1.ExpectTumblrPaths != curiEqCfg2.ExpectTumblrPaths {
 		return false
 	}
@@ -211,7 +211,7 @@ func init() {
 	tumblrPathRegex = regexp.MustCompile(`^(/post/\d+)(?:/[^/]+)?/?$`)
 }
 
-func CanonicalUriEqual(curi1, curi2 CanonicalUri, curiEqCfg CanonicalEqualityConfig) bool {
+func CanonicalUriEqual(curi1, curi2 CanonicalUri, curiEqCfg *CanonicalEqualityConfig) bool {
 	if !(curi1.Host == curi2.Host || (curiEqCfg.SameHosts[curi1.Host] && curiEqCfg.SameHosts[curi2.Host])) {
 		return false
 	}
@@ -234,11 +234,11 @@ type CanonicalUriSet struct {
 	Curis  []CanonicalUri
 	Length int
 
-	curiEqCfg CanonicalEqualityConfig
+	curiEqCfg *CanonicalEqualityConfig
 	keys      map[string]bool
 }
 
-func NewCanonicalUriSet(curis []CanonicalUri, curiEqCfg CanonicalEqualityConfig) CanonicalUriSet {
+func NewCanonicalUriSet(curis []CanonicalUri, curiEqCfg *CanonicalEqualityConfig) CanonicalUriSet {
 	result := CanonicalUriSet{
 		Curis:     nil,
 		Length:    0,
@@ -255,7 +255,7 @@ func (s *CanonicalUriSet) Contains(curi CanonicalUri) bool {
 }
 
 //nolint:unused
-func (s *CanonicalUriSet) updateEqualityConfig(curiEqCfg CanonicalEqualityConfig) {
+func (s *CanonicalUriSet) updateEqualityConfig(curiEqCfg *CanonicalEqualityConfig) {
 	curis := s.Curis
 	s.Curis = nil
 	s.Length = 0
@@ -297,7 +297,7 @@ func (s *CanonicalUriSet) add(curi CanonicalUri) {
 	s.Length++
 }
 
-func canonicalUriGetKey(curi CanonicalUri, curiEqCfg CanonicalEqualityConfig) string {
+func canonicalUriGetKey(curi CanonicalUri, curiEqCfg *CanonicalEqualityConfig) string {
 	server := curi.Host + curi.Port
 	serverKey := server
 	if curiEqCfg.SameHosts[server] {
