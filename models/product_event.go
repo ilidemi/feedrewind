@@ -22,137 +22,89 @@ func ProductUserId_New() (ProductUserId, error) {
 	return ProductUserId(guid.String()), nil
 }
 
-type ProductEventRequestArgs struct {
-	Tx              pgw.Queryable
-	Request         *http.Request
-	ProductUserId   ProductUserId
-	EventType       string
-	EventProperties map[string]any
-	UserProperties  map[string]any
+type ProductEventContext struct {
+	Tx            pgw.Queryable
+	Request       *http.Request
+	ProductUserId ProductUserId
 }
 
-func ProductEvent_MustEmitFromRequest(args ProductEventRequestArgs) {
-	platform := resolveUserAgent(args.Request.UserAgent())
-	anonIp := anonymizeUserIp(util.UserIp(args.Request))
-	_, err := args.Tx.Exec(`
+func NewProductEventContext(
+	tx pgw.Queryable, request *http.Request, productUserId ProductUserId,
+) ProductEventContext {
+	return ProductEventContext{
+		Tx:            tx,
+		Request:       request,
+		ProductUserId: productUserId,
+	}
+}
+
+func ProductEvent_MustEmitFromRequest(
+	pc ProductEventContext, eventType string, eventProperties map[string]any, userProperties map[string]any,
+) {
+	platform := resolveUserAgent(pc.Request.UserAgent())
+	anonIp := anonymizeUserIp(util.UserIp(pc.Request))
+	_, err := pc.Tx.Exec(`
 		insert into product_events (
 			event_type, event_properties, user_properties, user_ip, product_user_id, browser, os_name,
 			os_version, bot_name
 		)
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`,
-		args.EventType, args.EventProperties, args.UserProperties, anonIp, args.ProductUserId,
-		platform.Browser, platform.OsName, platform.OsVersion, platform.BotName,
+		eventType, eventProperties, userProperties, anonIp, pc.ProductUserId, platform.Browser,
+		platform.OsName, platform.OsVersion, platform.BotName,
 	)
 	if err != nil {
 		panic(err)
 	}
 }
 
-type ProductEventScheduleArgs struct {
-	Tx             pgw.Queryable
-	Request        *http.Request
-	ProductUserId  ProductUserId
-	EventType      string
-	SubscriptionId SubscriptionId
-	BlogBestUrl    string
-	WeeklyCount    int
-	ActiveDays     int
+func ProductEvent_MustEmitSchedule(
+	pc ProductEventContext, eventType string, subscriptionId SubscriptionId, blogBestUrl string,
+	weeklyCount int, activeDays int,
+) {
+	ProductEvent_MustEmitFromRequest(pc, eventType, map[string]any{
+		"subscription_id":      subscriptionId,
+		"blog_url":             blogBestUrl,
+		"weekly_count":         weeklyCount,
+		"active_days":          activeDays,
+		"posts_per_active_day": float64(weeklyCount) / float64(activeDays),
+	}, nil)
 }
 
-func ProductEvent_MustEmitSchedule(args ProductEventScheduleArgs) {
-	ProductEvent_MustEmitFromRequest(ProductEventRequestArgs{
-		Tx:            args.Tx,
-		Request:       args.Request,
-		ProductUserId: args.ProductUserId,
-		EventType:     args.EventType,
-		EventProperties: map[string]any{
-			"subscription_id":      args.SubscriptionId,
-			"blog_url":             args.BlogBestUrl,
-			"weekly_count":         args.WeeklyCount,
-			"active_days":          args.ActiveDays,
-			"posts_per_active_day": float64(args.WeeklyCount) / float64(args.ActiveDays),
-		},
-		UserProperties: nil,
-	})
-}
-
-type ProductEventVisitAddPageArgs struct {
-	Tx              pgw.Queryable
-	Request         *http.Request
-	ProductUserId   ProductUserId
-	Path            string
-	UserIsAnonymous bool
-	Extra           map[string]any
-}
-
-func ProductEvent_MustEmitVisitAddPage(args ProductEventVisitAddPageArgs) {
-	referer := collapseReferer(args.Request.Referer())
+func ProductEvent_MustEmitVisitAddPage(
+	pc ProductEventContext, path string, userIsAnonymous bool, extra map[string]any,
+) {
+	referer := collapseReferer(pc.Request.Referer())
 	eventProperties := map[string]any{
-		"path":              args.Path,
+		"path":              path,
 		"referer":           referer,
-		"user_is_anonymous": args.UserIsAnonymous,
+		"user_is_anonymous": userIsAnonymous,
 	}
-	for key, value := range args.Extra {
+	for key, value := range extra {
 		eventProperties[key] = value
 	}
-
-	ProductEvent_MustEmitFromRequest(ProductEventRequestArgs{
-		Tx:              args.Tx,
-		Request:         args.Request,
-		ProductUserId:   args.ProductUserId,
-		EventType:       "visit add page",
-		EventProperties: eventProperties,
-		UserProperties:  nil,
-	})
+	ProductEvent_MustEmitFromRequest(pc, "visit add page", eventProperties, nil)
 }
 
-type ProductEventDiscoverFeedArgs struct {
-	Tx              pgw.Queryable
-	Request         *http.Request
-	ProductUserId   ProductUserId
-	BlogUrl         string
-	Result          TypedBlogUrlResult
-	UserIsAnonymous bool
+func ProductEvent_MustEmitDiscoverFeeds(
+	pc ProductEventContext, blogUrl string, typedResult TypedBlogUrlResult, userIsAnonymous bool,
+) {
+	ProductEvent_MustEmitFromRequest(pc, "discover feeds", map[string]any{
+		"blog_url":          blogUrl,
+		"result":            typedResult,
+		"user_is_anonymous": userIsAnonymous,
+	}, nil)
 }
 
-func ProductEvent_MustEmitDiscoverFeeds(args ProductEventDiscoverFeedArgs) {
-	ProductEvent_MustEmitFromRequest(ProductEventRequestArgs{
-		Tx:            args.Tx,
-		Request:       args.Request,
-		ProductUserId: args.ProductUserId,
-		EventType:     "discover feeds",
-		EventProperties: map[string]any{
-			"blog_url":          args.BlogUrl,
-			"result":            args.Result,
-			"user_is_anonymous": args.UserIsAnonymous,
-		},
-		UserProperties: nil,
-	})
-}
-
-type ProductEventCreateSubscriptionArgs struct {
-	Tx              pgw.Queryable
-	Request         *http.Request
-	ProductUserId   ProductUserId
-	Subscription    *SubscriptionCreateResult
-	UserIsAnonymous bool
-}
-
-func ProductEvent_MustEmitCreateSubscription(args ProductEventCreateSubscriptionArgs) {
-	ProductEvent_MustEmitFromRequest(ProductEventRequestArgs{
-		Tx:            args.Tx,
-		Request:       args.Request,
-		ProductUserId: args.ProductUserId,
-		EventType:     "create subscription",
-		EventProperties: map[string]any{
-			"subscription_id":   args.Subscription.Id,
-			"blog_url":          args.Subscription.BlogBestUrl,
-			"is_blog_crawled":   BlogCrawledStatuses[args.Subscription.BlogStatus],
-			"user_is_anonymous": args.UserIsAnonymous,
-		},
-		UserProperties: nil,
-	})
+func ProductEvent_MustEmitCreateSubscription(
+	pc ProductEventContext, subscription *SubscriptionCreateResult, userIsAnonymous bool,
+) {
+	ProductEvent_MustEmitFromRequest(pc, "create subscription", map[string]any{
+		"subscription_id":   subscription.Id,
+		"blog_url":          subscription.BlogBestUrl,
+		"is_blog_crawled":   BlogCrawledStatuses[subscription.BlogStatus],
+		"user_is_anonymous": userIsAnonymous,
+	}, nil)
 }
 
 var userIpRegex = regexp.MustCompile(`.\d+.\d+$`)

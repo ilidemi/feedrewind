@@ -60,6 +60,7 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	currentUser := rutil.CurrentUser(r)
 	productUserId := rutil.CurrentProductUserId(r)
+	pc := models.NewProductEventContext(conn, r, productUserId)
 	userIsAnonymous := currentUser == nil
 
 	type onboardingResult struct {
@@ -77,27 +78,13 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 	if typedUrl != "" {
 		startUrl := strings.TrimSpace(typedUrl)
 		path := "/subscriptions/add?start_url="
-		models.ProductEvent_MustEmitVisitAddPage(models.ProductEventVisitAddPageArgs{
-			Tx:              conn,
-			Request:         r,
-			ProductUserId:   productUserId,
-			Path:            path,
-			UserIsAnonymous: userIsAnonymous,
-			Extra: map[string]any{
-				"blog_url": startUrl,
-			},
+		models.ProductEvent_MustEmitVisitAddPage(pc, path, userIsAnonymous, map[string]any{
+			"blog_url": startUrl,
 		})
 		discoverFeedsResult, typedResult := onboarding_MustDiscoverFeeds(
 			conn, startUrl, currentUser, productUserId,
 		)
-		models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
-			Tx:              conn,
-			Request:         r,
-			ProductUserId:   productUserId,
-			BlogUrl:         startUrl,
-			Result:          typedResult,
-			UserIsAnonymous: userIsAnonymous,
-		})
+		models.ProductEvent_MustEmitDiscoverFeeds(pc, startUrl, typedResult, userIsAnonymous)
 		var maybeUserId *models.UserId
 		if currentUser != nil {
 			maybeUserId = &currentUser.Id
@@ -108,13 +95,7 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 		}
 		switch discoverResult := discoverFeedsResult.(type) {
 		case *discoveredSubscription:
-			models.ProductEvent_MustEmitCreateSubscription(models.ProductEventCreateSubscriptionArgs{
-				Tx:              conn,
-				Request:         r,
-				ProductUserId:   productUserId,
-				Subscription:    discoverResult.subscription,
-				UserIsAnonymous: userIsAnonymous,
-			})
+			models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
 			http.Redirect(w, r, rutil.SubscriptionSetupPath(discoverResult.subscription.Id), http.StatusFound)
 			return
 		case *discoveredUnsupportedBlog:
@@ -140,15 +121,7 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 			panic("Unknown discover feeds result type")
 		}
 	} else {
-		models.ProductEvent_MustEmitVisitAddPage(models.ProductEventVisitAddPageArgs{
-			Tx:              conn,
-			Request:         r,
-			ProductUserId:   rutil.CurrentProductUserId(r),
-			Path:            "/subscriptions/add",
-			UserIsAnonymous: userIsAnonymous,
-			Extra:           nil,
-		})
-
+		models.ProductEvent_MustEmitVisitAddPage(pc, "/subscriptions/add", userIsAnonymous, nil)
 		result = onboardingResult{
 			Session:   rutil.Session(r),
 			FeedsData: nil,
@@ -167,6 +140,7 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	currentUser := rutil.CurrentUser(r)
 	productUserId := rutil.CurrentProductUserId(r)
+	pc := models.NewProductEventContext(conn, r, productUserId)
 	userIsAnonymous := currentUser == nil
 
 	type onboardingResult struct {
@@ -181,14 +155,7 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 	discoverFeedsResult, typedResult := onboarding_MustDiscoverFeeds(
 		conn, startUrl, currentUser, productUserId,
 	)
-	models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
-		Tx:              conn,
-		Request:         r,
-		ProductUserId:   productUserId,
-		BlogUrl:         startUrl,
-		Result:          typedResult,
-		UserIsAnonymous: userIsAnonymous,
-	})
+	models.ProductEvent_MustEmitDiscoverFeeds(pc, startUrl, typedResult, userIsAnonymous)
 	var maybeUserId *models.UserId
 	if currentUser != nil {
 		maybeUserId = &currentUser.Id
@@ -199,13 +166,7 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 	}
 	switch discoverResult := discoverFeedsResult.(type) {
 	case *discoveredSubscription:
-		models.ProductEvent_MustEmitCreateSubscription(models.ProductEventCreateSubscriptionArgs{
-			Tx:              conn,
-			Request:         r,
-			ProductUserId:   productUserId,
-			Subscription:    discoverResult.subscription,
-			UserIsAnonymous: userIsAnonymous,
-		})
+		models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
 		redirectPath := rutil.SubscriptionSetupPath(discoverResult.subscription.Id)
 		http.Redirect(w, r, redirectPath, http.StatusFound)
 		return
@@ -240,6 +201,7 @@ func Onboarding_DiscoverFeeds(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	currentUser := rutil.CurrentUser(r)
 	productUserId := rutil.CurrentProductUserId(r)
+	pc := models.NewProductEventContext(conn, r, productUserId)
 	userIsAnonymous := currentUser == nil
 
 	var result feedsData
@@ -249,14 +211,7 @@ func Onboarding_DiscoverFeeds(w http.ResponseWriter, r *http.Request) {
 	discoverFeedsResult, typedResult := onboarding_MustDiscoverFeeds(
 		conn, startUrl, currentUser, productUserId,
 	)
-	models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
-		Tx:              conn,
-		Request:         r,
-		ProductUserId:   productUserId,
-		BlogUrl:         startUrl,
-		Result:          typedResult,
-		UserIsAnonymous: userIsAnonymous,
-	})
+	models.ProductEvent_MustEmitDiscoverFeeds(pc, startUrl, typedResult, userIsAnonymous)
 	var maybeUserId *models.UserId
 	if currentUser != nil {
 		maybeUserId = &currentUser.Id
@@ -269,13 +224,7 @@ func Onboarding_DiscoverFeeds(w http.ResponseWriter, r *http.Request) {
 	}
 	switch discoverResult := discoverFeedsResult.(type) {
 	case *discoveredSubscription:
-		models.ProductEvent_MustEmitCreateSubscription(models.ProductEventCreateSubscriptionArgs{
-			Tx:              conn,
-			Request:         r,
-			ProductUserId:   productUserId,
-			Subscription:    discoverResult.subscription,
-			UserIsAnonymous: userIsAnonymous,
-		})
+		models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
 		_, err := w.Write([]byte(rutil.SubscriptionSetupPath(discoverResult.subscription.Id)))
 		if err != nil {
 			panic(err)

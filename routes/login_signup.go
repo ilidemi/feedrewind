@@ -85,27 +85,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 			// Users visiting landing page then signing in need to be excluded from the sign up funnel
 			// Track them twice: first as anonymous, then properly
-			currentProductUserId := rutil.CurrentProductUserId(r)
-			models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
-				Tx:            conn,
-				Request:       r,
-				ProductUserId: currentProductUserId,
-				EventType:     "log in",
-				EventProperties: map[string]any{
-					"user_is_anonymous": true,
-				},
-				UserProperties: nil,
-			})
-			models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
-				Tx:            conn,
-				Request:       r,
-				ProductUserId: user.ProductUserId,
-				EventType:     "log in",
-				EventProperties: map[string]any{
-					"user_is_anonymous": false,
-				},
-				UserProperties: nil,
-			})
+			pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+			models.ProductEvent_MustEmitFromRequest(
+				pc, "log in", map[string]any{"user_is_anonymous": true}, nil,
+			)
+			models.ProductEvent_MustEmitFromRequest(
+				pc, "log in", map[string]any{"user_is_anonymous": false}, nil,
+			)
 
 			subscriptionId := rutil.MustExtractAnonymousSubscriptionId(w, r)
 			if subscriptionId != 0 {
@@ -267,14 +253,8 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 
-		models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
-			Tx:              tx,
-			Request:         r,
-			ProductUserId:   user.ProductUserId,
-			EventType:       "sign up",
-			EventProperties: nil,
-			UserProperties:  nil,
-		})
+		pc := models.NewProductEventContext(tx, r, user.ProductUserId)
+		models.ProductEvent_MustEmitFromRequest(pc, "sign up", nil, nil)
 
 		slackMessage := fmt.Sprintf("*%s* signed up", jobs.NotifySlackJob_Escape(user.Email))
 		err = jobs.NotifySlackJob_PerformNow(tx, slackMessage)

@@ -174,18 +174,11 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 			log.Info().Time("run_at", newRunAt).Msg("Rescheduled PublishPostsJob")
 		}
 
-		productUserId := rutil.CurrentProductUserId(r)
-		models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
-			Tx:            tx,
-			Request:       r,
-			ProductUserId: productUserId,
-			EventType:     "update timezone",
-			EventProperties: map[string]any{
-				"old_timezone": oldTimezone,
-				"new_timezone": newTimezone,
-			},
-			UserProperties: nil,
-		})
+		pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+		models.ProductEvent_MustEmitFromRequest(pc, "update timezone", map[string]any{
+			"old_timezone": oldTimezone,
+			"new_timezone": newTimezone,
+		}, nil)
 
 		return true
 	}
@@ -301,19 +294,12 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			log.Info().Msg("Did initial schedule for PublishPostsJob")
 		}
 
-		productUserId := rutil.CurrentProductUserId(r)
-		models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
-			Tx:            tx,
-			Request:       r,
-			ProductUserId: productUserId,
-			EventType:     "update delivery channel",
-			EventProperties: map[string]any{
-				"old_delivery_channel": oldDeliveryChannel,
-				"new_delivery_channel": newDeliveryChannel,
-			},
-			UserProperties: map[string]any{
-				"delivery_channel": newDeliveryChannel,
-			},
+		pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+		models.ProductEvent_MustEmitFromRequest(pc, "update delivery channel", map[string]any{
+			"old_delivery_channel": oldDeliveryChannel,
+			"new_delivery_channel": newDeliveryChannel,
+		}, map[string]any{
+			"delivery_channel": newDeliveryChannel,
 		})
 
 		return true

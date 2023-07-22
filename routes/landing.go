@@ -15,14 +15,8 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	conn := rutil.DBConn(r)
-	models.ProductEvent_MustEmitVisitAddPage(models.ProductEventVisitAddPageArgs{
-		Tx:              conn,
-		Request:         r,
-		ProductUserId:   rutil.CurrentProductUserId(r),
-		Path:            "/",
-		UserIsAnonymous: true,
-		Extra:           nil,
-	})
+	pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+	models.ProductEvent_MustEmitVisitAddPage(pc, "/", true, nil)
 
 	type scheduleCell struct {
 		IsAdd      bool

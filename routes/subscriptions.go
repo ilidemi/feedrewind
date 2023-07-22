@@ -100,6 +100,7 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 	currentUser := rutil.CurrentUser(r)
 	productUserId := rutil.CurrentProductUserId(r)
 	userIsAnonymous := currentUser == nil
+	pc := models.NewProductEventContext(conn, r, productUserId)
 	startFeedId := models.StartFeedId(util.EnsureParamInt64(r, "start_feed_id"))
 	startFeed, err := models.StartFeed_GetUnfetched(conn, startFeedId)
 	if err != nil {
@@ -116,14 +117,9 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 		finalUrl := fetchResult.Page.FetchUri.String()
 		parsedFeed, err := crawler.ParseFeed(fetchResult.Page.Content, fetchResult.Page.FetchUri, logger)
 		if err != nil {
-			models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
-				Tx:              conn,
-				Request:         r,
-				ProductUserId:   productUserId,
-				BlogUrl:         startFeed.Url,
-				Result:          models.TypedBlogUrlResultBadFeed,
-				UserIsAnonymous: userIsAnonymous,
-			})
+			models.ProductEvent_MustEmitDiscoverFeeds(
+				pc, startFeed.Url, models.TypedBlogUrlResultBadFeed, userIsAnonymous,
+			)
 			w.WriteHeader(http.StatusUnsupportedMediaType)
 			return
 		}
@@ -141,14 +137,9 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 			conn, updatedBlog, currentUser, productUserId,
 		)
 		if errors.Is(err, models.ErrBlogFailed) {
-			models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
-				Tx:              conn,
-				Request:         r,
-				ProductUserId:   productUserId,
-				BlogUrl:         startFeed.Url,
-				Result:          models.TypedBlogUrlResultKnownUnsupported,
-				UserIsAnonymous: userIsAnonymous,
-			})
+			models.ProductEvent_MustEmitDiscoverFeeds(
+				pc, startFeed.Url, models.TypedBlogUrlResultKnownUnsupported, userIsAnonymous,
+			)
 			_, err := w.Write([]byte(rutil.BlogUnsupportedPath(updatedBlog.Id)))
 			if err != nil {
 				panic(err)
@@ -158,46 +149,25 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 
-		models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
-			Tx:              conn,
-			Request:         r,
-			ProductUserId:   productUserId,
-			BlogUrl:         startFeed.Url,
-			Result:          models.TypedBlogUrlResultFeed,
-			UserIsAnonymous: userIsAnonymous,
-		})
-		models.ProductEvent_MustEmitCreateSubscription(models.ProductEventCreateSubscriptionArgs{
-			Tx:              conn,
-			Request:         r,
-			ProductUserId:   productUserId,
-			Subscription:    subscriptionCreateResult,
-			UserIsAnonymous: userIsAnonymous,
-		})
+		models.ProductEvent_MustEmitDiscoverFeeds(
+			pc, startFeed.Url, models.TypedBlogUrlResultFeed, userIsAnonymous,
+		)
+		models.ProductEvent_MustEmitCreateSubscription(pc, subscriptionCreateResult, userIsAnonymous)
 		_, err = w.Write([]byte(rutil.SubscriptionSetupPath(subscriptionCreateResult.Id)))
 		if err != nil {
 			panic(err)
 		}
 		return
 	case *crawler.FetchFeedErrorBadFeed:
-		models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
-			Tx:              conn,
-			Request:         r,
-			ProductUserId:   productUserId,
-			BlogUrl:         startFeed.Url,
-			Result:          models.TypedBlogUrlResultBadFeed,
-			UserIsAnonymous: userIsAnonymous,
-		})
+		models.ProductEvent_MustEmitDiscoverFeeds(
+			pc, startFeed.Url, models.TypedBlogUrlResultBadFeed, userIsAnonymous,
+		)
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 		return
 	case *crawler.FetchFeedErrorCouldNotReach:
-		models.ProductEvent_MustEmitDiscoverFeeds(models.ProductEventDiscoverFeedArgs{
-			Tx:              conn,
-			Request:         r,
-			ProductUserId:   productUserId,
-			BlogUrl:         startFeed.Url,
-			Result:          models.TypedBlogUrlResultCouldNotReach,
-			UserIsAnonymous: userIsAnonymous,
-		})
+		models.ProductEvent_MustEmitDiscoverFeeds(
+			pc, startFeed.Url, models.TypedBlogUrlResultCouldNotReach, userIsAnonymous,
+		)
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 		return
 	default:
@@ -400,16 +370,10 @@ func Subscriptions_Update(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	models.ProductEvent_MustEmitSchedule(models.ProductEventScheduleArgs{
-		Tx:             tx,
-		Request:        r,
-		ProductUserId:  rutil.CurrentProductUserId(r),
-		EventType:      "update schedule",
-		SubscriptionId: subscriptionId,
-		BlogBestUrl:    subscription.BlogBestUrl,
-		WeeklyCount:    int(totalCount),
-		ActiveDays:     productActiveDays,
-	})
+	pc := models.NewProductEventContext(tx, r, rutil.CurrentProductUserId(r))
+	models.ProductEvent_MustEmitSchedule(
+		pc, "update schedule", subscriptionId, subscription.BlogBestUrl, int(totalCount), productActiveDays,
+	)
 }
 
 func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
@@ -438,17 +402,11 @@ func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
-		Tx:            conn,
-		Request:       r,
-		ProductUserId: rutil.CurrentProductUserId(r),
-		EventType:     "delete subscription",
-		EventProperties: map[string]any{
-			"subscription_id": subscriptionId,
-			"blog_url":        subscription.BlogBestUrl,
-		},
-		UserProperties: nil,
-	})
+	pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+	models.ProductEvent_MustEmitFromRequest(pc, "delete subscription", map[string]any{
+		"subscription_id": subscriptionId,
+		"blog_url":        subscription.BlogBestUrl,
+	}, nil)
 
 	if redirect, ok := r.Form["redirect"]; ok && redirect[0] == "add" {
 		http.Redirect(w, r, "/subscriptions/add", http.StatusFound)
@@ -621,16 +579,10 @@ func subscriptions_MustPauseUnpause(
 		panic(err)
 	}
 
-	models.ProductEvent_MustEmitFromRequest(models.ProductEventRequestArgs{
-		Tx:            conn,
-		Request:       r,
-		ProductUserId: rutil.CurrentProductUserId(r),
-		EventType:     eventName,
-		EventProperties: map[string]any{
-			"subscription_id": subscriptionId,
-			"blog_url":        subscription.BlogBestUrl,
-		},
-		UserProperties: nil,
-	})
+	pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+	models.ProductEvent_MustEmitFromRequest(pc, eventName, map[string]any{
+		"subscription_id": subscriptionId,
+		"blog_url":        subscription.BlogBestUrl,
+	}, nil)
 	w.WriteHeader(http.StatusOK)
 }
