@@ -29,9 +29,7 @@ type Session struct {
 func CommitOrRollbackMsg(tx *pgw.Tx, isSuccess bool, successMsg string) {
 	if rvr := recover(); rvr != nil {
 		if err := tx.Rollback(); err != nil {
-			log.Error().
-				Err(err).
-				Msg("Rollback error")
+			log.Error().Err(err).Msg("Rollback error")
 		}
 		panic(rvr)
 	} else if isSuccess {

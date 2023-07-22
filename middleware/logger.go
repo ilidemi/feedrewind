@@ -103,8 +103,7 @@ func Logger(next http.Handler) http.Handler {
 		defer func() {
 			status := ww.Status()
 			if status/100 == 4 || status/100 == 5 {
-				event := log.Error().
-					Func(commonFields)
+				event := log.Error().Func(commonFields)
 				if errorWrapper.err != nil {
 					event.Err(errorWrapper.err)
 				}

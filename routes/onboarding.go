@@ -5,6 +5,7 @@ import (
 	hardcodedblogs "feedrewind/crawler/hardcoded_blogs"
 	"feedrewind/db/pgw"
 	"feedrewind/jobs"
+	"feedrewind/log"
 	"feedrewind/models"
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
@@ -308,10 +309,12 @@ func onboarding_MustDiscoverFeeds(
 		}
 		subscription, err := models.Subscription_CreateForBlog(tx, blog, currentUser, productUserId)
 		if errors.Is(err, models.ErrBlogFailed) {
+			log.Info().Msg("Discover feeds for Our Machinery - unsupported blog")
 			return &discoveredUnsupportedBlog{blog: blog}, models.TypedBlogUrlResultHardcoded
 		} else if err != nil {
 			panic(err)
 		} else {
+			log.Info().Msg("Discover feeds for Our Machinery - created subscription")
 			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultHardcoded
 		}
 	}
@@ -324,6 +327,7 @@ func onboarding_MustDiscoverFeeds(
 	discoverFeedsResult := crawler.DiscoverFeedsAtUrl(startUrl, true, &crawlCtx, &httpClient, &logger)
 	switch r := discoverFeedsResult.(type) {
 	case *crawler.DiscoveredSingleFeed:
+		log.Info().Msgf("Discover feeds at %s - found single feed", startUrl)
 		startPageId, err := models.StartPage_Create(tx, r.StartPage)
 		if err != nil {
 			panic(err)
@@ -338,13 +342,16 @@ func onboarding_MustDiscoverFeeds(
 		}
 		subscription, err := models.Subscription_CreateForBlog(tx, updatedBlog, currentUser, productUserId)
 		if errors.Is(err, models.ErrBlogFailed) {
+			log.Info().Msgf("Discover feeds at %s - unsupported blog", startUrl)
 			return &discoveredUnsupportedBlog{blog: updatedBlog}, models.TypedBlogUrlResultKnownUnsupported
 		} else if err != nil {
 			panic(err)
 		} else {
+			log.Info().Msgf("Discover feeds at %s - created subscription", startUrl)
 			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultFeed
 		}
 	case *crawler.DiscoveredMultipleFeeds:
+		log.Info().Msgf("Discover feeds at %s - found %d feeds", startUrl, len(r.Feeds))
 		startPageId, err := models.StartPage_Create(tx, r.StartPage)
 		if err != nil {
 			panic(err)
@@ -359,12 +366,16 @@ func onboarding_MustDiscoverFeeds(
 		}
 		return &discoveredFeeds{feeds: startFeeds}, models.TypedBlogUrlResultPageWithMultipleFeeds
 	case *crawler.DiscoverFeedsErrorNotAUrl:
+		log.Info().Msgf("Discover feeds at %s - not a url", startUrl)
 		return &discoverError{}, models.TypedBlogUrlResultNotAUrl
 	case *crawler.DiscoverFeedsErrorCouldNotReach:
+		log.Info().Msgf("Discover feeds at %s - could not reach", startUrl)
 		return &discoverError{}, models.TypedBlogUrlResultCouldNotReach
 	case *crawler.DiscoverFeedsErrorNoFeeds:
+		log.Info().Msgf("Discover feeds at %s - no feeds", startUrl)
 		return &discoverError{}, models.TypedBlogUrlResultNoFeeds
 	case *crawler.DiscoverFeedsErrorBadFeed:
+		log.Info().Msgf("Discover feeds at %s - bad feed", startUrl)
 		return &discoverError{}, models.TypedBlogUrlResultBadFeed
 	default:
 		panic("unknown discover feeds result type")

@@ -502,9 +502,7 @@ func subscriptions_MustGetSchedulePreview(
 			panic(err)
 		}
 	}
-	log.Info().
-		Str("date", string(nextScheduleDate)).
-		Msg("Preview next schedule date")
+	log.Info().Msgf("Preview next schedule date: %s", nextScheduleDate)
 
 	return schedulePreview{
 		PrevPosts:                            preview.PrevPosts,
@@ -536,11 +534,7 @@ func subscriptions_GetRealisticScheduleDate(
 			return util.Schedule_Date(nextDay), nil
 		}
 	} else if nextScheduleDate < localDate {
-		log.Warn().
-			Int64("user_id", int64(userId)).
-			Str("next_schedule_date", string(nextScheduleDate)).
-			Str("today", string(localDate)).
-			Msg("Job is scheduled in the past")
+		log.Warn().Msgf("Job is scheduled in the past for user %d: %s (today is %s)", userId, nextScheduleDate, localDate)
 		return localDate, nil
 	} else {
 		return nextScheduleDate, nil

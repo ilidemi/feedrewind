@@ -101,9 +101,7 @@ func Blog_CreateOrUpdate(
 ) (*Blog, error) {
 	blog, err := Blog_GetLatestByFeedUrl(tx, startFeed.Url)
 	if errors.Is(err, ErrBlogNotFound) {
-		log.Info().
-			Str("feed_url", startFeed.Url).
-			Msg("Creating a new blog")
+		log.Info().Msgf("Creating a new blog for feed url %s", startFeed.Url)
 		blog, err = func() (blog *Blog, err error) {
 			nestedTx, err := tx.Begin()
 			if err != nil {
@@ -192,17 +190,13 @@ func Blog_CreateOrUpdate(
 	}
 
 	if newLinksOk && len(newLinks) == 0 {
-		log.Info().
-			Str("feed_url", startFeed.Url).
-			Msg("Blog doesn't need updating")
+		log.Info().Msgf("Blog %s doesn't need updating", startFeed.Url)
 		return blog, nil
 	}
 
 	switch blog.UpdateAction {
 	case BlogUpdateActionRecrawl:
-		log.Info().
-			Str("feed_url", startFeed.Url).
-			Msg("Blog is marked to recrawl on update")
+		log.Info().Msgf("Blog %s is marked to recrawl on update", startFeed.Url)
 		return func() (newBlog *Blog, err error) {
 			nestedTx, err := tx.Begin()
 			if err != nil {
@@ -233,10 +227,7 @@ func Blog_CreateOrUpdate(
 		}()
 	case BlogUpdateActionUpdateFromFeedOrFail:
 		if newLinksOk {
-			log.Info().
-				Str("feed_url", startFeed.Url).
-				Int("new_links_count", len(newLinks)).
-				Msg("Updating blog from feed")
+			log.Info().Msgf("Updating blog %s from feed with %d new links", startFeed.Url, len(newLinks))
 			row := tx.QueryRow(`
 				select id from blog_post_categories
 				where blog_id = $1 and name = 'Everything'
@@ -261,9 +252,7 @@ func Blog_CreateOrUpdate(
 				`, blog.Id)
 				var pgErr *pgconn.PgError
 				if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.LockNotAvailable {
-					log.Info().
-						Str("feed_url", startFeed.Url).
-						Msg("Someone else is updating the blog posts, just waiting till they're done")
+					log.Info().Msgf("Someone else is updating the blog posts for %s, just waiting till they're done", startFeed.Url)
 					rows, err := nestedTx.Query(`
 						select blog_id from blog_post_locks
 						where blog_id = $1
@@ -273,9 +262,7 @@ func Blog_CreateOrUpdate(
 						return nil, err
 					}
 					rows.Close()
-					log.Info().
-						Str("feed_url", startFeed.Url).
-						Msg("Done waiting")
+					log.Info().Msg("Done waiting")
 
 					// Assume that the other writer has put the fresh posts in
 					// There could be a race condition where two updates and a post publish happened at the
@@ -331,9 +318,7 @@ func Blog_CreateOrUpdate(
 				return blog, nil
 			}()
 		} else {
-			log.Warn().
-				Str("feed_url", startFeed.Url).
-				Msg("Couldn't update blog from feed, marking as failed")
+			log.Warn().Msgf("Couldn't update blog %s from feed, marking as failed", startFeed.Url)
 			_, err := tx.Exec(`
 				update blogs set status = $1 where id = $2
 			`, BlogStatusUpdateFromFeedFailed, blog.Id)
@@ -344,9 +329,7 @@ func Blog_CreateOrUpdate(
 			return blog, nil
 		}
 	case BlogUpdateActionFail:
-		log.Warn().
-			Str("feed_url", startFeed.Url).
-			Msg("Blog is marked to fail on update")
+		log.Warn().Msgf("Blog %s is marked to fail on update", startFeed.Url)
 		_, err := tx.Exec(`
 			update blogs set status = $1 where id = $2
 		`, BlogStatusUpdateFromFeedFailed, blog.Id)
@@ -356,9 +339,7 @@ func Blog_CreateOrUpdate(
 		blog.Status = BlogStatusUpdateFromFeedFailed
 		return blog, nil
 	case BlogUpdateActionNoOp:
-		log.Info().
-			Str("feed_url", startFeed.Url).
-			Msg("Blog is marked to never update")
+		log.Info().Msgf("Blog %s is marked to never update", startFeed.Url)
 		return blog, nil
 	default:
 		panic(fmt.Errorf("unexpected blog update action: %s", blog.UpdateAction))
