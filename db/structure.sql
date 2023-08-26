@@ -1165,6 +1165,14 @@ ALTER TABLE ONLY public.subscription_rsses
 
 
 --
+-- Name: subscription_rsses subscription_rsses_subscription_id_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_rsses
+    ADD CONSTRAINT subscription_rsses_subscription_id_unique UNIQUE (subscription_id);
+
+
+--
 -- Name: subscriptions subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1815,4 +1823,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20230623031513'),
 ('20230704085733'),
 ('20230712025233'),
-('20230712025648');
+('20230712025648'),
+('20230817035655');

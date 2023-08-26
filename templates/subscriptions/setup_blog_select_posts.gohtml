@@ -1,0 +1,672 @@
+{{template "layouts/application" .}}
+
+{{define "content"}}
+<div class="flex flex-col gap-6">
+  <div class="flex flex-col gap-1">
+    <div>
+      {{if .Session.IsLoggedIn}}
+        <a href="/subscriptions" class="text-sm link-secondary">← Dashboard</a>
+      {{else}}
+        <a href="/" class="text-sm link-secondary">← Main page</a>
+      {{end}}
+    </div>
+
+    <h2 class="break-word" id="name_header">{{.SubscriptionName}}</h2>
+  </div>
+
+  <div class="overflow-wrap-break-word">
+    <div id="select_posts" class="flex flex-col gap-6 mb-8">
+      <style>
+          body {
+              overflow-y: scroll; /* Show scrollbars */
+          }
+      </style>
+      <ul id="category_tabs" role="tablist" class="flex flex-row flex-wrap">
+        <script>
+            let prevSuffix = "0";
+            let activeSuffix = "0";
+            let activateTab = (suffix) => {
+                if (suffix === activeSuffix) return;
+                let currentTab = document.getElementById(`category_tab_${activeSuffix}`);
+                let newTab = document.getElementById(`category_tab_${suffix}`);
+                currentTab.classList.remove("active-tab");
+                currentTab.classList.add("tab");
+                currentTab.setAttribute("aria-selected", "false");
+                newTab.classList.remove("tab");
+                newTab.classList.add("active-tab");
+                newTab.setAttribute("aria-selected", "true");
+                let currentPosts = document.getElementById(`category_posts_${activeSuffix}`);
+                if (suffix > activeSuffix) {
+                    currentPosts.classList.add("tab-out-left");
+                } else {
+                    currentPosts.classList.add("tab-out-right");
+                }
+                document.getElementById("select_posts").classList.add("overflow-hidden");
+                prevSuffix = activeSuffix;
+                activeSuffix = suffix;
+            };
+        </script>
+
+        {{range $index, $topCategory := .TopCategories}}
+          <li role="presentation">
+            <button id="category_tab_{{$index}}"
+                    role="tab"
+                    aria-selected="{{if $index}}false{{else}}true{{end}}"
+                    class="w-full {{if $index}}tab{{else}}active-tab{{end}}"
+            >
+              {{$topCategory.Name}} ({{$topCategory.PostsCount}})
+            </button>
+          </li>
+          <script>
+              document
+                  .getElementById("category_tab_{{$index}}")
+                  .addEventListener("click", () => activateTab("{{$index}}"));
+          </script>
+        {{end}}
+
+        <li role="presentation">
+          <button id="category_tab_custom"
+                  role="tab"
+                  aria-selected="false"
+                  class="w-full tab"
+          >
+            <span class="flex flex-row items-center gap-0.5 justify-center">
+              <!-- funnel icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                <path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clip-rule="evenodd"/>
+              </svg>
+              Custom
+            </span>
+          </button>
+        </li>
+        <script>
+            document
+                .getElementById("category_tab_custom")
+                .addEventListener("click", () => activateTab("custom"));
+        </script>
+
+        <div id="category_tab_filler" class="flex-grow border-b-2 border-gray-200"></div>
+      </ul>
+      <script>
+          let categoryTabBar = document.getElementById("category_tabs");
+          let categoryTabFiller = document.getElementById("category_tab_filler");
+          let categoryTabs = Array.from(categoryTabBar.children).filter(e => e.tagName === "LI");
+          let totalTabWidth = 0;
+          for (let tab of categoryTabs) {
+              totalTabWidth += tab.offsetWidth;
+          }
+          let areTabsAutoSized = false;
+
+          let updateTabsLayout = () => {
+              let tabBarWidth = categoryTabBar.offsetWidth;
+              if (totalTabWidth > tabBarWidth && !areTabsAutoSized) {
+                  for (let tab of categoryTabs) {
+                      tab.classList.add("flex-grow");
+                  }
+                  categoryTabFiller.classList.add("hidden");
+                  areTabsAutoSized = true;
+              } else if (totalTabWidth <= tabBarWidth && areTabsAutoSized) {
+                  for (let tab of categoryTabs) {
+                      tab.classList.remove("flex-grow");
+                  }
+                  categoryTabFiller.classList.remove("hidden");
+                  areTabsAutoSized = false;
+              }
+          };
+
+          updateTabsLayout();
+          window.addEventListener("resize", updateTabsLayout);
+      </script>
+
+      <script>
+          let {{.MarkWrongFuncJS}} = (suffix) => {
+              const looksWrongField = document.getElementById(`looks_wrong_${suffix}`);
+              looksWrongField.value = "1";
+          };
+      </script>
+
+      {{$csrfField := .Session.CSRFField}}
+      {{range $index, $topCategory := .TopCategories}}
+        <section id="category_posts_{{$index}}"
+                 role="tabpanel"
+                 aria-labelledby="category_tab_{{$index}}"
+                 class="category-posts {{if $index}}hidden{{end}}"
+        >
+          <form class="flex flex-col gap-6"
+                action="{{.SubscriptionSelectPostsPath}}"
+                accept-charset="UTF-8"
+                method="post"
+          >
+            {{$csrfField}}
+            {{template "partial_posts" $topCategory.Posts}}
+            <input type="hidden" name="top_category_id" value="{{$topCategory.Id}}" id="top_category_{{$index}}">
+            <input type="hidden" name="looks_wrong" value="0" id="looks_wrong_{{$index}}">
+            {{template "partial_setup_blog_select_posts_submit" $topCategory.Submit}}
+          </form>
+        </section>
+      {{end}}
+
+      <section id="category_posts_custom"
+               role="tabpanel"
+               aria-labelledby="category_tab_custom"
+               class="category-posts flex flex-col gap-6 hidden"
+      >
+        <script>
+            let postIdsByTopCategoryId = new Map([
+                {{range .TopCategories}}
+                [
+                    "{{.Id}}",
+                    new Set({{.BlogPostIdsJS}})
+                ],
+                {{end}}
+            ]);
+
+            let topCategoryNamesById = new Map([
+                {{range .TopCategories}}
+                [
+                    "{{.Id}}",
+                    "{{.Name}}"
+                ],
+                {{end}}
+            ]);
+
+            let allPostFormInputs = [];
+            let allPostCheckboxes = [];
+
+            let isPostInputChecked = (postInput) => {
+                if (postInput.type === "checkbox") return postInput.checked;
+                return postInput.value === "1";
+            };
+
+            let updateSelectedCountAndButtons = () => {
+                let selectedPostIds = new Set();
+                for (let postInput of allPostFormInputs) {
+                    if (!isPostInputChecked(postInput)) continue;
+
+                    selectedPostIds.add(postInput.dataset.postId);
+                }
+
+                let selectedCategoryId;
+                for (let [categoryId, postIds] of postIdsByTopCategoryId) {
+                    if (selectedPostIds.size !== postIds.size) continue;
+
+                    let arePostsMatching = true;
+                    for (let selectedPostId of selectedPostIds) {
+                        if (!postIds.has(selectedPostId)) {
+                            arePostsMatching = false;
+                            break;
+                        }
+                    }
+                    if (!arePostsMatching) continue;
+
+                    selectedCategoryId = categoryId;
+                    break;
+                }
+                let selectedCountLabel = document.getElementById("selected_count_label");
+                let topCategoryIdField = document.getElementById("top_category_custom");
+                if (selectedCategoryId) {
+                    let selectedCategoryName = topCategoryNamesById.get(selectedCategoryId);
+                    selectedCountLabel.innerText = `${selectedCategoryName} (${selectedPostIds.size})`;
+                    topCategoryIdField.value = selectedCategoryId;
+                } else {
+                    selectedCountLabel.innerText = `${selectedPostIds.size}`;
+                    topCategoryIdField.value = null;
+                }
+
+                let selectAllButton = document.getElementById("select_all_btn");
+                let unselectAllButton = document.getElementById("unselect_all_btn");
+                let resetSelectionButton = document.getElementById("reset_selection_btn");
+                if (selectedPostIds.size === {{.AllPostsCount}}) {
+                    selectAllButton.disabled = true;
+                    unselectAllButton.disabled = false;
+                    if (resetSelectionButton) resetSelectionButton.disabled = false;
+                } else if (selectedPostIds.size === 0) {
+                    selectAllButton.disabled = false;
+                    unselectAllButton.disabled = true;
+                    if (resetSelectionButton) resetSelectionButton.disabled = false;
+                } else if (resetSelectionButton &&
+                    selectedCategoryId &&
+                    selectedCategoryId === "{{.CheckedTopCategoryId}}"
+                ) {
+                    selectAllButton.disabled = false;
+                    unselectAllButton.disabled = false;
+                    resetSelectionButton.disabled = true;
+                } else {
+                    selectAllButton.disabled = false;
+                    unselectAllButton.disabled = false;
+                    if (resetSelectionButton) resetSelectionButton.disabled = false;
+                }
+
+                let continueButton = document.getElementById("continue_btn_custom");
+                let continueButton2 = document.getElementById("continue_btn_2_custom");
+                let continueError = document.getElementById("continue_error_custom");
+                if (selectedPostIds.size > 0) {
+                    continueButton.disabled = false;
+                    continueButton2.disabled = false;
+                    continueError.classList.add("invisible");
+                } else {
+                    continueButton.disabled = true;
+                    continueButton2.disabled = true;
+                    continueError.classList.remove("invisible");
+                }
+            };
+        </script>
+
+        <div class="flex flex-row flex-wrap gap-3 -mt-3">
+          <button id="select_all_btn"
+                  class="btn-secondary bg-gray-50 disabled:cursor-default disabled:hover:bg-gray-50 disabled:opacity-50 flex flex-row gap-1.5 items-center whitespace-nowrap"
+                  {{if .IsCheckedEverything}}
+                  disabled
+                  {{end}}
+          >
+            <!-- custom double checkmark icon -->
+            <svg width="19" height="12" viewBox="0 0 19 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18.4306 0.901523L18.4306 0.901454C18.4506 0.875312 18.4651 0.845496 18.4735 0.813713C18.4819 0.781929 18.4839 0.748805 18.4795 0.716235C18.4751 0.683664 18.4643 0.652286 18.4477 0.623896C18.4312 0.595536 18.4092 0.570715 18.383 0.55085C18.3303 0.510818 18.2638 0.493353 18.1982 0.50229C18.1326 0.511226 18.0732 0.545834 18.033 0.598517L18.033 0.598576L10.553 10.4156L10.2063 10.8706L9.80178 10.4661L5.91567 6.58103C5.86888 6.53962 5.80821 6.51719 5.74559 6.51829C5.68082 6.51943 5.61903 6.54567 5.57322 6.59148C5.52742 6.63728 5.50118 6.69908 5.50004 6.76384C5.49893 6.82646 5.52137 6.88712 5.56276 6.9339L10.0548 11.426L10.0551 11.4263C10.0803 11.4515 10.1106 11.471 10.144 11.4836C10.1774 11.4962 10.213 11.5014 10.2486 11.4991C10.2842 11.4967 10.3189 11.4867 10.3503 11.4699C10.3816 11.4531 10.409 11.4298 10.4306 11.4015L18.4306 0.901523ZM18.4306 0.901523L10.4308 11.4013L18.4306 0.901523Z" stroke="#334155"/>
+              <path d="M13.4306 0.901523L13.4306 0.901454C13.4506 0.875312 13.4651 0.845496 13.4735 0.813713C13.4819 0.781929 13.4839 0.748805 13.4795 0.716235C13.4751 0.683664 13.4643 0.652286 13.4477 0.623896C13.4312 0.595536 13.4092 0.570715 13.383 0.55085C13.3303 0.510818 13.2638 0.493353 13.1982 0.50229C13.1326 0.511226 13.0732 0.545834 13.033 0.598517L13.033 0.598576L5.553 10.4156L5.20632 10.8706L4.80178 10.4661L0.915668 6.58103C0.86888 6.53962 0.808209 6.51719 0.74559 6.51829C0.680824 6.51943 0.619029 6.54567 0.573223 6.59148C0.527419 6.63728 0.501182 6.69908 0.500039 6.76384C0.498934 6.82646 0.521365 6.88712 0.562757 6.9339L5.05484 11.426L5.05511 11.4263C5.08031 11.4515 5.11061 11.471 5.14399 11.4836C5.17736 11.4962 5.21304 11.5014 5.24862 11.4991C5.2842 11.4967 5.31887 11.4867 5.35028 11.4699C5.3816 11.4531 5.40898 11.4298 5.43058 11.4015L13.4306 0.901523ZM13.4306 0.901523L5.43078 11.4013L13.4306 0.901523Z" stroke="#334155"/>
+            </svg>
+            Select all
+          </button>
+          <button id="unselect_all_btn" class="btn-secondary bg-gray-50 disabled:cursor-default disabled:hover:bg-gray-50 disabled:opacity-50 flex flex-row gap-1.5 items-center whitespace-nowrap">
+            <!-- custom empty checkboxes icon -->
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4.48193" y="4" width="11" height="11" rx="1.5" fill="#F9FAFB" stroke="#334155"/>
+              <rect x="1.48193" y="1" width="11" height="11" rx="1.5" fill="#F9FAFB" stroke="#334155"/>
+            </svg>
+            Unselect all
+          </button>
+          {{if not .IsCheckedEverything}}
+            <button id="reset_selection_btn"
+                    class="btn-secondary bg-gray-50 disabled:cursor-default disabled:hover:bg-gray-50 disabled:opacity-50 flex flex-row gap-1 items-center whitespace-nowrap"
+                    disabled
+            >
+              <!-- arrow-path icon -->
+              <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clip-rule="evenodd"/>
+              </svg>
+              Reset to {{.CheckedTopCategoryName}}
+            </button>
+          {{end}}
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <div class="{{if .CustomCategories}}font-semibold{{end}}">Selected:
+            <span id="selected_count_label">
+                {{.CheckedTopCategoryName}} ({{.CheckedBlogPostIdsCount}})
+            </span>
+          </div>
+
+          {{if .CustomCategories}}
+            <script>
+                let allCategoryCheckboxes = [];
+                let postCheckboxesByCategoryIndex = [];
+                let postCheckboxesByPostId = new Map();
+                let postHiddenFieldsByPostId = new Map();
+
+                let updateCategorySelection = (categoryCheckbox) => {
+                    if (categoryCheckbox.dataset.postsCheckedCount === categoryCheckbox.dataset.postsCount) {
+                        categoryCheckbox.checked = true;
+                        categoryCheckbox.indeterminate = false;
+                    } else if (categoryCheckbox.dataset.postsCheckedCount === '0') {
+                        categoryCheckbox.checked = false;
+                        categoryCheckbox.indeterminate = false;
+                    } else {
+                        categoryCheckbox.indeterminate = true;
+                    }
+                };
+
+                let updatePostSelection = (isPostIdSelected) => {
+                    for (let checkbox of allPostCheckboxes) {
+                        checkbox.checked = isPostIdSelected(checkbox.dataset.postId);
+                        let postId = checkbox.dataset.postId;
+                        let hiddenField = document.getElementById(`post_${postId}`);
+                        hiddenField.value = checkbox.checked ? "1" : "0";
+                    }
+                    for (let categoryCheckbox of allCategoryCheckboxes) {
+                        let categoryIndex = categoryCheckbox.dataset.selfIndex;
+                        let childCheckboxes = postCheckboxesByCategoryIndex[parseInt(categoryIndex)];
+                        let childrenCheckedCount = 0;
+                        for (let childCheckbox of childCheckboxes) {
+                            if (childCheckbox.checked) {
+                                childrenCheckedCount += 1;
+                            }
+                        }
+                        categoryCheckbox.dataset.postsCheckedCount = childrenCheckedCount.toString();
+                        updateCategorySelection(categoryCheckbox);
+                    }
+                    updateSelectedCountAndButtons();
+                }
+
+                let updateCategoryCountAndSelection = (categoryIndex, checkedDelta) => {
+                    let categoryCheckbox = document.getElementById(`category_${categoryIndex}`);
+                    categoryCheckbox.dataset.postsCheckedCount =
+                        (parseInt(categoryCheckbox.dataset.postsCheckedCount) + checkedDelta)
+                            .toString();
+                    updateCategorySelection(categoryCheckbox);
+                };
+
+                let handleCategoryChange = (event) => {
+                    let categoryIndex = parseInt(event.target.dataset.selfIndex);
+                    let checkedDelta = event.target.checked ? 1 : -1;
+                    let childCheckboxes = postCheckboxesByCategoryIndex[categoryIndex];
+                    let selectedCountDelta = 0;
+                    let checkedDeltaByCategoryIndex = new Map();
+                    for (let childCheckbox of childCheckboxes) {
+                        if (childCheckbox.checked === event.target.checked) continue;
+
+                        selectedCountDelta += 1;
+                        childCheckbox.checked = event.target.checked;
+                        let postId = parseInt(childCheckbox.dataset.postId);
+                        let hiddenField = postHiddenFieldsByPostId.get(postId);
+                        hiddenField.value = event.target.checked ? "1" : "0";
+                        let postCheckboxes = postCheckboxesByPostId.get(postId);
+                        for (let postCheckbox of postCheckboxes) {
+                            let postCategoryIndex = parseInt(postCheckbox.dataset.categoryIndex);
+                            if (postCategoryIndex === categoryIndex) continue;
+
+                            postCheckbox.checked = event.target.checked;
+                            if (checkedDeltaByCategoryIndex.has(postCategoryIndex)) {
+                                let prevCheckedDelta = checkedDeltaByCategoryIndex.get(postCategoryIndex);
+                                checkedDeltaByCategoryIndex.set(
+                                    postCategoryIndex, prevCheckedDelta + checkedDelta
+                                );
+                            } else {
+                                checkedDeltaByCategoryIndex.set(postCategoryIndex, checkedDelta);
+                            }
+                        }
+                    }
+                    for (let [categoryIndex, checkedDelta] of checkedDeltaByCategoryIndex) {
+                        updateCategoryCountAndSelection(categoryIndex, checkedDelta);
+                    }
+                    event.target.dataset.postsCheckedCount =
+                        event.target.checked ? event.target.dataset.postsCount : '0';
+                    updateSelectedCountAndButtons();
+                };
+
+                let handlePostChange = (event) => {
+                    let checkedDelta = event.target.checked ? 1 : -1;
+                    let postId = event.target.dataset.postId;
+                    let hiddenField = document.getElementById(`post_${postId}`);
+                    hiddenField.value = event.target.checked ? "1" : "0";
+                    let postCheckboxes = postCheckboxesByPostId.get(parseInt(postId));
+                    for (let checkbox of postCheckboxes) {
+                        checkbox.checked = event.target.checked;
+                        let categoryIndex = checkbox.dataset.categoryIndex;
+                        updateCategoryCountAndSelection(categoryIndex, checkedDelta);
+                    }
+                    updateSelectedCountAndButtons();
+                };
+
+                let toggleCategory = (categoryIndex) => {
+                    let rightChevron = document.getElementById(`category_${categoryIndex}_right`);
+                    let downChevron = document.getElementById(`category_${categoryIndex}_down`);
+                    let childCheckboxes = postCheckboxesByCategoryIndex[categoryIndex];
+                    let isExpanded = rightChevron.classList.contains("hidden");
+                    if (isExpanded) {
+                        rightChevron.classList.remove("hidden");
+                        rightChevron.focus();
+                        downChevron.classList.add("hidden");
+                        for (let childCheckbox of childCheckboxes) {
+                            let post = childCheckbox.parentElement.parentElement;
+                            post.classList.add("hidden");
+                        }
+                    } else {
+                        rightChevron.classList.add("hidden");
+                        downChevron.classList.remove("hidden");
+                        downChevron.focus();
+                        for (let childCheckbox of childCheckboxes) {
+                            let post = childCheckbox.parentElement.parentElement;
+                            post.classList.remove("hidden");
+                        }
+                    }
+                }
+            </script>
+
+            <div class="flex flex-col gap-6">
+              <div class="flex flex-col gap-1.5">
+                {{range $categoryIndex, $customCategory := .CustomCategories}}
+                  <div class="flex flex-row gap-2 items-top">
+                    <div class="flex flex-row gap-1 items-center h-6">
+                      <button id="category_{{$categoryIndex}}_right">
+                        <!-- chevron-right icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-6 h-6 text-primary-500">
+                          <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/>
+                        </svg>
+                      </button>
+
+                      <button id="category_{{$categoryIndex}}_down" class="hidden">
+                        <!-- chevron-down icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-6 h-6 text-primary-500">
+                          <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+                        </svg>
+                      </button>
+
+                      <input type="checkbox"
+                             class="rounded w-4 h-4"
+                             id="category_{{$categoryIndex}}"
+                             name="category_{{$categoryIndex}}"
+                             data-self-index="{{$categoryIndex}}"
+                             data-posts-count="{{$customCategory.PostsCount}}"
+                             data-posts-checked-count="{{$customCategory.CheckedCount}}"
+                             {{if $customCategory.IsChecked}}
+                             checked="checked"
+                             {{end}}
+                             >
+                    </div>
+
+                    <label id="category_{{$categoryIndex}}_label"
+                           for="category_{{$categoryIndex}}"
+                           class="font-semibold"
+                    >
+                      {{$customCategory.Name}}&nbsp;({{$customCategory.PostsCount}})
+                    </label>
+
+                    <script>
+                        {
+                            document
+                                .getElementById("category_{{$categoryIndex}}_right")
+                                .addEventListener("click", () => {
+                                    toggleCategory({{$categoryIndex}});
+                                });
+                            document
+                                .getElementById("category_{{$categoryIndex}}_down")
+                                .addEventListener("click", () => {
+                                    toggleCategory({{$categoryIndex}});
+                                });
+                            document
+                                .getElementById("category_{{$categoryIndex}}_label")
+                                .addEventListener("click", (event) => {
+                                    toggleCategory({{$categoryIndex}});
+                                    event.preventDefault(); // Expanding the category is less "destructive" than toggling the checkbox
+                                });
+
+                            let categoryCheckbox = document.getElementById("category_{{$categoryIndex}}");
+                            {{if $customCategory.IsIndeterminate}}
+                            categoryCheckbox.indeterminate = true;
+                            {{end}}
+                            categoryCheckbox.addEventListener("change", handleCategoryChange);
+
+                            allCategoryCheckboxes.push(categoryCheckbox);
+                            postCheckboxesByCategoryIndex[{{$categoryIndex}}] = [];
+                        }
+                    </script>
+                  </div>
+
+                  {{range $customCategory.Posts}}
+                    <div class="flex flex-row gap-2 items-top ml-[3.25rem] hidden">
+                      <div class="h-6 flex flex-row items-center">
+                        <!--suppress HtmlFormInputWithoutLabel -->
+                        <input type="checkbox"
+                               class="rounded w-4 h-4"
+                               id="post_{{$categoryIndex}}_{{.Id}}"
+                               name="post_{{$categoryIndex}}_{{.Id}}"
+                               data-category-index="{{$categoryIndex}}"
+                               data-post-id="{{.Id}}"
+                               {{if .IsChecked}}
+                               checked
+                               {{end}}
+                        >
+                      </div>
+                      <label for="post_{{$categoryIndex}}_{{.Id}}">
+                        <a href="{{.Url}}" class="link text-black" target="_blank">{{.Title}}</a>
+                      </label>
+                      <script>
+                          {
+                              let postCheckbox = document
+                                  .getElementById("post_{{$categoryIndex}}_{{.Id}}");
+                              postCheckbox.addEventListener("change", handlePostChange);
+                              allPostCheckboxes.push(postCheckbox);
+                              postCheckboxesByCategoryIndex[{{$categoryIndex}}].push(postCheckbox);
+                              if (!postCheckboxesByPostId.has({{.Id}})) {
+                                  postCheckboxesByPostId.set({{.Id}}, []);
+                              }
+                              postCheckboxesByPostId.get({{.Id}}).push(postCheckbox);
+                          }
+                      </script>
+                    </div>
+                  {{end}}
+                {{end}}
+              </div>
+
+              <form id="custom_form"
+                    class="flex flex-col gap-6"
+                    action="{{.SubscriptionSelectPostsPath}}"
+                    accept-charset="UTF-8"
+                    method="post"
+              >
+                {{.Session.CSRFField}}
+                {{range .AllPosts}}
+                  <input type="hidden"
+                         name="post_{{.Id}}"
+                         id="post_{{.Id}}"
+                         value="{{if .IsChecked}}1{{else}}0{{end}}"
+                         data-post-id="{{.Id}}"
+                  >
+                  <script>
+                      {
+                          let postHiddenField = document.getElementById("post_{{.Id}}");
+                          allPostFormInputs.push(postHiddenField);
+                          postHiddenFieldsByPostId.set({{.Id}}, postHiddenField);
+                      }
+                  </script>
+                {{end}}
+
+                <input type="hidden" name="top_category_id" id="top_category_custom">
+                <input type="hidden" name="looks_wrong" value="0" id="looks_wrong_custom">
+                {{template "partial_setup_blog_select_posts_submit" .CustomSubmit}}
+              </form>
+            </div>
+          {{else}}
+            <script>
+                let updatePostSelection = (isPostIdSelected) => {
+                    let form = document.getElementById("custom_form");
+                    for (let checkbox of allPostCheckboxes) {
+                        checkbox.checked = isPostIdSelected(checkbox.dataset.postId);
+                    }
+                    updateSelectedCountAndButtons();
+                };
+            </script>
+
+            <form id="custom_form"
+                  class="flex flex-col gap-6"
+                  action="{{.SubscriptionSelectPostsPath}}"
+                  accept-charset="UTF-8"
+                  method="post"
+            >
+            {{.Session.CSRFField}}
+              <div class="flex flex-col gap-1.5">
+                {{range $index, $blogPost := .AllPosts}}
+                  <div class="flex flex-row gap-2 items-top">
+                    <div class="h-6 flex flex-row items-center">
+                      <input type="checkbox"
+                             name="post_{{$blogPost.Id}}"
+                             id="post_{{$blogPost.Id}}"
+                             value="1"
+                             class="rounded w-4 h-4"
+                             data-post-id="{{$blogPost.Id}}"
+                             {{if .IsChecked}}
+                             checked="checked"
+                             {{end}}
+                      >
+                    </div>
+                    <label for="post_{{$blogPost.Id}}">
+                      <a href="{{$blogPost.Url}}"
+                         class="link text-black"
+                         target="_blank"
+                      >
+                        {{$blogPost.Title}}
+                      </a>
+                      {{if .IsEarliest}}
+                        <span class="text-gray-500">(earliest)</span>
+                      {{else if .IsNewest}}
+                        <span class="text-gray-500">(newest)</span>
+                      {{end}}
+                    </label>
+                  </div>
+                  <script>
+                      {
+                          let postCheckbox = document.getElementById("post_{{$blogPost.Id}}");
+                          postCheckbox.addEventListener("change", updateSelectedCountAndButtons);
+                          allPostFormInputs.push(postCheckbox);
+                          allPostCheckboxes.push(postCheckbox);
+                      }
+                  </script>
+                {{end}}
+              </div>
+
+              <input type="hidden" name="top_category_id" id="top_category_custom">
+              <input type="hidden" name="looks_wrong" value="0" id="looks_wrong_custom">
+              {{template "partial_setup_blog_select_posts_submit" .CustomSubmit}}
+            </form>
+          {{end}}
+        </div>
+      </section>
+
+      <script>
+          document.getElementById("select_all_btn").addEventListener("click", () => {
+              updatePostSelection(() => true);
+          });
+
+          document.getElementById("unselect_all_btn").addEventListener("click", () => {
+              updatePostSelection(() => false);
+          });
+
+          {{if not .IsCheckedEverything}}
+          document.getElementById("reset_selection_btn").addEventListener("click", () => {
+              let postIdsToSelect = postIdsByTopCategoryId.get("{{.CheckedTopCategoryId}}");
+              updatePostSelection((postId) => postIdsToSelect.has(postId));
+          });
+          {{end}}
+
+          for (let categoryPosts of Array.from(document.getElementsByClassName("category-posts"))) {
+              categoryPosts.addEventListener("animationend", (event) => {
+                  let newPosts = document.getElementById(`category_posts_${activeSuffix}`);
+                  let selectPosts = document.getElementById("select_posts");
+                  switch (event.animationName) {
+                      case "tab-out-left":
+                          event.target.classList.remove("tab-out-left");
+                          event.target.classList.add("hidden");
+                          newPosts.classList.remove("hidden");
+                          newPosts.classList.add("tab-in-left");
+                          break;
+                      case "tab-out-right":
+                          event.target.classList.remove("tab-out-right");
+                          event.target.classList.add("hidden");
+                          newPosts.classList.remove("hidden");
+                          newPosts.classList.add("tab-in-right");
+                          break;
+                      case "tab-in-left":
+                          event.target.classList.remove("tab-in-left");
+                          selectPosts.classList.remove("overflow-hidden");
+                          break;
+                      case "tab-in-right":
+                          event.target.classList.remove("tab-in-right");
+                          selectPosts.classList.remove("overflow-hidden");
+                          break;
+                  }
+              });
+          }
+      </script>
+    </div>
+  </div>
+</div>
+{{end}}

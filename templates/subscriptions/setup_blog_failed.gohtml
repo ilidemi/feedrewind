@@ -1,0 +1,36 @@
+{{template "layouts/application" .}}
+
+{{define "content"}}
+<div class="flex flex-col gap-6">
+  <div class="flex flex-col gap-1">
+    <div>
+      {{if .Session.IsLoggedIn}}
+        <a href="/subscriptions" class="text-sm link-secondary">← Dashboard</a>
+      {{else}}
+        <a href="/" class="text-sm link-secondary">← Main page</a>
+      {{end}}
+    </div>
+
+    <h2 class="break-word" id="name_header">{{.SubscriptionName}}</h2>
+  </div>
+
+  <div class="overflow-wrap-break-word">
+    <div class="flex flex-col gap-6">
+      <p>
+        FeedRewind couldn't discover posts in this blog. We support over 80% of blogs, but unfortunately not this one.
+      </p>
+      <div class="inline-flex flex-row gap-2">
+        <form method="post" action="{{.SubscriptionDeletePath}}">
+          <input class="btn" type="submit" value="Try another">
+          {{.Session.CSRFField}}
+          <input type="hidden" name="redirect" value="add">
+        </form>
+        <form method="post" action="{{.SubscriptionDeletePath}}">
+          <input class="btn" type="submit" value="Discard">
+          {{.Session.CSRFField}}
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

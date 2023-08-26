@@ -40,6 +40,11 @@ const AuthTokenLength = 16
 var Cfg Config
 
 func init() {
+	if isTesting {
+		Cfg = testingConfig()
+		return
+	}
+
 	env, ok := os.LookupEnv("FEEDREWIND_ENV")
 	if !ok {
 		Cfg = developmentConfig()

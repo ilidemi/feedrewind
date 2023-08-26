@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strings"
 )
 
 func BlogUnsupportedPath(blogId models.BlogId) string {
@@ -13,6 +15,22 @@ func BlogUnsupportedPath(blogId models.BlogId) string {
 
 func SubscriptionSetupPath(subscriptionId models.SubscriptionId) string {
 	return fmt.Sprintf("/subscriptions/%d/setup", subscriptionId)
+}
+
+func SubscriptionProgressPath(subscriptionId models.SubscriptionId) string {
+	return fmt.Sprintf("/subscriptions/%d/progress", subscriptionId)
+}
+
+func SubscriptionSelectPostsPath(subscriptionId models.SubscriptionId) string {
+	return fmt.Sprintf("/subscriptions/%d/select_posts", subscriptionId)
+}
+
+func SubscriptionMarkWrongPath(subscriptionId models.SubscriptionId) string {
+	return fmt.Sprintf("/subscriptions/%d/mark_wrong", subscriptionId)
+}
+
+func SubscriptionSchedulePath(subscriptionId models.SubscriptionId) string {
+	return fmt.Sprintf("/subscriptions/%d/schedule", subscriptionId)
 }
 
 func SubscriptionDeletePath(subscriptionId models.SubscriptionId) string {
@@ -35,13 +53,30 @@ func SubscriptionUnpausePath(subscriptionId models.SubscriptionId) string {
 	return fmt.Sprintf("/subscriptions/%d/unpause", subscriptionId)
 }
 
+func SubscriptionUrl(subscriptionId models.SubscriptionId) string {
+	return fmt.Sprintf("https://feedrewind.com/subscriptions/%d", subscriptionId)
+}
+
+func SubscriptionPath(subscriptionId models.SubscriptionId) string {
+	return fmt.Sprintf("/subscriptions/%d", subscriptionId)
+}
+
 func SubscriptionFeedUrl(r *http.Request, subscriptionId models.SubscriptionId) string {
 	proto := "http"
 	if r.TLS != nil {
 		proto = "https"
 	}
 
-	port := ":" + r.URL.Port()
+	lastColonIndex := strings.LastIndex(r.Host, ":")
+	var host string
+	var port string
+	if lastColonIndex >= 0 {
+		host = r.Host[:lastColonIndex]
+		port = r.Host[lastColonIndex:]
+	} else {
+		host = r.Host
+		port = ""
+	}
 	if port == ":80" && proto == "http" {
 		port = ""
 	}
@@ -49,5 +84,34 @@ func SubscriptionFeedUrl(r *http.Request, subscriptionId models.SubscriptionId) 
 		port = ""
 	}
 
-	return fmt.Sprintf("%s://%s%s/subscriptions/%d/feed", proto, r.Host, port, subscriptionId)
+	return fmt.Sprintf("%s://%s%s/feeds/%d", proto, host, port, subscriptionId)
+}
+
+func SubscriptionPostUrl(title, randomId string) string {
+	slug := postSlug(title)
+	return fmt.Sprintf("https://feedrewind.com/posts/%s/%s/", slug, randomId)
+}
+
+var postSlugRegex regexp.Regexp
+
+func init() {
+	postSlugRegex = *regexp.MustCompile(`\w+`)
+}
+
+func postSlug(title string) string {
+	tokens := postSlugRegex.FindAllString(strings.ToLower(title), 10)
+	totalLength := 0
+	for _, token := range tokens {
+		totalLength += len(token)
+	}
+	totalLength += len(tokens) - 1
+	for totalLength > 100 && len(tokens) > 1 {
+		totalLength -= len(tokens[len(tokens)-1]) + 1
+		tokens = tokens[:len(tokens)-1]
+	}
+	if totalLength > 100 {
+		return tokens[0][:100]
+	} else {
+		return strings.Join(tokens, "-")
+	}
 }

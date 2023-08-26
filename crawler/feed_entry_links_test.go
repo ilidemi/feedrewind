@@ -3,7 +3,7 @@ package crawler
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSequenceSuffixLength(t *testing.T) {
@@ -142,7 +142,7 @@ func TestSequenceSuffixLength(t *testing.T) {
 			var linkBucket []MaybeTitledLink
 			for _, url := range bucket {
 				link, ok := ToCanonicalLink(url, logger, nil)
-				assert.True(t, ok, tc.description)
+				require.True(t, ok, tc.description)
 				linkBucket = append(linkBucket, MaybeTitledLink{
 					Link:       *link,
 					MaybeTitle: nil,
@@ -160,14 +160,14 @@ func TestSequenceSuffixLength(t *testing.T) {
 		var seqCuris []CanonicalUri
 		for _, seqUrl := range tc.sequence {
 			seqLink, ok := ToCanonicalLink(seqUrl, logger, nil)
-			assert.True(t, ok, tc.description)
+			require.True(t, ok, tc.description)
 			seqCuris = append(seqCuris, seqLink.Curi)
 		}
 
 		var suffixLength int
-		assert.NotPanics(t, func() {
+		require.NotPanics(t, func() {
 			suffixLength = feedEntryLinks.sequenceSuffixLength(seqCuris, curiEqCfg)
 		}, tc.description)
-		assert.Equal(t, tc.expectedLength, suffixLength, tc.description)
+		require.Equal(t, tc.expectedLength, suffixLength, tc.description)
 	}
 }

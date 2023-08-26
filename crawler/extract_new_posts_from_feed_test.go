@@ -4,7 +4,7 @@ import (
 	neturl "net/url"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExtractNewPostsFromFeed(t *testing.T) {
@@ -283,24 +283,24 @@ func TestExtractNewPostsFromFeed(t *testing.T) {
 		var existingPostCuris []CanonicalUri
 		for _, url := range tc.existingPostUrls {
 			link, ok := ToCanonicalLink(url, logger, nil)
-			assert.True(t, ok, tc.description)
+			require.True(t, ok, tc.description)
 			existingPostCuris = append(existingPostCuris, link.Curi)
 		}
 		parsedFeed, err := ParseFeed(tc.feed, feedUri, logger)
-		assert.NoError(t, err, tc.description)
+		require.NoError(t, err, tc.description)
 		newLinks, err := ExtractNewPostsFromFeed(
 			parsedFeed, feedUri, existingPostCuris, tc.discardedFeedEntryUrls, tc.missingFromFeedEntryUrls,
 			curiEqCfg, logger, logger,
 		)
 		if tc.expectedOk {
-			assert.NoError(t, err, tc.description)
+			require.NoError(t, err, tc.description)
 		} else {
-			assert.ErrorIs(t, err, ErrExtractNewPostsNoMatch, tc.description)
+			require.ErrorIs(t, err, ErrExtractNewPostsNoMatch, tc.description)
 		}
 		var newUrls []string
 		for _, link := range newLinks {
 			newUrls = append(newUrls, link.Url)
 		}
-		assert.Equal(t, tc.expectedNewLinkUrls, newUrls, tc.description)
+		require.Equal(t, tc.expectedNewLinkUrls, newUrls, tc.description)
 	}
 }

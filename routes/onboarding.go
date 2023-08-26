@@ -328,11 +328,15 @@ func onboarding_MustDiscoverFeeds(
 	switch r := discoverFeedsResult.(type) {
 	case *crawler.DiscoveredSingleFeed:
 		log.Info().Msgf("Discover feeds at %s - found single feed", startUrl)
-		startPageId, err := models.StartPage_Create(tx, r.StartPage)
-		if err != nil {
-			panic(err)
+		var maybeStartPageId *models.StartPageId
+		if r.MaybeStartPage != nil {
+			startPageId, err := models.StartPage_Create(tx, *r.MaybeStartPage)
+			if err != nil {
+				panic(err)
+			}
+			maybeStartPageId = &startPageId
 		}
-		startFeed, err := models.StartFeed_CreateFetched(tx, startPageId, r.Feed)
+		startFeed, err := models.StartFeed_CreateFetched(tx, maybeStartPageId, r.Feed)
 		if err != nil {
 			panic(err)
 		}

@@ -26,13 +26,13 @@ type Session struct {
 	UserName       string
 }
 
-func CommitOrRollbackMsg(tx *pgw.Tx, isSuccess bool, successMsg string) {
+func CommitOrRollbackMsg(tx *pgw.Tx, isSuccess *bool, successMsg string) {
 	if rvr := recover(); rvr != nil {
 		if err := tx.Rollback(); err != nil {
 			log.Error().Err(err).Msg("Rollback error")
 		}
 		panic(rvr)
-	} else if isSuccess {
+	} else if *isSuccess {
 		if err := tx.Commit(); err != nil {
 			panic(err)
 		}
@@ -46,14 +46,34 @@ func CommitOrRollbackMsg(tx *pgw.Tx, isSuccess bool, successMsg string) {
 	}
 }
 
-func CommitOrRollback(tx *pgw.Tx, isSuccess bool) {
+func CommitOrRollback(tx *pgw.Tx, isSuccess *bool) {
 	CommitOrRollbackMsg(tx, isSuccess, "")
 }
 
-func CommitOrRollbackErr(tx *pgw.Tx, err error) {
-	CommitOrRollbackMsg(tx, err != nil, "")
+func CommitOrRollbackErr(tx *pgw.Tx, err *error) {
+	isSuccess := err == nil
+	CommitOrRollbackMsg(tx, &isSuccess, "")
 }
 
 func CommitOrRollbackOnPanic(tx *pgw.Tx) {
-	CommitOrRollbackMsg(tx, true, "")
+	isSuccess := true
+	CommitOrRollbackMsg(tx, &isSuccess, "")
+}
+
+func Ordinal(number int) string {
+	number = number % 100
+	if number == 11 || number == 12 || number == 13 {
+		return "th"
+	}
+
+	switch number % 10 {
+	case 1:
+		return "st"
+	case 2:
+		return "nd"
+	case 3:
+		return "rd"
+	default:
+		return "th"
+	}
 }

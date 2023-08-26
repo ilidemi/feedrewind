@@ -3,9 +3,26 @@ package config
 import (
 	"encoding/hex"
 	"os"
+	"strings"
 )
 
 func developmentConfig() Config {
+	for i := 0; ; i++ {
+		if i > 100 {
+			panic("Something went wrong when looking for the feedrewind root dir")
+		}
+		cwd, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+		if strings.HasSuffix(cwd, "/feedrewind") || strings.HasSuffix(cwd, "\\feedrewind") {
+			break
+		}
+		err = os.Chdir("..")
+		if err != nil {
+			panic(err)
+		}
+	}
 	wslIp, err := os.ReadFile("config/wsl_ip.txt")
 	if err != nil {
 		panic(err)

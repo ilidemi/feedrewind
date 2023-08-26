@@ -7,9 +7,9 @@ import (
 type DeliveryChannel string
 
 const (
-	DeliveryChannelSingleFeed    = "single_feed"
-	DeliveryChannelMultipleFeeds = "multiple_feeds"
-	DeliveryChannelEmail         = "email"
+	DeliveryChannelSingleFeed    DeliveryChannel = "single_feed"
+	DeliveryChannelMultipleFeeds DeliveryChannel = "multiple_feeds"
+	DeliveryChannelEmail         DeliveryChannel = "email"
 )
 
 type UserSettings struct {
@@ -27,7 +27,7 @@ func UserSettings_Create(tx pgw.Queryable, userId UserId, timezone string) error
 	return err
 }
 
-func UserSettings_GetById(tx pgw.Queryable, userId UserId) (*UserSettings, error) {
+func UserSettings_Get(tx pgw.Queryable, userId UserId) (*UserSettings, error) {
 	row := tx.QueryRow(`
 		select timezone, version, delivery_channel from user_settings where user_id = $1
 	`, userId)
@@ -50,11 +50,20 @@ func UserSettings_SaveTimezone(
 	return err
 }
 
-func UserSettings_SaveDeliveryChannel(
+func UserSettings_SaveDeliveryChannelVersion(
 	tx pgw.Queryable, userId UserId, deliveryChannel DeliveryChannel, version int,
 ) error {
 	_, err := tx.Exec(`
 		update user_settings set delivery_channel = $1, version = $2 where user_id = $3
 	`, deliveryChannel, version, userId)
+	return err
+}
+
+func UserSettings_SaveDeliveryChannel(
+	tx pgw.Queryable, userId UserId, deliveryChannel DeliveryChannel,
+) error {
+	_, err := tx.Exec(`
+		update user_settings set delivery_channel = $1 where user_id = $2
+	`, deliveryChannel, userId)
 	return err
 }

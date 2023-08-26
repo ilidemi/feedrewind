@@ -51,7 +51,7 @@ func runServer() {
 
 	staticR := chi.NewRouter()
 	staticR.Use(frmiddleware.Logger)
-	staticR.Use(middleware.Compress(5))
+	staticR.Use(middleware.Compress(3))
 	staticR.Use(frmiddleware.Recoverer)
 	staticR.Use(frmiddleware.DefaultHeaders)
 	staticR.Use(middleware.GetHead)
@@ -78,6 +78,15 @@ func runServer() {
 
 		r.Get("/subscriptions/{id}/setup", routes.Subscriptions_Setup)
 		r.Post("/subscriptions", routes.Subscriptions_Create)
+		r.Post("/subscriptions/{id}/progress", routes.Subscriptions_Progress)
+		r.Post("/subscriptions/{id}/submit_progress_times", routes.Subscriptions_SubmitProgressTimes)
+		r.Post("/subscriptions/{id}/select_posts", routes.Subscriptions_SelectPosts)
+		r.Post("/subscriptions/{id}/mark_wrong", routes.Subscriptions_MarkWrong)
+		r.Post("/subscriptions/{id}/schedule", routes.Subscriptions_Schedule)
+
+		r.Get("/subscriptions/{id}/feed", routes.Rss_SubscriptionFeed) // Legacy
+		r.Get("/feeds/single/{id}", routes.Rss_UserFeed)
+		r.Get("/feeds/{id}", routes.Rss_SubscriptionFeed)
 
 		r.Get("/blogs/{id}/unsupported", routes.Blogs_Unsupported)
 

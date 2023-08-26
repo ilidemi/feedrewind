@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/antchfx/xmlquery"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsRSS(t *testing.T) {
@@ -20,8 +20,8 @@ func TestIsRSS(t *testing.T) {
 
 	reader := strings.NewReader(feed)
 	xml, err := xmlquery.Parse(reader)
-	assert.NoError(t, err)
-	assert.True(t, isRSS(xml))
+	require.NoError(t, err)
+	require.True(t, isRSS(xml))
 }
 
 func TestIsRDF(t *testing.T) {
@@ -43,8 +43,8 @@ func TestIsRDF(t *testing.T) {
 
 	reader := strings.NewReader(feed)
 	xml, err := xmlquery.Parse(reader)
-	assert.NoError(t, err)
-	assert.True(t, isRDF(xml))
+	require.NoError(t, err)
+	require.True(t, isRDF(xml))
 }
 
 func TestIsAtom(t *testing.T) {
@@ -63,8 +63,8 @@ func TestIsAtom(t *testing.T) {
 
 	reader := strings.NewReader(feed)
 	xml, err := xmlquery.Parse(reader)
-	assert.NoError(t, err)
-	assert.True(t, isAtom(xml))
+	require.NoError(t, err)
+	require.True(t, isAtom(xml))
 }
 
 func TestParseFeedRootUrl(t *testing.T) {
@@ -164,18 +164,18 @@ func TestParseFeedRootUrl(t *testing.T) {
 
 	logger := &DummyLogger{}
 	fetchUri, err := neturl.Parse("https://root/feed")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, tc := range tests {
 		var parsedFeed *ParsedFeed
 		var err error
-		assert.NotPanics(t, func() {
+		require.NotPanics(t, func() {
 			parsedFeed, err = ParseFeed(tc.content, fetchUri, logger)
 		}, tc.description)
-		assert.NoError(t, err, tc.description)
+		require.NoError(t, err, tc.description)
 		if tc.expectedRootUrl == "" {
-			assert.Nil(t, parsedFeed.RootLink)
+			require.Nil(t, parsedFeed.RootLink)
 		} else {
-			assert.Equal(t, parsedFeed.RootLink.Url, tc.expectedRootUrl)
+			require.Equal(t, parsedFeed.RootLink.Url, tc.expectedRootUrl)
 		}
 	}
 }
@@ -316,15 +316,15 @@ func TestParseFeedTitle(t *testing.T) {
 
 	logger := &DummyLogger{}
 	fetchUri, err := neturl.Parse("https://root/feed")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, tc := range tests {
 		var parsedFeed *ParsedFeed
 		var err error
-		assert.NotPanics(t, func() {
+		require.NotPanics(t, func() {
 			parsedFeed, err = ParseFeed(tc.content, fetchUri, logger)
 		}, tc.description)
-		assert.NoError(t, err, tc.description)
-		assert.Equal(t, parsedFeed.Title, tc.expectedTitle)
+		require.NoError(t, err, tc.description)
+		require.Equal(t, parsedFeed.Title, tc.expectedTitle)
 	}
 }
 
@@ -915,19 +915,19 @@ func TestParseFeedEntryUrls(t *testing.T) {
 
 	logger := &DummyLogger{}
 	fetchUri, err := neturl.Parse("https://root/feed")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, tc := range tests {
 		var parsedFeed *ParsedFeed
 		var err error
-		assert.NotPanics(t, func() {
+		require.NotPanics(t, func() {
 			parsedFeed, err = ParseFeed(tc.content, fetchUri, logger)
 		}, tc.description)
 		if tc.expectedError != "" {
-			assert.ErrorContains(t, err, tc.expectedError, tc.description)
-			assert.Nil(t, tc.expectedEntryUrls, tc.description)
-			assert.Nil(t, tc.expectedNotEntryUrls, tc.description)
+			require.ErrorContains(t, err, tc.expectedError, tc.description)
+			require.Nil(t, tc.expectedEntryUrls, tc.description)
+			require.Nil(t, tc.expectedNotEntryUrls, tc.description)
 		} else {
-			assert.NoError(t, err, tc.description)
+			require.NoError(t, err, tc.description)
 
 			curiEqCfg := &CanonicalEqualityConfig{
 				SameHosts:         nil,
@@ -938,7 +938,7 @@ func TestParseFeedEntryUrls(t *testing.T) {
 				entryCuris = append(entryCuris, CanonicalUriFromDbString(url))
 			}
 			matchedLinks := parsedFeed.EntryLinks.sequenceMatch(entryCuris, curiEqCfg)
-			assert.Equal(t, len(tc.expectedEntryUrls), len(matchedLinks), tc.description)
+			require.Equal(t, len(tc.expectedEntryUrls), len(matchedLinks), tc.description)
 
 			if tc.expectedNotEntryUrls != nil {
 				var notEntryCuris []CanonicalUri
@@ -946,7 +946,7 @@ func TestParseFeedEntryUrls(t *testing.T) {
 					notEntryCuris = append(notEntryCuris, CanonicalUriFromDbString(url))
 				}
 				notMatchedLinks := parsedFeed.EntryLinks.sequenceMatch(notEntryCuris, curiEqCfg)
-				assert.Zero(t, len(notMatchedLinks), tc.description)
+				require.Zero(t, len(notMatchedLinks), tc.description)
 			}
 		}
 	}
@@ -1058,14 +1058,14 @@ func TestParseFeedGenerator(t *testing.T) {
 
 	logger := &DummyLogger{}
 	fetchUri, err := neturl.Parse("https://root/feed")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, tc := range tests {
 		var parsedFeed *ParsedFeed
 		var err error
-		assert.NotPanics(t, func() {
+		require.NotPanics(t, func() {
 			parsedFeed, err = ParseFeed(tc.content, fetchUri, logger)
 		}, tc.description)
-		assert.NoError(t, err, tc.description)
-		assert.Equal(t, parsedFeed.Generator, tc.expectedGenerator)
+		require.NoError(t, err, tc.description)
+		require.Equal(t, parsedFeed.Generator, tc.expectedGenerator)
 	}
 }

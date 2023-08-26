@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/binary"
 	"errors"
 	"feedrewind/crawler"
 	"feedrewind/db/pgw"
@@ -59,9 +60,6 @@ type Blog struct {
 	BestUrl      string
 }
 
-type BlogPostId int64
-type BlogPostCategoryId int64
-
 const BlogLatestVersion = 1000000
 
 // Invariants for a given feed_url:
@@ -107,7 +105,7 @@ func Blog_CreateOrUpdate(
 			if err != nil {
 				return nil, err
 			}
-			defer util.CommitOrRollbackErr(nestedTx, err)
+			defer util.CommitOrRollbackErr(nestedTx, &err)
 			blog, err = blog_CreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobScheduleFunc)
 			if errors.Is(err, errBlogAlreadyExists) {
 				// Another writer must've created the record at the same time, let's use that
@@ -202,7 +200,7 @@ func Blog_CreateOrUpdate(
 			if err != nil {
 				return nil, err
 			}
-			defer util.CommitOrRollbackErr(nestedTx, err)
+			defer util.CommitOrRollbackErr(nestedTx, &err)
 
 			err = Blog_Downgrade(nestedTx, blog.Id, startFeed.Url)
 			if err != nil {
@@ -243,7 +241,7 @@ func Blog_CreateOrUpdate(
 				if err != nil {
 					return nil, err
 				}
-				defer util.CommitOrRollbackErr(nestedTx, err)
+				defer util.CommitOrRollbackErr(nestedTx, &err)
 
 				rows, err = nestedTx.Query(`
 					select blog_id from blog_post_locks
@@ -393,13 +391,6 @@ func blog_CreateWithCrawling(
 	}, nil
 }
 
-func blogPostLock_Create(tx pgw.Queryable, blogId BlogId) error {
-	_, err := tx.Exec(`
-		insert into blog_post_locks (blog_id) values ($1)
-	`, blogId)
-	return err
-}
-
 var ErrNoLatestVersion = errors.New("blog with latest version not found")
 
 func Blog_Downgrade(tx pgw.Queryable, blogId BlogId, feedUrl string) error {
@@ -420,7 +411,7 @@ func Blog_Downgrade(tx pgw.Queryable, blogId BlogId, feedUrl string) error {
 	return nil
 }
 
-func Blog_GetNameStatusById(tx pgw.Queryable, blogId BlogId) (name string, status BlogStatus, err error) {
+func Blog_GetNameStatus(tx pgw.Queryable, blogId BlogId) (name string, status BlogStatus, err error) {
 	row := tx.QueryRow("select name, status from blogs where id = $1", blogId)
 	err = row.Scan(&name, &status)
 	if err != nil {
@@ -428,4 +419,335 @@ func Blog_GetNameStatusById(tx pgw.Queryable, blogId BlogId) (name string, statu
 	}
 
 	return name, status, nil
+}
+
+func Blog_GetStatus(tx pgw.Queryable, blogId BlogId) (BlogStatus, error) {
+	row := tx.QueryRow("select status from blogs where id = $1", blogId)
+	var status BlogStatus
+	err := row.Scan(&status)
+	if err != nil {
+		return "", err
+	}
+
+	return status, nil
+}
+
+func Blog_GetCrawlProgressMap(tx pgw.Queryable, blogId BlogId) (map[string]any, error) {
+	status, err := Blog_GetStatus(tx, blogId)
+	if err != nil {
+		return nil, err
+	}
+	switch status {
+	case BlogStatusCrawlInProgress:
+		blogCrawlProgress, err := BlogCrawlProgress_Get(tx, blogId)
+		if err != nil {
+			return nil, err
+		}
+
+		log.Info().Msgf("Blog %d crawl in progress (epoch %d)", blogId, blogCrawlProgress.Epoch)
+		return map[string]any{
+			"epoch":  blogCrawlProgress.Epoch,
+			"status": blogCrawlProgress.Progress,
+			"count":  blogCrawlProgress.Count,
+		}, nil
+	default:
+		log.Info().Msgf("Blog %d crawl done", blogId)
+		return map[string]any{
+			"done": true,
+		}, nil
+	}
+
+}
+
+func Blog_GetBestUrl(tx pgw.Queryable, blogId BlogId) (string, error) {
+	row := tx.QueryRow(`
+		select coalesce(url, feed_url) from blogs
+		where id = $1
+	`, blogId)
+
+	var result string
+	err := row.Scan(&result)
+	return result, err
+}
+
+// BlogCanonicalEqualityConfig
+
+func blogCanonicalEqualityConfig_Get(
+	tx pgw.Queryable, blogId BlogId,
+) (*crawler.CanonicalEqualityConfig, error) {
+	row := tx.QueryRow(`
+		select same_hosts, expect_tumblr_paths from blog_canonical_equality_configs
+		where blog_id = $1
+	`, blogId)
+	var sameHostsSlice []string
+	var expectTumblrPaths bool
+	err := row.Scan(&sameHostsSlice, &expectTumblrPaths)
+	if err != nil {
+		return nil, err
+	}
+	sameHosts := make(map[string]bool)
+	for _, sameHost := range sameHostsSlice {
+		sameHosts[sameHost] = true
+	}
+	return &crawler.CanonicalEqualityConfig{
+		SameHosts:         sameHosts,
+		ExpectTumblrPaths: expectTumblrPaths,
+	}, nil
+}
+
+// BlogDiscardedFeedEntry, BlogMissingFeedEntry
+
+func blogDiscardedFeedEntry_ListUrls(tx pgw.Queryable, blogId BlogId) (map[string]bool, error) {
+	return blogFeedEntry_ListUrls(tx, "blog_discarded_feed_entries", blogId)
+}
+
+func blogMissingFromFeedEntry_ListUrls(tx pgw.Queryable, blogId BlogId) (map[string]bool, error) {
+	return blogFeedEntry_ListUrls(tx, "blog_missing_from_feed_entries", blogId)
+}
+
+func blogFeedEntry_ListUrls(tx pgw.Queryable, table string, blogId BlogId) (map[string]bool, error) {
+	rows, err := tx.Query("select url from "+table+" where blog_id = $1", blogId)
+	if err != nil {
+		return nil, err
+	}
+	urls := make(map[string]bool)
+	for rows.Next() {
+		var url string
+		err := rows.Scan(&url)
+		if err != nil {
+			return nil, err
+		}
+		urls[url] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return urls, nil
+}
+
+// BlogPostLock
+
+func blogPostLock_Create(tx pgw.Queryable, blogId BlogId) error {
+	_, err := tx.Exec(`
+		insert into blog_post_locks (blog_id) values ($1)
+	`, blogId)
+	return err
+}
+
+// BlogCrawlProgress
+
+type BlogCrawlProgress struct {
+	Count    int32
+	Progress string
+	Epoch    int32
+}
+
+func BlogCrawlProgress_Get(tx pgw.Queryable, blogId BlogId) (*BlogCrawlProgress, error) {
+	row := tx.QueryRow(`
+		select count, progress, epoch from blog_crawl_progresses where blog_id = $1
+	`, blogId)
+	var countPtr *int32
+	var progressPtr *string
+	var epoch int32
+	err := row.Scan(&countPtr, &progressPtr, &epoch)
+	if err != nil {
+		return nil, err
+	}
+	var count int32
+	if countPtr != nil {
+		count = *countPtr
+	}
+	var progress string
+	if progressPtr != nil {
+		progress = *progressPtr
+	}
+
+	return &BlogCrawlProgress{
+		Count:    count,
+		Progress: progress,
+		Epoch:    epoch,
+	}, nil
+}
+
+func blogCrawlProgress_Create(tx pgw.Queryable, blogId BlogId) error {
+	_, err := tx.Exec(`
+		insert into blog_crawl_progresses (blog_id, epoch) values ($1, 0)
+	`, blogId)
+	return err
+}
+
+// BlogCrawlClientToken
+
+type BlogCrawlClientToken string
+
+var ErrBlogCrawlClientTokenNotFound = errors.New("blog crawl client token not found")
+
+func BlogCrawlClientToken_GetById(tx pgw.Queryable, blogId BlogId) (BlogCrawlClientToken, error) {
+	row := tx.QueryRow("select value from blog_crawl_client_tokens where blog_id = $1", blogId)
+	var result BlogCrawlClientToken
+	err := row.Scan(&result)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrBlogCrawlClientTokenNotFound
+	} else if err != nil {
+		return "", err
+	}
+
+	return result, nil
+}
+
+// Returns zero value on conflict
+func BlogCrawlClientToken_Create(tx pgw.Queryable, blogId BlogId) (BlogCrawlClientToken, error) {
+	buf := make([]byte, 8)
+	valueInt := binary.LittleEndian.Uint64(buf)
+	value := BlogCrawlClientToken(fmt.Sprintf("%x", valueInt))
+	_, err := tx.Exec(`
+		insert into blog_crawl_client_tokens (blog_id, value) values ($1, $2)
+	`, blogId, value)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
+		pgErr.ConstraintName == "blog_crawl_client_tokens_pkey" {
+		return "", nil
+	} else if err != nil {
+		return "", err
+	}
+
+	return value, nil
+}
+
+// BlogPostCategory
+
+type BlogPostCategoryId int64
+
+type BlogPostCategory struct {
+	Id          BlogPostCategoryId
+	Name        string
+	IsTop       bool
+	BlogPostIds map[BlogPostId]bool
+}
+
+func BlogPostCategory_ListOrdered(tx pgw.Queryable, blogId BlogId) ([]BlogPostCategory, error) {
+	rows, err := tx.Query(`
+		select id, name, is_top from blog_post_categories where blog_id = $1 order by index asc
+	`, blogId)
+	if err != nil {
+		return nil, err
+	}
+
+	var categories []BlogPostCategory
+	for rows.Next() {
+		var category BlogPostCategory
+		err := rows.Scan(&category.Id, &category.Name, &category.IsTop)
+		if err != nil {
+			return nil, err
+		}
+
+		categories = append(categories, category)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	rows, err = tx.Query(`
+		select category_id, blog_post_id from blog_post_category_assignments
+		where category_id in (select id from blog_post_categories where blog_id = $1)
+	`, blogId)
+	if err != nil {
+		return nil, err
+	}
+
+	blogPostIdsByCategoryId := make(map[BlogPostCategoryId][]BlogPostId)
+	for rows.Next() {
+		var categoryId BlogPostCategoryId
+		var postId BlogPostId
+		err := rows.Scan(&categoryId, &postId)
+		if err != nil {
+			return nil, err
+		}
+		blogPostIdsByCategoryId[categoryId] = append(blogPostIdsByCategoryId[categoryId], postId)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	for i := range categories {
+		category := &categories[i]
+		category.BlogPostIds = make(map[BlogPostId]bool)
+		for _, blogPostId := range blogPostIdsByCategoryId[category.Id] {
+			category.BlogPostIds[blogPostId] = true
+		}
+	}
+
+	return categories, nil
+}
+
+func BlogPostCategory_GetNamePostsCountById(
+	tx pgw.Queryable, categoryId BlogPostCategoryId,
+) (name string, postsCount int, err error) {
+	row := tx.QueryRow(`
+		select
+			name,
+			(select count(1) from blog_post_category_assignments where category_id = blog_post_categories.id)
+		from blog_post_categories
+		where id = $1
+	`, categoryId)
+	err = row.Scan(&name, &postsCount)
+	return name, postsCount, err
+}
+
+// BlogPost
+
+type BlogPostId int64
+
+type BlogPost struct {
+	Id    BlogPostId
+	Index int32
+	Url   string
+	Title string
+}
+
+func BlogPost_List(tx pgw.Queryable, blogId BlogId) ([]BlogPost, error) {
+	rows, err := tx.Query(`
+		select id, index, url, title from blog_posts where blog_id = $1
+	`, blogId)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []BlogPost
+	for rows.Next() {
+		var p BlogPost
+		err := rows.Scan(&p.Id, &p.Index, &p.Url, &p.Title)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// BlogCrawlVote
+
+type BlogCrawlVoteValue string
+
+const (
+	BlogCrawlVoteLooksWrong BlogCrawlVoteValue = "looks_wrong"
+	BlogCrawlVoteConfirmed  BlogCrawlVoteValue = "confirmed"
+)
+
+func BlogCrawlVote_Create(
+	tx pgw.Queryable, blogId BlogId, userId UserId, value BlogCrawlVoteValue,
+) error {
+	var sqlUserId *UserId
+	if userId != 0 {
+		sqlUserId = &userId
+	}
+	_, err := tx.Exec(`
+		insert into blog_crawl_votes (blog_id, user_id, value) values ($1, $2, $3)
+	`, blogId, sqlUserId, value)
+	return err
 }

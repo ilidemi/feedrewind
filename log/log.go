@@ -3,7 +3,6 @@ package log
 
 import (
 	"feedrewind/oops"
-	"os"
 	"time"
 
 	"github.com/pkg/errors"
@@ -16,7 +15,6 @@ func init() {
 	zerolog.ErrorStackMarshaler = marshalStack
 	zerolog.DurationFieldInteger = true
 	zerolog.TimeFieldFormat = time.RFC3339Nano
-	logger = zerolog.New(os.Stderr).With().Stack().Logger()
 }
 
 func Info() *zerolog.Event {

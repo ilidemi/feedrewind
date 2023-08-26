@@ -1,0 +1,188 @@
+{{template "layouts/application" .}}
+
+{{define "content"}}
+<div class="flex flex-col gap-6">
+  <div class="flex flex-col gap-1">
+    <div>
+      {{if .Session.IsLoggedIn}}
+        <a href="/subscriptions" class="text-sm link-secondary">← Dashboard</a>
+      {{else}}
+        <a href="/" class="text-sm link-secondary">← Main page</a>
+      {{end}}
+    </div>
+
+    <h2 class="break-word" id="{{.NameHeaderId}}">{{.SubscriptionName}}</h2>
+  </div>
+
+  <div class="overflow-wrap-break-word">
+    <div>
+      <form id="schedule_form">
+        <div class="flex flex-col gap-6">
+          <div class="flex flex-col gap-2">
+            <label class="font-semibold" for="name">Name</label>
+            <div class="flex flex-col">
+              <input type="text"
+                     name="name"
+                     id="name"
+                     value="{{.SubscriptionName}}"
+                     class="rounded-md shadow-sm border-gray-300 max-w-xs"
+              >
+              <div id="name_empty_error" class="hidden text-red-600 text-sm">Name cannot be empty</div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <div class="font-semibold">Weekly schedule</div>
+
+            {{template "partial_schedule" .Schedule}}
+
+            <div id="schedule_empty_error" class="hidden text-red-600 text-sm">Select at least some days</div>
+          </div>
+
+          {{template "partial_schedule_preview" .SchedulePreview}}
+
+          {{if not .IsDeliveryChannelSet}}
+            <div class="flex flex-col gap-1">
+              {{template "users/partial_delivery_channel" .DeliveryChannel}}
+              <div id="delivery_channel_empty_error" class="text-red-600 text-sm">Pick one</div>
+            </div>
+          {{end}}
+
+          <div>
+            <button id="save_button" type="button" class="btn-no-disable relative">
+              <div id="save_label">Continue</div>
+              <div id="save_spinner" class="absolute-center hidden">
+                <div class="spinner spinner-dark"></div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <script>
+            let isNameValid = true;
+            let isScheduleValid = true;
+
+            function validateForm() {
+                {{if .IsDeliveryChannelSet}}
+                let isFormValid = isNameValid && isScheduleValid;
+                {{else}}
+                let isFormValid = isNameValid && isScheduleValid && document.querySelectorAll("input[name='delivery_channel']:checked").length > 0;
+                {{end}}
+                if (isFormValid) {
+                    saveButton.disabled = false;
+                    saveButton.classList.remove("btn-disabled");
+                } else {
+                    saveButton.disabled = true;
+                    saveButton.classList.add("btn-disabled");
+                }
+            }
+
+            function showSpinner() {
+                const label = document.getElementById("save_label");
+                label.classList.add("invisible");
+                const spinner = document.getElementById("save_spinner");
+                spinner.classList.remove("hidden");
+                void spinner.offsetWidth; // trigger reflow
+            }
+
+            function hideSpinner() {
+                const label = document.getElementById("save_label");
+                label.classList.remove("invisible");
+                const spinner = document.getElementById("save_spinner");
+                spinner.classList.add("hidden");
+            }
+
+            document.getElementById("save_button").addEventListener("click", async () => {
+                let saveButton = document.getElementById("save_button");
+                saveButton.disabled = true;
+                showSpinner();
+
+                try {
+                    const abortController = new AbortController();
+                    const timeoutId = setTimeout(() => abortController.abort(), 30000);
+                    const body = new URLSearchParams(new FormData(document.getElementById("schedule_form")));
+                    const response = await fetch(
+                        "{{.SubscriptionSchedulePath}}",
+                        {
+                            method: "post",
+                            headers: {
+                                "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: body,
+                            signal: abortController.signal
+                        }
+                    );
+
+                    if (response.status === 200) {
+                        const text = await response.text();
+                        clearTimeout(timeoutId);
+                        // No need to hide spinner as we're navigating away
+                        window.location = text;
+                    } else {
+                        clearTimeout(timeoutId);
+                        hideSpinner();
+                        showRefreshPopup("Something went wrong. Please refresh the page.");
+                    }
+                } catch (err) {
+                    // Timeout
+                    hideSpinner();
+                    showRefreshPopup("Something went wrong. Please refresh the page.");
+                }
+            });
+
+            let nameTimer;
+            let nameChangeScheduleCallback = (_) => {
+            };
+
+            function setNameChangeScheduleCallback(callback) {
+                nameChangeScheduleCallback = callback;
+            }
+
+            function validateName() {
+                let newName = document.getElementById("name").value;
+                if (newName.length === 0) {
+                    isNameValid = false;
+                    document.getElementById("name_empty_error").classList.remove("hidden");
+                } else {
+                    isNameValid = true;
+                    document.getElementById("name_empty_error").classList.add("hidden");
+
+                    clearTimeout(nameTimer);
+                    nameTimer = setTimeout(() => {
+                        document.getElementById("{{.NameHeaderId}}").innerText = newName;
+                        nameChangeScheduleCallback(newName);
+                    }, 500);
+                }
+                validateForm();
+            }
+
+            document.getElementById("name").addEventListener("input", validateName);
+
+            function onValidateSchedule(isValid, countsByDay, _) {
+                const scheduleError = document.getElementById("schedule_empty_error");
+                if (isValid) {
+                    scheduleError.classList.add("hidden");
+                    updateNextPosts(countsByDay);
+                } else {
+                    scheduleError.classList.remove("hidden");
+                    updateNextPosts(null);
+                }
+                isScheduleValid = isValid;
+                validateForm();
+            }
+
+            const deliveryChannelRadios = document.querySelectorAll("input[name='delivery_channel']");
+            for (let radio of deliveryChannelRadios) {
+                radio.addEventListener("change", () => {
+                    document.getElementById("delivery_channel_empty_error").classList.add("hidden")
+                    validateForm();
+                });
+            }
+        </script>
+
+        {{template "partial_schedule_js" .ScheduleJS}}
+      </form>
+    </div>
+  </div>
+</div>
+{{end}}

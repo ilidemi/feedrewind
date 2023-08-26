@@ -6,6 +6,7 @@ import (
 	"feedrewind/log"
 	"feedrewind/models"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/securecookie"
 )
@@ -79,5 +80,6 @@ func mustSetCookie(w http.ResponseWriter, session *sessionData) {
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().UTC().AddDate(1, 0, 0),
 	})
 }

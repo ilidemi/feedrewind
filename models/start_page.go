@@ -14,7 +14,7 @@ func StartPage_Create(
 		insert into start_pages (url, final_url, content)
 		values ($1, $2, $3)
 		returning id
-	`, discoveredStartPage.Url, discoveredStartPage.FinalUrl, discoveredStartPage.Content)
+	`, discoveredStartPage.Url, discoveredStartPage.FinalUrl, []byte(discoveredStartPage.Content))
 	var id StartPageId
 	err := row.Scan(&id)
 	if err != nil {

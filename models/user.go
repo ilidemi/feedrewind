@@ -137,6 +137,31 @@ func User_Create(
 	}, nil
 }
 
+type UserWithRss struct {
+	AnySubcriptionNotPausedOrFinished bool
+	Rss                               string
+	ProductUserId                     ProductUserId
+}
+
+func User_GetWithRss(tx pgw.Queryable, userId UserId) (*UserWithRss, error) {
+	row := tx.QueryRow(`
+		select
+			(
+				select count(1) from subscriptions
+				where subscriptions.user_id = $1 and
+					not is_paused and
+					final_item_published_at is null
+			) > 0,
+			(select body from user_rsses where user_id = $1),
+			product_user_id
+		from users
+		where id = $1
+	`, userId)
+	var u UserWithRss
+	err := row.Scan(&u.AnySubcriptionNotPausedOrFinished, &u.Rss, &u.ProductUserId)
+	return &u, err
+}
+
 func generatePasswordDigest(password string) (string, error) {
 	if len(password) < 8 {
 		return "", ErrPasswordTooShort

@@ -5,9 +5,40 @@ import (
 	"feedrewind/db/pgw"
 	"feedrewind/util"
 	"fmt"
+	"strings"
 )
 
-func Schedule_GetCounts(tx pgw.Queryable, subscriptionId SubscriptionId) (map[util.DayOfWeek]int, error) {
+func Schedule_Create(
+	tx pgw.Queryable, subscriptionId SubscriptionId, countsByDay map[util.DayOfWeek]int,
+) error {
+	var valuesSql strings.Builder
+	for dayOfWeek, count := range countsByDay {
+		if valuesSql.Len() > 0 {
+			fmt.Fprint(&valuesSql, ", ")
+		}
+		fmt.Fprintf(&valuesSql, "(%d, '%s', %d)", subscriptionId, dayOfWeek, count)
+	}
+	_, err := tx.Exec(`
+		insert into schedules (subscription_id, day_of_week, count)
+		values ` + valuesSql.String() + `
+	`)
+	return err
+}
+
+func Schedule_GetCount(
+	tx pgw.Queryable, subscriptionId SubscriptionId, dayOfWeek util.DayOfWeek,
+) (int, error) {
+	row := tx.QueryRow(`
+		select count from schedules where subscription_id = $1 and day_of_week = $2
+	`, subscriptionId, dayOfWeek)
+	var result int
+	err := row.Scan(&result)
+	return result, err
+}
+
+func Schedule_GetCountsByDay(
+	tx pgw.Queryable, subscriptionId SubscriptionId,
+) (map[util.DayOfWeek]int, error) {
 	rows, err := tx.Query(`
 		select day_of_week, count
 		from schedules

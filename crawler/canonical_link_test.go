@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestToCanonicalLink(t *testing.T) {
@@ -359,15 +359,15 @@ func TestToCanonicalLink(t *testing.T) {
 	}
 	for _, tc := range tests {
 		fetchUri, err := url.Parse(tc.fetchUrl)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		canonicalLink, ok := ToCanonicalLink(tc.url, logger, fetchUri)
 		if tc.expected != nil {
-			assert.True(t, ok, tc.description)
-			assert.Equal(t, tc.expected.url, canonicalLink.Url, tc.description)
+			require.True(t, ok, tc.description)
+			require.Equal(t, tc.expected.url, canonicalLink.Url, tc.description)
 			expectedCuri := CanonicalUriFromDbString(tc.expected.canonicalUrl)
-			assert.True(t, CanonicalUriEqual(expectedCuri, canonicalLink.Curi, curiEqCfg), tc.description)
+			require.True(t, CanonicalUriEqual(expectedCuri, canonicalLink.Curi, curiEqCfg), tc.description)
 		} else {
-			assert.False(t, ok, tc.description)
+			require.False(t, ok, tc.description)
 		}
 	}
 }

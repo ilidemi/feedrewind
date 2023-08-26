@@ -79,7 +79,7 @@ func (conn *Conn) Query(sql string, args ...any) (*Rows, error) {
 	defer addDuration(conn.ctx, t1)()
 
 	rows, err := conn.impl.Query(conn.ctx, sql, args...)
-	return newRows(rows), oops.Wrap(err)
+	return newRows(rows, conn.ctx), oops.Wrap(err)
 }
 
 func (conn *Conn) QueryRow(sql string, args ...any) *Row {
@@ -160,7 +160,7 @@ func (tx *Tx) Query(sql string, arguments ...any) (*Rows, error) {
 	defer addDuration(tx.ctx, t1)()
 
 	rows, err := tx.impl.Query(tx.ctx, sql, arguments...)
-	return newRows(rows), oops.Wrap(err)
+	return newRows(rows, tx.ctx), oops.Wrap(err)
 }
 
 func (tx *Tx) QueryRow(sql string, arguments ...any) *Row {
@@ -176,6 +176,97 @@ func (tx *Tx) SendBatch(batch *pgx.Batch) *BatchResults {
 	defer addDuration(tx.ctx, t1)()
 
 	return newBatchResults(tx.impl.SendBatch(tx.ctx, batch))
+}
+
+type Rows struct {
+	impl pgx.Rows
+	ctx  context.Context
+}
+
+func newRows(rows pgx.Rows, ctx context.Context) *Rows {
+	if rows == nil {
+		return nil
+	}
+
+	return &Rows{
+		impl: rows,
+		ctx:  ctx,
+	}
+}
+
+// Next prepares the next row for reading. It returns true if there is another
+// row and false if no more rows are available. It automatically closes rows
+// when all rows are read.
+func (rows *Rows) Next() bool {
+	t1 := time.Now()
+	defer addDuration(rows.ctx, t1)()
+
+	return rows.impl.Next()
+}
+
+// Scan reads the values from the current row into dest values positionally.
+// dest can include pointers to core types, values implementing the Scanner
+// interface, and nil. nil will skip the value entirely. It is an error to
+// call Scan without first calling Next() and checking that it returned true.
+func (rows *Rows) Scan(dest ...any) error {
+	err := rows.impl.Scan(dest...)
+	return oops.Wrap(err)
+}
+
+// Err returns any error that occurred while reading. Err must only be called after the Rows is closed (either by
+// calling Close or by Next returning false). If it is called early it may return nil even if there was an error
+// executing the query.
+func (rows *Rows) Err() error {
+	err := rows.impl.Err()
+	return oops.Wrap(err)
+}
+
+// Close closes the rows, making the connection ready for use again. It is safe
+// to call Close after rows is already closed.
+func (rows *Rows) Close() {
+	rows.impl.Close()
+}
+
+type Row struct {
+	impl pgx.Row
+}
+
+func newRow(row pgx.Row) *Row {
+	if row == nil {
+		return nil
+	}
+
+	return &Row{impl: row}
+}
+
+// Scan works the same as Rows. with the following exceptions. If no
+// rows were found it returns ErrNoRows. If multiple rows are returned it
+// ignores all but the first.
+func (row *Row) Scan(dest ...any) error {
+	err := row.impl.Scan(dest...)
+	return oops.Wrap(err)
+}
+
+type BatchResults struct {
+	impl pgx.BatchResults
+}
+
+func newBatchResults(impl pgx.BatchResults) *BatchResults {
+	return &BatchResults{impl: impl}
+}
+
+// Close closes the batch operation. All unread results are read and any callback functions registered with
+// QueuedQuery.Query, QueuedQuery.QueryRow, or QueuedQuery.Exec will be called. If a callback function returns an
+// error or the batch encounters an error subsequent callback functions will not be called.
+//
+// Close must be called before the underlying connection can be used again. Any error that occurred during a batch
+// operation may have made it impossible to resyncronize the connection with the server. In this case the underlying
+// connection will have been closed.
+//
+// Close is safe to call multiple times. If it returns an error subsequent calls will return the same error. Callback
+// functions will not be rerun.
+func (r *BatchResults) Close() error {
+	return oops.Wrap(r.impl.Close())
 }
 
 type dbDurationKeyType struct{}
@@ -206,63 +297,4 @@ func WithDBDuration(r *http.Request) *http.Request {
 	dbDuration := time.Duration(0)
 	r = r.WithContext(context.WithValue(r.Context(), dbDurationKey, &dbDuration))
 	return r
-}
-
-type Rows struct {
-	impl pgx.Rows
-}
-
-func newRows(rows pgx.Rows) *Rows {
-	if rows == nil {
-		return nil
-	}
-
-	return &Rows{impl: rows}
-}
-
-func (rows *Rows) Next() bool {
-	return rows.impl.Next()
-}
-
-func (rows *Rows) Scan(dest ...any) error {
-	err := rows.impl.Scan(dest...)
-	return oops.Wrap(err)
-}
-
-func (rows *Rows) Err() error {
-	err := rows.impl.Err()
-	return oops.Wrap(err)
-}
-
-func (rows *Rows) Close() {
-	rows.impl.Close()
-}
-
-type Row struct {
-	impl pgx.Row
-}
-
-func newRow(row pgx.Row) *Row {
-	if row == nil {
-		return nil
-	}
-
-	return &Row{impl: row}
-}
-
-func (row *Row) Scan(dest ...any) error {
-	err := row.impl.Scan(dest...)
-	return oops.Wrap(err)
-}
-
-type BatchResults struct {
-	impl pgx.BatchResults
-}
-
-func newBatchResults(impl pgx.BatchResults) *BatchResults {
-	return &BatchResults{impl: impl}
-}
-
-func (r *BatchResults) Close() error {
-	return oops.Wrap(r.impl.Close())
 }

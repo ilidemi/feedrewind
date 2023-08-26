@@ -14,11 +14,19 @@
             [
                 {
                     "name": "test",
-                    "shell_cmd": "go test ./...",
+                    "shell_cmd": "go test ./... -tags testing",
+                },
+                {
+                    "name": "migrate test db",
+                    "shell_cmd": "go run -tags testing . db migrate",
                 },
                 {
                     "name": "golangci-lint",
                     "shell_cmd": "golangci-lint cache clean && golangci-lint run",
+                },
+                {
+                    "name": "golangci-lint (with cache)",
+                    "shell_cmd": "golangci-lint run",
                 },
                 {
                     "name": "tailwindcss",

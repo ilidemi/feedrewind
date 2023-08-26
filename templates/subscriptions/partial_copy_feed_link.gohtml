@@ -15,7 +15,7 @@
   </button>
   <script>
       document.getElementById("copy_button").addEventListener("click", () => {
-          navigator.clipboard.writeText("<%= SubscriptionsHelper.feed_url(request, subscription) %>");
+          navigator.clipboard.writeText("{{.}}");
           showInfoPopup("Copied!");
       });
   </script>

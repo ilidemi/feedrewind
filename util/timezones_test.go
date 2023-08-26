@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTzInfoIsComplete(t *testing.T) {
@@ -14,13 +14,13 @@ func TestTzInfoIsComplete(t *testing.T) {
 			continue
 		}
 		_, ok := GroupIdByTimezoneId[location]
-		assert.Truef(t, ok, "timezone from tzdata is not in tzdb: %s", location)
+		require.Truef(t, ok, "timezone from tzdata is not in tzdb: %s", location)
 	}
 }
 
 func TestTzdbIsComplete(t *testing.T) {
 	for _, friendlyTimezone := range FriendlyTimezones {
 		_, ok := tzdata.LocationByName[friendlyTimezone.GroupId]
-		assert.Truef(t, ok, "group from tzdb is not in tzdata: %s", friendlyTimezone.GroupId)
+		require.Truef(t, ok, "group from tzdb is not in tzdata: %s", friendlyTimezone.GroupId)
 	}
 }

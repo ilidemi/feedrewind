@@ -1,7 +1,7 @@
 package util
 
 import (
-	"errors"
+	"feedrewind/oops"
 	"html/template"
 	"time"
 
@@ -21,10 +21,22 @@ func init() {
 	DaysOfWeekJson = template.JS(string(daysOfWeekJsonBytes))
 }
 
+func Schedule_DayOfWeek(time time.Time) DayOfWeek {
+	return DaysOfWeek[time.Weekday()]
+}
+
 type Date string
 
 func Schedule_Date(time time.Time) Date {
 	return Date(time.Format("2006-01-02"))
+}
+
+func Schedule_TimeFromDate(date Date) time.Time {
+	parsed, err := time.Parse("2006-01-02", string(date))
+	if err != nil {
+		panic(err)
+	}
+	return parsed
 }
 
 func Schedule_DateInLocation(date Date, location *time.Location) (time.Time, error) {
@@ -41,8 +53,8 @@ func Schedule_IsEarlyMorning(localTime time.Time) bool {
 }
 
 func Schedule_ToUTCStr(time time.Time) (string, error) {
-	if time.Location() != nil {
-		return "", errors.New("Expected UTC time")
+	if time.Location() != nil && time.Location().String() != "UTC" {
+		return "", oops.Newf("Expected UTC time")
 	}
 
 	return time.Format("2006-01-02 15:04:05"), nil

@@ -10,8 +10,8 @@ import (
 )
 
 type DiscoveredSingleFeed struct {
-	StartPage DiscoveredStartPage
-	Feed      DiscoveredFetchedFeed
+	MaybeStartPage *DiscoveredStartPage
+	Feed           DiscoveredFetchedFeed
 }
 
 type DiscoveredStartPage struct {
@@ -128,8 +128,8 @@ func DiscoverFeedsAtUrl(
 			ParsedFeed: parsedFeed,
 		}
 		return &DiscoveredSingleFeed{
-			StartPage: DiscoveredStartPage{}, //nolint:exhaustruct
-			Feed:      feed,
+			MaybeStartPage: nil,
+			Feed:           feed,
 		}
 	} else if startResult.Document == nil {
 		logger.Info("Page without document")
@@ -241,8 +241,8 @@ func DiscoverFeedsAtUrl(
 					ParsedFeed: parsedFeed,
 				}
 				return &DiscoveredSingleFeed{
-					StartPage: startPage,
-					Feed:      fetchedFeed,
+					MaybeStartPage: &startPage,
+					Feed:           fetchedFeed,
 				}
 			case *FetchFeedErrorBadFeed:
 				return &DiscoverFeedsErrorBadFeed{}

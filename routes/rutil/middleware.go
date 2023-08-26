@@ -20,6 +20,14 @@ func CurrentUser(r *http.Request) *models.User {
 	return middleware.GetCurrentUser(r)
 }
 
+func CurrentUserId(r *http.Request) models.UserId {
+	currentUser := middleware.GetCurrentUser(r)
+	if currentUser == nil {
+		return 0
+	}
+	return currentUser.Id
+}
+
 func CurrentProductUserId(r *http.Request) models.ProductUserId {
 	return middleware.GetCurrentProductUserId(r)
 }

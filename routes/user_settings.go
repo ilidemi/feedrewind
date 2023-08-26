@@ -21,10 +21,32 @@ const (
 	deliveryChannelEmail deliveryChannel = "email"
 )
 
+type deliverySettings struct {
+	IsRSSSelected   bool
+	IsEmailSelected bool
+	RSSValue        deliveryChannel
+	EmailValue      deliveryChannel
+}
+
+func newDeliverySettings(userSettings *models.UserSettings) deliverySettings {
+	isRSSSelected := false
+	isEmailSelected := false
+	if userSettings.DeliveryChannel != nil {
+		isRSSSelected = *userSettings.DeliveryChannel == models.DeliveryChannelMultipleFeeds
+		isEmailSelected = *userSettings.DeliveryChannel == models.DeliveryChannelEmail
+	}
+	return deliverySettings{
+		IsRSSSelected:   isRSSSelected,
+		IsEmailSelected: isEmailSelected,
+		RSSValue:        deliveryChannelRSS,
+		EmailValue:      deliveryChannelEmail,
+	}
+}
+
 func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	currentUser := rutil.CurrentUser(r)
-	userSettings, err := models.UserSettings_GetById(conn, currentUser.Id)
+	userSettings, err := models.UserSettings_Get(conn, currentUser.Id)
 	if err != nil {
 		panic(err)
 	}
@@ -54,13 +76,6 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	type deliverySettings struct {
-		IsRSSSelected   bool
-		IsEmailSelected bool
-		RSSValue        deliveryChannel
-		EmailValue      deliveryChannel
-	}
-
 	type settingsPageResult struct {
 		Session                              *util.Session
 		TimezoneOptions                      []timezoneOption
@@ -70,21 +85,10 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		ShortFriendlyNameByGroupIdJson       template.JS
 		GroupIdByTimezoneIdJson              template.JS
 	}
-	isRSSSelected := false
-	isEmailSelected := false
-	if userSettings.DeliveryChannel != nil {
-		isRSSSelected = *userSettings.DeliveryChannel == models.DeliveryChannelMultipleFeeds
-		isEmailSelected = *userSettings.DeliveryChannel == models.DeliveryChannelEmail
-	}
 	result := settingsPageResult{
-		Session:         rutil.Session(r),
-		TimezoneOptions: timezoneOptions,
-		DeliveryChannel: deliverySettings{
-			IsRSSSelected:   isRSSSelected,
-			IsEmailSelected: isEmailSelected,
-			RSSValue:        deliveryChannelRSS,
-			EmailValue:      deliveryChannelEmail,
-		},
+		Session:                              rutil.Session(r),
+		TimezoneOptions:                      timezoneOptions,
+		DeliveryChannel:                      newDeliverySettings(userSettings),
 		Version:                              userSettings.Version,
 		ShortFriendlyPrefixNameByGroupIdJson: util.ShortFriendlyPrefixNameByGroupIdJson,
 		ShortFriendlyNameByGroupIdJson:       util.ShortFriendlyNameByGroupIdJson,
@@ -111,7 +115,7 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		defer util.CommitOrRollbackMsg(tx, result, "Unlocked PublishPostsJob")
+		defer util.CommitOrRollbackMsg(tx, &result, "Unlocked PublishPostsJob")
 
 		log.Info().Msg("Locking PublishPostsJob")
 		lockedJobs, err := jobs.PublishPostsJob_Lock(tx, currentUser.Id)
@@ -127,7 +131,7 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		oldUserSettings, err := models.UserSettings_GetById(tx, currentUser.Id)
+		oldUserSettings, err := models.UserSettings_Get(tx, currentUser.Id)
 		if err != nil {
 			panic(err)
 		}
@@ -221,7 +225,7 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		defer util.CommitOrRollbackMsg(tx, result, "Unlocked PublishPostsJob")
+		defer util.CommitOrRollbackMsg(tx, &result, "Unlocked PublishPostsJob")
 
 		log.Info().Msg("Locking PublishPostsJob")
 		lockedJobs, err := jobs.PublishPostsJob_Lock(tx, currentUser.Id)
@@ -237,7 +241,7 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		oldUserSettings, err := models.UserSettings_GetById(tx, currentUser.Id)
+		oldUserSettings, err := models.UserSettings_Get(tx, currentUser.Id)
 		if err != nil {
 			panic(err)
 		}
@@ -255,7 +259,7 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 		}
 
 		oldDeliveryChannel := oldUserSettings.DeliveryChannel
-		err = models.UserSettings_SaveDeliveryChannel(tx, currentUser.Id, newDeliveryChannel, newVersion)
+		err = models.UserSettings_SaveDeliveryChannelVersion(tx, currentUser.Id, newDeliveryChannel, newVersion)
 		if err != nil {
 			panic(err)
 		}

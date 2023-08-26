@@ -10,6 +10,7 @@ import (
 	"feedrewind/util"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 const CSRFFormKey = "authenticity_token"
@@ -20,7 +21,8 @@ func CSRF(next http.Handler) http.Handler {
 		var rawAuthToken []byte
 		if authToken != "" {
 			var err error
-			rawAuthToken, err = base64.RawStdEncoding.DecodeString(authToken)
+			urlAuthToken := strings.Replace(strings.Replace(authToken, "+", "-", -1), "/", "_", -1)
+			rawAuthToken, err = base64.RawURLEncoding.DecodeString(urlAuthToken)
 			if err != nil {
 				panic(err)
 			}

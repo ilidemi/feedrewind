@@ -27,6 +27,20 @@ func strToYaml(str string) yamlString {
 	return yamlString(fmt.Sprintf("'%s'", str))
 }
 
+// Assumes top-level array and enmeshes indentation handling with the rest of args serialization
+func int64ListToYaml(values []int64) yamlString {
+	var b strings.Builder
+	for i, value := range values {
+		if i == 0 {
+			fmt.Fprint(&b, "- ")
+		} else {
+			fmt.Fprint(&b, "\n    - ")
+		}
+		fmt.Fprint(&b, value)
+	}
+	return yamlString(b.String())
+}
+
 func performNow(tx pgw.Queryable, class string, queue string, arguments ...yamlString) error {
 	return performAt(tx, time.Now().UTC(), class, queue, arguments...)
 }

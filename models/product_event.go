@@ -28,6 +28,21 @@ type ProductEventContext struct {
 	ProductUserId ProductUserId
 }
 
+func ProductEvent_MustEmit(
+	tx pgw.Queryable, productUserId ProductUserId, eventType string, eventProperties map[string]any,
+	userProperties map[string]any,
+) {
+	_, err := tx.Exec(`
+		insert into product_events (
+			event_type, event_properties, user_properties, product_user_id
+		)
+		values ($1, $2, $3, $4)
+	`, eventType, eventProperties, userProperties, productUserId)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func NewProductEventContext(
 	tx pgw.Queryable, request *http.Request, productUserId ProductUserId,
 ) ProductEventContext {

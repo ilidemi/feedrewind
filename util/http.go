@@ -66,6 +66,18 @@ func EnsureParamInt(r *http.Request, name string) int {
 	return int(val64)
 }
 
+func EnsureParamFloat64(r *http.Request, name string) float64 {
+	str := EnsureParamStr(r, name)
+	val, err := strconv.ParseFloat(str, 64)
+	if err != nil {
+		panic(HttpError{
+			Status: http.StatusBadRequest,
+			Inner:  fmt.Errorf("couldn't read float64: %s", str),
+		})
+	}
+	return val
+}
+
 // Route params return bool ok instead of BadRequest because we may want to manually redirect the user
 func URLParamInt64(r *http.Request, name string) (int64, bool) {
 	str := chi.URLParam(r, name)
@@ -93,11 +105,20 @@ func FindCookie(r *http.Request, name string) (string, bool) {
 	return "", false
 }
 
+func SetSessionCookie(w http.ResponseWriter, name string, value string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:  name,
+		Value: value,
+		Path:  "/",
+	})
+}
+
 func DeleteCookie(w http.ResponseWriter, name string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:    name,
 		Value:   "",
 		Expires: time.Unix(0, 0),
+		Path:    "/",
 	})
 }
 

@@ -5,6 +5,8 @@ import (
 	"feedrewind/models/mutil"
 	"feedrewind/util"
 	"fmt"
+	"strings"
+	"time"
 
 	"errors"
 
@@ -32,6 +34,21 @@ func Subscription_Exists(tx pgw.Queryable, id SubscriptionId) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func Subscription_GetUserIdBlogId(tx pgw.Queryable, id SubscriptionId) (UserId, BlogId, error) {
+	row := tx.QueryRow("select user_id, blog_id from subscriptions where id = $1", id)
+	var userIdPtr *UserId
+	var blogId BlogId
+	err := row.Scan(&userIdPtr, &blogId)
+	if err != nil {
+		return 0, blogId, err
+	}
+
+	if userIdPtr == nil {
+		return 0, blogId, nil
+	}
+	return *userIdPtr, blogId, nil
 }
 
 func Subscription_SetUserId(tx pgw.Queryable, id SubscriptionId, userId UserId) error {
@@ -171,6 +188,15 @@ func Subscription_SetIsPaused(tx pgw.Queryable, subscriptionId SubscriptionId, i
 func Subscription_Delete(tx pgw.Queryable, subscriptionId SubscriptionId) error {
 	_, err := tx.Exec("delete from subscriptions where id = $1", subscriptionId)
 	return err
+}
+
+func Subscription_GetName(tx pgw.Queryable, subscriptionId SubscriptionId) (string, error) {
+	row := tx.QueryRow(`
+		select subscriptions.name from subscriptions where subscriptions.id = $1
+	`, subscriptionId)
+	var name string
+	err := row.Scan(&name)
+	return name, err
 }
 
 func Subscription_GetOtherNamesByDay(
@@ -361,6 +387,101 @@ func Subscription_GetUserIdStatusScheduleVersion(
 	return &s, nil
 }
 
+type SubscriptionBlogStatus struct {
+	SubscriptionStatus SubscriptionStatus
+	BlogStatus         BlogStatus
+	SubscriptionName   string
+	BlogId             BlogId
+	UserId             *UserId
+}
+
+func Subscription_GetStatus(
+	tx pgw.Queryable, subscriptionId SubscriptionId,
+) (*SubscriptionBlogStatus, error) {
+	row := tx.QueryRow(`
+		select status, (select status from blogs where id = blog_id) as blog_status, name, blog_id, user_id
+		from subscriptions
+		where id = $1
+	`, subscriptionId)
+	var s SubscriptionBlogStatus
+	err := row.Scan(&s.SubscriptionStatus, &s.BlogStatus, &s.SubscriptionName, &s.BlogId, &s.UserId)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrSubscriptionNotFound
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &s, err
+}
+
+type SubscriptionBlogStatusPostsCount struct {
+	SubscriptionStatus SubscriptionStatus
+	BlogStatus         BlogStatus
+	PostsCount         int
+	BlogId             BlogId
+	BlogBestUrl        string
+	UserId             *UserId
+}
+
+func Subscription_GetStatusPostsCount(
+	tx pgw.Queryable, subscriptionId SubscriptionId,
+) (*SubscriptionBlogStatusPostsCount, error) {
+	row := tx.QueryRow(`
+		select
+			status,
+			(select status from blogs where id = blog_id) as blog_status,
+			(select count(1) from blog_posts where blog_posts.blog_id = subscriptions.blog_id),
+			blog_id,
+			(select coalesce(url, feed_url) from blogs where id = blog_id),
+			user_id
+		from subscriptions
+		where id = $1
+	`, subscriptionId)
+	var s SubscriptionBlogStatusPostsCount
+	err := row.Scan(&s.SubscriptionStatus, &s.BlogStatus, &s.PostsCount, &s.BlogId, &s.BlogBestUrl, &s.UserId)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrSubscriptionNotFound
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &s, err
+}
+
+type SubscriptionBlogStatusBestUrl struct {
+	SubscriptionStatus SubscriptionStatus
+	BlogStatus         BlogStatus
+	BlogName           string
+	BlogBestUrl        string
+	BlogId             BlogId
+	UserId             *UserId
+}
+
+func Subscription_GetStatusBestUrl(
+	tx pgw.Queryable, subscriptionId SubscriptionId,
+) (*SubscriptionBlogStatusBestUrl, error) {
+	row := tx.QueryRow(`
+		select
+			status,
+			(select status from blogs where id = blog_id) as blog_status,
+			(select name from blogs where id = blog_id) as blog_name,
+			(select coalesce(url, feed_url) from blogs where id = blog_id),
+			blog_id,
+			user_id
+		from subscriptions
+		where id = $1
+	`, subscriptionId)
+	var s SubscriptionBlogStatusBestUrl
+	err := row.Scan(&s.SubscriptionStatus, &s.BlogStatus, &s.BlogName, &s.BlogBestUrl, &s.BlogId, &s.UserId)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrSubscriptionNotFound
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &s, err
+}
+
 func Subscription_UpdateScheduleVersion(
 	tx pgw.Queryable, subscriptionId SubscriptionId, scheduleVersion int64,
 ) error {
@@ -425,4 +546,273 @@ func Subscription_Create(
 		BlogBestUrl: blog.BestUrl,
 		BlogStatus:  blog.Status,
 	}, nil
+}
+
+type SubscriptionBlogCrawlTimes struct {
+	UserId               UserId
+	BlogFeedUrl          string
+	BlogCrawlClientToken BlogCrawlClientToken
+	BlogCrawlEpoch       int32
+	BlogCrawlEpochTimes  string
+}
+
+func Subscription_GetBlogCrawlTimes(
+	tx pgw.Queryable, subscriptionId SubscriptionId,
+) (*SubscriptionBlogCrawlTimes, error) {
+	row := tx.QueryRow(`
+		select user_id, blogs.feed_url, blog_crawl_client_tokens.value, blog_crawl_progresses.epoch,
+			blog_crawl_progresses.epoch_times
+		from subscriptions
+		join blogs on subscriptions.blog_id = blogs.id
+		join blog_crawl_client_tokens on blog_crawl_client_tokens.blog_id = subscriptions.blog_id
+		join blog_crawl_progresses on blog_crawl_progresses.blog_id = subscriptions.blog_id
+		where subscription_id = $1
+	`, subscriptionId)
+	var d SubscriptionBlogCrawlTimes
+	err := row.Scan(
+		&d.UserId, &d.BlogFeedUrl, &d.BlogCrawlClientToken, &d.BlogCrawlEpoch, &d.BlogCrawlEpochTimes,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &d, nil
+}
+
+// 16 urlsafe random bytes
+var psqlRandomId = "rtrim(replace(replace(encode(gen_random_bytes(16), 'base64'), '+', '-'), '/', '_'), '=')"
+
+func Subscription_CreatePostsFromCategory(
+	tx pgw.Queryable, subscriptionId SubscriptionId, categoryId BlogPostCategoryId,
+) error {
+	_, err := tx.Exec(`
+		insert into subscription_posts (subscription_id, blog_post_id, random_id, published_at)
+		select $1, blog_post_id, `+psqlRandomId+`, null
+		from blog_post_category_assignments
+		where category_id = $2
+	`, subscriptionId, categoryId)
+	return err
+}
+
+func Subscription_CreatePostsFromIds(
+	tx pgw.Queryable, subscriptionId SubscriptionId, blogId BlogId, blogPostIds map[BlogPostId]bool,
+) error {
+	var blogPostIdsStr strings.Builder
+	for blogPostId := range blogPostIds {
+		if blogPostIdsStr.Len() > 0 {
+			fmt.Fprint(&blogPostIdsStr, ", ")
+		}
+		fmt.Fprint(&blogPostIdsStr, blogPostId)
+	}
+
+	_, err := tx.Exec(`
+		insert into subscription_posts (subscription_id, blog_post_id, random_id, published_at)
+		select $1, id, `+psqlRandomId+`, null
+		from blog_posts
+		where blog_id = $2 and id in (`+blogPostIdsStr.String()+`)
+	`, subscriptionId, blogId)
+	return err
+}
+
+func Subscription_UpdateStatus(
+	tx pgw.Queryable, subscriptionId SubscriptionId, newStatus SubscriptionStatus,
+) error {
+	_, err := tx.Exec(`update subscriptions set status = $1 where id = $2`, newStatus, subscriptionId)
+	return err
+}
+
+func Subscription_FinishSetup(
+	tx pgw.Queryable, subscriptionId SubscriptionId, name string, status SubscriptionStatus,
+	finishedSetupAt time.Time, scheduleVersion int, isAddedPastMidnight bool,
+) error {
+	_, err := tx.Exec(`
+		update subscriptions
+		set name = $1, status = $2, finished_setup_at = $3, schedule_version = $4, is_added_past_midnight = $5
+		where id = $6
+	`, name, status, finishedSetupAt, scheduleVersion, isAddedPastMidnight, subscriptionId)
+	return err
+}
+
+type SubscriptionToPublish struct {
+	Id                   SubscriptionId
+	Name                 string
+	IsPaused             *bool
+	FinishedSetupAt      time.Time
+	FinalItemPublishedAt *time.Time
+	BlogId               BlogId
+}
+
+func Subscription_ListSortedToPublish(tx pgw.Queryable, userId UserId) ([]SubscriptionToPublish, error) {
+	rows, err := tx.Query(`
+		select id, name, is_paused, finished_setup_at, final_item_published_at, blog_id from subscriptions
+		where user_id = $1 and status = $2
+		order by finished_setup_at desc, id desc
+	`, userId, SubscriptionStatusLive)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []SubscriptionToPublish
+	for rows.Next() {
+		var s SubscriptionToPublish
+		err := rows.Scan(&s.Id, &s.Name, &s.IsPaused, &s.FinishedSetupAt, &s.FinalItemPublishedAt, &s.BlogId)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func Subscription_SetInitialItemPublishStatus(
+	tx pgw.Queryable, subscriptionId SubscriptionId, initialItemPublishStatus PostPublishStatus,
+) error {
+	_, err := tx.Exec(`
+		update subscriptions set initial_item_publish_status = $1 where id = $2
+	`, initialItemPublishStatus, subscriptionId)
+	return err
+}
+
+func Subscription_SetFinalItemPublished(
+	tx pgw.Queryable, subscriptionId SubscriptionId, finalItemPublishedAt time.Time,
+	finalItemPublishStatus PostPublishStatus,
+) error {
+	_, err := tx.Exec(`
+		update subscriptions set final_item_published_at = $1 where id = $2
+	`, finalItemPublishedAt, subscriptionId)
+	return err
+}
+
+type SubscriptionWithRss struct {
+	IsPausedOrFinished bool
+	Rss                string
+	BlogBestUrl        string
+	ProductUserId      ProductUserId
+}
+
+func Subscription_GetWithRss(tx pgw.Queryable, subscriptionId SubscriptionId) (*SubscriptionWithRss, error) {
+	row := tx.QueryRow(`
+		select
+			(is_paused or final_item_published_at is not null),
+			(select body from subscription_rsses where subscription_id = $1),
+			(select coalesce(url, feed_url) from blogs where blogs.id = blog_id),
+			(select product_user_id from users where users.id = user_id)
+		from subscriptions where id = $1
+	`, subscriptionId)
+	var s SubscriptionWithRss
+	err := row.Scan(&s.IsPausedOrFinished, &s.Rss, &s.BlogBestUrl, &s.ProductUserId)
+	return &s, err
+}
+
+// SubscriptionPost
+
+type SubscriptionPostId int64
+
+type SubscriptionBlogPost struct {
+	Id          SubscriptionPostId
+	Title       string
+	RandomId    string
+	PublishedAt *time.Time
+}
+
+type PostPublishStatus string
+
+const (
+	PostPublishStatusRssPublished PostPublishStatus = "rss_published"
+	PostPublishStatusEmailPending PostPublishStatus = "email_pending"
+	PostPublishStatusEmailSkipped PostPublishStatus = "email_skipped"
+	PostPublishStatusEmailSent    PostPublishStatus = "email_sent"
+)
+
+func SubscriptionPost_GetNextUnpublished(
+	tx pgw.Queryable, subscriptionId SubscriptionId, count int,
+) ([]SubscriptionBlogPost, error) {
+	rows, err := tx.Query(`
+		select subscription_posts.id, title, random_id, published_at from subscription_posts 
+		join blog_posts on subscription_posts.blog_post_id = blog_posts.id
+		where subscription_id = $1 and published_at is null
+		order by index asc
+		limit $2
+	`, subscriptionId, count)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []SubscriptionBlogPost
+	for rows.Next() {
+		var p SubscriptionBlogPost
+		err := rows.Scan(&p.Id, &p.Title, &p.RandomId, &p.PublishedAt)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func SubscriptionPost_GetLastPublishedDesc(
+	tx pgw.Queryable, subscriptionId SubscriptionId, count int,
+) ([]SubscriptionBlogPost, error) {
+	rows, err := tx.Query(`
+		select subscription_posts.id, title, random_id, published_at from subscription_posts
+		join blog_posts on subscription_posts.blog_post_id = blog_posts.id
+		where subscription_id = $1 and published_at is not null
+		order by index desc
+		limit $2
+	`, subscriptionId, count)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []SubscriptionBlogPost
+	for rows.Next() {
+		var p SubscriptionBlogPost
+		err := rows.Scan(&p.Id, &p.Title, &p.RandomId, &p.PublishedAt)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func SubscriptionPost_UpdatePublished(
+	tx pgw.Queryable, postId SubscriptionPostId, publishedAt time.Time, publishedAtLocalDate util.Date,
+	publishStatus PostPublishStatus,
+) error {
+	_, err := tx.Exec(`
+		update subscription_posts
+		set published_at = $1, published_at_local_date = $2, publish_status = $3
+		where id = $4
+	`, publishedAt, publishedAtLocalDate, publishStatus, postId)
+	return err
+}
+
+func SubscriptionPost_GetPublishedCount(tx pgw.Queryable, subscriptionId SubscriptionId) (int, error) {
+	row := tx.QueryRow(`
+		select count(1) from subscription_posts where subscription_id = $1 and published_at is not null
+	`, subscriptionId)
+	var result int
+	err := row.Scan(&result)
+	return result, err
+}
+
+func SubscriptionPost_GetUnpublishedCount(tx pgw.Queryable, subscriptionId SubscriptionId) (int, error) {
+	row := tx.QueryRow(`
+		select count(1) from subscription_posts where subscription_id = $1 and published_at is null
+	`, subscriptionId)
+	var result int
+	err := row.Scan(&result)
+	return result, err
 }

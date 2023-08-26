@@ -85,6 +85,18 @@ func Logger(next http.Handler) http.Handler {
 				}
 				event.Dict("form", formDict)
 			}
+			cookies := r.Cookies()
+			if len(cookies) > 0 {
+				cookiesDict := zerolog.Dict()
+				for _, cookie := range cookies {
+					if cookie.Name == "_rss_catchup_rails_session" || cookie.Name == "feedrewind_session" {
+						cookiesDict.Bool(cookie.Name, true)
+					} else {
+						cookiesDict.Str(cookie.Name, cookie.Value)
+					}
+				}
+				event.Dict("cookies", cookiesDict)
+			}
 		}
 
 		isStaticFile := strings.HasPrefix(r.URL.Path, util.StaticUrlPrefix)

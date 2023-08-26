@@ -25,6 +25,7 @@ User and session management doesn't use transactions and that'll probably bite m
 
 ## Not great
 Date parsing is forgiving in Ruby, strict in Go.
+html/template takes 80-100ms on SSC posts list
 
 
 ## Tests
@@ -125,3 +126,13 @@ Onboarding multiple feeds with different tags https://ilidemi.github.io/dummy-bl
 Onboarding multiple feeds dedup https://ilidemi.github.io/dummy-blogs/multiple-feeds/dedup/
 Onboarding multiple feeds renamed to page title https://ilidemi.github.io/dummy-blogs/multiple-feeds/rename-title/
 Onboarding multiple feeds renamed to page host https://ilidemi.github.io/dummy-blogs/multiple-feeds/rename-host
+
+Subscription select posts UI tests are missing
+
+Subscription select posts bad id
+Subscription select posts id not found
+Subscription select posts user mismatch
+Subscription select posts status mismatch
+Subscription select posts from top category
+Subscription select posts custom
+Subscription mark wrong
