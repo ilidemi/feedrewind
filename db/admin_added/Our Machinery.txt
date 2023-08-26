@@ -1,0 +1,216 @@
+Our Machinery
+https://ourmachinery.com
+[x] Skip feed validation
+https://ourmachinery.com
+
+https://web.archive.org/web/20220428162401if_/https://ourmachinery.com/post/release-2022-4/ The Machinery — April 2022 (version 2022.4)
+https://web.archive.org/web/20220502180503if_/https://ourmachinery.com/post/a-taxonomy-of-bugs/ A Taxonomy of Bugs
+https://web.archive.org/web/20220402192026if_/https://ourmachinery.com/post/release-2022-3/ The Machinery — March 2022 (version 2022.3)
+https://web.archive.org/web/20220519205135if_/https://ourmachinery.com/post/release-2022-2/ The Machinery — February 2022 (version 2022.2)
+https://web.archive.org/web/20220428020129if_/https://ourmachinery.com/post/release-2022-1/ The Machinery — January 2022 (version 2022.1)
+https://web.archive.org/web/20220519205135if_/https://ourmachinery.com/post/the-machinery-network-frontier-part-2/ The (Machinery) Network Frontier, Part 2
+https://web.archive.org/web/20211206235914if_/https://ourmachinery.com/post/compiling-the-machinery-with-emscripten-part-2/ Compiling The Machinery with Emscripten: Part 2 — Graphics
+https://web.archive.org/web/20211202012605if_/https://ourmachinery.com/post/release-2021-11/ The Machinery — November 2021 (version 2021.11)
+https://web.archive.org/web/20211112112733if_/https://ourmachinery.com/post/compiling-the-machinery-with-emscripten-part-1/ Compiling The Machinery with Emscripten: Part 1
+https://web.archive.org/web/20211029202116if_/https://ourmachinery.com/post/release-2021-10/ The Machinery — October 2021 (version 2021.10)
+https://web.archive.org/web/20211026015146if_/https://ourmachinery.com/post/the-machinery-network-frontier-part-1/ The (Machinery) Network Frontier -- Part 1
+https://web.archive.org/web/20210930233102if_/https://ourmachinery.com/post/release-2021-9/ The Machinery — September 2021 (version 2021.9)
+https://web.archive.org/web/20210923033545if_/https://ourmachinery.com/post/api-versioning/ API Versioning
+https://web.archive.org/web/20210922173430if_/https://ourmachinery.com/post/save-game-system-part-3/ One-Click Save Game System -- Part 3
+https://web.archive.org/web/20210922172135if_/https://ourmachinery.com/post/procedural-forest-sample/ Procedural Forest Sample
+https://web.archive.org/web/20210922180956if_/https://ourmachinery.com/post/release-2021-8/ The Machinery — August 2021 (version 2021.8)
+https://web.archive.org/web/20210922183220if_/https://ourmachinery.com/post/roadmap/ The Machinery Roadmap Update!
+https://web.archive.org/web/20210922164513if_/https://ourmachinery.com/post/accessibility-in-the-machinery/ Accessibility in The Machinery
+https://web.archive.org/web/20210922163453if_/https://ourmachinery.com/post/release-2021-7/ The Machinery — July 2021 (version 2021.7)
+https://web.archive.org/web/20210804202119if_/https://ourmachinery.com/post/early-adopters-program/ Early Adopters Program
+https://web.archive.org/web/20210804201827if_/https://ourmachinery.com/post/save-game-system-part-2/ One-Click Save Game System -- Part 2
+https://web.archive.org/web/20210804174913if_/https://ourmachinery.com/post/beta-2021-6/ The Machinery Beta — June 2021 (version 2021.6)
+https://web.archive.org/web/20210804185421if_/https://ourmachinery.com/post/save-game-system-part-1/ One-Click Save Game System -- Part 1
+https://web.archive.org/web/20210804193248if_/https://ourmachinery.com/post/supporting-native-hdr-monitors/ Supporting Native HDR Monitors
+https://web.archive.org/web/20210922173508if_/https://ourmachinery.com/post/beta-2021-5/ The Machinery Beta — May 2021 (version 2021.5)
+https://web.archive.org/web/20210804190936if_/https://ourmachinery.com/post/a-debugging-story/ A Debugging Story
+https://web.archive.org/web/20210804201910if_/https://ourmachinery.com/post/beta-2021-4/ The Machinery Beta — April 2021 (version 2021.4)
+https://web.archive.org/web/20210804175426if_/https://ourmachinery.com/post/gamepad-implementation-on-linux/ Gamepad Implementation on Linux
+https://web.archive.org/web/20210804195900if_/https://ourmachinery.com/post/dig-shallow-graves/ Dig Shallow Graves
+https://web.archive.org/web/20210804185512if_/https://ourmachinery.com/post/beta-2021-3/ The Machinery Beta — March 2021 (version 2021.3)
+https://web.archive.org/web/20210804193630if_/https://ourmachinery.com/post/porting-the-machinery-to-linux/ Porting The Machinery to Linux
+https://web.archive.org/web/20210804200426if_/https://ourmachinery.com/post/beta-2021-2/ The Machinery Beta — February 2021 (version 2021.2)
+https://web.archive.org/web/20220127012854if_/https://ourmachinery.com/post/moving-the-machinery-to-bindless/ Moving The Machinery to Bindless
+https://web.archive.org/web/20210804192941if_/https://ourmachinery.com/post/dino-dino/ Dino! Dino!
+https://web.archive.org/web/20210804183535if_/https://ourmachinery.com/post/beta-2021-1/ The Machinery Beta — January 2021 (version 2021.1)
+https://web.archive.org/web/20210804202330if_/https://ourmachinery.com/post/summer-fun-with-creation-graphs/ Summer Fun with Creation Graphs
+https://web.archive.org/web/20210804192102if_/https://ourmachinery.com/post/beta-2020-12/ The Machinery Beta — December 2020 (version 2020.12)
+https://web.archive.org/web/20210804180459if_/https://ourmachinery.com/post/interns-at-our-machinery-simon/ Interns at Our Machinery: Simon
+https://web.archive.org/web/20210804193935if_/https://ourmachinery.com/post/interns-at-our-machinery-frank/ Interns at Our Machinery: Frank
+https://web.archive.org/web/20210804191610if_/https://ourmachinery.com/post/beta-2020-11/ The Machinery Beta — November 2020 (version 2020.11)
+https://web.archive.org/web/20210804200939if_/https://ourmachinery.com/post/interns-at-our-machinery/ Interns at Our Machinery
+https://web.archive.org/web/20210804184939if_/https://ourmachinery.com/post/linear-algebra-shenanigans-gizmo-repair/ Linear Algebra Shenanigans: Gizmo Repair
+https://web.archive.org/web/20210804195135if_/https://ourmachinery.com/post/the-machinery-goes-open-beta/ The Machinery Goes Open Beta
+https://web.archive.org/web/20220512072646if_/https://ourmachinery.com/post/step-by-step-programming-incrementally/ Step-by-step: Programming incrementally
+https://web.archive.org/web/20210804201320if_/https://ourmachinery.com/post/beta-2020-9/ The Machinery Beta — September 2020 (version 2020.9)
+https://web.archive.org/web/20210804183202if_/https://ourmachinery.com/post/borderland-part-3-selection-highlighting/ Borderland between Rendering and Editor — Part 3: Selection Highlighting
+https://web.archive.org/web/20210804200555if_/https://ourmachinery.com/post/wasabi-part-5-making-it-wfh/ WaSaBi Part 5: Making it WFH
+https://web.archive.org/web/20210804184841if_/https://ourmachinery.com/post/beta-2020-8/ The Machinery Beta — August 2020 (version 2020.8)
+https://web.archive.org/web/20210804195817if_/https://ourmachinery.com/post/beta-2020-7/ The Machinery Beta — July 2020 (version 2020.7)
+https://web.archive.org/web/20210804200118if_/https://ourmachinery.com/post/prototypes-in-the-machinery/ Prototypes in The Machinery
+https://web.archive.org/web/20210804182727if_/https://ourmachinery.com/post/beta-2020-6/ The Machinery Beta — June 2020 (version 2020.6)
+https://web.archive.org/web/20210804191831if_/https://ourmachinery.com/post/subgraphs-and-function-graphs/ Subgraphs and Function Graphs
+https://web.archive.org/web/20220729080324if_/https://ourmachinery.com/post/borderland-part-2-picking/ Borderland between Rendering and Editor — Part 2: Picking
+https://web.archive.org/web/20210804194402if_/https://ourmachinery.com/post/beta-2020-5/ The Machinery Beta — May 2020 (version 2020.5)
+https://web.archive.org/web/20210804182243if_/https://ourmachinery.com/post/wasabi-part-4-working-from-home/ WaSaBi Part 4: Working From Home
+https://web.archive.org/web/20210804195350if_/https://ourmachinery.com/post/recording-statistics/ Recording Statistics — An Exercise in Minimalism
+https://web.archive.org/web/20210804195219if_/https://ourmachinery.com/post/gpu-simulation/ GPU Simulation
+https://web.archive.org/web/20210804180723if_/https://ourmachinery.com/post/beta-2020-4/ The Machinery Beta — April 2020 (version 2020.4)
+https://web.archive.org/web/20210804182506if_/https://ourmachinery.com/post/wasabi-part-3-accessibility/ WaSaBi Part 3: Accessibility
+https://web.archive.org/web/20210804181537if_/https://ourmachinery.com/post/beta/ The Machinery Beta — March 2020 (version 2020.3)
+https://web.archive.org/web/20220212193327if_/https://ourmachinery.com/post/writing-a-low-level-sound-system/ Writing a Low-Level Sound System — You Can Do It!
+https://web.archive.org/web/20210804191922if_/https://ourmachinery.com/post/borderland-between-rendering-and-editor-part-1/ Borderland between Rendering and Editor - Part 1
+https://web.archive.org/web/20210804181048if_/https://ourmachinery.com/post/gdc-2020/ GDC 2020
+https://web.archive.org/web/20210804193715if_/https://ourmachinery.com/post/time-tracking-in-2020/ Time Tracking In 2020
+https://web.archive.org/web/20210804193847if_/https://ourmachinery.com/post/see-ya-later-2019/ See Ya Later 2019!
+https://web.archive.org/web/20210804181308if_/https://ourmachinery.com/post/alpha-update/ Alpha Update
+https://web.archive.org/web/20220529231022if_/https://ourmachinery.com/post/more-on-creation-graphs/ More on Creation Graphs
+https://web.archive.org/web/20210804201616if_/https://ourmachinery.com/post/wasabi-part-2-defining-culture/ WaSaBi Part 2: Defining Culture
+https://web.archive.org/web/20220430023903if_/https://ourmachinery.com/post/data-structures-part-3-arrays-of-arrays/ Data Structures Part 3: Arrays of arrays
+https://web.archive.org/web/20210804194021if_/https://ourmachinery.com/post/vertex-assembly-and-skinning/ Vertex Assembly and Skinning
+https://web.archive.org/web/20220314011542if_/https://ourmachinery.com/post/data-structures-part-2-indices/ Data Structures Part 2: Indices
+https://web.archive.org/web/20220313202555if_/https://ourmachinery.com/post/data-structures-part-1-bulk-data/ Data Structures Part 1: Bulk Data
+https://web.archive.org/web/20201107231937if_/https://ourmachinery.com/post/syncing-a-data-oriented-ecs/ Syncing a data-oriented ECS with a stateful external system
+https://web.archive.org/web/20210924094145if_/https://ourmachinery.com/post/the-machinery-asset-pipeline/ The Machinery Asset Pipeline
+https://web.archive.org/web/20201215065606if_/https://ourmachinery.com/post/creating-cross-language-apis/ Creating Cross-Language APIs
+https://web.archive.org/web/20220330202033if_/https://ourmachinery.com/post/referencing-objects-names-vs-guids/ Referencing Objects: Names vs GUIDs
+https://web.archive.org/web/20201215070003if_/https://ourmachinery.com/post/creation-graphs/ Creation Graphs
+https://web.archive.org/web/20210506194857if_/https://ourmachinery.com/post/localization-in-the-machinerys-ui/ Localization in The Machinery’s UI
+https://web.archive.org/web/20220704004206if_/https://ourmachinery.com/post/the-anti-feature-dream/ The Anti-Feature Dream
+https://web.archive.org/web/20220406212420if_/https://ourmachinery.com/post/the-story-behind-the-truth-designing-a-data-model/ The Story behind The Truth: Designing a Data Model
+https://web.archive.org/web/20201109031813if_/https://ourmachinery.com/post/ecs-and-rendering/ Entity-Component-Systems and Rendering
+https://web.archive.org/web/20181018224651if_/https://ourmachinery.com/post/our-machinery-podcast/ Our Machinery Podcast
+https://web.archive.org/web/20210804184315if_/https://ourmachinery.com/post/device-memory-management/ Device Memory Management
+https://web.archive.org/web/20190604090753if_/https://ourmachinery.com/post/marketing-mini-series-part-9-internal-marketing/ Marketing Mini Series Part 9: Internal Marketing
+https://web.archive.org/web/20190604103351if_/https://ourmachinery.com/post/making-the-move-rotate-scale-gizmos-work-with-any-component/ Making the move/rotate/scale gizmos work with any component
+https://web.archive.org/web/20210804175728if_/https://ourmachinery.com/post/the-machinery-shader-system-part-3/ The Machinery Shader System (part 3)
+https://web.archive.org/web/20190604084445if_/https://ourmachinery.com/post/marketing-mini-series-part-8-online-marketing/ Marketing Mini Series Part 8: Online Marketing 101: The Four Pillars
+https://web.archive.org/web/20190604095647if_/https://ourmachinery.com/post/implementing-drag-and-drop-in-an-imgui/ Implementing drag-and-drop in an IMGUI
+https://web.archive.org/web/20210804193203if_/https://ourmachinery.com/post/the-machinery-shader-system-part-2/ The Machinery Shader System (part 2)
+https://web.archive.org/web/20180423044956if_/http://ourmachinery.com:80/post/the-document-model-and-the-machinery/ The Document Model and The Machinery
+https://web.archive.org/web/20210711062143if_/https://ourmachinery.com/post/the-machinery-shader-system-part-1/ The Machinery Shader System (part 1)
+https://web.archive.org/web/20180220151158if_/http://ourmachinery.com:80/post/marketing-mini-series-part-6-co-marketing-partner-efforts/ Marketing Mini Series Part 6: Co-Marketing/Partner Efforts
+https://web.archive.org/web/20220504024640if_/https://ourmachinery.com/post/minimalist-container-library-in-c-part-2/ Minimalist container library in C (part 2)
+https://web.archive.org/web/20201112002739if_/https://ourmachinery.com/post/explicit-multi-gpu-programming/ Explicit Multi-GPU Programming
+https://web.archive.org/web/20180402190026if_/http://ourmachinery.com:80/post/marketing-mini-series-part-5-demos/ Marketing Mini Series Part 5: Demos
+https://web.archive.org/web/20220430023900if_/https://ourmachinery.com/post/minimalist-container-library-in-c-part-1/ Minimalist container library in C (part 1)
+https://web.archive.org/web/20210422134232if_/https://ourmachinery.com/post/a-year-in-review/ A year in review
+https://web.archive.org/web/20180909163517if_/http://ourmachinery.com/post/vulkan-pipelines-and-render-states/ Vulkan: Pipelines and Render States
+https://web.archive.org/web/20210802204247if_/https://ourmachinery.com/post/should-entities-support-multiple-instances-of-the-same-component/ Should entities support multiple instances of the same component?
+https://web.archive.org/web/20210804181432if_/https://ourmachinery.com/post/vulkan-command-buffer-management/ Vulkan: Command Buffer Management
+https://web.archive.org/web/20220401023033if_/https://ourmachinery.com/post/virtual-memory-tricks/ Virtual Memory Tricks
+https://web.archive.org/web/20220321100722if_/https://ourmachinery.com/post/vulkan-descriptor-sets-management/ Vulkan: Descriptor Sets Management
+https://web.archive.org/web/20220316014134if_/https://ourmachinery.com/post/marketing-miniseries-part-2-user-groups-and-user-conferences/ Marketing Miniseries: Part 2 User Groups and User Conferences
+https://web.archive.org/web/20220316014137if_/https://ourmachinery.com/post/multi-threading-the-truth/ Multi-Threading The Truth
+https://web.archive.org/web/20220316014145if_/https://ourmachinery.com/post/its-all-about-the-data/ It’s All About The Data
+https://web.archive.org/web/20210712203502if_/https://ourmachinery.com/post/keyboard-focus-and-event-trickling-in-immediate-mode-guis/ Keyboard Focus and Event Trickling in Immediate Mode GUIs
+https://web.archive.org/web/20201215071310if_/https://ourmachinery.com/post/simple-parallel-rendering/ Simple Parallel Rendering
+https://web.archive.org/web/20190701163938if_/https://ourmachinery.com/post/how-to-marketing-events/ How to Marketing (A 10-Part Mini Series)
+https://web.archive.org/web/20201215071333if_/https://ourmachinery.com/post/moving-away-from-git-flow/ Moving away from GitFlow
+https://web.archive.org/web/20220412103607if_/https://ourmachinery.com/post/high-level-rendering-using-render-graphs/ High-Level Rendering Using Render Graphs
+https://web.archive.org/web/20190701153036if_/https://ourmachinery.com/post/lets-all-go-to-the-conference/ Let's All Go to the Conference
+https://web.archive.org/web/20220705103427if_/https://ourmachinery.com/post/dll-hot-reloading-in-theory-and-practice/ DLL Hot Reloading in Theory and Practice
+https://web.archive.org/web/20220313014325if_/https://ourmachinery.com/post/dpi-aware-imgui/ DPI-aware IMGUI
+https://web.archive.org/web/20170901142949if_/http://ourmachinery.com:80/post/interviewing-part-2-the-interviewer/ Interviewing Part 2: The Interviewer
+https://web.archive.org/web/20220702205403if_/https://ourmachinery.com/post/one-draw-call-ui/ One Draw Call UI
+https://web.archive.org/web/20171012121649if_/http://ourmachinery.com:80/post/interviewing-part-1-the-interviewee/ Interviewing Part 1: The Interviewee
+https://web.archive.org/web/20220119052822if_/https://ourmachinery.com/post/defaulting-to-zero/ Defaulting to Zero
+https://web.archive.org/web/20210831125334if_/https://ourmachinery.com/post/ui-rendering-using-primitive-buffers/ UI rendering using Primitive Buffers
+https://web.archive.org/web/20210830070717if_/https://ourmachinery.com/post/little-machines-working-together-part-2/ Little Machines Working Together (Part 2)
+https://web.archive.org/web/20210401063921if_/https://ourmachinery.com/post/efficient-binding-of-shader-resources/ Efficient binding of shader resources
+https://web.archive.org/web/20170528133640if_/http://ourmachinery.com:80/post/finding-alignment/ Finding Alignment
+https://web.archive.org/web/20220529231012if_/https://ourmachinery.com/post/little-machines-working-together-part-1/ Little Machines Working Together (Part 1)
+https://web.archive.org/web/20220314010639if_/https://ourmachinery.com/post/a-modern-rendering-architecture/ A modern rendering architecture
+https://web.archive.org/web/20170806025908if_/http://ourmachinery.com:80/post/quality-life-quality-work/ Quality Life, Quality Work
+https://web.archive.org/web/20170830095246if_/http://ourmachinery.com/post/one-button-source-code-builds/ One-button source code builds
+https://web.archive.org/web/20170830095242if_/http://ourmachinery.com/post/our-development-methodology/ Our development methodology
+https://web.archive.org/web/20171223234313if_/http://ourmachinery.com:80/post/our-origin-story/ Our Origin Story
+https://web.archive.org/web/20220315030351if_/https://ourmachinery.com/post/physical-design/ Physical Design of The Machinery
+https://web.archive.org/web/20220317035009if_/https://ourmachinery.com/post/fiber-based-job-system/ Fiber based job system
+https://web.archive.org/web/20171006053330if_/http://ourmachinery.com/post/day-1-blog/ Day 1 Blog
+
+https://web.archive.org/web/20220502180503if_/https://ourmachinery.com/post/a-taxonomy-of-bugs/ Technical Articles
+https://web.archive.org/web/20220519205135if_/https://ourmachinery.com/post/the-machinery-network-frontier-part-2/ Technical Articles
+https://web.archive.org/web/20211206235914if_/https://ourmachinery.com/post/compiling-the-machinery-with-emscripten-part-2/ Technical Articles
+https://web.archive.org/web/20211112112733if_/https://ourmachinery.com/post/compiling-the-machinery-with-emscripten-part-1/ Technical Articles
+https://web.archive.org/web/20211026015146if_/https://ourmachinery.com/post/the-machinery-network-frontier-part-1/ Technical Articles
+https://web.archive.org/web/20210923033545if_/https://ourmachinery.com/post/api-versioning/ Technical Articles
+https://web.archive.org/web/20210922173430if_/https://ourmachinery.com/post/save-game-system-part-3/ Technical Articles
+https://web.archive.org/web/20210922172135if_/https://ourmachinery.com/post/procedural-forest-sample/ Technical Articles
+https://web.archive.org/web/20210922164513if_/https://ourmachinery.com/post/accessibility-in-the-machinery/ Technical Articles
+https://web.archive.org/web/20210804201827if_/https://ourmachinery.com/post/save-game-system-part-2/ Technical Articles
+https://web.archive.org/web/20210804185421if_/https://ourmachinery.com/post/save-game-system-part-1/ Technical Articles
+https://web.archive.org/web/20210804193248if_/https://ourmachinery.com/post/supporting-native-hdr-monitors/ Technical Articles
+https://web.archive.org/web/20210804190936if_/https://ourmachinery.com/post/a-debugging-story/ Technical Articles
+https://web.archive.org/web/20210804175426if_/https://ourmachinery.com/post/gamepad-implementation-on-linux/ Technical Articles
+https://web.archive.org/web/20210804195900if_/https://ourmachinery.com/post/dig-shallow-graves/ Technical Articles
+https://web.archive.org/web/20210804193630if_/https://ourmachinery.com/post/porting-the-machinery-to-linux/ Technical Articles
+https://web.archive.org/web/20220127012854if_/https://ourmachinery.com/post/moving-the-machinery-to-bindless/ Technical Articles
+https://web.archive.org/web/20210804202330if_/https://ourmachinery.com/post/summer-fun-with-creation-graphs/ Technical Articles
+https://web.archive.org/web/20210804184939if_/https://ourmachinery.com/post/linear-algebra-shenanigans-gizmo-repair/ Technical Articles
+https://web.archive.org/web/20220512072646if_/https://ourmachinery.com/post/step-by-step-programming-incrementally/ Technical Articles
+https://web.archive.org/web/20210804183202if_/https://ourmachinery.com/post/borderland-part-3-selection-highlighting/ Technical Articles
+https://web.archive.org/web/20210804200118if_/https://ourmachinery.com/post/prototypes-in-the-machinery/ Technical Articles
+https://web.archive.org/web/20210804191831if_/https://ourmachinery.com/post/subgraphs-and-function-graphs/ Technical Articles
+https://web.archive.org/web/20220729080324if_/https://ourmachinery.com/post/borderland-part-2-picking/ Technical Articles
+https://web.archive.org/web/20210804195350if_/https://ourmachinery.com/post/recording-statistics/ Technical Articles
+https://web.archive.org/web/20210804195219if_/https://ourmachinery.com/post/gpu-simulation/ Technical Articles
+https://web.archive.org/web/20220212193327if_/https://ourmachinery.com/post/writing-a-low-level-sound-system/ Technical Articles
+https://web.archive.org/web/20210804191922if_/https://ourmachinery.com/post/borderland-between-rendering-and-editor-part-1/ Technical Articles
+https://web.archive.org/web/20220529231022if_/https://ourmachinery.com/post/more-on-creation-graphs/ Technical Articles
+https://web.archive.org/web/20220430023903if_/https://ourmachinery.com/post/data-structures-part-3-arrays-of-arrays/ Technical Articles
+https://web.archive.org/web/20210804194021if_/https://ourmachinery.com/post/vertex-assembly-and-skinning/ Technical Articles
+https://web.archive.org/web/20220314011542if_/https://ourmachinery.com/post/data-structures-part-2-indices/ Technical Articles
+https://web.archive.org/web/20220313202555if_/https://ourmachinery.com/post/data-structures-part-1-bulk-data/ Technical Articles
+https://web.archive.org/web/20201107231937if_/https://ourmachinery.com/post/syncing-a-data-oriented-ecs/ Technical Articles
+https://web.archive.org/web/20210924094145if_/https://ourmachinery.com/post/the-machinery-asset-pipeline/ Technical Articles
+https://web.archive.org/web/20201215065606if_/https://ourmachinery.com/post/creating-cross-language-apis/ Technical Articles
+https://web.archive.org/web/20220330202033if_/https://ourmachinery.com/post/referencing-objects-names-vs-guids/ Technical Articles
+https://web.archive.org/web/20201215070003if_/https://ourmachinery.com/post/creation-graphs/ Technical Articles
+https://web.archive.org/web/20210506194857if_/https://ourmachinery.com/post/localization-in-the-machinerys-ui/ Technical Articles
+https://web.archive.org/web/20220704004206if_/https://ourmachinery.com/post/the-anti-feature-dream/ Technical Articles
+https://web.archive.org/web/20220406212420if_/https://ourmachinery.com/post/the-story-behind-the-truth-designing-a-data-model/ Technical Articles
+https://web.archive.org/web/20201109031813if_/https://ourmachinery.com/post/ecs-and-rendering/ Technical Articles
+https://web.archive.org/web/20210804184315if_/https://ourmachinery.com/post/device-memory-management/ Technical Articles
+https://web.archive.org/web/20190604103351if_/https://ourmachinery.com/post/making-the-move-rotate-scale-gizmos-work-with-any-component/ Technical Articles
+https://web.archive.org/web/20210804175728if_/https://ourmachinery.com/post/the-machinery-shader-system-part-3/ Technical Articles
+https://web.archive.org/web/20190604095647if_/https://ourmachinery.com/post/implementing-drag-and-drop-in-an-imgui/ Technical Articles
+https://web.archive.org/web/20210804193203if_/https://ourmachinery.com/post/the-machinery-shader-system-part-2/ Technical Articles
+https://web.archive.org/web/20180423044956if_/http://ourmachinery.com:80/post/the-document-model-and-the-machinery/ Technical Articles
+https://web.archive.org/web/20210711062143if_/https://ourmachinery.com/post/the-machinery-shader-system-part-1/ Technical Articles
+https://web.archive.org/web/20220504024640if_/https://ourmachinery.com/post/minimalist-container-library-in-c-part-2/ Technical Articles
+https://web.archive.org/web/20201112002739if_/https://ourmachinery.com/post/explicit-multi-gpu-programming/ Technical Articles
+https://web.archive.org/web/20220430023900if_/https://ourmachinery.com/post/minimalist-container-library-in-c-part-1/ Technical Articles
+https://web.archive.org/web/20180909163517if_/http://ourmachinery.com/post/vulkan-pipelines-and-render-states/ Technical Articles
+https://web.archive.org/web/20210802204247if_/https://ourmachinery.com/post/should-entities-support-multiple-instances-of-the-same-component/ Technical Articles
+https://web.archive.org/web/20210804181432if_/https://ourmachinery.com/post/vulkan-command-buffer-management/ Technical Articles
+https://web.archive.org/web/20220401023033if_/https://ourmachinery.com/post/virtual-memory-tricks/ Technical Articles
+https://web.archive.org/web/20220321100722if_/https://ourmachinery.com/post/vulkan-descriptor-sets-management/ Technical Articles
+https://web.archive.org/web/20220316014137if_/https://ourmachinery.com/post/multi-threading-the-truth/ Technical Articles
+https://web.archive.org/web/20220316014145if_/https://ourmachinery.com/post/its-all-about-the-data/ Technical Articles
+https://web.archive.org/web/20210712203502if_/https://ourmachinery.com/post/keyboard-focus-and-event-trickling-in-immediate-mode-guis/ Technical Articles
+https://web.archive.org/web/20201215071310if_/https://ourmachinery.com/post/simple-parallel-rendering/ Technical Articles
+https://web.archive.org/web/20201215071333if_/https://ourmachinery.com/post/moving-away-from-git-flow/ Technical Articles
+https://web.archive.org/web/20220412103607if_/https://ourmachinery.com/post/high-level-rendering-using-render-graphs/ Technical Articles
+https://web.archive.org/web/20220705103427if_/https://ourmachinery.com/post/dll-hot-reloading-in-theory-and-practice/ Technical Articles
+https://web.archive.org/web/20220313014325if_/https://ourmachinery.com/post/dpi-aware-imgui/ Technical Articles
+https://web.archive.org/web/20220702205403if_/https://ourmachinery.com/post/one-draw-call-ui/ Technical Articles
+https://web.archive.org/web/20220119052822if_/https://ourmachinery.com/post/defaulting-to-zero/ Technical Articles
+https://web.archive.org/web/20210831125334if_/https://ourmachinery.com/post/ui-rendering-using-primitive-buffers/ Technical Articles
+https://web.archive.org/web/20210830070717if_/https://ourmachinery.com/post/little-machines-working-together-part-2/ Technical Articles
+https://web.archive.org/web/20210401063921if_/https://ourmachinery.com/post/efficient-binding-of-shader-resources/ Technical Articles
+https://web.archive.org/web/20220529231012if_/https://ourmachinery.com/post/little-machines-working-together-part-1/ Technical Articles
+https://web.archive.org/web/20220314010639if_/https://ourmachinery.com/post/a-modern-rendering-architecture/ Technical Articles
+https://web.archive.org/web/20170830095246if_/http://ourmachinery.com/post/one-button-source-code-builds/ Technical Articles
+https://web.archive.org/web/20170830095242if_/http://ourmachinery.com/post/our-development-methodology/ Technical Articles
+https://web.archive.org/web/20220315030351if_/https://ourmachinery.com/post/physical-design/ Technical Articles
+https://web.archive.org/web/20220317035009if_/https://ourmachinery.com/post/fiber-based-job-system/ Technical Articles
+
+Technical Articles
+
+no_op

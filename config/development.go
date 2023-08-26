@@ -51,5 +51,6 @@ func developmentConfig() Config {
 		},
 		SessionHashKey:  sessionHashKey,
 		SessionBlockKey: sessionBlockKey,
+		AdminUserIds:    nil,
 	}
 }

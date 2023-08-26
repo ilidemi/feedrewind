@@ -10,12 +10,14 @@ type Config struct {
 	DB              DBConfig
 	SessionHashKey  []byte
 	SessionBlockKey []byte
+	AdminUserIds    map[int64]bool
 }
 
 type Env int
 
 const (
 	EnvDevelopment Env = iota
+	EnvTesting
 	EnvProduction
 )
 

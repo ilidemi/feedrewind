@@ -51,7 +51,7 @@ func CommitOrRollback(tx *pgw.Tx, isSuccess *bool) {
 }
 
 func CommitOrRollbackErr(tx *pgw.Tx, err *error) {
-	isSuccess := err == nil
+	isSuccess := *err == nil
 	CommitOrRollbackMsg(tx, &isSuccess, "")
 }
 

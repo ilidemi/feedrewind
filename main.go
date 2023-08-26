@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"feedrewind/config"
 	"feedrewind/db"
 	"feedrewind/log"
 	frmiddleware "feedrewind/middleware"
@@ -83,6 +84,7 @@ func runServer() {
 		r.Post("/subscriptions/{id}/select_posts", routes.Subscriptions_SelectPosts)
 		r.Post("/subscriptions/{id}/mark_wrong", routes.Subscriptions_MarkWrong)
 		r.Post("/subscriptions/{id}/schedule", routes.Subscriptions_Schedule)
+		r.Post("/subscriptions/{id:\\d+}/delete", routes.Subscriptions_Delete)
 
 		r.Get("/subscriptions/{id}/feed", routes.Rss_SubscriptionFeed) // Legacy
 		r.Get("/feeds/single/{id}", routes.Rss_UserFeed)
@@ -103,7 +105,18 @@ func runServer() {
 			authorized.Post("/settings/save_timezone", routes.UserSettings_SaveTimezone)
 			authorized.Post("/settings/save_delivery_channel", routes.UserSettings_SaveDeliveryChannel)
 		})
-		r.Post("/subscriptions/{id:\\d+}/delete", routes.Subscriptions_Delete)
+
+		r.Group(func(admin chi.Router) {
+			admin.Use(frmiddleware.AuthorizeAdmin)
+
+			admin.Get("/admin/add_blog", routes.Admin_AddBlog)
+			admin.Post("/admin/post_blog", routes.Admin_PostBlog)
+		})
+
+		if config.Cfg.Env == config.EnvDevelopment || config.Cfg.Env == config.EnvTesting {
+			r.Get("/test/destroy_user_subscriptions", routes.AdminTest_DestroyUserSubscriptions)
+			r.Get("/test/execute_sql", routes.AdminTest_ExecuteSql)
+		}
 	})
 
 	staticR.Get(util.StaticRouteTemplate, routes.Static_File)

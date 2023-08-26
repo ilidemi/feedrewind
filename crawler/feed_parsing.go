@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"errors"
+	"feedrewind/oops"
 	"fmt"
 	"html"
 	neturl "net/url"
@@ -80,7 +81,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 	reader := strings.NewReader(content)
 	xml, err := xmlquery.Parse(reader)
 	if err != nil {
-		return nil, err
+		return nil, oops.Wrap(err)
 	}
 
 	hasFeedburnerNamespace := xmlquery.FindOne(xml, " //*[@xmlns:feedburner]") != nil

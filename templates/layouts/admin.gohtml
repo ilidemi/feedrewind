@@ -1,17 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>{{.Title}}</title>
+  <title>FeedRewind Admin</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   {{template "layouts/partial_icons"}}
   <link rel="stylesheet" media="screen" href="{{static "tailwind.css"}}">
   <meta name="csrf-param" content="authenticity_token">
   <meta name="csrf-token" content="{{.Session.CSRFToken}}">
+  {{template "layouts/partial_wicg_inert"}}
   {{template "layouts/partial_rails_ujs"}}
 </head>
 
-<body>
+<body class="container">
+{{template "layouts/partial_popups"}}
+<main class="m-4 modal-inert">
   {{block "content" .}}
   {{end}}
+</main>
 </body>
 </html>

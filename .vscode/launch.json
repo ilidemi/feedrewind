@@ -18,7 +18,7 @@
             "request": "launch",
             "mode": "test",
             "program": "${relativeFileDirname}",
-            "buildFlags": "-tags testing"
+            "buildFlags": "-tags testing,e2etesting"
         }
     ]
 }

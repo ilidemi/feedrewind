@@ -1,0 +1,82 @@
+{{template "layouts/admin" .}}
+
+{{define "content"}}
+<h2>Admin: Add Blog</h2>
+
+<form
+  class="flex flex-col gap-3"
+  action="/admin/post_blog"
+  accept-charset="UTF-8"
+  method="post"
+  >
+  <input type="hidden" name="authenticity_token" value="{{.Session.CSRFToken}}">
+  <div>
+    <label for="name">Name</label>
+    <input type="text" name="name" id="name">
+  </div>
+
+  <div>
+    <label for="feed_url">Feed url</label>
+    <input type="url" name="feed_url" id="feed_url">
+  </div>
+
+  <div>
+    <input name="skip_feed_validation" type="hidden" value="0">
+    <input type="checkbox" value="1" name="skip_feed_validation" id="skip_feed_validation">
+    <label for="skip_feed_validation">Skip feed validation</label>
+  </div>
+
+  <div>
+    <label for="url">Url</label>
+    <input type="url" name="url" id="url">
+  </div>
+
+  <div>
+    <label for="direction">Direction</label>
+    <select name="direction" id="direction">
+      <option selected="selected" value="newest_first">newest_first</option>
+      <option value="oldest_first">oldest_first</option>
+    </select>
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <span><label for="posts">Posts</label> (one per line, https://post-1 Post 1)</span>
+    <textarea rows="20" cols="80" name="posts" id="posts"></textarea>
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <span><label for="post_categories">Post categories</label> (one per line, https://post-1 Category 1)</span>
+    <textarea cols="80" name="post_categories" id="post_categories"></textarea>
+  </div>
+
+  <div>
+    <span><label for="top_categories">Top categories</label> (Top;Articles)</span>
+    <input type="text" name="top_categories" id="top_categories">
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <span><label for="same_hosts">Same hosts</label> (one per line)</span>
+    <textarea name="same_hosts" id="same_hosts"></textarea>
+  </div>
+
+  <div>
+    <label for="expect_tumblr_paths">Expect tumblr paths</label>
+    <input name="expect_tumblr_paths" type="hidden" value="0">
+    <input type="checkbox" value="1" name="expect_tumblr_paths" id="expect_tumblr_paths">
+  </div>
+
+  <div>
+    <label for="update_action">Update action</label>
+    <select name="update_action" id="update_action">
+      <option value="update_from_feed_or_fail">update_from_feed_or_fail</option>
+      <option value="no_op">no_op</option>
+      <option value="fail">fail</option>
+      <option value="recrawl">recrawl</option>
+    </select>
+  </div>
+
+  <div>
+    <input type="submit" name="commit" value="Save" class="btn" data-disable-with="Save">
+  </div>
+</form>
+{{end}}

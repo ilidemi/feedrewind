@@ -21,6 +21,10 @@
                     "shell_cmd": "go run -tags testing . db migrate",
                 },
                 {
+                    "name": "test e2e",
+                    "shell_cmd": "go test ./e2e_test -tags e2etesting",
+                },
+                {
                     "name": "golangci-lint",
                     "shell_cmd": "golangci-lint cache clean && golangci-lint run",
                 },

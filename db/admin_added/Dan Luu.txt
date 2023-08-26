@@ -1,0 +1,106 @@
+Dan Luu
+https://danluu.com/atom.xml
+https://danluu.com
+
+https://danluu.com/futurist-predictions/ Futurist prediction methods and accuracy
+https://danluu.com/simple-architectures In defense of simple architectures
+https://danluu.com/nothing-works Why is it so hard to buy things that work well?
+https://danluu.com/talent Misidentifying talent
+https://danluu.com/cache-incidents A decade of major cache incidents at Twitter
+https://danluu.com/cocktail-ideas Cocktail party ideas
+https://danluu.com/cgroup-throttling The container throttling problem
+https://danluu.com/writing-non-advice Some thoughts on writing
+https://danluu.com/latency-pitfalls Some latency measurement pitfalls
+https://danluu.com/corrections Major errors on this blog (and their corrections)
+https://danluu.com/people-matter Individuals matter
+https://danluu.com/culture Culture matters
+https://danluu.com/look-stupid Willingness to look stupid
+https://danluu.com/learn-what What to learn
+https://danluu.com/productivity-velocity Some reasons to work on productivity and velocity
+https://danluu.com/in-house The value of in-house expertise
+https://danluu.com/why-benchmark Some reasons to measure
+https://danluu.com/essential-complexity Against essential and accidental complexity
+https://danluu.com/car-safety How do cars fare in crash tests they're not specifically optimized for?
+https://danluu.com/tracing-analytics A simple way to get more value from tracing
+https://danluu.com/metrics-analytics A simple way to get more value from metrics
+https://danluu.com/corp-eng-blogs How (some) good corporate engineering blogs are written
+https://danluu.com/cli-complexity The growth of command line options, 1979-Present
+https://danluu.com/discontinuities Suspicious discontinuities
+https://danluu.com/p95-skill 95%-ile isn't that good
+https://danluu.com/algorithms-interviews Algorithms interviews: theory vs. practice
+https://danluu.com/deconstruct-files Files are fraught with peril
+https://danluu.com/overwatch-gender Randomized trial on gender in Overwatch
+https://danluu.com/input-lag Computer latency: 1977-2017
+https://danluu.com/bad-decisions How good are decisions?
+https://danluu.com/android-updates How out of date are Android devices?
+https://danluu.com/ui-compatibility UI backwards compatibility
+https://danluu.com/filesystem-errors Filesystem error handling
+https://danluu.com/keyboard-latency Keyboard latency
+https://danluu.com/branch-prediction Branch prediction
+https://danluu.com/sattolo Sattolo's algorithm
+https://danluu.com/term-latency Terminal latency
+https://danluu.com/keyboard-v-mouse Keyboard v. mouse
+https://danluu.com/startup-options Startup options v. cash
+https://danluu.com/web-bloat The modern web on a slow connection
+https://danluu.com/hn-comments HN: the good parts
+https://danluu.com/programming-books Programming book list
+https://danluu.com/hiring-lemons Hiring and the market for lemons
+https://danluu.com/sounds-easy I could do that in a weekend!
+https://danluu.com/bimodal-compensation Is dev compensation bimodal?
+https://danluu.com/learning-to-program How I learned to program
+https://danluu.com/concurrency-bugs Notes on concurrency bugs
+https://danluu.com/programming-blogs Some programming blogs to consider reading
+https://danluu.com/google-sre-book Google SRE book
+https://danluu.com/programmer-moneyball We only hire the trendiest
+https://danluu.com/perf-tracing Sampling v. tracing
+https://danluu.com/cpu-bugs CPU bugs
+https://danluu.com/wat Normalization of deviance
+https://danluu.com/startup-tradeoffs Big companies v. startups
+https://danluu.com/file-consistency Files are hard
+https://danluu.com/why-ecc Why use ECC?
+https://danluu.com/butler-lampson-1999 What's worked in Computer Science: 1999 v. 2015
+https://danluu.com/infinite-disk Infinite disk
+https://danluu.com/intel-cat Why Intel added cache partitioning
+https://danluu.com/limplock Slowlock
+https://danluu.com/yegge-predictions Steve Yegge's prediction record
+https://danluu.com/postmortem-lessons Reading postmortems
+https://danluu.com/slashdot-sourceforge Slashdot and Sourceforge
+https://danluu.com/googlebot-monopoly The googlebot monopoly
+https://danluu.com/boring-languages A defense of boring languages
+https://danluu.com/monorepo Advantages of monorepos
+https://danluu.com/dunning-kruger Reading citations is easier than most people think
+https://danluu.com/testing Given that devs spend the effort they do on testing, what can we do to improve testing?
+https://danluu.com/navigate-url What happens when you load a URL?
+https://danluu.com/percentile-latency Goodhearting IQ, cholesterol, and tail latency
+https://danluu.com/customer-service AI doesn't have to be that good
+https://danluu.com/cpu-backdoors CPU backdoors
+https://danluu.com/blog-ads Blog monetization
+https://danluu.com/new-cpu-features What's new in CPUs since the 80s?
+https://danluu.com/julialang A review of the Julia language
+https://danluu.com/integer-overflow Integer overflow checking cost
+https://danluu.com/malloc-tutorial Malloc tutorial
+https://danluu.com/tech-discrimination Markets, discrimination, and "lowering the bar"
+https://danluu.com/linux-devs-say TF-IDF linux commits
+https://danluu.com/everything-is-broken One week of bugs
+https://danluu.com/octopress-speedup Speeding up this site by 50x
+https://danluu.com/broken-builds Build uptime
+https://danluu.com/empirical-pl Literature review on the benefits of static types
+https://danluu.com/clwb-pcommit CLWB and PCOMMIT
+https://danluu.com/2choices-eviction Caches: LRU v. random
+https://danluu.com/tests-v-reason Testing v. informal reasoning
+https://danluu.com/assembly-intrinsics Assembly v. intrinsics
+https://danluu.com/bugalytics Bug analytics
+https://danluu.com/edit-binary Editing binaries
+https://danluu.com/gender-gap That bogus gender gap article
+https://danluu.com/anon-benchmark A solution to DeWitt clauses
+https://danluu.com/teach-debugging Why don't schools teach debugging?
+https://danluu.com/math-bias Do programmers need math?
+https://danluu.com/3c-conflict Data alignment and caches
+https://danluu.com/linear-hammer PCA is not a panacea
+https://danluu.com/hardware-unforgiving The complexity of knowledge and skill transfer
+https://danluu.com/discourage-oss How to discourage open source contributions
+https://danluu.com/randomize-hn Randomize HN
+https://danluu.com/pl-troll Writing safe Verilog
+https://danluu.com/why-hardware-development-is-hard Verilog is weird
+
+update_from_feed_or_fail
