@@ -61,7 +61,7 @@
                         "--no-cocomo",
                         "--no-complexity",
                         "--exclude-dir",
-                        "assets,static,third_party",
+                        "assets,static,third_party,admin_added",
                         "-M",
                         "structure\\.sql",
                         "-M",
@@ -69,7 +69,11 @@
                         "-M",
                         "partial_rails_ujs\\.gohtml",
                         "-M",
-                        "partial_wicg_inert\\.gohtml"
+                        "partial_wicg_inert\\.gohtml",
+                        "-M",
+                        "raw-time-zomes\\.json",
+                        "-M",
+                        "rewrite-notes\\.txt"
                     ],
                     "shell": true
                 }
