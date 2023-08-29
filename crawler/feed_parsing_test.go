@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"feedrewind/oops"
 	neturl "net/url"
 	"strings"
 	"testing"
@@ -20,7 +21,7 @@ func TestIsRSS(t *testing.T) {
 
 	reader := strings.NewReader(feed)
 	xml, err := xmlquery.Parse(reader)
-	require.NoError(t, err)
+	oops.RequireNoError(t, err)
 	require.True(t, isRSS(xml))
 }
 
@@ -43,7 +44,7 @@ func TestIsRDF(t *testing.T) {
 
 	reader := strings.NewReader(feed)
 	xml, err := xmlquery.Parse(reader)
-	require.NoError(t, err)
+	oops.RequireNoError(t, err)
 	require.True(t, isRDF(xml))
 }
 
@@ -63,7 +64,7 @@ func TestIsAtom(t *testing.T) {
 
 	reader := strings.NewReader(feed)
 	xml, err := xmlquery.Parse(reader)
-	require.NoError(t, err)
+	oops.RequireNoError(t, err)
 	require.True(t, isAtom(xml))
 }
 
@@ -164,14 +165,14 @@ func TestParseFeedRootUrl(t *testing.T) {
 
 	logger := &DummyLogger{}
 	fetchUri, err := neturl.Parse("https://root/feed")
-	require.NoError(t, err)
+	oops.RequireNoError(t, err)
 	for _, tc := range tests {
 		var parsedFeed *ParsedFeed
 		var err error
 		require.NotPanics(t, func() {
 			parsedFeed, err = ParseFeed(tc.content, fetchUri, logger)
 		}, tc.description)
-		require.NoError(t, err, tc.description)
+		oops.RequireNoError(t, err, tc.description)
 		if tc.expectedRootUrl == "" {
 			require.Nil(t, parsedFeed.RootLink)
 		} else {
@@ -316,14 +317,14 @@ func TestParseFeedTitle(t *testing.T) {
 
 	logger := &DummyLogger{}
 	fetchUri, err := neturl.Parse("https://root/feed")
-	require.NoError(t, err)
+	oops.RequireNoError(t, err)
 	for _, tc := range tests {
 		var parsedFeed *ParsedFeed
 		var err error
 		require.NotPanics(t, func() {
 			parsedFeed, err = ParseFeed(tc.content, fetchUri, logger)
 		}, tc.description)
-		require.NoError(t, err, tc.description)
+		oops.RequireNoError(t, err, tc.description)
 		require.Equal(t, parsedFeed.Title, tc.expectedTitle)
 	}
 }
@@ -915,7 +916,7 @@ func TestParseFeedEntryUrls(t *testing.T) {
 
 	logger := &DummyLogger{}
 	fetchUri, err := neturl.Parse("https://root/feed")
-	require.NoError(t, err)
+	oops.RequireNoError(t, err)
 	for _, tc := range tests {
 		var parsedFeed *ParsedFeed
 		var err error
@@ -927,7 +928,7 @@ func TestParseFeedEntryUrls(t *testing.T) {
 			require.Nil(t, tc.expectedEntryUrls, tc.description)
 			require.Nil(t, tc.expectedNotEntryUrls, tc.description)
 		} else {
-			require.NoError(t, err, tc.description)
+			oops.RequireNoError(t, err, tc.description)
 
 			curiEqCfg := &CanonicalEqualityConfig{
 				SameHosts:         nil,
@@ -1058,14 +1059,14 @@ func TestParseFeedGenerator(t *testing.T) {
 
 	logger := &DummyLogger{}
 	fetchUri, err := neturl.Parse("https://root/feed")
-	require.NoError(t, err)
+	oops.RequireNoError(t, err)
 	for _, tc := range tests {
 		var parsedFeed *ParsedFeed
 		var err error
 		require.NotPanics(t, func() {
 			parsedFeed, err = ParseFeed(tc.content, fetchUri, logger)
 		}, tc.description)
-		require.NoError(t, err, tc.description)
+		oops.RequireNoError(t, err, tc.description)
 		require.Equal(t, parsedFeed.Generator, tc.expectedGenerator)
 	}
 }

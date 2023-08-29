@@ -26,11 +26,11 @@
                 },
                 {
                     "name": "golangci-lint",
-                    "shell_cmd": "golangci-lint cache clean && golangci-lint run"
+                    "shell_cmd": "golangci-lint cache clean && golangci-lint run --build-tags testing,e2etesting"
                 },
                 {
                     "name": "golangci-lint (with cache)",
-                    "shell_cmd": "golangci-lint run"
+                    "shell_cmd": "golangci-lint run --build-tags testing,e2etesting"
                 },
                 {
                     "name": "tailwindcss",

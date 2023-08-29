@@ -5,6 +5,7 @@ package e2etest
 import (
 	"encoding/json"
 	"feedrewind/models"
+	"feedrewind/oops"
 	"fmt"
 	"regexp"
 	"testing"
@@ -121,7 +122,7 @@ func TestDoubleSchedule(t *testing.T) {
 	page = visitAdmin(browser, "travel_back")
 	serverTimeStr := page.MustElement("body").MustText()
 	serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
-	require.NoError(t, err)
+	oops.RequireNoError(t, err)
 	require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60)
 	page = visitAdmin(browser, "reschedule_user_job")
 	require.Equal(t, "OK", page.MustElement("body").MustText())

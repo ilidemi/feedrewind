@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"feedrewind/oops"
 	neturl "net/url"
 	"testing"
 
@@ -287,13 +288,13 @@ func TestExtractNewPostsFromFeed(t *testing.T) {
 			existingPostCuris = append(existingPostCuris, link.Curi)
 		}
 		parsedFeed, err := ParseFeed(tc.feed, feedUri, logger)
-		require.NoError(t, err, tc.description)
+		oops.RequireNoError(t, err, tc.description)
 		newLinks, err := ExtractNewPostsFromFeed(
 			parsedFeed, feedUri, existingPostCuris, tc.discardedFeedEntryUrls, tc.missingFromFeedEntryUrls,
 			curiEqCfg, logger, logger,
 		)
 		if tc.expectedOk {
-			require.NoError(t, err, tc.description)
+			oops.RequireNoError(t, err, tc.description)
 		} else {
 			require.ErrorIs(t, err, ErrExtractNewPostsNoMatch, tc.description)
 		}

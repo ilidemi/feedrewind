@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"feedrewind/oops"
 	"net/url"
 	"testing"
 
@@ -359,7 +360,7 @@ func TestToCanonicalLink(t *testing.T) {
 	}
 	for _, tc := range tests {
 		fetchUri, err := url.Parse(tc.fetchUrl)
-		require.NoError(t, err)
+		oops.RequireNoError(t, err)
 		canonicalLink, ok := ToCanonicalLink(tc.url, logger, fetchUri)
 		if tc.expected != nil {
 			require.True(t, ok, tc.description)

@@ -7,7 +7,8 @@ import (
 )
 
 func callToTimeNow(m dsl.Matcher) {
-	// m.Match(`time.Now`).Report(`call to time.Now`)
+	m.Match(`require.NoError`).
+		Report(`calls to require.NoError() are disallowed, use oops.RequireNoError() for nice stacktraces`)
 	m.Match(`time.LoadLocation`).
 		Report(`calls to time.LoadLocation() are disallowed, use tzdata.LocationByName instead`)
 	m.Match(`db.Conn`).

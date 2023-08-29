@@ -17,5 +17,6 @@ func testingConfig() Config {
 		},
 		SessionHashKey:  devCfg.SessionHashKey,
 		SessionBlockKey: devCfg.SessionBlockKey,
+		AdminUserIds:    nil,
 	}
 }

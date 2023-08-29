@@ -29,7 +29,6 @@ func TestInitSubscription(t *testing.T) {
 		ExpectedUserBody      string
 	}
 
-	//nolint:staticcheck
 	tests := []test{
 		{
 			Description: "init with 0 posts",
@@ -481,7 +480,6 @@ func TestPublishForUser(t *testing.T) {
 		ExpectedUserBody string
 	}
 
-	//nolint:staticcheck
 	tests := []test{
 		{
 			Description:   "update one",
@@ -993,7 +991,6 @@ func TestRssCountLimit(t *testing.T) {
 		ExpectedSubBody string
 	}
 
-	//nolint:staticcheck
 	tests := []test{
 		{
 			Description:    "evict welcome",
