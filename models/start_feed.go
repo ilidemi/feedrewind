@@ -18,7 +18,7 @@ type StartFeed struct {
 func StartFeed_CreateFetched(
 	tx pgw.Queryable, startPageId *StartPageId, discoveredFetchedFeed crawler.DiscoveredFetchedFeed,
 ) (*StartFeed, error) {
-	idInt, err := mutil.GenerateRandomId(tx, "start_feeds")
+	idInt, err := mutil.RandomId(tx, "start_feeds")
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func StartFeed_CreateFetched(
 func StartFeed_Create(
 	tx pgw.Queryable, startPageId StartPageId, discoveredFeed crawler.DiscoveredFeed,
 ) (*StartFeed, error) {
-	idInt, err := mutil.GenerateRandomId(tx, "start_feeds")
+	idInt, err := mutil.RandomId(tx, "start_feeds")
 	if err != nil {
 		return nil, err
 	}

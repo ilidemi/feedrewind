@@ -2,7 +2,6 @@ package oops
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -12,16 +11,7 @@ type Error struct {
 }
 
 func (err *Error) Error() string {
-	st := err.StackTrace()
-	var b strings.Builder
-	for i, frame := range st {
-		if i > 0 {
-			fmt.Fprint(&b, "\n")
-		}
-		frameText, _ := frame.MarshalText()
-		fmt.Fprint(&b, string(frameText))
-	}
-	return fmt.Sprintf("%+v\b%s", err.Inner.Error(), b.String())
+	return err.Inner.Error()
 }
 
 func (err *Error) Is(target error) bool {

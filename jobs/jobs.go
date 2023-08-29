@@ -3,6 +3,7 @@ package jobs
 import (
 	"bytes"
 	"feedrewind/db/pgw"
+	"feedrewind/util"
 	"fmt"
 	"strings"
 	"time"
@@ -41,8 +42,15 @@ func int64ListToYaml(values []int64) yamlString {
 	return yamlString(b.String())
 }
 
+func timeToYaml(value time.Time) yamlString {
+	return yamlString(fmt.Sprintf(
+		"_aj_serialized: ActiveJob::Serializers::DateTimeSerializer\n    value: '%s'",
+		value.Format("2006-01-02T15:04:05.000000000-07:00"),
+	))
+}
+
 func performNow(tx pgw.Queryable, class string, queue string, arguments ...yamlString) error {
-	return performAt(tx, time.Now().UTC(), class, queue, arguments...)
+	return performAt(tx, util.Schedule_UTCNow(), class, queue, arguments...)
 }
 
 func performAt(tx pgw.Queryable, runAt time.Time, class string, queue string, arguments ...yamlString) error {

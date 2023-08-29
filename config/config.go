@@ -21,6 +21,10 @@ const (
 	EnvProduction
 )
 
+func (e Env) IsDevOrTest() bool {
+	return e == EnvDevelopment || e == EnvTesting
+}
+
 type DBConfig struct {
 	User     string
 	Password *string

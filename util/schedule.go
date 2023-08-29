@@ -1,6 +1,7 @@
 package util
 
 import (
+	"feedrewind/config"
 	"feedrewind/oops"
 	"html/template"
 	"time"
@@ -58,4 +59,14 @@ func Schedule_ToUTCStr(time time.Time) (string, error) {
 	}
 
 	return time.Format("2006-01-02 15:04:05"), nil
+}
+
+var Schedule_UTCNowOverride time.Time
+
+func Schedule_UTCNow() time.Time {
+	if config.Cfg.Env.IsDevOrTest() && Schedule_UTCNowOverride != (time.Time{}) {
+		return Schedule_UTCNowOverride
+	} else {
+		return time.Now().UTC()
+	}
 }

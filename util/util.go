@@ -1,8 +1,11 @@
 package util
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"feedrewind/db/pgw"
 	"feedrewind/log"
+	"feedrewind/oops"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -75,5 +78,21 @@ func Ordinal(number int) string {
 		return "rd"
 	default:
 		return "th"
+	}
+}
+
+func RandomInt63() (int64, error) {
+	buf := make([]byte, 8)
+	for {
+		_, err := rand.Read(buf)
+		if err != nil {
+			return 0, oops.Wrap(err)
+		}
+		uVal := binary.LittleEndian.Uint64(buf)
+		val := int64(uVal & ((1 << 63) - 1))
+		if val == 0 {
+			continue
+		}
+		return val, nil
 	}
 }

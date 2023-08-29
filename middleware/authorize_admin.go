@@ -7,7 +7,7 @@ import (
 
 func AuthorizeAdmin(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		if config.Cfg.Env == config.EnvDevelopment || config.Cfg.Env == config.EnvTesting {
+		if config.Cfg.Env.IsDevOrTest() {
 			next.ServeHTTP(w, r)
 		} else {
 			currentUser := GetCurrentUser(r)

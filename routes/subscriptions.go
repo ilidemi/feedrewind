@@ -689,7 +689,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			utcNow := time.Now().UTC()
+			utcNow := util.Schedule_UTCNow()
 			location := tzdata.LocationByName[userSettings.Timezone]
 			localTime := utcNow.In(location)
 			localDate := util.Schedule_Date(localTime)
@@ -1173,7 +1173,7 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 
-		utcNow := time.Now().UTC()
+		utcNow := util.Schedule_UTCNow()
 		location := tzdata.LocationByName[oldUserSettings.Timezone]
 		localTime := utcNow.In(location)
 		localDate := util.Schedule_Date(localTime)
@@ -1450,7 +1450,7 @@ func subscriptions_MustGetSchedulePreview(
 	if !ok {
 		panic(fmt.Errorf("Timezone not found: %s", userSettings.Timezone))
 	}
-	utcNow := time.Now().UTC()
+	utcNow := util.Schedule_UTCNow()
 	localTime := utcNow.In(location)
 	localDate := util.Schedule_Date(localTime)
 

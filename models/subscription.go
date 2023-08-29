@@ -525,7 +525,7 @@ func Subscription_Create(
 	tx pgw.Queryable, userId *UserId, anonProductUserId *ProductUserId, blog *Blog, status SubscriptionStatus,
 	isPaused bool, scheduleVersion int64,
 ) (*SubscriptionCreateResult, error) {
-	idInt, err := mutil.GenerateRandomId(tx, "subscriptions")
+	idInt, err := mutil.RandomId(tx, "subscriptions")
 	if err != nil {
 		return nil, err
 	}

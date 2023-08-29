@@ -350,7 +350,7 @@ func blog_CreateWithCrawling(
 	tx pgw.Queryable, startFeed *StartFeed,
 	guidedCrawlingJobScheduleFunc GuidedCrawlingJobScheduleFunc,
 ) (*Blog, error) {
-	blogIdInt, err := mutil.GenerateRandomId(tx, "blogs")
+	blogIdInt, err := mutil.RandomId(tx, "blogs")
 	if err != nil {
 		return nil, err
 	}
@@ -395,7 +395,7 @@ func Blog_Create(
 	tx pgw.Queryable, name string, feedUrl string, url string, status BlogStatus, version int,
 	updateAction BlogUpdateAction,
 ) (BlogId, error) {
-	blogIdInt, err := mutil.GenerateRandomId(tx, "blogs")
+	blogIdInt, err := mutil.RandomId(tx, "blogs")
 	if err != nil {
 		return 0, err
 	}

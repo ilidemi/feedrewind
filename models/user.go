@@ -109,7 +109,7 @@ func User_Create(
 		return nil, err
 	}
 
-	idInt, err := mutil.GenerateRandomId(tx, "users")
+	idInt, err := mutil.RandomId(tx, "users")
 	if err != nil {
 		return nil, err
 	}

@@ -113,8 +113,12 @@ func runServer() {
 			admin.Post("/admin/post_blog", routes.Admin_PostBlog)
 		})
 
-		if config.Cfg.Env == config.EnvDevelopment || config.Cfg.Env == config.EnvTesting {
+		if config.Cfg.Env.IsDevOrTest() {
+			r.Get("/test/reschedule_user_job", routes.AdminTest_RescheduleUserJob)
 			r.Get("/test/destroy_user_subscriptions", routes.AdminTest_DestroyUserSubscriptions)
+			r.Get("/test/travel_to", routes.AdminTest_TravelTo)
+			r.Get("/test/travel_back", routes.AdminTest_TravelBack)
+			r.Get("/test/wait_for_publish_posts_job", routes.AdminTest_WaitForPublishPostsJob)
 			r.Get("/test/execute_sql", routes.AdminTest_ExecuteSql)
 		}
 	})

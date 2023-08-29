@@ -1,25 +1,18 @@
 package mutil
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	"errors"
 	"feedrewind/db/pgw"
+	"feedrewind/util"
 
 	"github.com/jackc/pgx/v5"
 )
 
-func GenerateRandomId(tx pgw.Queryable, tableName string) (int64, error) {
-	buf := make([]byte, 8)
+func RandomId(tx pgw.Queryable, tableName string) (int64, error) {
 	for {
-		_, err := rand.Read(buf)
+		id, err := util.RandomInt63()
 		if err != nil {
 			return 0, err
-		}
-		uId := binary.LittleEndian.Uint64(buf)
-		id := int64(uId & ((1 << 63) - 1))
-		if id == 0 {
-			continue
 		}
 
 		row := tx.QueryRow("select 1 from "+tableName+" where id = $1", id)

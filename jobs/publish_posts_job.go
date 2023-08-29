@@ -15,7 +15,7 @@ import (
 func PublishPostsJob_ScheduleInitial(
 	tx pgw.Queryable, userId models.UserId, userSettings *models.UserSettings,
 ) error {
-	utcNow := time.Now().UTC()
+	utcNow := util.Schedule_UTCNow()
 	location := tzdata.LocationByName[userSettings.Timezone]
 	date := time.Date(utcNow.Year(), utcNow.Month(), utcNow.Day(), 0, 0, 0, 0, location).AddDate(0, 0, -1)
 	hourOfDay := PublishPostsJob_GetHourOfDay(*userSettings.DeliveryChannel)
@@ -110,4 +110,21 @@ func PublishPostsJob_UpdateRunAt(tx pgw.Queryable, jobId JobId, runAt time.Time)
 		update delayed_jobs set run_at = $1 where id = $2
 	`, runAt.Format(runAtFormat), jobId)
 	return err
+}
+
+func PublishPostsJob_IsScheduledForDate(
+	tx pgw.Queryable, userId models.UserId, date util.Date,
+) (bool, error) {
+	row := tx.QueryRow(`
+		select count(1)
+		from delayed_jobs
+		where handler like concat(E'%class: PublishPostsJob\n%') and
+			handler like concat(E'%arguments:\n  - ', $1::text, E'\n  - ''', $2::text, '''%')
+	`, fmt.Sprint(userId), date)
+	var jobsCount int
+	err := row.Scan(&jobsCount)
+	if err != nil {
+		return false, err
+	}
+	return jobsCount == 1, nil
 }
