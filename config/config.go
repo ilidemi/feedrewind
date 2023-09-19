@@ -6,11 +6,12 @@ import (
 )
 
 type Config struct {
-	Env             Env
-	DB              DBConfig
-	SessionHashKey  []byte
-	SessionBlockKey []byte
-	AdminUserIds    map[int64]bool
+	Env                     Env
+	DB                      DBConfig
+	SessionHashKey          []byte
+	SessionBlockKey         []byte
+	PostmarkApiSandboxToken string
+	AdminUserIds            map[int64]bool
 }
 
 type Env int

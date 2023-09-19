@@ -39,6 +39,7 @@ type OutboundMessage struct {
 	Status string
 	// MessageEvents - List of summaries (MessageEvent) of things that have happened to this message. They can be Delivered, Opened, or Bounced as shown in the type field.
 	MessageEvents []MessageEvent
+	Metadata      map[string]any
 }
 
 // Recipient represents an individual who received a message

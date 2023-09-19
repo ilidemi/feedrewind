@@ -60,7 +60,11 @@ func TestGetOutboundMessage(t *testing.T) {
 			"BounceID": "374814878"
 		  }
 		}
-	  ]
+	  ],
+      "Metadata": {
+        "color": "blue",
+        "client-id": "12345"
+      }
 	}`
 
 	tMux.HandleFunc(pat.Get("/messages/outbound/07311c54-0687-4ab9-b034-b54b5bad88ba/details"), func(w http.ResponseWriter, req *http.Request) {
@@ -74,6 +78,10 @@ func TestGetOutboundMessage(t *testing.T) {
 
 	if res.MessageID != "07311c54-0687-4ab9-b034-b54b5bad88ba" {
 		t.Fatalf("GetOutboundMessage: wrong MessageID (%v)", res.MessageID)
+	}
+
+	if res.Metadata["color"] != "blue" {
+		t.Fatal("GetOutboundMessage: couldn't read metadata")
 	}
 }
 
@@ -114,7 +122,11 @@ func TestGetOutboundMessages(t *testing.T) {
 			"From": "\"Joe\" <joe@domain.com>",
 			"Subject": "staging",
 			"Attachments": [],
-			"Status": "Sent"
+			"Status": "Sent",
+            "Metadata": {
+              "color": "blue",
+              "client-id": "12345"
+            }
 		  }
 		]
 	}`
@@ -123,7 +135,7 @@ func TestGetOutboundMessages(t *testing.T) {
 		_, _ = w.Write([]byte(responseJSON))
 	})
 
-	_, total, err := client.GetOutboundMessages(context.Background(), 100, 0, map[string]interface{}{
+	res, total, err := client.GetOutboundMessages(context.Background(), 100, 0, map[string]interface{}{
 		"recipient": "john.doe@yahoo.com",
 		"tag":       "welcome",
 		"status":    "",
@@ -136,6 +148,10 @@ func TestGetOutboundMessages(t *testing.T) {
 
 	if total != 194 {
 		t.Fatalf("GetOutboundMessages: wrong total (%d)", total)
+	}
+
+	if res[0].Metadata["color"] != "blue" {
+		t.Fatal("GetOutboundMessage: couldn't read metadata")
 	}
 }
 

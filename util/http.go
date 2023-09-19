@@ -125,3 +125,10 @@ func DeleteCookie(w http.ResponseWriter, name string) {
 func UserIp(r *http.Request) string {
 	return r.Header.Get("X-Forwarded-For")
 }
+
+func MustWrite(w http.ResponseWriter, plainText string) {
+	_, err := w.Write([]byte(plainText))
+	if err != nil {
+		panic(err)
+	}
+}

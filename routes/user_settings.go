@@ -283,7 +283,11 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			}
 			log.Info().Msgf("Rescheduled PublishPostsJob for %s", newRunAt)
 		} else {
-			err := jobs.PublishPostsJob_ScheduleInitial(tx, currentUser.Id, oldUserSettings)
+			newUserSettings, err := models.UserSettings_Get(tx, currentUser.Id)
+			if err != nil {
+				panic(err)
+			}
+			err = jobs.PublishPostsJob_ScheduleInitial(tx, currentUser.Id, newUserSettings)
 			if err != nil {
 				panic(err)
 			}

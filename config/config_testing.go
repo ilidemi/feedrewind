@@ -15,8 +15,9 @@ func testingConfig() Config {
 			Port:     devCfg.DB.Port,
 			DBName:   "rss_catchup_rails_test",
 		},
-		SessionHashKey:  devCfg.SessionHashKey,
-		SessionBlockKey: devCfg.SessionBlockKey,
-		AdminUserIds:    nil,
+		SessionHashKey:          devCfg.SessionHashKey,
+		SessionBlockKey:         devCfg.SessionBlockKey,
+		PostmarkApiSandboxToken: devCfg.PostmarkApiSandboxToken,
+		AdminUserIds:            nil,
 	}
 }

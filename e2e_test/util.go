@@ -5,6 +5,7 @@ package e2etest
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/go-rod/rod"
@@ -15,8 +16,16 @@ func visitDev(browser *rod.Browser, path string) *rod.Page {
 	return browser.MustPage(fmt.Sprintf("http://localhost:3000/%s", path))
 }
 
+func visitDevf(browser *rod.Browser, format string, args ...any) *rod.Page {
+	return visitDev(browser, fmt.Sprintf(format, args...))
+}
+
 func visitAdmin(browser *rod.Browser, path string) *rod.Page {
 	return browser.MustPage(fmt.Sprintf("http://localhost:3000/test/%s", path))
+}
+
+func visitAdminf(browser *rod.Browser, format string, args ...any) *rod.Page {
+	return visitAdmin(browser, fmt.Sprintf(format, args...))
 }
 
 func visitAdminSql(browser *rod.Browser, query string) []map[string]any {
@@ -36,4 +45,14 @@ func visitAdminSql(browser *rod.Browser, query string) []map[string]any {
 		panic(err)
 	}
 	return result
+}
+
+var subscriptionIdRegex *regexp.Regexp
+
+func init() {
+	subscriptionIdRegex = regexp.MustCompile("/([0-9]+)")
+}
+
+func parseSubscriptionId(page *rod.Page) string {
+	return subscriptionIdRegex.FindStringSubmatch(page.MustInfo().URL)[1]
 }

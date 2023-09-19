@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"feedrewind/config"
 	"feedrewind/db/pgw"
 	"feedrewind/jobs"
 	"feedrewind/models"
@@ -11,18 +12,20 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/mrz1836/postmark"
 )
 
 func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
 	currentUserId := rutil.CurrentUserId(r)
 	conn := rutil.DBConn(r)
 	_, err := conn.Exec(`
-      delete from delayed_jobs
-      where (handler like '%class: PublishPostsJob%' or
-          handler like '%class: EmailInitialItemJob%' or
-          handler like '%class: EmailPostsJob%' or
-          handler like '%class: EmailFinalItemJob%') and
-        handler like concat('%', $1::text, '%')
+		delete from delayed_jobs
+		where (handler like '%class: PublishPostsJob%' or
+			handler like '%class: EmailInitialItemJob%' or
+			handler like '%class: EmailPostsJob%' or
+			handler like '%class: EmailFinalItemJob%') and
+			handler like concat('%', $1::text, '%')
 	`, fmt.Sprint(currentUserId))
 	if err != nil {
 		panic(err)
@@ -38,10 +41,7 @@ func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	_, err = w.Write([]byte("OK"))
-	if err != nil {
-		panic(err)
-	}
+	util.MustWrite(w, "OK")
 }
 
 func AdminTest_DestroyUserSubscriptions(w http.ResponseWriter, r *http.Request) {
@@ -51,10 +51,89 @@ func AdminTest_DestroyUserSubscriptions(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		panic(err)
 	}
-	_, err = w.Write([]byte("OK"))
+	util.MustWrite(w, "OK")
+}
+
+func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
+	email := util.EnsureParamStr(r, "email")
+	conn := rutil.DBConn(r)
+	user, err := models.User_FindByEmail(conn, email)
+	if err == models.ErrUserNotFound {
+		util.MustWrite(w, "NotFound")
+		return
+	}
+
+	_, err = conn.Exec(`delete from users where id = $1`, user.Id)
 	if err != nil {
 		panic(err)
 	}
+	util.MustWrite(w, "OK")
+}
+
+func AdminTest_SetEmailMetadata(w http.ResponseWriter, r *http.Request) {
+	value := util.EnsureParamStr(r, "value")
+	conn := rutil.DBConn(r)
+	_, err := conn.Exec(`
+		update test_singletons
+		set value = $1
+		where key = 'email_metadata'
+	`, value)
+	if err != nil {
+		panic(err)
+	}
+	util.MustWrite(w, "OK")
+}
+
+func AdminTest_AssertEmailCountWithMetadata(w http.ResponseWriter, r *http.Request) {
+	value := util.EnsureParamStr(r, "value")
+	count := util.EnsureParamInt(r, "count")
+	lastTimestamp := util.EnsureParamStr(r, "last_timestamp")
+	lastTag := util.EnsureParamStr(r, "last_tag")
+
+	pollCount := 0
+	postmarkClient := postmark.NewClient(config.Cfg.PostmarkApiSandboxToken, "")
+	for {
+		messages, _, err := postmarkClient.GetOutboundMessages(
+			r.Context(), 100, 0, map[string]any{"metadata_test": value},
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		if len(messages) == count {
+			if count != 0 && messages[0].Metadata["server_timestamp"] != lastTimestamp {
+				panic(oops.Newf(
+					"Last message timestamp doesn't match: %s", messages[0].Metadata["server_timestamp"],
+				))
+			}
+
+			if count != 0 && messages[0].Tag != lastTag {
+				panic(oops.Newf("Last message tag doesn't match: %s", messages[0].Tag))
+			}
+
+			util.MustWrite(w, "OK")
+			return
+		}
+
+		time.Sleep(time.Second)
+		pollCount++
+		if pollCount >= 20 {
+			panic(oops.Newf("Email count doesn't match: expected %d, actual %d", count, len(messages)))
+		}
+	}
+}
+
+func AdminTest_DeleteEmailMetadata(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
+	_, err := conn.Exec(`
+		update test_singletons
+		set value = null
+		where key = 'email_metadata'
+	`)
+	if err != nil {
+		panic(err)
+	}
+	util.MustWrite(w, "OK")
 }
 
 func AdminTest_TravelTo(w http.ResponseWriter, r *http.Request) {
@@ -82,10 +161,7 @@ func AdminTest_TravelTo(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	_, err = w.Write([]byte(util.Schedule_UTCNow().Format(time.RFC3339)))
-	if err != nil {
-		panic(err)
-	}
+	util.MustWrite(w, util.Schedule_UTCNow().Format(time.RFC3339))
 }
 
 func AdminTest_TravelBack(w http.ResponseWriter, r *http.Request) {
@@ -105,10 +181,7 @@ func AdminTest_TravelBack(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	_, err = w.Write([]byte(util.Schedule_UTCNow().Format(time.RFC3339)))
-	if err != nil {
-		panic(err)
-	}
+	util.MustWrite(w, util.Schedule_UTCNow().Format(time.RFC3339))
 }
 
 func AdminTest_WaitForPublishPostsJob(w http.ResponseWriter, r *http.Request) {
@@ -123,16 +196,13 @@ func AdminTest_WaitForPublishPostsJob(w http.ResponseWriter, r *http.Request) {
 	localTime := utcNow.In(tzdata.LocationByName[userSettings.Timezone])
 	localDate := util.Schedule_Date(localTime)
 
-	for pollCount := 0; pollCount < 10; pollCount++ {
+	for pollCount := 0; pollCount < 50; pollCount++ {
 		isScheduledForDate, err := jobs.PublishPostsJob_IsScheduledForDate(conn, currentUserId, localDate)
 		if err != nil {
 			panic(err)
 		}
 		if !isScheduledForDate {
-			_, err := w.Write([]byte("OK"))
-			if err != nil {
-				panic(err)
-			}
+			util.MustWrite(w, "OK")
 			return
 		}
 
@@ -155,16 +225,13 @@ func AdminTest_ExecuteSql(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	if result != nil {
-		_, err = w.Write([]byte(*result))
-		if err != nil {
-			panic(err)
-		}
+		util.MustWrite(w, *result)
 	}
 }
 
 func adminTest_CompareTimestamps(conn *pgw.Conn, commandId int64) error {
 	commandIdStr := fmt.Sprint(commandId)
-	for pollCount := 0; pollCount < 30; pollCount++ {
+	for pollCount := 0; pollCount < 50; pollCount++ {
 		workerCommandIdStr, err := models.TestSingleton_GetValue(conn, "time_travel_command_id")
 		if err != nil {
 			return err

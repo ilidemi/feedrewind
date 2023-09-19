@@ -32,10 +32,7 @@ func Rss_SubscriptionFeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/xml")
-	_, err = w.Write([]byte(subscription.Rss))
-	if err != nil {
-		panic(err)
-	}
+	util.MustWrite(w, subscription.Rss)
 }
 
 func Rss_UserFeed(w http.ResponseWriter, r *http.Request) {
@@ -60,10 +57,7 @@ func Rss_UserFeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/xml")
-	_, err = w.Write([]byte(user.Rss))
-	if err != nil {
-		panic(err)
-	}
+	util.MustWrite(w, user.Rss)
 }
 
 func resolveRssClient(r *http.Request) string {

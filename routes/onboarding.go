@@ -226,16 +226,10 @@ func Onboarding_DiscoverFeeds(w http.ResponseWriter, r *http.Request) {
 	switch discoverResult := discoverFeedsResult.(type) {
 	case *discoveredSubscription:
 		models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
-		_, err := w.Write([]byte(rutil.SubscriptionSetupPath(discoverResult.subscription.Id)))
-		if err != nil {
-			panic(err)
-		}
+		util.MustWrite(w, rutil.SubscriptionSetupPath(discoverResult.subscription.Id))
 		return
 	case *discoveredUnsupportedBlog:
-		_, err := w.Write([]byte(rutil.BlogUnsupportedPath(discoverResult.blog.Id)))
-		if err != nil {
-			panic(err)
-		}
+		util.MustWrite(w, rutil.BlogUnsupportedPath(discoverResult.blog.Id))
 		return
 	case *discoveredFeeds:
 		result = feedsData{ //nolint:exhaustruct

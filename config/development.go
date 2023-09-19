@@ -49,8 +49,9 @@ func developmentConfig() Config {
 			Port:     5432,
 			DBName:   "rss_catchup_rails_development",
 		},
-		SessionHashKey:  sessionHashKey,
-		SessionBlockKey: sessionBlockKey,
-		AdminUserIds:    nil,
+		SessionHashKey:          sessionHashKey,
+		SessionBlockKey:         sessionBlockKey,
+		PostmarkApiSandboxToken: "REDACTED_DEV_POSTMARK_API_SANDBOX_TOKEN",
+		AdminUserIds:            nil,
 	}
 }

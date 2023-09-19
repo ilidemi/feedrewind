@@ -251,10 +251,7 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 			models.ProductEvent_MustEmitDiscoverFeeds(
 				pc, startFeed.Url, models.TypedBlogUrlResultKnownUnsupported, userIsAnonymous,
 			)
-			_, err := w.Write([]byte(rutil.BlogUnsupportedPath(updatedBlog.Id)))
-			if err != nil {
-				panic(err)
-			}
+			util.MustWrite(w, rutil.BlogUnsupportedPath(updatedBlog.Id))
 			return
 		} else if err != nil {
 			panic(err)
@@ -264,10 +261,7 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 			pc, startFeed.Url, models.TypedBlogUrlResultFeed, userIsAnonymous,
 		)
 		models.ProductEvent_MustEmitCreateSubscription(pc, subscriptionCreateResult, userIsAnonymous)
-		_, err = w.Write([]byte(rutil.SubscriptionSetupPath(subscriptionCreateResult.Id)))
-		if err != nil {
-			panic(err)
-		}
+		util.MustWrite(w, rutil.SubscriptionSetupPath(subscriptionCreateResult.Id))
 		return
 	case *crawler.FetchFeedErrorBadFeed:
 		models.ProductEvent_MustEmitDiscoverFeeds(
@@ -1224,10 +1218,7 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Msg("Error while submitting a NotifySlackJob")
 		}
 
-		_, err = w.Write([]byte(rutil.SubscriptionSetupPath(subscriptionId)))
-		if err != nil {
-			panic(err)
-		}
+		util.MustWrite(w, rutil.SubscriptionSetupPath(subscriptionId))
 		return true
 	}
 

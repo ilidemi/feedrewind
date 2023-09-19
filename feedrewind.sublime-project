@@ -22,7 +22,11 @@
                 },
                 {
                     "name": "test e2e",
-                    "shell_cmd": "go test ./e2e_test -tags e2etesting"
+                    "shell_cmd": "go test ./e2e_test -tags e2etesting,testing"
+                },
+                {
+                    "name": "test e2e with email",
+                    "shell_cmd": "go test ./e2e_test -tags emailtesting,e2etesting,testing"
                 },
                 {
                     "name": "golangci-lint",

@@ -116,6 +116,10 @@ func runServer() {
 		if config.Cfg.Env.IsDevOrTest() {
 			r.Get("/test/reschedule_user_job", routes.AdminTest_RescheduleUserJob)
 			r.Get("/test/destroy_user_subscriptions", routes.AdminTest_DestroyUserSubscriptions)
+			r.Get("/test/destroy_user", routes.AdminTest_DestroyUser)
+			r.Get("/test/set_email_metadata", routes.AdminTest_SetEmailMetadata)
+			r.Get("/test/assert_email_count_with_metadata", routes.AdminTest_AssertEmailCountWithMetadata)
+			r.Get("/test/delete_email_metadata", routes.AdminTest_DeleteEmailMetadata)
 			r.Get("/test/travel_to", routes.AdminTest_TravelTo)
 			r.Get("/test/travel_back", routes.AdminTest_TravelBack)
 			r.Get("/test/wait_for_publish_posts_job", routes.AdminTest_WaitForPublishPostsJob)

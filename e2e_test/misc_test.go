@@ -39,7 +39,7 @@ func TestDoubleSchedule(t *testing.T) {
 	todayLocal := todayUtc.Add(7 * time.Hour)
 	todayLocal1AM := todayLocal.Add(1 * time.Hour)
 	todayLocal1AMStr := todayLocal1AM.Format(time.RFC3339)
-	page = visitAdmin(browser, fmt.Sprintf("travel_to?timestamp=%s", todayLocal1AMStr))
+	page = visitAdminf(browser, "travel_to?timestamp=%s", todayLocal1AMStr)
 	require.Equal(t, todayLocal1AMStr, page.MustElement("body").MustText())
 	page = visitAdmin(browser, "reschedule_user_job")
 	require.Equal(t, "OK", page.MustElement("body").MustText())
@@ -67,11 +67,9 @@ func TestDoubleSchedule(t *testing.T) {
 	page.MustElementR("input", "Continue").MustClick()
 
 	page.MustElement("#wed_add").MustClick()
-	page.MustElementR("button", "Continue").MustClick()
+	page.MustElement("#save_button").MustClick()
 	page.MustElement("#arrival_msg")
-
-	subscriptionIdRegex := regexp.MustCompile("/([0-9]+)")
-	subscriptionId := subscriptionIdRegex.FindStringSubmatch(page.MustInfo().URL)[1]
+	subscriptionId := parseSubscriptionId(page)
 
 	// Duplicate the job
 	visitAdminSql(browser, fmt.Sprintf(`
@@ -89,7 +87,7 @@ func TestDoubleSchedule(t *testing.T) {
 	require.Len(t, duplicateJobRows, 2)
 
 	todayLocal3AMStr := todayLocal.Add(3 * time.Hour).Format(time.RFC3339)
-	page = visitAdmin(browser, fmt.Sprintf("travel_to?timestamp=%s", todayLocal3AMStr))
+	page = visitAdminf(browser, "travel_to?timestamp=%s", todayLocal3AMStr)
 	require.Equal(t, todayLocal3AMStr, page.MustElement("body").MustText())
 	page = visitAdmin(browser, "wait_for_publish_posts_job")
 	require.Equal(t, "OK", page.MustElement("body").MustText())
@@ -183,7 +181,7 @@ https://ilidemi.github.io/dummy-blogs/1man/post5 post5`,
 	page.MustElementR("input", "Continue").MustClick()
 
 	page.MustElement("#wed_add").MustClick()
-	page.MustElementR("button", "Continue").MustClick()
+	page.MustElement("#save_button").MustClick()
 	page.MustElement("#arrival_msg")
 
 	page.MustElementR("a", "Manage").MustClick()
