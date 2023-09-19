@@ -5,7 +5,6 @@ package e2etest
 import (
 	"feedrewind/oops"
 	"fmt"
-	"regexp"
 	"testing"
 	"time"
 
@@ -59,7 +58,7 @@ func TestSignupRss(t *testing.T) {
 		browser := rod.New().ControlURL(browserUrl).MustConnect()
 
 		page := visitAdminf(browser, "destroy_user?email=%s", tc.Email)
-		require.Contains(t, []string{"OK", "NotFound"}, page.MustElement("body").MustText(), description)
+		require.Contains(t, []string{"OK", "NotFound"}, pageText(page), description)
 
 		todayUtc := time.Date(2022, 6, 1, 0, 0, 0, 0, time.UTC)
 		var todayLocal time.Time
@@ -76,7 +75,7 @@ func TestSignupRss(t *testing.T) {
 
 		signupTimestampStr := signupTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", signupTimestampStr)
-		require.Equal(t, signupTimestampStr, page.MustElement("body").MustText(), description)
+		require.Equal(t, signupTimestampStr, pageText(page), description)
 
 		// Create user
 		page = visitDev(browser, "signup")
@@ -120,23 +119,21 @@ func TestSignupRss(t *testing.T) {
 		// Assert published count
 		rssPublishTimestampStr := rssPublishTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", rssPublishTimestampStr)
-		require.Equal(t, rssPublishTimestampStr, page.MustElement("body").MustText(), description)
+		require.Equal(t, rssPublishTimestampStr, pageText(page), description)
 		page = visitAdmin(browser, "wait_for_publish_posts_job")
-		require.Equal(t, "OK", page.MustElement("body").MustText(), description)
+		require.Equal(t, "OK", pageText(page), description)
 		page = visitDevf(browser, "subscriptions/%s", subscriptionId)
-		publishedCountText := page.MustElement("#published_count").MustText()
-		publishedCountRegex := regexp.MustCompile("^[0-9]+")
-		publishedCount := publishedCountRegex.FindStringSubmatch(publishedCountText)[0]
+		publishedCount := parsePublishedCount(page)
 		require.Equal(t, "1", publishedCount)
 
 		// Cleanup
 		page = visitAdmin(browser, "travel_back")
-		serverTimeStr := page.MustElement("body").MustText()
+		serverTimeStr := pageText(page)
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60)
-		page = visitAdmin(browser, "reschedule_user_job")
-		require.Equal(t, "OK", page.MustElement("body").MustText())
+		page = visitAdminf(browser, "destroy_user?email=%s", tc.Email)
+		require.Equal(t, "OK", pageText(page), description)
 
 		browser.MustClose()
 		l.Cleanup()

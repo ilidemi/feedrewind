@@ -33,16 +33,16 @@ func TestDoubleSchedule(t *testing.T) {
 	page.MustWaitLoad()
 
 	page = visitAdmin(browser, "destroy_user_subscriptions")
-	require.Equal(t, "OK", page.MustElement("body").MustText())
+	require.Equal(t, "OK", pageText(page))
 
 	todayUtc := time.Date(2022, 6, 1, 0, 0, 0, 0, time.UTC)
 	todayLocal := todayUtc.Add(7 * time.Hour)
 	todayLocal1AM := todayLocal.Add(1 * time.Hour)
 	todayLocal1AMStr := todayLocal1AM.Format(time.RFC3339)
 	page = visitAdminf(browser, "travel_to?timestamp=%s", todayLocal1AMStr)
-	require.Equal(t, todayLocal1AMStr, page.MustElement("body").MustText())
+	require.Equal(t, todayLocal1AMStr, pageText(page))
 	page = visitAdmin(browser, "reschedule_user_job")
-	require.Equal(t, "OK", page.MustElement("body").MustText())
+	require.Equal(t, "OK", pageText(page))
 
 	userRows := visitAdminSql(browser, fmt.Sprintf("select id from users where email = '%s'", email))
 	userId := userRows[0]["id"]
@@ -88,9 +88,9 @@ func TestDoubleSchedule(t *testing.T) {
 
 	todayLocal3AMStr := todayLocal.Add(3 * time.Hour).Format(time.RFC3339)
 	page = visitAdminf(browser, "travel_to?timestamp=%s", todayLocal3AMStr)
-	require.Equal(t, todayLocal3AMStr, page.MustElement("body").MustText())
+	require.Equal(t, todayLocal3AMStr, pageText(page))
 	page = visitAdmin(browser, "wait_for_publish_posts_job")
-	require.Equal(t, "OK", page.MustElement("body").MustText())
+	require.Equal(t, "OK", pageText(page))
 
 	// Assert 1 job for tomorrow and 1 published post
 	// Postgres might need time to reflect the new publish posts job update on another connection
@@ -118,12 +118,12 @@ func TestDoubleSchedule(t *testing.T) {
 
 	// Cleanup
 	page = visitAdmin(browser, "travel_back")
-	serverTimeStr := page.MustElement("body").MustText()
+	serverTimeStr := pageText(page)
 	serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 	oops.RequireNoError(t, err)
 	require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60)
 	page = visitAdmin(browser, "reschedule_user_job")
-	require.Equal(t, "OK", page.MustElement("body").MustText())
+	require.Equal(t, "OK", pageText(page))
 
 	visitDev(browser, "logout")
 }
@@ -143,7 +143,7 @@ func TestUpdateFromFeed(t *testing.T) {
 	page.MustWaitLoad()
 
 	page = visitAdmin(browser, "destroy_user_subscriptions")
-	require.Equal(t, "OK", page.MustElement("body").MustText())
+	require.Equal(t, "OK", pageText(page))
 
 	page = visitDev(browser, "admin/add_blog")
 	page.MustElement("#name").MustInput("1man")

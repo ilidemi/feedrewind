@@ -703,7 +703,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				willArriveDateTime = willArriveDateTime.AddDate(0, 0, 1)
 			}
 
-			willArriveDate = willArriveDateTime.Format("Monday, January 1") +
+			willArriveDate = willArriveDateTime.Format("Monday, January 2") +
 				util.Ordinal(willArriveDateTime.Day())
 			willArriveOne = countsByDay[util.Schedule_DayOfWeek(willArriveDateTime)] == 1
 		}

@@ -59,7 +59,7 @@ func TestSignupEmail(t *testing.T) {
 		browser := rod.New().ControlURL(browserUrl).MustConnect()
 
 		page := visitAdminf(browser, "destroy_user?email=%s", tc.Email)
-		require.Contains(t, []string{"OK", "NotFound"}, page.MustElement("body").MustText(), description)
+		require.Contains(t, []string{"OK", "NotFound"}, pageText(page), description)
 
 		todayUtc := time.Date(2022, 6, 1, 0, 0, 0, 0, time.UTC)
 		var todayLocal time.Time
@@ -76,12 +76,12 @@ func TestSignupEmail(t *testing.T) {
 
 		signupTimestampStr := signupTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", signupTimestampStr)
-		require.Equal(t, signupTimestampStr, page.MustElement("body").MustText(), description)
+		require.Equal(t, signupTimestampStr, pageText(page), description)
 
 		emailMetadata, err := util.RandomInt63()
 		oops.RequireNoError(t, err, description)
 		page = visitAdminf(browser, "set_email_metadata?value=%d", emailMetadata)
-		require.Equal(t, "OK", page.MustElement("body").MustText(), description)
+		require.Equal(t, "OK", pageText(page), description)
 
 		// Create user
 		page = visitDev(browser, "signup")
@@ -124,9 +124,9 @@ func TestSignupEmail(t *testing.T) {
 		// Assert published count
 		emailTimestampStr := emailTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", emailTimestampStr)
-		require.Equal(t, emailTimestampStr, page.MustElement("body").MustText(), description)
+		require.Equal(t, emailTimestampStr, pageText(page), description)
 		page = visitAdmin(browser, "wait_for_publish_posts_job")
-		require.Equal(t, "OK", page.MustElement("body").MustText(), description)
+		require.Equal(t, "OK", pageText(page), description)
 		emailTimestampUTCStr, err := util.Schedule_ToUTCStr(emailTimestamp)
 		oops.RequireNoError(t, err, description)
 		page = visitAdminf(
@@ -134,16 +134,16 @@ func TestSignupEmail(t *testing.T) {
 			"assert_email_count_with_metadata?value=%d&count=2&last_timestamp=%s&last_tag=subscription_post",
 			emailMetadata, emailTimestampUTCStr,
 		)
-		require.Equal(t, "OK", page.MustElement("body").MustText(), description)
+		require.Equal(t, "OK", pageText(page), description)
 
 		// Cleanup
 		page = visitAdmin(browser, "travel_back")
-		serverTimeStr := page.MustElement("body").MustText()
+		serverTimeStr := pageText(page)
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
-		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60)
-		page = visitAdmin(browser, "reschedule_user_job")
-		require.Equal(t, "OK", page.MustElement("body").MustText())
+		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60, description)
+		page = visitAdminf(browser, "destroy_user?email=%s", tc.Email)
+		require.Equal(t, "OK", pageText(page), description)
 
 		browser.MustClose()
 		l.Cleanup()

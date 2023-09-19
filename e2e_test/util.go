@@ -32,7 +32,7 @@ func visitAdminSql(browser *rod.Browser, query string) []map[string]any {
 	escapedQuery := url.QueryEscape(query)
 	url := fmt.Sprintf("http://localhost:3000/test/execute_sql?query=%s", escapedQuery)
 	page := browser.MustPage(url)
-	text := page.MustElement("body").MustText()
+	text := pageText(page)
 	if text == "" {
 		return nil
 	}
@@ -48,11 +48,22 @@ func visitAdminSql(browser *rod.Browser, query string) []map[string]any {
 }
 
 var subscriptionIdRegex *regexp.Regexp
+var publishedCountRegex *regexp.Regexp
 
 func init() {
 	subscriptionIdRegex = regexp.MustCompile("/([0-9]+)")
+	publishedCountRegex = regexp.MustCompile("^[0-9]+")
 }
 
 func parseSubscriptionId(page *rod.Page) string {
 	return subscriptionIdRegex.FindStringSubmatch(page.MustInfo().URL)[1]
+}
+
+func pageText(page *rod.Page) string {
+	return page.MustElement("body").MustText()
+}
+
+func parsePublishedCount(page *rod.Page) string {
+	publishedCountText := page.MustElement("#published_count").MustText()
+	return publishedCountRegex.FindStringSubmatch(publishedCountText)[0]
 }

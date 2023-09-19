@@ -345,14 +345,14 @@ func Subscription_GetSchedulePreview(
 
 	unpublishedCount := totalCount - publishedCount
 
-	prevHasMore := (publishedCount - len(result.PrevPosts)) > 0
-	if prevHasMore {
+	result.PrevHasMore = (publishedCount - len(result.PrevPosts)) > 0
+	if result.PrevHasMore {
 		// Always show 2 lines: either all 2 prev posts or ellipsis and a post
 		result.PrevPosts = result.PrevPosts[1:]
 	}
 
-	nextHasMore := (unpublishedCount - len(result.NextPosts)) > 0
-	if nextHasMore {
+	result.NextHasMore = (unpublishedCount - len(result.NextPosts)) > 0
+	if result.NextHasMore {
 		// Always show 5 lines: either all 5 next posts or 4 posts and ellipsis
 		result.NextPosts = result.NextPosts[:len(result.NextPosts)-1]
 	}
