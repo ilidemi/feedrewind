@@ -68,6 +68,7 @@
                 {{else}}
                 let isFormValid = isNameValid && isScheduleValid && document.querySelectorAll("input[name='delivery_channel']:checked").length > 0;
                 {{end}}
+                let saveButton = document.getElementById("save_button");
                 if (isFormValid) {
                     saveButton.disabled = false;
                     saveButton.classList.remove("btn-disabled");

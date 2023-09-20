@@ -12,13 +12,13 @@ func MustInit(tx pgw.Queryable) {
 	var timezoneInExpr bytes.Buffer
 	timezoneInExpr.WriteString("('")
 	isFirst := true
-	for _, friendlyTimezone := range util.FriendlyTimezones {
+	for groupId := range util.GroupIdByTimezoneId {
 		if isFirst {
 			isFirst = false
 		} else {
 			timezoneInExpr.WriteString("', '")
 		}
-		timezoneInExpr.WriteString(friendlyTimezone.GroupId)
+		timezoneInExpr.WriteString(groupId)
 	}
 	for groupId := range util.UnfriendlyGroupIds {
 		timezoneInExpr.WriteString("', '")
