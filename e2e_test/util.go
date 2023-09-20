@@ -1,4 +1,4 @@
-//go:build e2etesting
+///go:build e2etesting
 
 package e2etest
 
@@ -7,9 +7,11 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"testing"
 
 	"github.com/go-rod/rod"
 	"github.com/goccy/go-json"
+	"github.com/stretchr/testify/require"
 )
 
 func visitDev(browser *rod.Browser, path string) *rod.Page {
@@ -66,4 +68,68 @@ func pageText(page *rod.Page) string {
 func parsePublishedCount(page *rod.Page) string {
 	publishedCountText := page.MustElement("#published_count").MustText()
 	return publishedCountRegex.FindStringSubmatch(publishedCountText)[0]
+}
+
+func assertSchedulePreview(t *testing.T, page *rod.Page, expectedPreview string, description string) {
+	expectedTokens := strings.Split(expectedPreview, "-")
+	expectedPrevStr := strings.TrimSpace(expectedTokens[0])
+	expectedNextStr := strings.TrimSpace(expectedTokens[1])
+	var expectedPrev []string
+	var expectedNext []string
+	if expectedPrevStr != "" {
+		expectedPrev = strings.Split(expectedPrevStr, " ")
+	}
+	if expectedNextStr != "" {
+		expectedNext = strings.Split(expectedNextStr, " ")
+	}
+
+	tbody := page.MustElement("#schedule_preview").MustElement("tbody")
+	prevRows := tbody.MustElements("tr.prev_post")
+	if len(expectedPrev) != len(prevRows) {
+		_ = 0
+	}
+	require.Equal(t, len(expectedPrev), len(prevRows), description)
+	for i, expected := range expectedPrev {
+		row := prevRows[i]
+		rowDate := row.MustElementX(".//td[2]").MustText()
+		var expectedDate string
+		switch expected {
+		case "el":
+			expectedDate = "…"
+		case "ys":
+			expectedDate = "Yesterday"
+		case "td":
+			expectedDate = "Today"
+		default:
+			require.FailNowf(t, description, "Unknown date: %s", expected)
+		}
+		require.Equal(t, expectedDate, rowDate, description)
+	}
+
+	nextRows := tbody.MustElements("tr.next_post")
+	for i, expected := range expectedNext {
+		row := nextRows[i]
+		rowDate := row.MustElementX(".//td[2]").MustText()
+		var expectedDate string
+		switch expected {
+		case "td":
+			expectedDate = "Today"
+		case "tm":
+			expectedDate = "Tomorrow"
+		case "da":
+			expectedDate = "Fri, June 3"
+		default:
+			require.FailNowf(t, description, "Unknown date: %s", expected)
+		}
+		require.Equal(t, expectedDate, rowDate, description)
+	}
+}
+
+func splitAndTrimSpace(s string, sep string) []string {
+	tokens := strings.Split(s, sep)
+	trimmedTokens := make([]string, len(tokens))
+	for i, token := range tokens {
+		trimmedTokens[i] = strings.TrimSpace(token)
+	}
+	return trimmedTokens
 }

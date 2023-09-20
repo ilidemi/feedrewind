@@ -103,12 +103,12 @@ func AdminTest_AssertEmailCountWithMetadata(w http.ResponseWriter, r *http.Reque
 		if len(messages) == count {
 			if count != 0 && messages[0].Metadata["server_timestamp"] != lastTimestamp {
 				panic(oops.Newf(
-					"Last message timestamp doesn't match: %s", messages[0].Metadata["server_timestamp"],
+					"Last message timestamp doesn't match. Expected: %s, actual: %s", lastTimestamp, messages[0].Metadata["server_timestamp"],
 				))
 			}
 
 			if count != 0 && messages[0].Tag != lastTag {
-				panic(oops.Newf("Last message tag doesn't match: %s", messages[0].Tag))
+				panic(oops.Newf("Last message tag doesn't match. Expected: %s, actual: %s", lastTag, messages[0].Tag))
 			}
 
 			util.MustWrite(w, "OK")

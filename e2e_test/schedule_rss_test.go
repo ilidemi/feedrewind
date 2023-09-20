@@ -16,19 +16,19 @@ import (
 
 func TestRssSchedule(t *testing.T) {
 	scheduleOutputs := map[string]string{
-		//                              before     arrivalMsg       creation               late                   midnight           tomorrow
-		"job_today_job_tomorrow":     " - td tm da ; one will td  ; 0 ;       - td tm da ; 1 ; td    - tm da    ; ys    - td tm    ; 2 ; ys td - tm",
-		"job_today_no_tomorrow":      " - td da    ; one will td  ; 0 ;       - td da    ; 1 ; td    - da       ; ys    - tm       ; 1 ; ys    - tm",
-		"no_today_job_tomorrow":      " - tm da    ; one will tm  ; 0 ;       - tm da    ; 0 ;       - tm da    ;       - td tm    ; 1 ; td    - tm",
-		"no_today_no_tomorrow":       " - da       ; one will da  ; 0 ;       - da       ; 0 ;       - da       ;       - tm       ; 0 ;       - tm",
-		"init_today_job_tomorrow":    " - td tm da ; one has      ; 1 ; td    - tm da    ; 1 ; td    - tm da    ; ys    - td tm    ; 2 ; ys td - tm",
-		"init_today_no_tomorrow":     " - td da    ; one has      ; 1 ; td    - da       ; 1 ; td    - da       ; ys    - tm       ; 1 ; ys    - tm",
-		"x2_job_today_job_tomorrow":  " - td td tm ; many will td ; 0 ;       - td td tm ; 2 ; td td - tm tm da ; ys ys - td td tm ; 4 ; el td - tm",
-		"x2_job_today_no_tomorrow":   " - td td da ; many will td ; 0 ;       - td td da ; 2 ; td td - da da    ; ys ys - tm tm    ; 2 ; ys ys - tm",
-		"x2_no_today_job_tomorrow":   " - tm tm da ; many will tm ; 0 ;       - tm tm da ; 0 ;       - tm tm da ;       - td td tm ; 2 ; td td - tm",
-		"x2_no_today_no_tomorrow":    " - da da    ; many will da ; 0 ;       - da da    ; 0 ;       - da da    ;       - tm tm    ; 0 ;       - tm",
-		"x2_init_today_job_tomorrow": " - td td tm ; many have    ; 2 ; td td - tm tm da ; 2 ; td td - tm tm da ; ys ys - td td tm ; 4 ; el td - tm",
-		"x2_init_today_no_tomorrow":  " - td td da ; many have    ; 2 ; td td - da da    ; 2 ; td td - da da    ; ys ys - tm tm    ; 2 ; ys ys - tm",
+		//                              before pr  arrivalMsg       creation cnt/pr        late cnt/pr            midnight pr        tomorrow cnt/pr
+		"job_today_job_tomorrow":     " - td tm da ; one will td  ; 0 ;       - td tm da ; 1 ; td    - tm da    ; ys    - td tm    ; 2 ; ys td - tm   ",
+		"job_today_no_tomorrow":      " - td da    ; one will td  ; 0 ;       - td da    ; 1 ; td    - da       ; ys    - tm       ; 1 ; ys    - tm   ",
+		"no_today_job_tomorrow":      " - tm da    ; one will tm  ; 0 ;       - tm da    ; 0 ;       - tm da    ;       - td tm    ; 1 ; td    - tm   ",
+		"no_today_no_tomorrow":       " - da       ; one will da  ; 0 ;       - da       ; 0 ;       - da       ;       - tm       ; 0 ;       - tm   ",
+		"init_today_job_tomorrow":    " - td tm da ; one has      ; 1 ; td    - tm da    ; 1 ; td    - tm da    ; ys    - td tm    ; 2 ; ys td - tm   ",
+		"init_today_no_tomorrow":     " - td da    ; one has      ; 1 ; td    - da       ; 1 ; td    - da       ; ys    - tm       ; 1 ; ys    - tm   ",
+		"x2_job_today_job_tomorrow":  " - td td tm ; many will td ; 0 ;       - td td tm ; 2 ; td td - tm tm da ; ys ys - td td tm ; 4 ; el td - tm tm",
+		"x2_job_today_no_tomorrow":   " - td td da ; many will td ; 0 ;       - td td da ; 2 ; td td - da da    ; ys ys - tm tm    ; 2 ; ys ys - tm tm",
+		"x2_no_today_job_tomorrow":   " - tm tm da ; many will tm ; 0 ;       - tm tm da ; 0 ;       - tm tm da ;       - td td tm ; 2 ; td td - tm tm",
+		"x2_no_today_no_tomorrow":    " - da da    ; many will da ; 0 ;       - da da    ; 0 ;       - da da    ;       - tm tm    ; 0 ;       - tm tm",
+		"x2_init_today_job_tomorrow": " - td td tm ; many have    ; 2 ; td td - tm tm da ; 2 ; td td - tm tm da ; ys ys - td td tm ; 4 ; el td - tm tm",
+		"x2_init_today_no_tomorrow":  " - td td da ; many have    ; 2 ; td td - da da    ; 2 ; td td - da da    ; ys ys - tm tm    ; 2 ; ys ys - tm tm",
 	}
 
 	type CreationTime int
@@ -147,26 +147,26 @@ func TestRssSchedule(t *testing.T) {
 		page.MustElement("tr.next_post")
 
 		outputStr := scheduleOutputs[tc.OutputName]
-		outputTokens := strings.Split(outputStr, ";")
-		outputBefore := outputTokens[0]
+		outputTokens := splitAndTrimSpace(outputStr, ";")
+		outputPreviewBefore := outputTokens[0]
 		outputArrivalMsg := outputTokens[1]
 		outputCountAtCreation := outputTokens[2]
-		outputAtCreation := outputTokens[3]
+		outputPreviewAtCreation := outputTokens[3]
 		outputCountLate := outputTokens[4]
-		outputLate := outputTokens[5]
+		outputPreviewLate := outputTokens[5]
 		outputAtMidnight := outputTokens[6]
 		outputCountTomorrow := outputTokens[7]
-		outputTomorrow := outputTokens[8]
+		outputPreviewTomorrow := outputTokens[8]
 
 		// Assert preview before
-		assertSchedulePreview(t, page, outputBefore, description)
+		assertSchedulePreview(t, page, outputPreviewBefore, description)
 
 		page.MustElement("#save_button").MustClick()
 
 		// Assert arrival msg
 		var expectedArrivalMsg strings.Builder
 		expectedArrivalMsg.WriteString("First")
-		outputArrivalMsgTokens := strings.Split(strings.TrimSpace(outputArrivalMsg), " ")
+		outputArrivalMsgTokens := strings.Split(outputArrivalMsg, " ")
 		switch outputArrivalMsgTokens[0] {
 		case "one":
 			expectedArrivalMsg.WriteString(" entry")
@@ -211,10 +211,10 @@ func TestRssSchedule(t *testing.T) {
 		// Assert published at creation
 		page = visitDev(browser, subscriptionPath)
 		publishedCountAtCreation := parsePublishedCount(page)
-		require.Equal(t, strings.TrimSpace(outputCountAtCreation), publishedCountAtCreation, description)
+		require.Equal(t, outputCountAtCreation, publishedCountAtCreation, description)
 
 		// Assert preview at creation
-		assertSchedulePreview(t, page, outputAtCreation, description)
+		assertSchedulePreview(t, page, outputPreviewAtCreation, description)
 
 		// Assert published late
 		lateTimestampStr := lateTimestamp.Format(time.RFC3339)
@@ -224,10 +224,10 @@ func TestRssSchedule(t *testing.T) {
 		require.Equal(t, "OK", pageText(page), description)
 		page = visitDev(browser, subscriptionPath)
 		publishedCountLate := parsePublishedCount(page)
-		require.Equal(t, strings.TrimSpace(outputCountLate), publishedCountLate, description)
+		require.Equal(t, outputCountLate, publishedCountLate, description)
 
 		// Assert preview late
-		assertSchedulePreview(t, page, outputLate, description)
+		assertSchedulePreview(t, page, outputPreviewLate, description)
 
 		// Assert preview at midnight
 		midnightTimestampStr := midnightTimestamp.Format(time.RFC3339)
@@ -244,10 +244,10 @@ func TestRssSchedule(t *testing.T) {
 		require.Equal(t, "OK", pageText(page), description)
 		page = visitDev(browser, subscriptionPath)
 		publishedCountTomorrow := parsePublishedCount(page)
-		require.Equal(t, strings.TrimSpace(outputCountTomorrow), publishedCountTomorrow, description)
+		require.Equal(t, outputCountTomorrow, publishedCountTomorrow, description)
 
 		// Assert preview tomorrow
-		assertSchedulePreview(t, page, outputTomorrow, description)
+		assertSchedulePreview(t, page, outputPreviewTomorrow, description)
 
 		// Cleanup
 		page = visitAdmin(browser, "travel_back")
@@ -257,66 +257,9 @@ func TestRssSchedule(t *testing.T) {
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60, description)
 		page = visitAdmin(browser, "reschedule_user_job")
 		require.Equal(t, "OK", pageText(page), description)
-
 		visitDev(browser, "logout")
 
 		browser.MustClose()
 		l.Cleanup()
-	}
-}
-
-func assertSchedulePreview(t *testing.T, page *rod.Page, expectedPreview string, description string) {
-	expectedPreview = strings.TrimSpace(expectedPreview)
-	expectedTokens := strings.Split(expectedPreview, "-")
-	expectedPrevStr := strings.TrimSpace(expectedTokens[0])
-	expectedNextStr := strings.TrimSpace(expectedTokens[1])
-	var expectedPrev []string
-	var expectedNext []string
-	if expectedPrevStr != "" {
-		expectedPrev = strings.Split(expectedPrevStr, " ")
-	}
-	if expectedNextStr != "" {
-		expectedNext = strings.Split(expectedNextStr, " ")
-	}
-
-	tbody := page.MustElement("#schedule_preview").MustElement("tbody")
-	prevRows := tbody.MustElements("tr.prev_post")
-	if len(expectedPrev) != len(prevRows) {
-		_ = 0
-	}
-	require.Equal(t, len(expectedPrev), len(prevRows), description)
-	for i, expected := range expectedPrev {
-		row := prevRows[i]
-		rowDate := row.MustElementX(".//td[2]").MustText()
-		var expectedDate string
-		switch expected {
-		case "el":
-			expectedDate = "…"
-		case "ys":
-			expectedDate = "Yesterday"
-		case "td":
-			expectedDate = "Today"
-		default:
-			require.FailNowf(t, description, "Unknown date: %s", expected)
-		}
-		require.Equal(t, expectedDate, rowDate, description)
-	}
-
-	nextRows := tbody.MustElements("tr.next_post")
-	for i, expected := range expectedNext {
-		row := nextRows[i]
-		rowDate := row.MustElementX(".//td[2]").MustText()
-		var expectedDate string
-		switch expected {
-		case "td":
-			expectedDate = "Today"
-		case "tm":
-			expectedDate = "Tomorrow"
-		case "da":
-			expectedDate = "Fri, June 3"
-		default:
-			require.FailNowf(t, description, "Unknown date: %s", expected)
-		}
-		require.Equal(t, expectedDate, rowDate, description)
 	}
 }
