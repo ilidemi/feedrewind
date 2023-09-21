@@ -3,8 +3,10 @@ package pgw
 
 import (
 	"context"
+	"errors"
 	"feedrewind/oops"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -66,9 +68,21 @@ func (conn *Conn) Begin() (*Tx, error) {
 	}, nil
 }
 
+var fromSubscriptionsRegex *regexp.Regexp
+var ErrDontUseSubscriptions = errors.New("Use of subscriptions table is deprecated. Use subscriptions_with_discarded or subscriptions_without_discarded instead.")
+var CheckSubscriptionsUsage = true
+
+func init() {
+	fromSubscriptionsRegex = regexp.MustCompile(`\b(from|into)\s+subscriptions\b`)
+}
+
 func (conn *Conn) Exec(sql string, args ...any) (pgconn.CommandTag, error) {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
+
+	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
+		return pgconn.CommandTag{}, oops.Wrap(ErrDontUseSubscriptions) // nolint:exhaustruct
+	}
 
 	result, err := conn.impl.Exec(conn.ctx, sql, args...)
 	return result, oops.Wrap(err)
@@ -78,6 +92,10 @@ func (conn *Conn) Query(sql string, args ...any) (*Rows, error) {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
 
+	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
+		return nil, oops.Wrap(ErrDontUseSubscriptions)
+	}
+
 	rows, err := conn.impl.Query(conn.ctx, sql, args...)
 	return newRows(rows, conn.ctx), oops.Wrap(err)
 }
@@ -85,6 +103,10 @@ func (conn *Conn) Query(sql string, args ...any) (*Rows, error) {
 func (conn *Conn) QueryRow(sql string, args ...any) *Row {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
+
+	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
+		return newErrRow(ErrDontUseSubscriptions)
+	}
 
 	row := conn.impl.QueryRow(conn.ctx, sql, args...)
 	return newRow(row)
@@ -151,6 +173,10 @@ func (tx *Tx) Exec(sql string, arguments ...any) (pgconn.CommandTag, error) {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
+	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
+		return pgconn.CommandTag{}, oops.Wrap(ErrDontUseSubscriptions) // nolint:exhaustruct
+	}
+
 	result, err := tx.impl.Exec(tx.ctx, sql, arguments...)
 	return result, oops.Wrap(err)
 }
@@ -159,6 +185,10 @@ func (tx *Tx) Query(sql string, arguments ...any) (*Rows, error) {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
+	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
+		return nil, oops.Wrap(ErrDontUseSubscriptions)
+	}
+
 	rows, err := tx.impl.Query(tx.ctx, sql, arguments...)
 	return newRows(rows, tx.ctx), oops.Wrap(err)
 }
@@ -166,6 +196,10 @@ func (tx *Tx) Query(sql string, arguments ...any) (*Rows, error) {
 func (tx *Tx) QueryRow(sql string, arguments ...any) *Row {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
+
+	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
+		return newErrRow(ErrDontUseSubscriptions)
+	}
 
 	row := tx.impl.QueryRow(tx.ctx, sql, arguments...)
 	return newRow(row)
@@ -229,6 +263,7 @@ func (rows *Rows) Close() {
 
 type Row struct {
 	impl pgx.Row
+	err  error
 }
 
 func newRow(row pgx.Row) *Row {
@@ -236,13 +271,21 @@ func newRow(row pgx.Row) *Row {
 		return nil
 	}
 
-	return &Row{impl: row}
+	return &Row{impl: row, err: nil}
+}
+
+func newErrRow(err error) *Row {
+	return &Row{impl: nil, err: err}
 }
 
 // Scan works the same as Rows. with the following exceptions. If no
 // rows were found it returns ErrNoRows. If multiple rows are returned it
 // ignores all but the first.
 func (row *Row) Scan(dest ...any) error {
+	if row.err != nil {
+		return oops.Wrap(row.err)
+	}
+
 	err := row.impl.Scan(dest...)
 	return oops.Wrap(err)
 }

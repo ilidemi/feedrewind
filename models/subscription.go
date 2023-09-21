@@ -24,7 +24,7 @@ const (
 )
 
 func Subscription_Exists(tx pgw.Queryable, id SubscriptionId) (bool, error) {
-	row := tx.QueryRow("select 1 from subscriptions where id = $1", id)
+	row := tx.QueryRow("select 1 from subscriptions_without_discarded where id = $1", id)
 	var one int
 	err := row.Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -37,7 +37,7 @@ func Subscription_Exists(tx pgw.Queryable, id SubscriptionId) (bool, error) {
 }
 
 func Subscription_GetUserIdBlogId(tx pgw.Queryable, id SubscriptionId) (UserId, BlogId, error) {
-	row := tx.QueryRow("select user_id, blog_id from subscriptions where id = $1", id)
+	row := tx.QueryRow("select user_id, blog_id from subscriptions_without_discarded where id = $1", id)
 	var userIdPtr *UserId
 	var blogId BlogId
 	err := row.Scan(&userIdPtr, &blogId)
@@ -52,7 +52,7 @@ func Subscription_GetUserIdBlogId(tx pgw.Queryable, id SubscriptionId) (UserId, 
 }
 
 func Subscription_SetUserId(tx pgw.Queryable, id SubscriptionId, userId UserId) error {
-	_, err := tx.Exec("update subscriptions set user_id = $1 where id = $2", userId, id)
+	_, err := tx.Exec("update subscriptions_without_discarded set user_id = $1 where id = $2", userId, id)
 	return err
 }
 
@@ -70,8 +70,9 @@ func Subscription_ListWithPostCounts(
 ) ([]SubscriptionWithPostCounts, error) {
 	rows, err := tx.Query(`
 		with user_subscriptions as (
-			select id, name, status, is_paused, finished_setup_at, created_at from subscriptions
-			where user_id = $1 and discarded_at is null
+			select id, name, status, is_paused, finished_setup_at, created_at
+			from subscriptions_without_discarded
+			where user_id = $1
 		)
 		select id, name, status, is_paused, published_count, total_count
 		from user_subscriptions
@@ -133,11 +134,15 @@ func Subscription_GetWithPostCounts(
 		select id, name, is_paused, status, schedule_version, is_added_past_midnight,
 			(select url from blogs where id = blog_id) as url,
 			(
-				select count(published_at) from subscription_posts where subscription_id = subscriptions.id
+				select count(published_at) from subscription_posts
+				where subscription_id = subscriptions_without_discarded.id
 			) as published_count,
-			(select count(1) from subscription_posts where subscription_id = subscriptions.id) as total_count
-		from subscriptions
-		where id = $1 and user_id = $2 and discarded_at is null
+			(
+				select count(1) from subscription_posts
+				where subscription_id = subscriptions_without_discarded.id
+			) as total_count
+		from subscriptions_without_discarded
+		where id = $1 and user_id = $2
 	`, subscriptionId, userId)
 
 	var s SubscriptionFullWithPostCounts
@@ -166,8 +171,8 @@ func Subscription_GetUserIdStatusBlogBestUrl(
 	row := tx.QueryRow(`
 		select user_id, status, (
 			select coalesce(url, feed_url) from blogs
-			where blogs.id = subscriptions.blog_id
-		) from subscriptions where id = $1
+			where blogs.id = subscriptions_without_discarded.blog_id
+		) from subscriptions_without_discarded where id = $1
 	`, subscriptionId)
 	var s SubscriptionUserIdBlogBestUrl
 	err := row.Scan(&s.UserId, &s.Status, &s.BlogBestUrl)
@@ -181,18 +186,24 @@ func Subscription_GetUserIdStatusBlogBestUrl(
 }
 
 func Subscription_SetIsPaused(tx pgw.Queryable, subscriptionId SubscriptionId, isPaused bool) error {
-	_, err := tx.Exec("update subscriptions set is_paused = $1 where id = $2", isPaused, subscriptionId)
+	_, err := tx.Exec(`
+		update subscriptions_without_discarded set is_paused = $1 where id = $2
+	`, isPaused, subscriptionId)
 	return err
 }
 
 func Subscription_Delete(tx pgw.Queryable, subscriptionId SubscriptionId) error {
-	_, err := tx.Exec("delete from subscriptions where id = $1", subscriptionId)
+	_, err := tx.Exec(`
+		update subscriptions_with_discarded
+		set discarded_at = utc_now()
+		where id = $1
+	`, subscriptionId)
 	return err
 }
 
 func Subscription_GetName(tx pgw.Queryable, subscriptionId SubscriptionId) (string, error) {
 	row := tx.QueryRow(`
-		select subscriptions.name from subscriptions where subscriptions.id = $1
+		select name from subscriptions_without_discarded where id = $1
 	`, subscriptionId)
 	var name string
 	err := row.Scan(&name)
@@ -204,10 +215,9 @@ func Subscription_GetOtherNamesByDay(
 ) (map[util.DayOfWeek][]string, error) {
 	rows, err := tx.Query(`
 		with user_subscriptions as (
-			select id, name, created_at from subscriptions
+			select id, name, created_at from subscriptions_without_discarded
 			where user_id = $1 and
-			status = 'live' and
-			discarded_at is null
+			status = 'live'
 		)  
 		select name, day_of_week, day_count
 		from user_subscriptions
@@ -373,8 +383,8 @@ func Subscription_GetUserIdStatusScheduleVersion(
 	row := tx.QueryRow(`
 		select user_id, status, schedule_version, (
 			select coalesce(url, feed_url) from blogs
-			where blogs.id = subscriptions.blog_id
-		) from subscriptions where id = $1
+			where blogs.id = subscriptions_without_discarded.blog_id
+		) from subscriptions_without_discarded where id = $1
 	`, subscriptionId)
 	var s SubscriptionUserIdStatusScheduleVersionBlogBestUrl
 	err := row.Scan(&s.UserId, &s.Status, &s.ScheduleVersion, &s.BlogBestUrl)
@@ -400,7 +410,7 @@ func Subscription_GetStatus(
 ) (*SubscriptionBlogStatus, error) {
 	row := tx.QueryRow(`
 		select status, (select status from blogs where id = blog_id) as blog_status, name, blog_id, user_id
-		from subscriptions
+		from subscriptions_without_discarded
 		where id = $1
 	`, subscriptionId)
 	var s SubscriptionBlogStatus
@@ -430,11 +440,15 @@ func Subscription_GetStatusPostsCount(
 		select
 			status,
 			(select status from blogs where id = blog_id) as blog_status,
-			(select count(1) from blog_posts where blog_posts.blog_id = subscriptions.blog_id),
+			(
+				select count(1)
+				from blog_posts
+				where blog_posts.blog_id = subscriptions_without_discarded.blog_id
+			),
 			blog_id,
 			(select coalesce(url, feed_url) from blogs where id = blog_id),
 			user_id
-		from subscriptions
+		from subscriptions_without_discarded
 		where id = $1
 	`, subscriptionId)
 	var s SubscriptionBlogStatusPostsCount
@@ -468,7 +482,7 @@ func Subscription_GetStatusBestUrl(
 			(select coalesce(url, feed_url) from blogs where id = blog_id),
 			blog_id,
 			user_id
-		from subscriptions
+		from subscriptions_without_discarded
 		where id = $1
 	`, subscriptionId)
 	var s SubscriptionBlogStatusBestUrl
@@ -486,7 +500,7 @@ func Subscription_UpdateScheduleVersion(
 	tx pgw.Queryable, subscriptionId SubscriptionId, scheduleVersion int64,
 ) error {
 	_, err := tx.Exec(`
-		update subscriptions set schedule_version = $1 where id = $2
+		update subscriptions_without_discarded set schedule_version = $1 where id = $2
 	`, scheduleVersion, subscriptionId)
 	return err
 }
@@ -525,13 +539,13 @@ func Subscription_Create(
 	tx pgw.Queryable, userId *UserId, anonProductUserId *ProductUserId, blog *Blog, status SubscriptionStatus,
 	isPaused bool, scheduleVersion int64,
 ) (*SubscriptionCreateResult, error) {
-	idInt, err := mutil.RandomId(tx, "subscriptions")
+	idInt, err := mutil.RandomId(tx, "subscriptions_with_discarded")
 	if err != nil {
 		return nil, err
 	}
 	id := SubscriptionId(idInt)
 	_, err = tx.Exec(`
-		insert into subscriptions(
+		insert into subscriptions_without_discarded(
 			id, user_id, anon_product_user_id, blog_id, name, status, is_paused, schedule_version
 		) values (
 			$1, $2, $3, $4, $5, $6, $7, $8
@@ -562,10 +576,12 @@ func Subscription_GetBlogCrawlTimes(
 	row := tx.QueryRow(`
 		select user_id, blogs.feed_url, blog_crawl_client_tokens.value, blog_crawl_progresses.epoch,
 			blog_crawl_progresses.epoch_times
-		from subscriptions
-		join blogs on subscriptions.blog_id = blogs.id
-		join blog_crawl_client_tokens on blog_crawl_client_tokens.blog_id = subscriptions.blog_id
-		join blog_crawl_progresses on blog_crawl_progresses.blog_id = subscriptions.blog_id
+		from subscriptions_without_discarded
+		join blogs on subscriptions_without_discarded.blog_id = blogs.id
+		join blog_crawl_client_tokens
+			on blog_crawl_client_tokens.blog_id = subscriptions_without_discarded.blog_id
+		join blog_crawl_progresses
+			on blog_crawl_progresses.blog_id = subscriptions_without_discarded.blog_id
 		where subscription_id = $1
 	`, subscriptionId)
 	var d SubscriptionBlogCrawlTimes
@@ -616,7 +632,9 @@ func Subscription_CreatePostsFromIds(
 func Subscription_UpdateStatus(
 	tx pgw.Queryable, subscriptionId SubscriptionId, newStatus SubscriptionStatus,
 ) error {
-	_, err := tx.Exec(`update subscriptions set status = $1 where id = $2`, newStatus, subscriptionId)
+	_, err := tx.Exec(`
+		update subscriptions_without_discarded set status = $1 where id = $2
+	`, newStatus, subscriptionId)
 	return err
 }
 
@@ -625,7 +643,7 @@ func Subscription_FinishSetup(
 	finishedSetupAt time.Time, scheduleVersion int, isAddedPastMidnight bool,
 ) error {
 	_, err := tx.Exec(`
-		update subscriptions
+		update subscriptions_without_discarded
 		set name = $1, status = $2, finished_setup_at = $3, schedule_version = $4, is_added_past_midnight = $5
 		where id = $6
 	`, name, status, finishedSetupAt, scheduleVersion, isAddedPastMidnight, subscriptionId)
@@ -643,7 +661,8 @@ type SubscriptionToPublish struct {
 
 func Subscription_ListSortedToPublish(tx pgw.Queryable, userId UserId) ([]SubscriptionToPublish, error) {
 	rows, err := tx.Query(`
-		select id, name, is_paused, finished_setup_at, final_item_published_at, blog_id from subscriptions
+		select id, name, is_paused, finished_setup_at, final_item_published_at, blog_id
+		from subscriptions_without_discarded
 		where user_id = $1 and status = $2
 		order by finished_setup_at desc, id desc
 	`, userId, SubscriptionStatusLive)
@@ -671,7 +690,7 @@ func Subscription_SetInitialItemPublishStatus(
 	tx pgw.Queryable, subscriptionId SubscriptionId, initialItemPublishStatus PostPublishStatus,
 ) error {
 	_, err := tx.Exec(`
-		update subscriptions set initial_item_publish_status = $1 where id = $2
+		update subscriptions_without_discarded set initial_item_publish_status = $1 where id = $2
 	`, initialItemPublishStatus, subscriptionId)
 	return err
 }
@@ -681,7 +700,7 @@ func Subscription_SetFinalItemPublished(
 	finalItemPublishStatus PostPublishStatus,
 ) error {
 	_, err := tx.Exec(`
-		update subscriptions set final_item_published_at = $1 where id = $2
+		update subscriptions_without_discarded set final_item_published_at = $1 where id = $2
 	`, finalItemPublishedAt, subscriptionId)
 	return err
 }
@@ -700,7 +719,7 @@ func Subscription_GetWithRss(tx pgw.Queryable, subscriptionId SubscriptionId) (*
 			(select body from subscription_rsses where subscription_id = $1),
 			(select coalesce(url, feed_url) from blogs where blogs.id = blog_id),
 			(select product_user_id from users where users.id = user_id)
-		from subscriptions where id = $1
+		from subscriptions_without_discarded where id = $1
 	`, subscriptionId)
 	var s SubscriptionWithRss
 	err := row.Scan(&s.IsPausedOrFinished, &s.Rss, &s.BlogBestUrl, &s.ProductUserId)

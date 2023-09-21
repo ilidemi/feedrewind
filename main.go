@@ -77,13 +77,13 @@ func runServer() {
 		r.Post("/subscriptions/discover_feeds", routes.Onboarding_DiscoverFeeds)
 		r.Get("/preview/{slug}", routes.Onboarding_Preview)
 
-		r.Get("/subscriptions/{id}/setup", routes.Subscriptions_Setup)
+		r.Get("/subscriptions/{id:\\d+}/setup", routes.Subscriptions_Setup)
 		r.Post("/subscriptions", routes.Subscriptions_Create)
-		r.Post("/subscriptions/{id}/progress", routes.Subscriptions_Progress)
-		r.Post("/subscriptions/{id}/submit_progress_times", routes.Subscriptions_SubmitProgressTimes)
-		r.Post("/subscriptions/{id}/select_posts", routes.Subscriptions_SelectPosts)
-		r.Post("/subscriptions/{id}/mark_wrong", routes.Subscriptions_MarkWrong)
-		r.Post("/subscriptions/{id}/schedule", routes.Subscriptions_Schedule)
+		r.Post("/subscriptions/{id:\\d+}/progress", routes.Subscriptions_Progress)
+		r.Post("/subscriptions/{id:\\d+}/submit_progress_times", routes.Subscriptions_SubmitProgressTimes)
+		r.Post("/subscriptions/{id:\\d+}/select_posts", routes.Subscriptions_SelectPosts)
+		r.Post("/subscriptions/{id:\\d+}/mark_wrong", routes.Subscriptions_MarkWrong)
+		r.Post("/subscriptions/{id:\\d+}/schedule", routes.Subscriptions_Schedule)
 		r.Post("/subscriptions/{id:\\d+}/delete", routes.Subscriptions_Delete)
 
 		r.Get("/subscriptions/{id}/feed", routes.Rss_SubscriptionFeed) // Legacy
@@ -96,10 +96,10 @@ func runServer() {
 			authorized.Use(frmiddleware.Authorize)
 
 			authorized.Get("/subscriptions", routes.Subscriptions_Index)
-			authorized.Get("/subscriptions/{id}", routes.Subscriptions_Show)
-			authorized.Post("/subscriptions/{id}", routes.Subscriptions_Update)
-			authorized.Post("/subscriptions/{id}/pause", routes.Subscriptions_Pause)
-			authorized.Post("/subscriptions/{id}/unpause", routes.Subscriptions_Unpause)
+			authorized.Get("/subscriptions/{id:\\d+}", routes.Subscriptions_Show)
+			authorized.Post("/subscriptions/{id:\\d+}", routes.Subscriptions_Update)
+			authorized.Post("/subscriptions/{id:\\d+}/pause", routes.Subscriptions_Pause)
+			authorized.Post("/subscriptions/{id:\\d+}/unpause", routes.Subscriptions_Unpause)
 
 			authorized.Get("/settings", routes.UserSettings_Page)
 			authorized.Post("/settings/save_timezone", routes.UserSettings_SaveTimezone)

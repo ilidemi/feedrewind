@@ -147,8 +147,8 @@ func User_GetWithRss(tx pgw.Queryable, userId UserId) (*UserWithRss, error) {
 	row := tx.QueryRow(`
 		select
 			(
-				select count(1) from subscriptions
-				where subscriptions.user_id = $1 and
+				select count(1) from subscriptions_without_discarded
+				where subscriptions_without_discarded.user_id = $1 and
 					not is_paused and
 					final_item_published_at is null
 			) > 0,

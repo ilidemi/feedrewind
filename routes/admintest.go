@@ -47,7 +47,7 @@ func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
 func AdminTest_DestroyUserSubscriptions(w http.ResponseWriter, r *http.Request) {
 	currentUserId := rutil.CurrentUserId(r)
 	conn := rutil.DBConn(r)
-	_, err := conn.Exec(`delete from subscriptions where user_id = $1`, currentUserId)
+	_, err := conn.Exec(`delete from subscriptions_with_discarded where user_id = $1`, currentUserId)
 	if err != nil {
 		panic(err)
 	}

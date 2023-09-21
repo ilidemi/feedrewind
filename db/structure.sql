@@ -786,6 +786,57 @@ CREATE TABLE public.subscriptions (
 
 
 --
+-- Name: subscriptions_with_discarded; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.subscriptions_with_discarded AS
+ SELECT subscriptions.id,
+    subscriptions.blog_id,
+    subscriptions.name,
+    subscriptions.status,
+    subscriptions.is_paused,
+    subscriptions.is_added_past_midnight,
+    subscriptions.discarded_at,
+    subscriptions.created_at,
+    subscriptions.updated_at,
+    subscriptions.finished_setup_at,
+    subscriptions.final_item_published_at,
+    subscriptions.user_id,
+    subscriptions.initial_item_publish_status,
+    subscriptions.final_item_publish_status,
+    subscriptions.schedule_version,
+    subscriptions.anon_product_user_id
+   FROM public.subscriptions
+  WITH CASCADED CHECK OPTION;
+
+
+--
+-- Name: subscriptions_without_discarded; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.subscriptions_without_discarded AS
+ SELECT subscriptions.id,
+    subscriptions.blog_id,
+    subscriptions.name,
+    subscriptions.status,
+    subscriptions.is_paused,
+    subscriptions.is_added_past_midnight,
+    subscriptions.discarded_at,
+    subscriptions.created_at,
+    subscriptions.updated_at,
+    subscriptions.finished_setup_at,
+    subscriptions.final_item_published_at,
+    subscriptions.user_id,
+    subscriptions.initial_item_publish_status,
+    subscriptions.final_item_publish_status,
+    subscriptions.schedule_version,
+    subscriptions.anon_product_user_id
+   FROM public.subscriptions
+  WHERE (subscriptions.discarded_at IS NULL)
+  WITH CASCADED CHECK OPTION;
+
+
+--
 -- Name: test_singletons; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1824,4 +1875,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20230704085733'),
 ('20230712025233'),
 ('20230712025648'),
-('20230817035655');
+('20230817035655'),
+('20230920040801');
