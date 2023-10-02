@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/binary"
 	"errors"
 	"feedrewind/crawler"
 	"feedrewind/db/pgw"
@@ -668,10 +667,12 @@ func BlogCrawlClientToken_GetById(tx pgw.Queryable, blogId BlogId) (BlogCrawlCli
 
 // Returns zero value on conflict
 func BlogCrawlClientToken_Create(tx pgw.Queryable, blogId BlogId) (BlogCrawlClientToken, error) {
-	buf := make([]byte, 8)
-	valueInt := binary.LittleEndian.Uint64(buf)
+	valueInt, err := util.RandomInt63()
+	if err != nil {
+		return "", err
+	}
 	value := BlogCrawlClientToken(fmt.Sprintf("%x", valueInt))
-	_, err := tx.Exec(`
+	_, err = tx.Exec(`
 		insert into blog_crawl_client_tokens (blog_id, value) values ($1, $2)
 	`, blogId, value)
 	var pgErr *pgconn.PgError

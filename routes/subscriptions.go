@@ -3,6 +3,7 @@ package routes
 import (
 	"bytes"
 	"feedrewind/crawler"
+	"feedrewind/db"
 	"feedrewind/db/pgw"
 	"feedrewind/jobs"
 	"feedrewind/log"
@@ -22,6 +23,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goccy/go-json"
+	"github.com/gorilla/websocket"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pkg/errors"
 )
 
@@ -336,24 +340,28 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			}
 
 			type crawlInProgressResult struct {
-				Session                  *util.Session
-				SubscriptionName         string
-				SubscriptionNameJS       template.JS
-				BlogId                   models.BlogId
-				ClientToken              models.BlogCrawlClientToken
-				BlogCrawlProgress        models.BlogCrawlProgress
-				SubscriptionProgressPath string
-				SubscriptionDeletePath   string
+				Session                       *util.Session
+				SubscriptionName              string
+				SubscriptionNameJS            template.JS
+				SubscriptionId                models.SubscriptionId
+				BlogId                        models.BlogId
+				ClientToken                   models.BlogCrawlClientToken
+				BlogCrawlProgress             models.BlogCrawlProgress
+				SubscriptionProgressPath      string
+				SubscriptionProgressStreamUrl string
+				SubscriptionDeletePath        string
 			}
 			result := crawlInProgressResult{
-				Session:                  rutil.Session(r),
-				SubscriptionName:         status.SubscriptionName,
-				SubscriptionNameJS:       template.JS(status.SubscriptionName),
-				BlogId:                   status.BlogId,
-				ClientToken:              clientToken,
-				BlogCrawlProgress:        *blogCrawlProgress,
-				SubscriptionProgressPath: rutil.SubscriptionProgressPath(subscriptionId),
-				SubscriptionDeletePath:   rutil.SubscriptionDeletePath(subscriptionId),
+				Session:                       rutil.Session(r),
+				SubscriptionName:              status.SubscriptionName,
+				SubscriptionNameJS:            template.JS(status.SubscriptionName),
+				SubscriptionId:                subscriptionId,
+				BlogId:                        status.BlogId,
+				ClientToken:                   clientToken,
+				BlogCrawlProgress:             *blogCrawlProgress,
+				SubscriptionProgressPath:      rutil.SubscriptionProgressPath(subscriptionId),
+				SubscriptionProgressStreamUrl: rutil.SubscriptionProgressStreamUrl(r, subscriptionId),
+				SubscriptionDeletePath:        rutil.SubscriptionDeletePath(subscriptionId),
 			}
 			templates.MustWrite(w, "subscriptions/setup_blog_crawl_in_progress", result)
 			return
@@ -746,8 +754,6 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 }
 
 func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
-	// TODO this can only be tested after websockets are implemented
-
 	conn := rutil.DBConn(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
@@ -757,6 +763,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	clientToken := models.BlogCrawlClientToken(util.EnsureParamStr(r, "client_token"))
 	epochDurations := util.EnsureParamStr(r, "epoch_durations")
 	websocketWaitDuration := util.EnsureParamFloat64(r, "websocket_wait_duration")
+	totalReconnectAttempts := util.EnsureParamInt(r, "total_reconnect_attempts")
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
 	currentUserId := rutil.CurrentUserId(r)
@@ -778,6 +785,20 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Msgf("Server: %s", crawlTimes.BlogCrawlEpochTimes)
 	log.Info().Msgf("Client: %s", epochDurations)
+	adminTelemetryExtra := map[string]any{
+		"feed_url":        crawlTimes.BlogFeedUrl,
+		"subscription_id": subscriptionId,
+	}
+	if totalReconnectAttempts > 0 {
+		log.Info().Msgf("Total reconnect attempts: %d", totalReconnectAttempts)
+		err := models.AdminTelemetry_Create(
+			conn, "websocket_reconnects", float64(totalReconnectAttempts), adminTelemetryExtra,
+		)
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
 
 	var serverDurations []float64
 	for _, token := range strings.Split(crawlTimes.BlogCrawlEpochTimes, ";") {
@@ -827,14 +848,10 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	serverDurationsAfterInitialLoad :=
-		serverDurations[:len(serverDurations)-len(clientDurationsAfterInitialLoad)]
+		serverDurations[len(serverDurations)-len(clientDurationsAfterInitialLoad):]
 	stdDeviationAfterInitialLoad :=
 		calcStdDeviation(clientDurationsAfterInitialLoad, serverDurationsAfterInitialLoad)
 	log.Info().Msgf("Standard deviation after initial load: %.03f", stdDeviationAfterInitialLoad)
-	adminTelemetryExtra := map[string]any{
-		"feed_url":        crawlTimes.BlogFeedUrl,
-		"subscription_id": subscriptionId,
-	}
 	err = models.AdminTelemetry_Create(
 		conn, "progress_timing_std_deviation", stdDeviationAfterInitialLoad, adminTelemetryExtra,
 	)
@@ -1248,6 +1265,46 @@ func Subscriptions_Unpause(w http.ResponseWriter, r *http.Request) {
 	subscriptions_MustPauseUnpause(w, r, false, "unpause subscription")
 }
 
+func subscriptions_MustPauseUnpause(
+	w http.ResponseWriter, r *http.Request, newIsPaused bool, eventName string,
+) {
+	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
+	if !ok {
+		subscriptions_RedirectNotFound(w, r)
+		return
+	}
+
+	subscriptionId := models.SubscriptionId(subscriptionIdInt)
+	conn := rutil.DBConn(r)
+	subscription, err := models.Subscription_GetUserIdStatusBlogBestUrl(conn, subscriptionId)
+	if errors.Is(err, models.ErrSubscriptionNotFound) {
+		subscriptions_RedirectNotFound(w, r)
+		return
+	} else if err != nil {
+		panic(err)
+	}
+
+	if subscriptions_RedirectIfUserMismatch(w, r, subscription.UserId) {
+		return
+	}
+
+	if subscriptions_BadRequestIfNotLive(w, subscription.Status) {
+		return
+	}
+
+	err = models.Subscription_SetIsPaused(conn, subscriptionId, newIsPaused)
+	if err != nil {
+		panic(err)
+	}
+
+	pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+	models.ProductEvent_MustEmitFromRequest(pc, eventName, map[string]any{
+		"subscription_id": subscriptionId,
+		"blog_url":        subscription.BlogBestUrl,
+	}, nil)
+	w.WriteHeader(http.StatusOK)
+}
+
 var dayCountNames []string
 
 func init() {
@@ -1368,40 +1425,6 @@ func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func subscriptions_RedirectNotFound(w http.ResponseWriter, r *http.Request) {
-	path := "/"
-	if rutil.CurrentUser(r) != nil {
-		path = "/subscriptions"
-	}
-	http.Redirect(w, r, path, http.StatusFound)
-}
-
-func subscriptions_RedirectIfUserMismatch(
-	w http.ResponseWriter, r *http.Request, subscriptionUserId *models.UserId,
-) bool {
-	if subscriptionUserId != nil {
-		currentUser := rutil.CurrentUser(r)
-		if currentUser == nil {
-			http.Redirect(w, r, util.LoginPathWithRedirect(r), http.StatusFound)
-			return true
-		} else if *subscriptionUserId != currentUser.Id {
-			http.Redirect(w, r, "/subscriptions", http.StatusFound)
-			return true
-		}
-	}
-
-	return false
-}
-
-func subscriptions_BadRequestIfNotLive(w http.ResponseWriter, status models.SubscriptionStatus) bool {
-	if status != models.SubscriptionStatusLive {
-		w.WriteHeader(http.StatusBadRequest)
-		return true
-	}
-
-	return false
-}
-
 type schedulePreview struct {
 	PrevPosts                            []models.SchedulePreviewPrevPost
 	PrevPostDatesJS                      template.JS
@@ -1494,9 +1517,8 @@ func subscriptions_GetRealisticScheduleDate(
 	}
 }
 
-func subscriptions_MustPauseUnpause(
-	w http.ResponseWriter, r *http.Request, newIsPaused bool, eventName string,
-) {
+func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -1504,8 +1526,7 @@ func subscriptions_MustPauseUnpause(
 	}
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
-	conn := rutil.DBConn(r)
-	subscription, err := models.Subscription_GetUserIdStatusBlogBestUrl(conn, subscriptionId)
+	status, err := models.Subscription_GetStatus(conn, subscriptionId)
 	if errors.Is(err, models.ErrSubscriptionNotFound) {
 		subscriptions_RedirectNotFound(w, r)
 		return
@@ -1513,23 +1534,134 @@ func subscriptions_MustPauseUnpause(
 		panic(err)
 	}
 
-	if subscriptions_RedirectIfUserMismatch(w, r, subscription.UserId) {
+	if subscriptions_RedirectIfUserMismatch(w, r, status.UserId) {
 		return
 	}
 
-	if subscriptions_BadRequestIfNotLive(w, subscription.Status) {
-		return
-	}
-
-	err = models.Subscription_SetIsPaused(conn, subscriptionId, newIsPaused)
+	var upgrader = websocket.Upgrader{} // nolint:exhaustruct
+	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		panic(err)
 	}
+	defer ws.Close()
 
-	pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
-	models.ProductEvent_MustEmitFromRequest(pc, eventName, map[string]any{
-		"subscription_id": subscriptionId,
-		"blog_url":        subscription.BlogBestUrl,
-	}, nil)
-	w.WriteHeader(http.StatusOK)
+	if status.BlogStatus != models.BlogStatusCrawlInProgress {
+		err := ws.WriteJSON(map[string]any{"done": true})
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+
+	listenConn, err := db.Pool.Acquire(r.Context())
+	if err != nil {
+		panic(err)
+	}
+	defer listenConn.Release()
+
+	channelName := fmt.Sprintf("discovery_%d", status.BlogId)
+	_, err = listenConn.Exec("listen " + channelName)
+	if err != nil {
+		panic(err)
+	}
+	log.Info().Msgf("Started listen on %s", channelName)
+
+	// Guard against a race condition where the last NOTIFY happened before we
+	// started listening
+	statusRefresh, err := models.Subscription_GetStatus(conn, subscriptionId)
+	if err != nil {
+		panic(err)
+	}
+	if statusRefresh.BlogStatus != models.BlogStatusCrawlInProgress {
+		log.Info().Msgf("Blog %d finished crawling before a notification was received", status.BlogId)
+		err := ws.WriteJSON(map[string]any{"done": true})
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
+
+	notificationChan := make(chan *pgconn.Notification)
+	errorChan := make(chan error)
+	go func() {
+		for {
+			notification, err := listenConn.WaitForNotification()
+			if err != nil {
+				errorChan <- err
+				break
+			}
+			notificationChan <- notification
+		}
+	}()
+
+	for {
+		select {
+		case err := <-errorChan:
+			panic(err)
+		case notification := <-notificationChan:
+			var payload map[string]any
+			err := json.Unmarshal([]byte(notification.Payload), &payload)
+			if err != nil {
+				panic(err)
+			}
+			log.Info().Msgf("%s: %s", channelName, notification.Payload)
+			err = ws.WriteMessage(websocket.TextMessage, []byte(notification.Payload))
+			if err != nil {
+				panic(err)
+			}
+			if payload["done"] == true {
+				return
+			}
+		case <-ticker.C:
+			payload, err := json.Marshal(map[string]any{
+				"type":    "ping",
+				"message": time.Now().Unix(),
+			})
+			if err != nil {
+				panic(err)
+			}
+			log.Info().Msgf("%s: %s", channelName, payload)
+			err = ws.WriteMessage(websocket.TextMessage, []byte(payload))
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+}
+
+func subscriptions_RedirectNotFound(w http.ResponseWriter, r *http.Request) {
+	path := "/"
+	if rutil.CurrentUser(r) != nil {
+		path = "/subscriptions"
+	}
+	http.Redirect(w, r, path, http.StatusFound)
+}
+
+func subscriptions_RedirectIfUserMismatch(
+	w http.ResponseWriter, r *http.Request, subscriptionUserId *models.UserId,
+) bool {
+	if subscriptionUserId != nil {
+		currentUser := rutil.CurrentUser(r)
+		if currentUser == nil {
+			http.Redirect(w, r, util.LoginPathWithRedirect(r), http.StatusFound)
+			return true
+		} else if *subscriptionUserId != currentUser.Id {
+			http.Redirect(w, r, "/subscriptions", http.StatusFound)
+			return true
+		}
+	}
+
+	return false
+}
+
+func subscriptions_BadRequestIfNotLive(w http.ResponseWriter, status models.SubscriptionStatus) bool {
+	if status != models.SubscriptionStatusLive {
+		w.WriteHeader(http.StatusBadRequest)
+		return true
+	}
+
+	return false
 }

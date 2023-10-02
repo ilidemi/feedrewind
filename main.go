@@ -85,6 +85,7 @@ func runServer() {
 		r.Post("/subscriptions/{id:\\d+}/mark_wrong", routes.Subscriptions_MarkWrong)
 		r.Post("/subscriptions/{id:\\d+}/schedule", routes.Subscriptions_Schedule)
 		r.Post("/subscriptions/{id:\\d+}/delete", routes.Subscriptions_Delete)
+		r.Get("/subscriptions/{id:\\d+}/progress_stream", routes.Subscriptions_ProgressStream)
 
 		r.Get("/subscriptions/{id}/feed", routes.Rss_SubscriptionFeed) // Legacy
 		r.Get("/feeds/single/{id}", routes.Rss_UserFeed)

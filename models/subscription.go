@@ -582,7 +582,7 @@ func Subscription_GetBlogCrawlTimes(
 			on blog_crawl_client_tokens.blog_id = subscriptions_without_discarded.blog_id
 		join blog_crawl_progresses
 			on blog_crawl_progresses.blog_id = subscriptions_without_discarded.blog_id
-		where subscription_id = $1
+		where subscriptions_without_discarded.id = $1
 	`, subscriptionId)
 	var d SubscriptionBlogCrawlTimes
 	err := row.Scan(

@@ -78,6 +78,18 @@ func EnsureParamFloat64(r *http.Request, name string) float64 {
 	return val
 }
 
+func EnsureParamBool(r *http.Request, name string) bool {
+	str := EnsureParamStr(r, name)
+	val, err := strconv.ParseBool(str)
+	if err != nil {
+		panic(HttpError{
+			Status: http.StatusBadRequest,
+			Inner:  fmt.Errorf("couldn't read bool: %s", str),
+		})
+	}
+	return val
+}
+
 // Route params return bool ok instead of BadRequest because we may want to manually redirect the user
 func URLParamInt64(r *http.Request, name string) (int64, bool) {
 	str := chi.URLParam(r, name)

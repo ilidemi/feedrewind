@@ -123,6 +123,16 @@ func (conn *Conn) Release() {
 	conn.impl.Release()
 }
 
+func (conn *Conn) WaitForNotification() (*pgconn.Notification, error) {
+	// Do not track duration. We're mostly waiting here and it's by design.
+
+	notification, err := conn.impl.Conn().WaitForNotification(conn.ctx)
+	if err != nil {
+		return nil, oops.Wrap(err)
+	}
+	return notification, nil
+}
+
 type Tx struct {
 	impl pgx.Tx
 	ctx  context.Context

@@ -61,15 +61,26 @@ func SubscriptionPath(subscriptionId models.SubscriptionId) string {
 	return fmt.Sprintf("/subscriptions/%d", subscriptionId)
 }
 
+func SubscriptionProgressStreamUrl(r *http.Request, subscriptionId models.SubscriptionId) string {
+	proto := "ws"
+	if r.TLS != nil {
+		proto = "wss"
+	}
+	host, port := parseHostPort(r)
+	return fmt.Sprintf("%s://%s%s/subscriptions/%d/progress_stream", proto, host, port, subscriptionId)
+}
+
 func SubscriptionFeedUrl(r *http.Request, subscriptionId models.SubscriptionId) string {
 	proto := "http"
 	if r.TLS != nil {
 		proto = "https"
 	}
+	host, port := parseHostPort(r)
+	return fmt.Sprintf("%s://%s%s/feeds/%d", proto, host, port, subscriptionId)
+}
 
+func parseHostPort(r *http.Request) (host, port string) {
 	lastColonIndex := strings.LastIndex(r.Host, ":")
-	var host string
-	var port string
 	if lastColonIndex >= 0 {
 		host = r.Host[:lastColonIndex]
 		port = r.Host[lastColonIndex:]
@@ -77,14 +88,13 @@ func SubscriptionFeedUrl(r *http.Request, subscriptionId models.SubscriptionId) 
 		host = r.Host
 		port = ""
 	}
-	if port == ":80" && proto == "http" {
+	if port == ":80" && r.TLS == nil {
 		port = ""
 	}
-	if port == ":443" && proto == "https" {
+	if port == ":443" && r.TLS != nil {
 		port = ""
 	}
-
-	return fmt.Sprintf("%s://%s%s/feeds/%d", proto, host, port, subscriptionId)
+	return host, port
 }
 
 func SubscriptionPostUrl(title, randomId string) string {

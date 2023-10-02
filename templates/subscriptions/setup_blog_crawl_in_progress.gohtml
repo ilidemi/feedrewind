@@ -26,6 +26,7 @@
         let crawlEpoch;
         let crawlEpochDurations = [];
         let crawlWasDone = false;
+        let totalReconnectAttempts = 0;
 
         function now() {
             return Date.now() / 1000;
@@ -123,22 +124,23 @@
                     .map(t => t.toFixed(3))
                     .join(";");
                 let websocketWaitDuration;
-                if websocketStartTimestamp {
+                if (websocketStartTimestamp) {
                     websocketWaitDuration = websocketStartTimestamp - pageLoadTimestamp;
                 } else {
                     websocketWaitDuration = Infinity
                 }
-                let formData = new FormData();
-                formData.set("client_token", crawlClientToken);
-                formData.set("epoch_durations", epochDurationsStr);
-                formData.set("websocket_wait_duration", websocketWaitDuration.toString());
+                let body = new URLSearchParams();
+                body.append("client_token", crawlClientToken);
+                body.append("epoch_durations", epochDurationsStr);
+                body.append("websocket_wait_duration", websocketWaitDuration.toString());
+                body.append("total_reconnect_attempts", totalReconnectAttempts);
                 fetch(
                     "./submit_progress_times", {
                         method: "POST",
                         headers: {
                             "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
                         },
-                        body: formData
+                        body: body
                     }
                 );
 
@@ -147,14 +149,89 @@
         }
 
         let shouldPollProgress = true;
-        // TODO websocket
-        // let [subscription, monitor] = window.discoverySubscribe("{{.BlogId}}", data => {
-        //     if (!websocketStartTimestamp) {
-        //         websocketStartTimestamp = now();
-        //     }
-        //     shouldPollProgress = false;
-        //     displayProgress(data);
-        // });
+        let lastPingedAt;
+        let disconnectedAt;
+        let disconnected = true;
+        let reconnectAttempts = 0;
+        function initWebsocket() {
+            let websocket = new WebSocket("{{.SubscriptionProgressStreamUrl}}");
+            websocket.onopen = () => {
+                disconnected = false;
+                lastPingedAt = now();
+                reconnectAttempts = 0;
+            };
+            websocket.onmessage = (event) => {
+                if (!websocketStartTimestamp) {
+                    websocketStartTimestamp = now();
+                }
+                shouldPollProgress = false;
+                let data = JSON.parse(event.data);
+                if (data.type === "ping") {
+                    lastPingedAt = now();
+                } else {
+                    displayProgress(data);
+                }
+            };
+            websocket.onerror = (event) => {
+                console.error("Websocket error:", event);
+            };
+            websocket.onclose = () => {
+                if (disconnected) {
+                    return;
+                }
+                disconnected = true;
+                disconnectedAt = now();
+            };
+            return websocket;
+        }
+        function uninitWebsocket(websocket) {
+            if (!websocket) {
+                return;
+            }
+
+            websocket.onopen = () => {};
+            websocket.onmessage = () => {};
+            websocket.onerror = () => {};
+            websocket.onclose = () => {};
+        }
+        function reinitWebsocket() {
+            uninitWebsocket(websocket);
+            websocket = initWebsocket();
+        }
+        let websocket = initWebsocket();
+
+        function secondsSince(time) {
+            return now() - time;
+        }
+
+        function checkWebsocketStale() {
+            const staleThreshold = 6;
+            if (lastPingedAt && secondsSince(lastPingedAt) >= staleThreshold &&
+                !(disconnectedAt && secondsSince(disconnectedAt) < staleThreshold)) {
+
+                websocketHiccup = true;
+                reconnectAttempts++;
+                totalReconnectAttempts++;
+                if (reconnectAttempts >= 5) {
+                    showRefreshPopup("Connection was lost. Please refresh the page.");
+                    return;
+                } else if (websocket.readyState <= 1) { // CONNECTING or OPEN
+                    try {
+                        disconnectedAt = now();
+                        websocket.close();
+                    } catch (error) {
+                        console.log("Failed to open websocket:", error);
+                    } finally {
+                        setTimeout(() => reinitWebsocket(), 500);
+                    }
+                } else {
+                    reinitWebsocket();
+                }
+            }
+
+            staleTimeoutId = setTimeout(() => checkWebsocketStale(), 1000);
+        }
+        checkWebsocketStale();
 
         async function pollProgressTillWebsocketStarts() {
             if (!shouldPollProgress) return;
@@ -169,38 +246,11 @@
                 }
             );
             const body = await response.json();
-            console.log(`Poll: ${JSON.stringify(body)}`);
             displayProgress(body);
 
             setTimeout(() => pollProgressTillWebsocketStarts(), 100);
         }
-
         pollProgressTillWebsocketStarts();
-
-        function secondsSince(time) {
-            return (new Date().getTime() - time) / 1e3;
-        }
-
-        // TODO websocket
-        // let crawlStalenessTimeoutId = undefined;
-
-        // function checkWebsocketStaleness() {
-        //     if (secondsSince(monitor.pingedAt ? monitor.pingedAt : monitor.startedAt) >= 30) {
-        //         showRefreshPopup("Connection was lost. Please refresh the page.");
-        //     } else {
-        //         crawlStalenessTimeoutId = setTimeout(() => checkWebsocketStaleness(), 1000);
-        //     }
-        // }
-
-        // checkWebsocketStaleness();
-
-        // window.addEventListener('beforeunload', () => {
-        //     if (crawlStalenessTimeoutId) {
-        //         clearTimeout(crawlStalenessTimeoutId);
-        //     }
-        //     window.discoveryUnsubscribe(subscription);
-        //     shouldPollProgress = false;
-        // });
     </script>
 
     <div class="flex flex-col gap-8">
