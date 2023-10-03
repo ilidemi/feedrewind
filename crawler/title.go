@@ -68,5 +68,6 @@ func normalizeTitle(title string) string {
 	title = strings.ReplaceAll(title, "\u00A0", " ") // Non-breaking space
 	title = newlineRegex.ReplaceAllString(title, " ")
 	title = spacesRegex.ReplaceAllString(title, " ")
+	title = strings.TrimSpace(title)
 	return title
 }
