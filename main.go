@@ -91,6 +91,8 @@ func runServer() {
 		r.Get("/feeds/single/{id}", routes.Rss_UserFeed)
 		r.Get("/feeds/{id}", routes.Rss_SubscriptionFeed)
 
+		r.Get("/posts/{slug}/{random_id:[A-Za-z0-9_-]+}/", routes.Posts_Post)
+
 		r.Get("/blogs/{id}/unsupported", routes.Blogs_Unsupported)
 
 		r.Group(func(authorized chi.Router) {

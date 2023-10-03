@@ -97,7 +97,7 @@ func parseHostPort(r *http.Request) (host, port string) {
 	return host, port
 }
 
-func SubscriptionPostUrl(title, randomId string) string {
+func SubscriptionPostUrl(title string, randomId models.SubscriptionPostRandomId) string {
 	slug := postSlug(title)
 	return fmt.Sprintf("https://feedrewind.com/posts/%s/%s/", slug, randomId)
 }

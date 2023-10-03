@@ -729,11 +729,12 @@ func Subscription_GetWithRss(tx pgw.Queryable, subscriptionId SubscriptionId) (*
 // SubscriptionPost
 
 type SubscriptionPostId int64
+type SubscriptionPostRandomId string
 
 type SubscriptionBlogPost struct {
 	Id          SubscriptionPostId
 	Title       string
-	RandomId    string
+	RandomId    SubscriptionPostRandomId
 	PublishedAt *time.Time
 }
 
@@ -834,4 +835,36 @@ func SubscriptionPost_GetUnpublishedCount(tx pgw.Queryable, subscriptionId Subsc
 	var result int
 	err := row.Scan(&result)
 	return result, err
+}
+
+type SubscriptionBlogPostBestUrl struct {
+	Url            string
+	SubscriptionId SubscriptionId
+	BlogBestUrl    string
+	ProductUserId  ProductUserId
+}
+
+func SubscriptionPost_GetByRandomId(
+	tx pgw.Queryable, randomId SubscriptionPostRandomId,
+) (*SubscriptionBlogPostBestUrl, error) {
+	row := tx.QueryRow(`
+		select
+			(select url from blog_posts where blog_posts.id = subscription_posts.blog_post_id),
+			subscription_id,
+			(select coalesce(url, feed_url) from blogs where blogs.id = (
+				select blog_id from blog_posts where blog_posts.id = subscription_posts.blog_post_id
+			)),
+			(select product_user_id from users where users.id = (
+				select user_id from subscriptions_with_discarded
+				where subscriptions_with_discarded.id = subscription_id
+			))
+		from subscription_posts
+		where random_id = $1
+	`, randomId)
+	var p SubscriptionBlogPostBestUrl
+	err := row.Scan(&p.Url, &p.SubscriptionId, &p.BlogBestUrl, &p.ProductUserId)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
 }
