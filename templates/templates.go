@@ -124,8 +124,10 @@ func MustWrite(w http.ResponseWriter, templateName string, data any) {
 
 	partialIndex := strings.LastIndex(templateName, "/partial")
 	isPartial := partialIndex != -1 && partialIndex == strings.LastIndex(templateName, "/")
+	is404 := strings.HasSuffix(templateName, "/404")
+	expectSession := !(isPartial || is404)
 
-	if !isPartial {
+	if expectSession {
 		sessionField := reflect.ValueOf(data).FieldByName("Session")
 		if sessionField == (reflect.Value{}) ||
 			sessionField.Type() != reflect.TypeOf((*util.Session)(nil)) {

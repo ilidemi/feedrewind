@@ -144,6 +144,7 @@ func runServer() {
 	})
 
 	staticR.Get(util.StaticRouteTemplate, routes.Static_File)
+	staticR.NotFound(routes.Misc_NotFound)
 
 	log.Info().Msg("Started")
 	if err := http.ListenAndServe(":3000", staticR); err != nil {

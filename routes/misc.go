@@ -28,3 +28,12 @@ func Misc_About(w http.ResponseWriter, r *http.Request) {
 		Session: rutil.Session(r),
 	})
 }
+
+func Misc_NotFound(w http.ResponseWriter, r *http.Request) {
+	type NotFoundResult struct {
+		Title string
+	}
+	templates.MustWrite(w, "misc/404", NotFoundResult{
+		Title: "Page not found · FeedRewind",
+	})
+}
