@@ -1,0 +1,60 @@
+{{template "layouts/admin" .}}
+
+{{define "content"}}
+<h2>Admin: Dashboard</h2>
+<br>
+
+<div class="flex flex-col gap-8">
+  {{range .Dashboards}}
+    <div>
+      {{.Key}}
+      <div class="relative h-[300px] mt-4 w-fit">
+        <div class="absolute w-full h-full">
+          <div class="flex flex-row gap-1.5 w-full h-full">
+            <div class="w-6">
+              <div class="relative text-sm h-full">
+                {{range .Ticks}}
+                  <div
+                    class="absolute right-0 -translate-y-1/2"
+                    style="top: {{.TopPercent}}%"
+                  >
+                    {{.Label}}
+                  </div>
+                {{end}}
+              </div>
+            </div>
+            <div class="flex-1 h-full">
+              <div class="relative w-full h-full">
+                {{range .Ticks}}
+                  <div
+                    class="absolute left-0 -translate-y-1/2 bg-gray-300 inset-x-0 h-px"
+                    style="top: {{.TopPercent}}%"
+                  >
+                  </div>
+                {{end}}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-nowrap items-end h-full pl-8 gap-2">
+          {{range .Items}}
+            {{if .IsDate}}
+              <div class="shrink-0 vertical-text w-8 px-0.5 py-1 bg-white/50 z-10 cursor-default">
+                {{.DateStr}}
+              </div>
+            {{else}}
+              <div
+                class="shrink-0 bg-primary-300 hover:bg-primary-400 w-8 px-0.5 py-1 rounded-sm text-sm text-center z-10 cursor-default overflow-hidden"
+                style="height: {{.ValuePercent}}%"
+                title="{{.Hover}}"
+              >
+                {{.Value}}
+              </div>
+            {{end}}
+          {{end}}
+        </div>
+      </div>
+    </div>
+  {{end}}
+</div>
+{{end}}

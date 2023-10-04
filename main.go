@@ -108,6 +108,8 @@ func runServer() {
 
 			admin.Get("/admin/add_blog", routes.Admin_AddBlog)
 			admin.Post("/admin/post_blog", routes.Admin_PostBlog)
+
+			admin.Get("/admin/dashboard", routes.Admin_Dashboard)
 		})
 
 		if config.Cfg.Env.IsDevOrTest() {

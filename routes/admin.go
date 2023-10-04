@@ -8,8 +8,11 @@ import (
 	"feedrewind/templates"
 	"feedrewind/util"
 	"fmt"
+	"math"
 	"net/http"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -311,4 +314,151 @@ func admin_ParseUrlsLabels(text string) ([]urlLabel, error) {
 		})
 	}
 	return urlsLabels, nil
+}
+
+func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
+	year, month, day := time.Now().UTC().AddDate(0, 0, -6).Date()
+	weekAgo := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
+
+	conn := rutil.DBConn(r)
+	telemetries, err := models.AdminTelemetry_GetSince(conn, weekAgo)
+	if err != nil {
+		panic(err)
+	}
+
+	telemetriesByKey := make(map[string][]models.AdminTelemetry)
+	for _, telemetry := range telemetries {
+		telemetriesByKey[telemetry.Key] = append(telemetriesByKey[telemetry.Key], telemetry)
+	}
+
+	type Tick struct {
+		TopPercent int
+		Label      string
+	}
+	type Item struct {
+		IsDate       bool
+		DateStr      string
+		ValuePercent float64
+		Value        string
+		Hover        string
+	}
+	type Dashboard struct {
+		Key   string
+		Ticks []Tick
+		Items []Item
+	}
+	priorityKeys := []string{"guided_crawling_job_success", "guided_crawling_job_failure"}
+	var sortedKeys []string
+	for key := range telemetriesByKey {
+		sortedKeys = append(sortedKeys, key)
+	}
+	sort.Slice(sortedKeys, func(i, j int) bool {
+		for _, priorityKey := range priorityKeys {
+			if sortedKeys[i] == priorityKey {
+				return true
+			} else if sortedKeys[j] == priorityKey {
+				return false
+			}
+		}
+		return strings.Compare(sortedKeys[i], sortedKeys[j]) == -1
+	})
+
+	var dashboards []Dashboard
+	for _, key := range sortedKeys {
+		keyTelemetries := telemetriesByKey[key]
+
+		yMax := 0.0
+		for _, telemetry := range keyTelemetries {
+			if telemetry.Value > yMax {
+				yMax = telemetry.Value
+			}
+		}
+		yScaleMax := 1.0
+		if yMax > 0 {
+			yMax10 := math.Pow10(int(math.Ceil(math.Log10(yMax))))
+			if yMax10/yMax >= 5 {
+				yScaleMax = yMax10 / 5
+			} else if yMax10/yMax >= 2 {
+				yScaleMax = yMax10 / 2
+			} else {
+				yScaleMax = yMax10
+			}
+		}
+
+		var ticks []Tick
+		for i := 0; i <= 10; i++ {
+			ticks = append(ticks, Tick{
+				TopPercent: i * 10,
+				Label:      fmt.Sprint(yScaleMax * float64(10-i) / 10), // TODO: insignificant zeros
+			})
+		}
+
+		var items []Item
+		var prevDate time.Time
+		var prevDateStr string
+		for _, telemetry := range keyTelemetries {
+			dateStr := telemetry.CreatedAt.Format("2006-01-02")
+			if dateStr != prevDateStr {
+				if prevDateStr == "" {
+					prevDate = telemetry.CreatedAt
+					prevDateStr = dateStr
+					items = append(items, Item{ //nolint:exhaustruct
+						IsDate:  true,
+						DateStr: prevDateStr,
+					})
+				} else {
+					for prevDateStr != dateStr {
+						prevDate = prevDate.AddDate(0, 0, 1)
+						prevDateStr = prevDate.Format("2006-01-02")
+						items = append(items, Item{ //nolint:exhaustruct
+							IsDate:  true,
+							DateStr: prevDateStr,
+						})
+					}
+				}
+			}
+
+			formattedValue := fmt.Sprint(telemetry.Value) // TODO: insignificant zeros
+			valuePercent := 5.0
+			if telemetry.Value >= 0 {
+				valuePercent = telemetry.Value * 100 / yScaleMax
+			}
+
+			var hover strings.Builder
+			fmt.Fprintf(&hover, "value: %f", telemetry.Value)
+			fmt.Fprintf(&hover, "\ntimestamp: %s", telemetry.CreatedAt.Format("15:04:05 MST"))
+			var extraKeys []string
+			for extraKey := range telemetry.Extra {
+				extraKeys = append(extraKeys, extraKey)
+			}
+			sort.Strings(extraKeys)
+			for _, extraKey := range extraKeys {
+				fmt.Fprintf(&hover, "\n%s: %v", extraKey, telemetry.Extra[extraKey])
+			}
+
+			items = append(items, Item{
+				IsDate:       false,
+				DateStr:      "",
+				ValuePercent: valuePercent,
+				Value:        formattedValue,
+				Hover:        hover.String(),
+			})
+		}
+
+		dashboards = append(dashboards, Dashboard{
+			Key:   key,
+			Ticks: ticks,
+			Items: items,
+		})
+	}
+
+	type DashboardResult struct {
+		Session    *util.Session
+		Dashboards []Dashboard
+	}
+	result := DashboardResult{
+		Session:    rutil.Session(r),
+		Dashboards: dashboards,
+	}
+	templates.MustWrite(w, "admin/dashboard", result)
 }
