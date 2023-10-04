@@ -18,6 +18,7 @@ func testingConfig() Config {
 		SessionHashKey:          devCfg.SessionHashKey,
 		SessionBlockKey:         devCfg.SessionBlockKey,
 		PostmarkApiSandboxToken: devCfg.PostmarkApiSandboxToken,
+		PostmarkWebhookSecret:   devCfg.PostmarkWebhookSecret,
 		AdminUserIds:            nil,
 	}
 }

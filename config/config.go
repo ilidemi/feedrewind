@@ -11,6 +11,7 @@ type Config struct {
 	SessionHashKey          []byte
 	SessionBlockKey         []byte
 	PostmarkApiSandboxToken string
+	PostmarkWebhookSecret   string
 	AdminUserIds            map[int64]bool
 }
 

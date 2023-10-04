@@ -87,12 +87,6 @@ func runServer() {
 		r.Post("/subscriptions/{id:\\d+}/delete", routes.Subscriptions_Delete)
 		r.Get("/subscriptions/{id:\\d+}/progress_stream", routes.Subscriptions_ProgressStream)
 
-		r.Get("/subscriptions/{id}/feed", routes.Rss_SubscriptionFeed) // Legacy
-		r.Get("/feeds/single/{id}", routes.Rss_UserFeed)
-		r.Get("/feeds/{id}", routes.Rss_SubscriptionFeed)
-
-		r.Get("/posts/{slug}/{random_id:[A-Za-z0-9_-]+}/", routes.Posts_Post)
-
 		r.Get("/blogs/{id}/unsupported", routes.Blogs_Unsupported)
 
 		r.Group(func(authorized chi.Router) {
@@ -128,6 +122,18 @@ func runServer() {
 			r.Get("/test/wait_for_publish_posts_job", routes.AdminTest_WaitForPublishPostsJob)
 			r.Get("/test/execute_sql", routes.AdminTest_ExecuteSql)
 		}
+	})
+
+	staticR.Group(func(anonR chi.Router) {
+		anonR.Use(frmiddleware.DB)
+
+		anonR.Get("/subscriptions/{id}/feed", routes.Rss_SubscriptionFeed) // Legacy
+		anonR.Get("/feeds/single/{id}", routes.Rss_UserFeed)
+		anonR.Get("/feeds/{id}", routes.Rss_SubscriptionFeed)
+
+		anonR.Get("/posts/{slug}/{random_id:[A-Za-z0-9_-]+}/", routes.Posts_Post)
+
+		anonR.Post("/postmark/report_bounce", routes.Postmark_ReportBounce)
 	})
 
 	staticR.Get(util.StaticRouteTemplate, routes.Static_File)

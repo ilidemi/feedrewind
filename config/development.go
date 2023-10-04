@@ -52,6 +52,7 @@ func developmentConfig() Config {
 		SessionHashKey:          sessionHashKey,
 		SessionBlockKey:         sessionBlockKey,
 		PostmarkApiSandboxToken: "REDACTED_DEV_POSTMARK_API_SANDBOX_TOKEN",
+		PostmarkWebhookSecret:   "REDACTED_DEV_POSTMARK_WEBHOOK_SECRET",
 		AdminUserIds:            nil,
 	}
 }
