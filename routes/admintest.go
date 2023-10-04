@@ -44,6 +44,15 @@ func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
 	util.MustWrite(w, "OK")
 }
 
+func AdminTest_RunResetFailedBlogsJob(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
+	err := jobs.ResetFailedBlogsJob_PerformNow(conn, false)
+	if err != nil {
+		panic(err)
+	}
+	util.MustWrite(w, "OK")
+}
+
 func AdminTest_DestroyUserSubscriptions(w http.ResponseWriter, r *http.Request) {
 	currentUserId := rutil.CurrentUserId(r)
 	conn := rutil.DBConn(r)

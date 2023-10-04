@@ -49,6 +49,10 @@ func timeToYaml(value time.Time) yamlString {
 	))
 }
 
+func boolToYaml(value bool) yamlString {
+	return yamlString(fmt.Sprint(value))
+}
+
 func performNow(tx pgw.Queryable, class string, queue string, arguments ...yamlString) error {
 	return performAt(tx, util.Schedule_UTCNow(), class, queue, arguments...)
 }
