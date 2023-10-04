@@ -11,6 +11,7 @@ import (
 	"feedrewind/util"
 	"fmt"
 	"net/http"
+	"time"
 
 	_ "net/http/pprof"
 
@@ -36,6 +37,12 @@ func main() {
 		},
 	}
 	rootCmd.AddCommand(db.DbCmd)
+	rootCmd.AddCommand(&cobra.Command{
+		Use: "log-stalled-jobs",
+		Run: func(_ *cobra.Command, _ []string) {
+			logStalledJobs()
+		},
+	})
 
 	if err := rootCmd.Execute(); err != nil {
 		panic(err)
@@ -148,6 +155,35 @@ func runServer() {
 
 	log.Info().Msg("Started")
 	if err := http.ListenAndServe(":3000", staticR); err != nil {
+		panic(err)
+	}
+}
+
+func logStalledJobs() {
+	log.Info().Msg("Checking for stalled jobs")
+	conn, err := db.Pool.Acquire(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Release()
+
+	hourAgo := time.Now().UTC().Add(-1 * time.Hour)
+	rows, err := conn.Query(`
+		select id, handler from delayed_jobs where locked_at < $1
+	`, hourAgo)
+	if err != nil {
+		panic(err)
+	}
+	for rows.Next() {
+		var id int64
+		var handler string
+		err := rows.Scan(&id, &handler)
+		if err != nil {
+			panic(err)
+		}
+		log.Warn().Msgf("Stalled job (%d): %s", id, handler)
+	}
+	if err := rows.Err(); err != nil {
 		panic(err)
 	}
 }
