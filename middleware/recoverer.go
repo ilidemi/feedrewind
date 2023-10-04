@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"feedrewind/oops"
+	"feedrewind/templates"
 	"feedrewind/util"
 	"fmt"
 	"net/http"
@@ -22,7 +23,19 @@ func Recoverer(next http.Handler) http.Handler {
 					err = httpErr.Inner
 				}
 
-				w.WriteHeader(status)
+				if r.Header.Get("Connection") != "Upgrade" {
+					w.WriteHeader(status)
+
+					if status == http.StatusInternalServerError {
+						type InternalServerErrorResult struct {
+							Title string
+						}
+						templates.MustWrite(w, "misc/500", InternalServerErrorResult{
+							Title: "FeedRewind",
+						})
+					}
+				}
+
 				sterr, ok := err.(*oops.Error)
 				if !ok {
 					sterr = oops.Wrap(err).(*oops.Error)
