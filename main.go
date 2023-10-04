@@ -89,6 +89,10 @@ func runServer() {
 
 		r.Get("/blogs/{id}/unsupported", routes.Blogs_Unsupported)
 
+		r.Get("/terms", routes.Misc_Terms)
+		r.Get("/privacy", routes.Misc_Privacy)
+		r.Get("/about", routes.Misc_About)
+
 		r.Group(func(authorized chi.Router) {
 			authorized.Use(frmiddleware.Authorize)
 
