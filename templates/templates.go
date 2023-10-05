@@ -28,12 +28,12 @@ func init() {
 		},
 	}
 
-	type namedTemplate struct {
+	type NamedTemplate struct {
 		DirName string
 		Name    string
 		Content string
 	}
-	allTemplates := make(map[string][]namedTemplate)
+	allTemplates := make(map[string][]NamedTemplate)
 	dirs, err := templateFS.ReadDir(".")
 	if err != nil {
 		panic(err)
@@ -63,7 +63,7 @@ func init() {
 			}
 
 			templateName := filename[:len(filename)-len(ext)]
-			allTemplates[dirName] = append(allTemplates[dir.Name()], namedTemplate{
+			allTemplates[dirName] = append(allTemplates[dir.Name()], NamedTemplate{
 				DirName: dirName,
 				Name:    templateName,
 				Content: string(content),
@@ -71,11 +71,11 @@ func init() {
 		}
 	}
 
-	var sharedTemplates []namedTemplate
-	var routeTemplates []namedTemplate
+	var sharedTemplates []NamedTemplate
+	var routeTemplates []NamedTemplate
 	for dirName, templates := range allTemplates {
 		for _, tmpl := range templates {
-			nt := namedTemplate{
+			nt := NamedTemplate{
 				DirName: dirName,
 				Name:    path.Join(dirName, tmpl.Name),
 				Content: tmpl.Content,

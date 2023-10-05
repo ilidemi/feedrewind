@@ -50,7 +50,7 @@ func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	type dashboardSubscription struct {
+	type DashboardSubscription struct {
 		Id             models.SubscriptionId
 		Name           string
 		IsPaused       bool
@@ -61,8 +61,8 @@ func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 		TotalCount     int
 	}
 
-	createDashboardSubscription := func(s models.SubscriptionWithPostCounts) dashboardSubscription {
-		return dashboardSubscription{
+	createDashboardSubscription := func(s models.SubscriptionWithPostCounts) DashboardSubscription {
+		return DashboardSubscription{
 			Id:             s.Id,
 			Name:           s.Name,
 			IsPaused:       s.IsPaused,
@@ -74,15 +74,16 @@ func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	type dashboardResult struct {
+	type DashboardResult struct {
+		Title                  string
 		Session                *util.Session
 		HasSubscriptions       bool
-		SettingUpSubscriptions []dashboardSubscription
-		ActiveSubscriptions    []dashboardSubscription
-		FinishedSubscriptions  []dashboardSubscription
+		SettingUpSubscriptions []DashboardSubscription
+		ActiveSubscriptions    []DashboardSubscription
+		FinishedSubscriptions  []DashboardSubscription
 	}
-
-	result := dashboardResult{
+	result := DashboardResult{
+		Title:                  util.DecorateTitle("Dashboard"),
 		Session:                rutil.Session(r),
 		HasSubscriptions:       len(subscriptions) > 0,
 		SettingUpSubscriptions: nil,
@@ -162,7 +163,8 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 		conn, subscriptionId, subscription.Status, currentUser.Id, userSettings,
 	)
 
-	type subscriptionsShowResult struct {
+	type SubscriptionResult struct {
+		Title           string
 		Session         *util.Session
 		Name            string
 		FeedUrl         string
@@ -179,7 +181,8 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 		ScheduleJS      subscriptionsScheduleJsResult
 		DeletePath      string
 	}
-	result := subscriptionsShowResult{
+	templates.MustWrite(w, "subscriptions/show", SubscriptionResult{
+		Title:          util.DecorateTitle(subscription.Name),
 		Session:        rutil.Session(r),
 		Name:           subscription.Name,
 		FeedUrl:        feedUrl,
@@ -205,9 +208,7 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 			SetNameChangeCallback: template.JS("setNameChangeScheduleCallback"),
 		},
 		DeletePath: rutil.SubscriptionDeletePath(subscriptionId),
-	}
-
-	templates.MustWrite(w, "subscriptions/show", result)
+	})
 }
 
 func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
@@ -339,10 +340,10 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 
-			type crawlInProgressResult struct {
+			type CrawlInProgressResult struct {
+				Title                         string
 				Session                       *util.Session
 				SubscriptionName              string
-				SubscriptionNameJS            template.JS
 				SubscriptionId                models.SubscriptionId
 				BlogId                        models.BlogId
 				ClientToken                   models.BlogCrawlClientToken
@@ -351,10 +352,10 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				SubscriptionProgressStreamUrl string
 				SubscriptionDeletePath        string
 			}
-			result := crawlInProgressResult{
+			templates.MustWrite(w, "subscriptions/setup_blog_crawl_in_progress", CrawlInProgressResult{
+				Title:                         util.DecorateTitle(status.SubscriptionName),
 				Session:                       rutil.Session(r),
 				SubscriptionName:              status.SubscriptionName,
-				SubscriptionNameJS:            template.JS(status.SubscriptionName),
 				SubscriptionId:                subscriptionId,
 				BlogId:                        status.BlogId,
 				ClientToken:                   clientToken,
@@ -362,29 +363,28 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				SubscriptionProgressPath:      rutil.SubscriptionProgressPath(subscriptionId),
 				SubscriptionProgressStreamUrl: rutil.SubscriptionProgressStreamUrl(r, subscriptionId),
 				SubscriptionDeletePath:        rutil.SubscriptionDeletePath(subscriptionId),
-			}
-			templates.MustWrite(w, "subscriptions/setup_blog_crawl_in_progress", result)
+			})
 			return
 		case models.BlogStatusCrawledVoting,
 			models.BlogStatusCrawledConfirmed,
 			models.BlogStatusCrawledLooksWrong,
 			models.BlogStatusManuallyInserted:
 
-			type topPost struct {
+			type TopPost struct {
 				Url        string
 				Title      string
 				IsEarliest bool
 				IsNewest   bool
 			}
 
-			type customPost struct {
+			type CustomPost struct {
 				Id        models.BlogPostId
 				Url       string
 				Title     string
 				IsChecked bool
 			}
 
-			type post struct {
+			type Post struct {
 				Id         models.BlogPostId
 				Url        string
 				Title      string
@@ -393,56 +393,57 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				IsChecked  bool
 			}
 
-			type submit struct {
+			type Submit struct {
 				Suffix                    string
 				SubscriptionDeletePath    string
 				SubscriptionMarkWrongPath string
 				MarkWrongFuncJS           template.JS
 			}
 
-			type topCategoryPosts struct {
+			type TopCategoryPosts struct {
 				Suffix             string
 				ShowAll            bool
-				OrderedPostsAll    []topPost
-				OrderedPostsStart  []topPost
+				OrderedPostsAll    []TopPost
+				OrderedPostsStart  []TopPost
 				MiddleCount        int
-				OrderedPostsMiddle []topPost
-				OrderedPostsEnd    []topPost
+				OrderedPostsMiddle []TopPost
+				OrderedPostsEnd    []TopPost
 			}
 
-			type topCategory struct {
+			type TopCategory struct {
 				Id                          models.BlogPostCategoryId
 				Name                        string
 				PostsCount                  int
-				Posts                       topCategoryPosts
+				Posts                       TopCategoryPosts
 				BlogPostIdsJS               template.JS
 				SubscriptionSelectPostsPath string
-				Submit                      submit
+				Submit                      Submit
 			}
 
-			type customCategory struct {
+			type CustomCategory struct {
 				Name            string
 				PostsCount      int
 				CheckedCount    int
 				IsChecked       bool
 				IsIndeterminate bool
-				Posts           []customPost
+				Posts           []CustomPost
 			}
 
-			type crawledResult struct {
+			type CrawledResult struct {
+				Title                       string
 				Session                     *util.Session
 				SubscriptionName            string
-				TopCategories               []topCategory
+				TopCategories               []TopCategory
 				MarkWrongFuncJS             template.JS
 				IsCheckedEverything         bool
 				CheckedTopCategoryId        models.BlogPostCategoryId
 				CheckedTopCategoryName      string
 				CheckedBlogPostIdsCount     int
-				CustomCategories            []customCategory
+				CustomCategories            []CustomCategory
 				AllPostsCount               int
-				AllPosts                    []post
+				AllPosts                    []Post
 				SubscriptionSelectPostsPath string
-				CustomSubmit                submit
+				CustomSubmit                Submit
 			}
 
 			allBlogPosts, err := models.BlogPost_List(conn, status.BlogId)
@@ -478,8 +479,8 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			var topCategories []topCategory
-			var customCategories []customCategory
+			var topCategories []TopCategory
+			var customCategories []CustomCategory
 			for i, category := range allCategories {
 				categoryBlogPosts := make([]*models.BlogPost, 0, len(category.BlogPostIds))
 				for i := range allBlogPosts {
@@ -488,9 +489,9 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 				if category.IsTop {
-					posts := make([]topPost, 0, len(categoryBlogPosts))
+					posts := make([]TopPost, 0, len(categoryBlogPosts))
 					for _, blogPost := range categoryBlogPosts {
-						posts = append(posts, topPost{
+						posts = append(posts, TopPost{
 							Url:        blogPost.Url,
 							Title:      blogPost.Title,
 							IsEarliest: false,
@@ -501,7 +502,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 					posts[len(posts)-1].IsNewest = true
 
 					suffix := fmt.Sprint(i)
-					topPosts := topCategoryPosts{
+					topPosts := TopCategoryPosts{
 						Suffix:             suffix,
 						ShowAll:            len(posts) <= 12,
 						OrderedPostsAll:    posts,
@@ -531,14 +532,14 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 					}
 					idsBuilder.WriteString("]")
 
-					topCategories = append(topCategories, topCategory{
+					topCategories = append(topCategories, TopCategory{
 						Id:                          category.Id,
 						Name:                        category.Name,
 						PostsCount:                  len(category.BlogPostIds),
 						Posts:                       topPosts,
 						BlogPostIdsJS:               template.JS(idsBuilder.String()),
 						SubscriptionSelectPostsPath: subscriptionSelectPostsPath,
-						Submit: submit{
+						Submit: Submit{
 							Suffix:                    suffix,
 							SubscriptionDeletePath:    subscriptionDeletePath,
 							SubscriptionMarkWrongPath: subscrtipionMarkWrongPath,
@@ -546,10 +547,10 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 						},
 					})
 				} else {
-					posts := make([]customPost, 0, len(categoryBlogPosts))
+					posts := make([]CustomPost, 0, len(categoryBlogPosts))
 					checkedCount := 0
 					for _, blogPost := range categoryBlogPosts {
-						posts = append(posts, customPost{
+						posts = append(posts, CustomPost{
 							Id:        blogPost.Id,
 							Url:       blogPost.Url,
 							Title:     blogPost.Title,
@@ -561,7 +562,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 					}
 					postsCount := len(category.BlogPostIds)
 
-					customCategories = append(customCategories, customCategory{
+					customCategories = append(customCategories, CustomCategory{
 						Name:            category.Name,
 						PostsCount:      postsCount,
 						CheckedCount:    checkedCount,
@@ -572,9 +573,9 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			var allPosts []post
+			var allPosts []Post
 			for i, blogPost := range allBlogPosts {
-				allPosts = append(allPosts, post{
+				allPosts = append(allPosts, Post{
 					Id:         blogPost.Id,
 					Url:        blogPost.Url,
 					Title:      blogPost.Title,
@@ -584,7 +585,8 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				})
 			}
 
-			result := crawledResult{
+			templates.MustWrite(w, "subscriptions/setup_blog_select_posts", CrawledResult{
+				Title:                       util.DecorateTitle(status.SubscriptionName),
 				Session:                     rutil.Session(r),
 				SubscriptionName:            status.SubscriptionName,
 				TopCategories:               topCategories,
@@ -597,28 +599,28 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				AllPostsCount:               len(allBlogPosts),
 				AllPosts:                    allPosts,
 				SubscriptionSelectPostsPath: subscriptionSelectPostsPath,
-				CustomSubmit: submit{
+				CustomSubmit: Submit{
 					Suffix:                    "custom",
 					SubscriptionDeletePath:    subscriptionDeletePath,
 					SubscriptionMarkWrongPath: subscrtipionMarkWrongPath,
 					MarkWrongFuncJS:           markWrongFuncJS,
 				},
-			}
-			templates.MustWrite(w, "subscriptions/setup_blog_select_posts", result)
+			})
 			return
 		case models.BlogStatusCrawlFailed,
 			models.BlogStatusUpdateFromFeedFailed:
-			type failedResult struct {
+			type FailedResult struct {
+				Title                  string
 				Session                *util.Session
 				SubscriptionName       string
 				SubscriptionDeletePath string
 			}
-			result := failedResult{
+			templates.MustWrite(w, "subscriptions/setup_blog_failed", FailedResult{
+				Title:                  util.DecorateTitle("Blog not supported"),
 				Session:                rutil.Session(r),
 				SubscriptionName:       status.SubscriptionName,
 				SubscriptionDeletePath: rutil.SubscriptionDeletePath(subscriptionId),
-			}
-			templates.MustWrite(w, "subscriptions/setup_blog_failed", result)
+			})
 			return
 		default:
 			panic(fmt.Errorf("Unknown blog status: %s", status.BlogStatus))
@@ -637,7 +639,8 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 		preview := subscriptions_MustGetSchedulePreview(
 			conn, subscriptionId, status.SubscriptionStatus, currentUser.Id, userSettings,
 		)
-		type setScheduleResult struct {
+		type SetScheduleResult struct {
+			Title                    string
 			Session                  *util.Session
 			NameHeaderId             string
 			SubscriptionName         string
@@ -648,7 +651,8 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			DeliveryChannel          deliverySettings
 			SubscriptionSchedulePath string
 		}
-		result := setScheduleResult{
+		templates.MustWrite(w, "subscriptions/setup_subscription_set_schedule", SetScheduleResult{
+			Title:            util.DecorateTitle(status.SubscriptionName),
 			Session:          rutil.Session(r),
 			NameHeaderId:     "name_header",
 			SubscriptionName: status.SubscriptionName,
@@ -668,8 +672,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			IsDeliveryChannelSet:     userSettings.DeliveryChannel != nil,
 			DeliveryChannel:          newDeliverySettings(userSettings),
 			SubscriptionSchedulePath: rutil.SubscriptionSchedulePath(subscriptionId),
-		}
-		templates.MustWrite(w, "subscriptions/setup_subscription_set_schedule", result)
+		})
 	case models.SubscriptionStatusLive:
 		subscriptionName, err := models.Subscription_GetName(conn, subscriptionId)
 		if err != nil {
@@ -715,7 +718,8 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				util.Ordinal(willArriveDateTime.Day())
 			willArriveOne = countsByDay[util.Schedule_DayOfWeek(willArriveDateTime)] == 1
 		}
-		type heresFeedOrEmailResult struct {
+		type HeresFeedOrEmailResult struct {
+			Title            string
 			Session          *util.Session
 			SubscriptionName string
 			FeedUrl          string
@@ -727,7 +731,8 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			WillArriveDate   string
 			SubscriptionPath string
 		}
-		result := heresFeedOrEmailResult{
+		result := HeresFeedOrEmailResult{
+			Title:            util.DecorateTitle(subscriptionName),
 			Session:          rutil.Session(r),
 			SubscriptionName: subscriptionName,
 			FeedUrl:          feedUrl,

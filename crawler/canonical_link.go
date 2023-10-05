@@ -120,16 +120,16 @@ func CanonicalUriFromUri(uri *neturl.URL) CanonicalUri {
 
 	var query string
 	if uri.RawQuery != "" {
-		type queryToken struct {
+		type QueryToken struct {
 			key   string
 			value string
 		}
-		var queryTokens []queryToken
+		var queryTokens []QueryToken
 		for key, values := range uri.Query() {
 			if !whitelistedQueryParams[key] {
 				continue
 			}
-			queryTokens = append(queryTokens, queryToken{
+			queryTokens = append(queryTokens, QueryToken{
 				key:   key,
 				value: values[0],
 			})

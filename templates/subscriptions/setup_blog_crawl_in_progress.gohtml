@@ -23,6 +23,8 @@
         // noinspection JSAnnotator
         let crawlClientToken = null;
         {{end}}
+        let initialTitle = document.getElementsByTagName("title")[0].innerText;
+        let loadingIndicators = [ '⠟', '⠯', '⠷', '⠾', '⠽', '⠻'];
         let crawlEpoch;
         let crawlEpochDurations = [];
         let crawlWasDone = false;
@@ -59,6 +61,7 @@
                     let rects = [];
                     let matches = [...data.status.matchAll(/pP|p|hF\d*|h/g)];
                     let tokens = matches.map(match => match[0]);
+                    let filledCount = 0;
 
                     let rectsAreDark = tokens.length > 0 && tokens[tokens.length - 1].startsWith("hF");
                     let bgClass = rectsAreDark ? "bg-primary-600" : "bg-primary-400";
@@ -68,13 +71,16 @@
                         let token = tokens[index];
                         if (token === "h") {
                             rects.push(createProgressRect(`w-5 h-5 rounded-sm ${bgClass}`));
+                            filledCount++;
                         } else if (token === "p") {
                             rects.push(createProgressRect("w-[4.25rem] h-5 rounded-sm border border-primary-400 loader-41"));
                             needsTrailingLoader = false;
                         } else if (token === "pP") {
                             rects.push(createProgressRect(`w-[4.25rem] h-5 rounded-sm ${bgClass}`));
+                            filledCount++;
                         } else if (token.startsWith("hF")) {
                             rects.push(createProgressRect(`w-5 h-5 rounded-sm ${bgClass}`));
+                            filledCount++;
                             if (parseInt(index) === tokens.length - 1) {
                                 let remainingCountMatch = token.match(/\d+$/g);
                                 if (remainingCountMatch) {
@@ -100,11 +106,14 @@
                         }
                     }
                     document.getElementById("progress_rects").replaceChildren(...rects);
+                    let indicator = loadingIndicators[filledCount % loadingIndicators.length];
+                    document.getElementsByTagName("title")[0].innerText = `${indicator} ${initialTitle}`;
                     lastStatus = data.status;
                 } else if (crawlEpoch === 0) {
                     document
                         .getElementById("progress_rects")
                         .replaceChildren(createProgressRect("w-5 h-5 rounded-sm border border-primary-400 loader-41"));
+                    document.getElementsByTagName("title")[0].innerText = `${loadingIndicators[0]} ${initialTitle}`;
                 }
 
                 if (data.hasOwnProperty("count")) {
@@ -284,7 +293,7 @@
         <script>
             document.getElementById("cancel_button").addEventListener("click", () => {
                 showDeleteSubscriptionPopup(
-                    "Cancel adding ", "{{.SubscriptionNameJS}}", "?",
+                    "Cancel adding ", "{{.SubscriptionName}}", "?",
                     "{{.SubscriptionDeletePath}}", "Keep", "Cancel"
                 );
             })

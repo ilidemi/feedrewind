@@ -69,13 +69,13 @@ func TestIsAtom(t *testing.T) {
 }
 
 func TestParseFeedRootUrl(t *testing.T) {
-	type test struct {
+	type Test struct {
 		description     string
 		content         string
 		expectedRootUrl string
 	}
 
-	tests := []test{
+	tests := []Test{
 		{
 			description: "RSS root url",
 			content: `
@@ -182,13 +182,13 @@ func TestParseFeedRootUrl(t *testing.T) {
 }
 
 func TestParseFeedTitle(t *testing.T) {
-	type test struct {
+	type Test struct {
 		description   string
 		content       string
 		expectedTitle string
 	}
 
-	tests := []test{
+	tests := []Test{
 		{
 			description: "RSS title",
 			content: `
@@ -330,7 +330,7 @@ func TestParseFeedTitle(t *testing.T) {
 }
 
 func TestParseFeedEntryUrls(t *testing.T) {
-	type test struct {
+	type Test struct {
 		description          string
 		content              string
 		expectedEntryUrls    []string
@@ -338,7 +338,7 @@ func TestParseFeedEntryUrls(t *testing.T) {
 		expectedError        string
 	}
 
-	tests := []test{
+	tests := []Test{
 		{
 			description: "parse RSS feed",
 			content: `
@@ -954,13 +954,13 @@ func TestParseFeedEntryUrls(t *testing.T) {
 }
 
 func TestParseFeedGenerator(t *testing.T) {
-	type test struct {
+	type Test struct {
 		description       string
 		content           string
 		expectedGenerator FeedGenerator
 	}
 
-	tests := []test{
+	tests := []Test{
 		{
 			description: "handle no RSS generator",
 			content: `

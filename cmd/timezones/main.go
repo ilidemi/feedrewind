@@ -126,17 +126,17 @@ func main() {
 
 	const minOffset = -14
 	const maxOffset = 12
-	type unfriendlyOffsetGroupId struct {
+	type UnfriendlyOffsetGroupId struct {
 		offset  int
 		groupId string
 	}
-	var unfriendlyOffsetGroupIds []unfriendlyOffsetGroupId
+	var unfriendlyOffsetGroupIds []UnfriendlyOffsetGroupId
 	for offset := minOffset; offset <= maxOffset; offset++ {
 		offsetStr := fmt.Sprint(offset)
 		if offset >= 0 {
 			offsetStr = "+" + offsetStr
 		}
-		unfriendlyOffsetGroupIds = append(unfriendlyOffsetGroupIds, unfriendlyOffsetGroupId{
+		unfriendlyOffsetGroupIds = append(unfriendlyOffsetGroupIds, UnfriendlyOffsetGroupId{
 			offset:  offset,
 			groupId: fmt.Sprintf("Etc/GMT%s", offsetStr),
 		})

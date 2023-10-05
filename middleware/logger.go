@@ -36,13 +36,13 @@ func Logger(next http.Handler) http.Handler {
 			path += "#" + r.URL.EscapedFragment()
 		}
 
-		type formKV struct {
+		type FormKV struct {
 			Key   string
 			Value any
 		}
 
 		var formErr error
-		var formKVs []formKV
+		var formKVs []FormKV
 		if err := r.ParseForm(); err != nil {
 			formErr = err
 		} else if len(r.PostForm) != 0 {
@@ -55,17 +55,17 @@ func Logger(next http.Handler) http.Handler {
 			for _, key := range keys {
 				values := r.PostForm[key]
 
-				var kv formKV
+				var kv FormKV
 				if formFilter.MatchString(key) {
-					kv = formKV{key, "*******"}
+					kv = FormKV{key, "*******"}
 				} else if len(values) == 1 {
-					kv = formKV{key, values[0]}
+					kv = FormKV{key, values[0]}
 				} else {
 					arr := zerolog.Arr()
 					for _, value := range values {
 						arr.Str(value)
 					}
-					kv = formKV{key, arr}
+					kv = FormKV{key, arr}
 				}
 				formKVs = append(formKVs, kv)
 			}

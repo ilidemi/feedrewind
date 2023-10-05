@@ -240,11 +240,11 @@ func publishRssFeeds(
 	tx pgw.Queryable, userId models.UserId, subscriptions []models.SubscriptionToPublish,
 	newPostsBySubscriptionId map[models.SubscriptionId][]models.SubscriptionBlogPost, postsInRss int,
 ) error {
-	type userDateItem struct {
+	type UserDateItem struct {
 		PublishedAt time.Time
 		Item        item
 	}
-	var userDatesItems []userDateItem
+	var userDatesItems []UserDateItem
 	for _, subscription := range subscriptions {
 		log.Info().Msgf("Generating RSS for subscription %d", subscription.Id)
 		newPosts := newPostsBySubscriptionId[subscription.Id]
@@ -275,7 +275,7 @@ func publishRssFeeds(
 				PubDate:     subscription.FinalItemPublishedAt.Format(time.RFC1123Z),
 			}
 			subscriptionItems = append(subscriptionItems, finalItem)
-			userDatesItems = append(userDatesItems, userDateItem{
+			userDatesItems = append(userDatesItems, UserDateItem{
 				PublishedAt: *subscription.FinalItemPublishedAt,
 				Item:        finalItem,
 			})
@@ -316,7 +316,7 @@ func publishRssFeeds(
 				Description: userItemDescription,
 				PubDate:     pubDate,
 			}
-			userDatesItems = append(userDatesItems, userDateItem{
+			userDatesItems = append(userDatesItems, UserDateItem{
 				PublishedAt: *post.PublishedAt,
 				Item:        userItem,
 			})
@@ -335,7 +335,7 @@ func publishRssFeeds(
 				PubDate:     subscription.FinishedSetupAt.Format(time.RFC1123Z),
 			}
 			subscriptionItems = append(subscriptionItems, initialItem)
-			userDatesItems = append(userDatesItems, userDateItem{
+			userDatesItems = append(userDatesItems, UserDateItem{
 				PublishedAt: subscription.FinishedSetupAt,
 				Item:        initialItem,
 			})

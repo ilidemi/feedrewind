@@ -64,12 +64,14 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 	pc := models.NewProductEventContext(conn, r, productUserId)
 	userIsAnonymous := currentUser == nil
 
-	type onboardingResult struct {
+	type OnboardingResult struct {
+		Title       string
 		Session     *util.Session
 		FeedsData   *feedsData
 		Suggestions *rutil.Suggestions
 	}
-	var result onboardingResult
+	var result OnboardingResult
+	title := util.DecorateTitle("Add blog")
 
 	escapedUrl := util.URLParamStr(r, "start_url")
 	typedUrl, err := url.PathUnescape(escapedUrl)
@@ -103,7 +105,8 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, rutil.BlogUnsupportedPath(discoverResult.blog.Id), http.StatusFound)
 			return
 		case *discoveredFeeds:
-			result = onboardingResult{
+			result = OnboardingResult{
+				Title:   title,
 				Session: rutil.Session(r),
 				FeedsData: &feedsData{ //nolint:exhaustruct
 					StartUrl: startUrl,
@@ -113,7 +116,8 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 			}
 		case *discoverError:
 			feeds := feedsDataFromTypedResult(startUrl, typedResult)
-			result = onboardingResult{
+			result = OnboardingResult{
+				Title:       title,
 				Session:     rutil.Session(r),
 				FeedsData:   &feeds,
 				Suggestions: nil,
@@ -123,7 +127,8 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		models.ProductEvent_MustEmitVisitAddPage(pc, "/subscriptions/add", userIsAnonymous, nil)
-		result = onboardingResult{
+		result = OnboardingResult{
+			Title:     title,
 			Session:   rutil.Session(r),
 			FeedsData: nil,
 			Suggestions: &rutil.Suggestions{
@@ -144,12 +149,14 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 	pc := models.NewProductEventContext(conn, r, productUserId)
 	userIsAnonymous := currentUser == nil
 
-	type onboardingResult struct {
+	type OnboardingResult struct {
+		Title       string
 		Session     *util.Session
 		FeedsData   *feedsData
 		Suggestions *rutil.Suggestions
 	}
-	var result onboardingResult
+	var result OnboardingResult
+	title := util.DecorateTitle("Add blog")
 
 	typedUrl := util.EnsureParamStr(r, "start_url")
 	startUrl := strings.TrimSpace(typedUrl)
@@ -176,7 +183,8 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, redirectPath, http.StatusFound)
 		return
 	case *discoveredFeeds:
-		result = onboardingResult{
+		result = OnboardingResult{
+			Title:   title,
 			Session: rutil.Session(r),
 			FeedsData: &feedsData{ //nolint:exhaustruct
 				StartUrl: startUrl,
@@ -186,7 +194,8 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 		}
 	case *discoverError:
 		feeds := feedsDataFromTypedResult(startUrl, typedResult)
-		result = onboardingResult{
+		result = OnboardingResult{
+			Title:       title,
 			Session:     rutil.Session(r),
 			FeedsData:   &feeds,
 			Suggestions: nil,
@@ -253,19 +262,18 @@ func Onboarding_Preview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type previewResult struct {
-		Session     *util.Session
+	type Result struct {
 		Title       string
+		Session     *util.Session
 		Url         string
 		AddFeedPath string
 	}
-	result := previewResult{
-		Session:     rutil.Session(r),
+	templates.MustWrite(w, "onboarding/preview", Result{
 		Title:       link.TitleStr,
+		Session:     rutil.Session(r),
 		Url:         link.Url,
 		AddFeedPath: rutil.SubscriptionAddFeedPath(link.FeedUrl),
-	}
-	templates.MustWrite(w, "onboarding/preview", result)
+	})
 }
 
 type discoveredSubscription struct {

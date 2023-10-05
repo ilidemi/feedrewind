@@ -9,7 +9,7 @@ import (
 )
 
 func TestExtractNewPostsFromFeed(t *testing.T) {
-	type test struct {
+	type Test struct {
 		description              string
 		feed                     string
 		existingPostUrls         []string
@@ -19,7 +19,7 @@ func TestExtractNewPostsFromFeed(t *testing.T) {
 		expectedOk               bool
 	}
 
-	tests := []test{
+	tests := []Test{
 		{
 			description: "handle feed without updates",
 			feed: `

@@ -18,10 +18,12 @@ import (
 )
 
 func Admin_AddBlog(w http.ResponseWriter, r *http.Request) {
-	type addBlogResult struct {
+	type Result struct {
+		Title   string
 		Session *util.Session
 	}
-	templates.MustWrite(w, "admin/add_blog", addBlogResult{
+	templates.MustWrite(w, "admin/add_blog", Result{
+		Title:   "Add blog",
 		Session: rutil.Session(r),
 	})
 }
@@ -264,25 +266,29 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var message string
+	var title string
 	blog, err := postBlogImpl()
 	if err != nil {
 		message = err.Error()
+		title = "Blog not added"
 	} else {
 		message = fmt.Sprintf(
 			"Created %q (%s) with %d posts and %d categories",
 			blog.Name, blog.FeedUrl, blog.PostsCount, blog.CategoriesCount,
 		)
+		title = "Blog added"
 	}
 
-	type postBlogResult struct {
+	type Result struct {
+		Title   string
 		Session *util.Session
 		Message string
 	}
-	result := postBlogResult{
+	templates.MustWrite(w, "admin/post_blog", Result{
+		Title:   title,
 		Session: rutil.Session(r),
 		Message: message,
-	}
-	templates.MustWrite(w, "admin/post_blog", result)
+	})
 }
 
 type urlLabel struct {
@@ -452,13 +458,14 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	type DashboardResult struct {
+	type Result struct {
+		Title      string
 		Session    *util.Session
 		Dashboards []Dashboard
 	}
-	result := DashboardResult{
+	templates.MustWrite(w, "admin/dashboard", Result{
+		Title:      "Dashboard",
 		Session:    rutil.Session(r),
 		Dashboards: dashboards,
-	}
-	templates.MustWrite(w, "admin/dashboard", result)
+	})
 }

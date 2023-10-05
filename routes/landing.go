@@ -18,29 +18,28 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 	pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
 	models.ProductEvent_MustEmitVisitAddPage(pc, "/", true, nil)
 
-	type scheduleCell struct {
+	type ScheduleCell struct {
 		IsAdd      bool
 		IsSelected bool
 	}
-	type screenshot struct {
+	type Screenshot struct {
 		Links           []rutil.ScreenshotLink
 		LinksCount      int
 		DaysOfWeek      []util.DayOfWeek
-		ScheduleColumns [][]scheduleCell
+		ScheduleColumns [][]ScheduleCell
 	}
-	type landingIndexResult struct {
+	type LandingResult struct {
 		Session     *util.Session
-		Screenshot  screenshot
+		Screenshot  Screenshot
 		Suggestions rutil.Suggestions
 	}
-
-	result := landingIndexResult{
+	templates.MustWrite(w, "landing/index", LandingResult{
 		Session: rutil.Session(r),
-		Screenshot: screenshot{
+		Screenshot: Screenshot{
 			Links:      rutil.ScreenshotLinks,
 			LinksCount: len(rutil.ScreenshotLinks),
 			DaysOfWeek: util.DaysOfWeek,
-			ScheduleColumns: [][]scheduleCell{
+			ScheduleColumns: [][]ScheduleCell{
 				{
 					{IsAdd: true},
 				},
@@ -72,7 +71,5 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 			MiscellaneousBlogs:  rutil.MiscellaneousBlogs,
 			WidthClass:          "max-w-[531px]",
 		},
-	}
-
-	templates.MustWrite(w, "landing/index", result)
+	})
 }

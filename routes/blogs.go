@@ -26,13 +26,14 @@ func Blogs_Unsupported(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type unsupportedResult struct {
+	type Result struct {
+		Title    string
 		Session  *util.Session
 		BlogName string
 	}
-	result := unsupportedResult{
+	templates.MustWrite(w, "blogs/unsupported", Result{
+		Title:    util.DecorateTitle("Blog not supported"),
 		Session:  rutil.Session(r),
 		BlogName: blogName,
-	}
-	templates.MustWrite(w, "blogs/unsupported", result)
+	})
 }

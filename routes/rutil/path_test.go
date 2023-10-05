@@ -8,12 +8,12 @@ import (
 )
 
 func TestPostSlug(t *testing.T) {
-	type test struct {
+	type Test struct {
 		Description  string
 		PostTitle    string
 		ExpectedSlug string
 	}
-	tests := []test{
+	tests := []Test{
 		{
 			Description:  "one word",
 			PostTitle:    "hello",

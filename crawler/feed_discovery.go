@@ -313,14 +313,14 @@ func crawlFeedWithTimeout(
 	link *Link, enforceTimeout bool, crawlCtx *CrawlContext, httpClient *HttpClient, logger Logger,
 ) (*page, error) {
 	if enforceTimeout {
-		type crawlResult struct {
+		type CrawlResult struct {
 			Page  *page
 			Error error
 		}
-		ch := make(chan crawlResult)
+		ch := make(chan CrawlResult)
 		go func() {
 			page, err := crawlRequest(link, true, crawlCtx, httpClient, logger)
-			ch <- crawlResult{
+			ch <- CrawlResult{
 				Page:  page,
 				Error: err,
 			}

@@ -7,14 +7,14 @@ import (
 )
 
 func TestSequenceSuffixLength(t *testing.T) {
-	type test struct {
+	type Test struct {
 		description    string
 		buckets        [][]string
 		sequence       []string
 		expectedLength int
 	}
 
-	tests := []test{
+	tests := []Test{
 		{
 			description: "not a suffix",
 			buckets: [][]string{

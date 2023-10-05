@@ -96,3 +96,7 @@ func RandomInt63() (int64, error) {
 		return val, nil
 	}
 }
+
+func DecorateTitle(title string) string {
+	return title + " · FeedRewind"
+}

@@ -9,23 +9,23 @@ import (
 )
 
 func TestToCanonicalLink(t *testing.T) {
-	type expected struct {
+	type Expected struct {
 		url          string
 		canonicalUrl string
 	}
-	type test struct {
+	type Test struct {
 		description string
 		url         string
 		fetchUrl    string
-		expected    *expected
+		expected    *Expected
 	}
 
-	tests := []test{
+	tests := []Test{
 		{
 			description: "should parse absolute http url",
 			url:         "http://ya.ru/hi",
 			fetchUrl:    "http://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "http://ya.ru/hi",
 				canonicalUrl: "ya.ru/hi",
 			},
@@ -34,7 +34,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should parse absolute https url",
 			url:         "https://ya.ru/hi",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/hi",
 				canonicalUrl: "ya.ru/hi",
 			},
@@ -49,7 +49,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should parse relative url",
 			url:         "20201227",
 			fetchUrl:    "https://apenwarr.ca/log/",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://apenwarr.ca/log/20201227",
 				canonicalUrl: "apenwarr.ca/log/20201227",
 			},
@@ -58,7 +58,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should parse relative url with /",
 			url:         "/abc",
 			fetchUrl:    "https://ya.ru/hi/hello",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/abc",
 				canonicalUrl: "ya.ru/abc",
 			},
@@ -67,7 +67,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should parse relative url with ./",
 			url:         "./abc",
 			fetchUrl:    "https://ya.ru/hi/hello",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/hi/abc",
 				canonicalUrl: "ya.ru/hi/abc",
 			},
@@ -76,7 +76,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should parse relative url with ../",
 			url:         "../abc",
 			fetchUrl:    "https://ya.ru/hi/hello/bonjour",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/hi/abc",
 				canonicalUrl: "ya.ru/hi/abc",
 			},
@@ -85,7 +85,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should parse relative url with //",
 			url:         "//ya.ru/abc",
 			fetchUrl:    "https://ya.ru/hi/hello",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/abc",
 				canonicalUrl: "ya.ru/abc",
 			},
@@ -94,7 +94,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should drop fragment",
 			url:         "https://ya.ru/abc#def",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/abc",
 				canonicalUrl: "ya.ru/abc",
 			},
@@ -103,7 +103,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should include non-standard port in canonical url",
 			url:         "https://ya.ru:444/abc",
 			fetchUrl:    "https://ya.ru:444",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru:444/abc",
 				canonicalUrl: "ya.ru:444/abc",
 			},
@@ -112,7 +112,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should drop standard http port in canonical url",
 			url:         "http://ya.ru:80/abc",
 			fetchUrl:    "http://ya.ru:80",
-			expected: &expected{
+			expected: &Expected{
 				url:          "http://ya.ru/abc",
 				canonicalUrl: "ya.ru/abc",
 			},
@@ -121,7 +121,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should drop standard https port in canonical url",
 			url:         "https://ya.ru:443/abc",
 			fetchUrl:    "https://ya.ru:443",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/abc",
 				canonicalUrl: "ya.ru/abc",
 			},
@@ -130,7 +130,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should include whitelisted query in canonical url",
 			url:         "https://ya.ru/abc?page=2",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/abc?page=2",
 				canonicalUrl: "ya.ru/abc?page=2",
 			},
@@ -139,7 +139,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should include whitelisted query without value in canonical url",
 			url:         "https://ya.ru/abc?page",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/abc?page",
 				canonicalUrl: "ya.ru/abc?page",
 			},
@@ -148,7 +148,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should include whitelisted query with empty value in canonical url",
 			url:         "https://ya.ru/abc?page=",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/abc?page=",
 				canonicalUrl: "ya.ru/abc?page=",
 			},
@@ -157,7 +157,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should remove non-whitelisted query in canonical url",
 			url:         "https://ya.ru/abc?a=1&b=2",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/abc?a=1&b=2",
 				canonicalUrl: "ya.ru/abc",
 			},
@@ -166,7 +166,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should include only whitelisted query in canonical url",
 			url:         "https://ya.ru/abc?page=1&b=2",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/abc?page=1&b=2",
 				canonicalUrl: "ya.ru/abc?page=1",
 			},
@@ -175,7 +175,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should drop root path from canonical url if no query",
 			url:         "https://ya.ru/",
 			fetchUrl:    "https://ya.ru/",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/",
 				canonicalUrl: "ya.ru",
 			},
@@ -184,7 +184,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should keep root path in canonical url if query",
 			url:         "https://ya.ru/?page",
 			fetchUrl:    "https://ya.ru/",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/?page",
 				canonicalUrl: "ya.ru/?page",
 			},
@@ -193,7 +193,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should ignore newlines",
 			url:         "https://ya.ru/ab\nc",
 			fetchUrl:    "https://ya.ru/",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/abc",
 				canonicalUrl: "ya.ru/abc",
 			},
@@ -202,7 +202,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should trim leading and trailing spaces",
 			url:         " https://ya.ru",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru",
 				canonicalUrl: "ya.ru",
 			},
@@ -211,7 +211,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should trim leading and trailing escaped spaces",
 			url:         "%20https://waitbutwhy.com/table/like-improve-android-phone%20",
 			fetchUrl:    "https://waitbutwhy.com/table/like-improve-iphone",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://waitbutwhy.com/table/like-improve-android-phone",
 				canonicalUrl: "waitbutwhy.com/table/like-improve-android-phone",
 			},
@@ -220,7 +220,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should trim leading and trailing escaped crazy whitespace",
 			url:         " \t\n\x00\v\f\r%20%09%0a%00%0b%0c%0d%0A%0B%0C%0Dhttps://ya.ru \t\n\x00\v\f\r%20%09%0a%00%0b%0c%0d%0A%0B%0C%0D",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru",
 				canonicalUrl: "ya.ru",
 			},
@@ -229,7 +229,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should escape middle spaces",
 			url:         "/tagged/alex norris",
 			fetchUrl:    "https://webcomicname.com/post/652255218526011392/amp",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://webcomicname.com/tagged/alex%20norris",
 				canonicalUrl: "webcomicname.com/tagged/alex%20norris",
 			},
@@ -238,7 +238,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should replace // in path with /",
 			url:         "https://NQNStudios.github.io//2020//04//06/byte-size-mindfulness-1.html",
 			fetchUrl:    "https://www.natquaylenelson.com/feed.xml",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://NQNStudios.github.io/2020/04/06/byte-size-mindfulness-1.html",
 				canonicalUrl: "NQNStudios.github.io/2020/04/06/byte-size-mindfulness-1.html",
 			},
@@ -247,7 +247,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should leave + in query escaped",
 			url:         "https://blog.gardeviance.org/search?updated-max=2019-09-04T15:49:00%2B01:00&max-results=12",
 			fetchUrl:    "https://blog.gardeviance.org",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://blog.gardeviance.org/search?updated-max=2019-09-04T15:49:00%2B01:00&max-results=12",
 				canonicalUrl: "blog.gardeviance.org/search?updated-max=2019-09-04T15:49:00%2B01:00",
 			},
@@ -256,7 +256,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should use the port from fetch uri",
 			url:         "/rss",
 			fetchUrl:    "http://localhost:8000/page",
-			expected: &expected{
+			expected: &Expected{
 				url:          "http://localhost:8000/rss",
 				canonicalUrl: "localhost:8000/rss",
 			},
@@ -307,7 +307,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should escape url",
 			url:         "https://ya.ru/Россия",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D1%8F",
 				canonicalUrl: "ya.ru/%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D1%8F",
 			},
@@ -316,7 +316,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should preserve escaped url",
 			url:         "https://ya.ru/%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D1%8F",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D1%8F",
 				canonicalUrl: "ya.ru/%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D1%8F",
 			},
@@ -325,7 +325,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should handle half-escaped url",
 			url:         "https://ya.ru/Рос%D1%81%D0%B8%D1%8F%25",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D1%8F%25",
 				canonicalUrl: "ya.ru/%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D1%8F%25",
 			},
@@ -334,7 +334,7 @@ func TestToCanonicalLink(t *testing.T) {
 			description: "should preserve badly escaped url",
 			url:         "https://ya.ru/%25D1%2581%25D0%25B8%25D1%258F",
 			fetchUrl:    "https://ya.ru",
-			expected: &expected{
+			expected: &Expected{
 				url:          "https://ya.ru/%25D1%2581%25D0%25B8%25D1%258F",
 				canonicalUrl: "ya.ru/%25D1%2581%25D0%25B8%25D1%258F",
 			},

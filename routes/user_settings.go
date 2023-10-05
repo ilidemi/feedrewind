@@ -52,14 +52,14 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 	}
 	userGroupId, userGroupFound := util.GroupIdByTimezoneId[userSettings.Timezone]
 
-	type timezoneOption struct {
+	type TimezoneOption struct {
 		Value      string
 		Label      string
 		IsSelected bool
 	}
-	var timezoneOptions []timezoneOption
+	var timezoneOptions []TimezoneOption
 	for _, friendlyTimezone := range util.FriendlyTimezones {
-		timezoneOptions = append(timezoneOptions, timezoneOption{
+		timezoneOptions = append(timezoneOptions, TimezoneOption{
 			Value:      friendlyTimezone.GroupId,
 			Label:      friendlyTimezone.FriendlyName,
 			IsSelected: friendlyTimezone.GroupId == userGroupId,
@@ -69,23 +69,25 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		if !util.UnfriendlyGroupIds[userSettings.Timezone] {
 			log.Error().Msgf("User timezone not found in tzdb: %s", userSettings.Timezone)
 		}
-		timezoneOptions = append(timezoneOptions, timezoneOption{
+		timezoneOptions = append(timezoneOptions, TimezoneOption{
 			Value:      userSettings.Timezone,
 			Label:      userSettings.Timezone,
 			IsSelected: true,
 		})
 	}
 
-	type settingsPageResult struct {
+	type SettingsResult struct {
+		Title                                string
 		Session                              *util.Session
-		TimezoneOptions                      []timezoneOption
+		TimezoneOptions                      []TimezoneOption
 		DeliveryChannel                      deliverySettings
 		Version                              int
 		ShortFriendlyPrefixNameByGroupIdJson template.JS
 		ShortFriendlyNameByGroupIdJson       template.JS
 		GroupIdByTimezoneIdJson              template.JS
 	}
-	result := settingsPageResult{
+	templates.MustWrite(w, "users/settings", SettingsResult{
+		Title:                                util.DecorateTitle("Settings"),
 		Session:                              rutil.Session(r),
 		TimezoneOptions:                      timezoneOptions,
 		DeliveryChannel:                      newDeliverySettings(userSettings),
@@ -93,9 +95,7 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		ShortFriendlyPrefixNameByGroupIdJson: util.ShortFriendlyPrefixNameByGroupIdJson,
 		ShortFriendlyNameByGroupIdJson:       util.ShortFriendlyNameByGroupIdJson,
 		GroupIdByTimezoneIdJson:              util.GroupIdByTimezoneIdJson,
-	}
-
-	templates.MustWrite(w, "users/settings", result)
+	})
 }
 
 func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
