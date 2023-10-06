@@ -1,5 +1,3 @@
-///go:build e2etesting
-
 package e2etest
 
 import (

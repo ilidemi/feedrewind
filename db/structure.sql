@@ -781,7 +781,8 @@ CREATE TABLE public.subscriptions (
     initial_item_publish_status public.post_publish_status,
     final_item_publish_status public.post_publish_status,
     schedule_version integer NOT NULL,
-    anon_product_user_id uuid
+    anon_product_user_id uuid,
+    CONSTRAINT subscriptions_refers_to_user CHECK ((NOT ((user_id IS NULL) AND (anon_product_user_id IS NULL))))
 );
 
 
@@ -1876,4 +1877,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20230712025233'),
 ('20230712025648'),
 ('20230817035655'),
-('20230920040801');
+('20230920040801'),
+('20231006024221');
