@@ -18,12 +18,10 @@ import (
 type UserId int64
 
 type User struct {
-	Id             UserId
-	Email          string
-	PasswordDigest string
-	AuthToken      string
-	Name           string
-	ProductUserId  ProductUserId
+	Id            UserId
+	Email         string
+	Name          string
+	ProductUserId ProductUserId
 }
 
 var ErrPasswordTooShort = errors.New("password is too short")
@@ -40,13 +38,13 @@ func User_FindByAuthToken(tx pgw.Queryable, authToken string) (*User, error) {
 
 func user_FindBy(tx pgw.Queryable, column string, value string) (*User, error) {
 	row := tx.QueryRow(`
-		select id, email, password_digest, auth_token, name, product_user_id
+		select id, email, name, product_user_id
 		from users
 		where `+column+` = $1
 	`, value)
 	var user User
 	err := row.Scan(
-		&user.Id, &user.Email, &user.PasswordDigest, &user.AuthToken, &user.Name, &user.ProductUserId,
+		&user.Id, &user.Email, &user.Name, &user.ProductUserId,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrUserNotFound
@@ -70,7 +68,60 @@ func User_ExistsByProductUserId(tx pgw.Queryable, productUserId ProductUserId) (
 	return true, nil
 }
 
-func User_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*User, error) {
+type UserWithRss struct {
+	AnySubcriptionNotPausedOrFinished bool
+	Rss                               string
+	ProductUserId                     ProductUserId
+}
+
+func User_GetWithRss(tx pgw.Queryable, userId UserId) (*UserWithRss, error) {
+	row := tx.QueryRow(`
+		select
+			(
+				select count(1) from subscriptions_without_discarded
+				where subscriptions_without_discarded.user_id = $1 and
+					not is_paused and
+					final_item_published_at is null
+			) > 0,
+			(select body from user_rsses where user_id = $1),
+			product_user_id
+		from users
+		where id = $1
+	`, userId)
+	var u UserWithRss
+	err := row.Scan(&u.AnySubcriptionNotPausedOrFinished, &u.Rss, &u.ProductUserId)
+	return &u, err
+}
+
+type FullUser struct {
+	Id             UserId
+	Email          string
+	PasswordDigest string
+	AuthToken      string
+	Name           string
+	ProductUserId  ProductUserId
+}
+
+func FullUser_FindByEmail(tx pgw.Queryable, email string) (*FullUser, error) {
+	row := tx.QueryRow(`
+		select id, email, password_digest, auth_token, name, product_user_id
+		from users
+		where email = $1
+	`, email)
+	var user FullUser
+	err := row.Scan(
+		&user.Id, &user.Email, &user.PasswordDigest, &user.AuthToken, &user.Name, &user.ProductUserId,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrUserNotFound
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func FullUser_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*FullUser, error) {
 	passwordDigest, err := generatePasswordDigest(password)
 	if err != nil {
 		return nil, err
@@ -86,7 +137,7 @@ func User_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*User, e
 		set password_digest = $1, auth_token = $2 where id = $3
 		returning id, email, password_digest, auth_token, name, product_user_id
 	`, passwordDigest, authToken, id)
-	var user User
+	var user FullUser
 	err = row.Scan(
 		&user.Id, &user.Email, &user.PasswordDigest, &user.AuthToken, &user.Name, &user.ProductUserId,
 	)
@@ -96,9 +147,9 @@ func User_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*User, e
 	return &user, nil
 }
 
-func User_Create(
+func FullUser_Create(
 	tx pgw.Queryable, email string, password string, name string, productUserId ProductUserId,
-) (*User, error) {
+) (*FullUser, error) {
 	passwordDigest, err := generatePasswordDigest(password)
 	if err != nil {
 		return nil, err
@@ -127,7 +178,7 @@ func User_Create(
 		return nil, err
 	}
 
-	return &User{
+	return &FullUser{
 		Id:             id,
 		Email:          email,
 		PasswordDigest: passwordDigest,
@@ -135,31 +186,6 @@ func User_Create(
 		Name:           name,
 		ProductUserId:  productUserId,
 	}, nil
-}
-
-type UserWithRss struct {
-	AnySubcriptionNotPausedOrFinished bool
-	Rss                               string
-	ProductUserId                     ProductUserId
-}
-
-func User_GetWithRss(tx pgw.Queryable, userId UserId) (*UserWithRss, error) {
-	row := tx.QueryRow(`
-		select
-			(
-				select count(1) from subscriptions_without_discarded
-				where subscriptions_without_discarded.user_id = $1 and
-					not is_paused and
-					final_item_published_at is null
-			) > 0,
-			(select body from user_rsses where user_id = $1),
-			product_user_id
-		from users
-		where id = $1
-	`, userId)
-	var u UserWithRss
-	err := row.Scan(&u.AnySubcriptionNotPausedOrFinished, &u.Rss, &u.ProductUserId)
-	return &u, err
 }
 
 func generatePasswordDigest(password string) (string, error) {

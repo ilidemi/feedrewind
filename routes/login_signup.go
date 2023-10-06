@@ -73,7 +73,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	redirect := util.EnsureParamStr(r, "redirect")
 
 	conn := rutil.DBConn(r)
-	user, err := models.User_FindByEmail(conn, email)
+	user, err := models.FullUser_FindByEmail(conn, email)
 	if errors.Is(err, models.ErrUserNotFound) {
 		log.Info().Msg("User not found")
 	} else if err != nil {
@@ -178,7 +178,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 
 	const passwordTooShort = "Password is too short (minimum is 8 characters)"
 	const userAlreadyExists = "We already have an account registered with that email address"
-	existingUser, err := models.User_FindByEmail(tx, email)
+	existingUser, err := models.FullUser_FindByEmail(tx, email)
 	userExists := true
 	if errors.Is(err, models.ErrUserNotFound) {
 		userExists = false
@@ -186,9 +186,9 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	var user *models.User
+	var user *models.FullUser
 	if userExists && existingUser.PasswordDigest == "" {
-		user, err = models.User_UpdatePassword(tx, existingUser.Id, password)
+		user, err = models.FullUser_UpdatePassword(tx, existingUser.Id, password)
 		if errors.Is(err, models.ErrPasswordTooShort) {
 			result := newSignUpResult(r, passwordTooShort)
 			templates.MustWrite(w, "login_signup/signup", result)
@@ -210,7 +210,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 		}
-		user, err = models.User_Create(tx, email, password, name, productUserId)
+		user, err = models.FullUser_Create(tx, email, password, name, productUserId)
 		if errors.Is(err, models.ErrUserAlreadyExists) {
 			result := newSignUpResult(r, userAlreadyExists)
 			templates.MustWrite(w, "login_signup/signup", result)
