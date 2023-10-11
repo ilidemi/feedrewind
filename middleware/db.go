@@ -9,8 +9,7 @@ import (
 
 func DB(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		conn, err := db.Pool.Acquire(ctx)
+		conn, err := db.Pool.Acquire(r)
 		if err != nil {
 			panic(err)
 		}

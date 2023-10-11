@@ -3,6 +3,7 @@ package log
 
 import (
 	"feedrewind/oops"
+	"net/http"
 	"time"
 
 	"github.com/pkg/errors"
@@ -17,16 +18,45 @@ func init() {
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 }
 
-func Info() *zerolog.Event {
-	return logger.Info().Timestamp()
+var ErrUserUnknown = errors.New("User is unknown")
+var ErrUserAnonymous = errors.New("User is anonymous")
+var GetCurrentUserId func(r *http.Request) (int64, error)
+
+func Info(r *http.Request) *zerolog.Event {
+	event := logger.Info().Timestamp()
+	event = logCommon(event, r)
+	return event
 }
 
-func Warn() *zerolog.Event {
-	return logger.Warn().Timestamp()
+func Warn(r *http.Request) *zerolog.Event {
+	event := logger.Warn().Timestamp()
+	event = logCommon(event, r)
+	return event
 }
 
-func Error() *zerolog.Event {
-	return logger.Error().Timestamp()
+func Error(r *http.Request) *zerolog.Event {
+	event := logger.Error().Timestamp()
+	event = logCommon(event, r)
+	return event
+}
+
+func logCommon(event *zerolog.Event, r *http.Request) *zerolog.Event {
+	if r == nil {
+		return event
+	}
+	userId, err := GetCurrentUserId(r)
+	if errors.Is(err, ErrUserUnknown) {
+		// Don't log user id
+	} else if errors.Is(err, ErrUserAnonymous) {
+		event = event.Int64("user_id", 0)
+	} else if err != nil {
+		panic(err)
+	} else {
+		event = event.Int64("user_id", userId)
+	}
+	requestId := r.Header.Get("X-Request-ID")
+	event = event.Str("request_id", requestId)
+	return event
 }
 
 // Stack marshaling is copied from pkgerrors/stacktrace with quality of life modifications

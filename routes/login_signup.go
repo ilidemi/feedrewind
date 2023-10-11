@@ -75,7 +75,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	user, err := models.FullUser_FindByEmail(conn, email)
 	if errors.Is(err, models.ErrUserNotFound) {
-		log.Info().Msg("User not found")
+		log.Info(r).Msg("User not found")
 	} else if err != nil {
 		panic(err)
 	} else {
@@ -114,7 +114,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, redirect, http.StatusFound)
 			return
 		} else {
-			log.Info().Err(err).Msg("Password doesn't match")
+			log.Info(r).Err(err).Msg("Password doesn't match")
 		}
 	}
 
@@ -227,21 +227,21 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		if _, ok := util.GroupIdByTimezoneId[timezone]; ok {
 			timezoneOut = timezone
 		} else {
-			log.Warn().Msgf("Unknown timezone: %s", timezone)
+			log.Warn(r).Msgf("Unknown timezone: %s", timezone)
 			timeOffset, err := strconv.ParseInt(timeOffsetStr, 10, 32)
 			if err != nil {
-				log.Warn().Msgf("Couldn't parse time offset: %s", timeOffsetStr)
+				log.Warn(r).Msgf("Couldn't parse time offset: %s", timeOffsetStr)
 				timeOffset = 0
 			}
 			offsetHoursInverted := int(timeOffset) / 60
 			var ok bool
 			timezoneOut, ok = util.UnfriendlyGroupIdByOffset[offsetHoursInverted]
 			if !ok {
-				log.Warn().Msgf("Time offset too large: %s", timeOffsetStr)
+				log.Warn(r).Msgf("Time offset too large: %s", timeOffsetStr)
 				timezoneOut = util.TimezoneUTC
 			}
 		}
-		log.Info().Msgf("Timezone out: %s", timezoneOut)
+		log.Info(r).Msgf("Timezone out: %s", timezoneOut)
 
 		err = models.UserSettings_Create(tx, user.Id, timezoneOut)
 		if err != nil {

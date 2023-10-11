@@ -110,7 +110,7 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 
 		var postLinks []*crawler.Link
 		var postCuris []crawler.CanonicalUri
-		logger := crawler.ZeroLogger{}
+		logger := crawler.ZeroLogger{Req: r}
 		for _, urlTitle := range postUrlsTitles {
 			postLink, ok := crawler.ToCanonicalLink(urlTitle.Url, &logger, nil)
 			if !ok {

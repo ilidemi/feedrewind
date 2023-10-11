@@ -73,7 +73,7 @@ func init() {
 }
 
 func EnsureLatestMigration() error {
-	conn, err := Pool.Acquire(context.Background())
+	conn, err := Pool.AcquireBackground()
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func dumpStructure() {
 		panic(err)
 	}
 
-	conn, err := Pool.Acquire(context.Background())
+	conn, err := Pool.AcquireBackground()
 	if err != nil {
 		panic(err)
 	}
@@ -218,7 +218,7 @@ func (m *{{.StructName}}) Down(tx *Tx) {
 }
 
 func migrate() {
-	conn, err := Pool.Acquire(context.Background())
+	conn, err := Pool.AcquireBackground()
 	if err != nil {
 		panic(err)
 	}
@@ -288,7 +288,7 @@ func migrate() {
 }
 
 func rollback() {
-	conn, err := Pool.Acquire(context.Background())
+	conn, err := Pool.AcquireBackground()
 	if err != nil {
 		panic(err)
 	}

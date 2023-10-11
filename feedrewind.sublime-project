@@ -22,19 +22,19 @@
                 },
                 {
                     "name": "test e2e",
-                    "shell_cmd": "go test ./e2e_test -tags e2etesting,testing"
+                    "shell_cmd": "go test ./e2e_test -tags e2etesting,testing -v"
                 },
                 {
                     "name": "test e2e with email",
-                    "shell_cmd": "go test ./e2e_test -tags emailtesting,e2etesting,testing"
+                    "shell_cmd": "go test ./e2e_test -tags emailtesting,e2etesting,testing -v"
                 },
                 {
                     "name": "golangci-lint",
-                    "shell_cmd": "golangci-lint cache clean && golangci-lint run --build-tags testing,e2etesting"
+                    "shell_cmd": "golangci-lint cache clean && golangci-lint run --build-tags testing,e2etesting,emailtesting"
                 },
                 {
                     "name": "golangci-lint (with cache)",
-                    "shell_cmd": "golangci-lint run --build-tags testing,e2etesting"
+                    "shell_cmd": "golangci-lint run --build-tags testing,e2etesting,emailtesting"
                 },
                 {
                     "name": "tailwindcss",

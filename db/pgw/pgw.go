@@ -20,6 +20,7 @@ type Queryable interface {
 	Query(sql string, args ...any) (*Rows, error)
 	QueryRow(sql string, args ...any) *Row
 	SendBatch(batch *pgx.Batch) *BatchResults
+	Request() *http.Request
 }
 
 type Pool struct {
@@ -34,7 +35,8 @@ func NewPool(ctx context.Context, connString string) (*Pool, error) {
 	return &Pool{pool}, nil
 }
 
-func (pool *Pool) Acquire(ctx context.Context) (*Conn, error) {
+func (pool *Pool) Acquire(r *http.Request) (*Conn, error) {
+	ctx := r.Context()
 	t1 := time.Now()
 	defer addDuration(ctx, t1)()
 
@@ -44,12 +46,30 @@ func (pool *Pool) Acquire(ctx context.Context) (*Conn, error) {
 	}
 
 	return &Conn{
+		Req:  r,
+		impl: conn,
+		ctx:  ctx,
+	}, nil
+}
+
+func (pool *Pool) AcquireBackground() (*Conn, error) {
+	// Do not track duration, as we're not in request context
+
+	ctx := context.Background()
+	conn, err := pool.impl.Acquire(ctx)
+	if err != nil {
+		return nil, oops.Wrap(err)
+	}
+
+	return &Conn{
+		Req:  nil,
 		impl: conn,
 		ctx:  ctx,
 	}, nil
 }
 
 type Conn struct {
+	Req  *http.Request
 	impl *pgxpool.Conn
 	ctx  context.Context
 }
@@ -63,6 +83,7 @@ func (conn *Conn) Begin() (*Tx, error) {
 		return nil, oops.Wrap(err)
 	}
 	return &Tx{
+		Req:  conn.Req,
 		impl: tx,
 		ctx:  conn.ctx,
 	}, nil
@@ -119,6 +140,10 @@ func (conn *Conn) SendBatch(batch *pgx.Batch) *BatchResults {
 	return newBatchResults(conn.impl.SendBatch(conn.ctx, batch))
 }
 
+func (conn *Conn) Request() *http.Request {
+	return conn.Req
+}
+
 func (conn *Conn) Release() {
 	conn.impl.Release()
 }
@@ -134,6 +159,7 @@ func (conn *Conn) WaitForNotification() (*pgconn.Notification, error) {
 }
 
 type Tx struct {
+	Req  *http.Request
 	impl pgx.Tx
 	ctx  context.Context
 }
@@ -149,6 +175,7 @@ func (tx *Tx) Begin() (*Tx, error) {
 	}
 
 	return &Tx{
+		Req:  tx.Req,
 		impl: nested,
 		ctx:  tx.ctx,
 	}, nil
@@ -220,6 +247,10 @@ func (tx *Tx) SendBatch(batch *pgx.Batch) *BatchResults {
 	defer addDuration(tx.ctx, t1)()
 
 	return newBatchResults(tx.impl.SendBatch(tx.ctx, batch))
+}
+
+func (tx *Tx) Request() *http.Request {
+	return tx.Req
 }
 
 type Rows struct {

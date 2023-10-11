@@ -3,6 +3,7 @@ package crawler
 import (
 	"feedrewind/log"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 )
@@ -11,10 +12,12 @@ type Logger interface {
 	Info(format string, args ...any)
 }
 
-type ZeroLogger struct{}
+type ZeroLogger struct {
+	Req *http.Request
+}
 
 func (l *ZeroLogger) Info(format string, args ...any) {
-	log.Info().Msgf(format, args...)
+	log.Info(l.Req).Msgf(format, args...)
 }
 
 type FileLogger struct {

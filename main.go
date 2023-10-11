@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"feedrewind/config"
 	"feedrewind/db"
 	"feedrewind/log"
@@ -50,7 +49,7 @@ func main() {
 }
 
 func runServer() {
-	conn, err := db.Pool.Acquire(context.Background())
+	conn, err := db.Pool.AcquireBackground()
 	if err != nil {
 		panic(err)
 	}
@@ -153,15 +152,15 @@ func runServer() {
 	staticR.Get(util.StaticRouteTemplate, routes.Static_File)
 	staticR.NotFound(routes.Misc_NotFound)
 
-	log.Info().Msg("Started")
+	log.Info(nil).Msg("Started")
 	if err := http.ListenAndServe(":3000", staticR); err != nil {
 		panic(err)
 	}
 }
 
 func logStalledJobs() {
-	log.Info().Msg("Checking for stalled jobs")
-	conn, err := db.Pool.Acquire(context.Background())
+	log.Info(nil).Msg("Checking for stalled jobs")
+	conn, err := db.Pool.AcquireBackground()
 	if err != nil {
 		panic(err)
 	}
@@ -181,7 +180,7 @@ func logStalledJobs() {
 		if err != nil {
 			panic(err)
 		}
-		log.Warn().Msgf("Stalled job (%d): %s", id, handler)
+		log.Warn(nil).Msgf("Stalled job (%d): %s", id, handler)
 	}
 	if err := rows.Err(); err != nil {
 		panic(err)

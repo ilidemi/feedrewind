@@ -67,7 +67,7 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 	}
 	if !userGroupFound {
 		if !util.UnfriendlyGroupIds[userSettings.Timezone] {
-			log.Error().Msgf("User timezone not found in tzdb: %s", userSettings.Timezone)
+			log.Error(r).Msgf("User timezone not found in tzdb: %s", userSettings.Timezone)
 		}
 		timezoneOptions = append(timezoneOptions, TimezoneOption{
 			Value:      userSettings.Timezone,
@@ -117,16 +117,16 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 		}
 		defer util.CommitOrRollbackMsg(tx, &result, "Unlocked PublishPostsJob")
 
-		log.Info().Msg("Locking PublishPostsJob")
+		log.Info(r).Msg("Locking PublishPostsJob")
 		lockedJobs, err := jobs.PublishPostsJob_Lock(tx, currentUser.Id)
 		if err != nil {
 			panic(err)
 		}
-		log.Info().Msgf("Locked PublishPostsJob %d", len(lockedJobs))
+		log.Info(r).Msgf("Locked PublishPostsJob %d", len(lockedJobs))
 
 		for _, job := range lockedJobs {
 			if job.LockedBy != "" {
-				log.Info().Msgf("Some jobs are running, unlocking %d", len(lockedJobs))
+				log.Info(r).Msgf("Some jobs are running, unlocking %d", len(lockedJobs))
 				return false
 			}
 		}
@@ -137,12 +137,12 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 		}
 		if !((oldUserSettings.DeliveryChannel != nil && len(lockedJobs) == 1) ||
 			(oldUserSettings.DeliveryChannel == nil && len(lockedJobs) == 0)) {
-			log.Warn().Msgf("Unexpected amount of job rows for the user: %d", len(lockedJobs))
+			log.Warn(r).Msgf("Unexpected amount of job rows for the user: %d", len(lockedJobs))
 			return false
 		}
 
 		if oldUserSettings.Version >= newVersion {
-			log.Info().Msgf("Version conflict: existing %d, new %d", oldUserSettings.Version, newVersion)
+			log.Info(r).Msgf("Version conflict: existing %d, new %d", oldUserSettings.Version, newVersion)
 			rutil.MustWriteJson(w, http.StatusConflict, map[string]any{
 				"version": oldUserSettings.Version,
 			})
@@ -170,7 +170,7 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			log.Info().Msgf("Rescheduled PublishPostsJob for %s", newRunAt)
+			log.Info(r).Msgf("Rescheduled PublishPostsJob for %s", newRunAt)
 		}
 
 		pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
@@ -227,16 +227,16 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 		}
 		defer util.CommitOrRollbackMsg(tx, &result, "Unlocked PublishPostsJob")
 
-		log.Info().Msg("Locking PublishPostsJob")
+		log.Info(r).Msg("Locking PublishPostsJob")
 		lockedJobs, err := jobs.PublishPostsJob_Lock(tx, currentUser.Id)
 		if err != nil {
 			panic(err)
 		}
-		log.Info().Msgf("Locked PublishPostsJob %d", len(lockedJobs))
+		log.Info(r).Msgf("Locked PublishPostsJob %d", len(lockedJobs))
 
 		for _, job := range lockedJobs {
 			if job.LockedBy != "" {
-				log.Info().Msgf("Some jobs are running, unlocking %d", len(lockedJobs))
+				log.Info(r).Msgf("Some jobs are running, unlocking %d", len(lockedJobs))
 				return false
 			}
 		}
@@ -247,12 +247,12 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 		}
 		if !((oldUserSettings.DeliveryChannel != nil && len(lockedJobs) == 1) ||
 			(oldUserSettings.DeliveryChannel == nil && len(lockedJobs) == 0)) {
-			log.Warn().Msgf("Unexpected amount of job rows for the user: %d", len(lockedJobs))
+			log.Warn(r).Msgf("Unexpected amount of job rows for the user: %d", len(lockedJobs))
 			return false
 		}
 
 		if oldUserSettings.Version >= newVersion {
-			log.Info().Msgf("Version conflict: existing %d, new %d", oldUserSettings.Version, newVersion)
+			log.Info(r).Msgf("Version conflict: existing %d, new %d", oldUserSettings.Version, newVersion)
 			rutil.MustWriteJson(w, http.StatusConflict, map[string]any{
 				"version": oldUserSettings.Version,
 			})
@@ -281,7 +281,7 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			log.Info().Msgf("Rescheduled PublishPostsJob for %s", newRunAt)
+			log.Info(r).Msgf("Rescheduled PublishPostsJob for %s", newRunAt)
 		} else {
 			newUserSettings, err := models.UserSettings_Get(tx, currentUser.Id)
 			if err != nil {
@@ -291,7 +291,7 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			log.Info().Msg("Did initial schedule for PublishPostsJob")
+			log.Info(r).Msg("Did initial schedule for PublishPostsJob")
 		}
 
 		pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))

@@ -45,9 +45,9 @@ func Postmark_ReportBounce(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if exists {
-		log.Info().Msgf("Bounce already seen: %d", bounce.ID)
+		log.Info(r).Msgf("Bounce already seen: %d", bounce.ID)
 	} else {
-		log.Warn().Msgf("New bounce: %d", bounce.ID)
+		log.Warn(r).Msgf("New bounce: %d", bounce.ID)
 		err := models.PostmarkBounce_Create(tx, bounce, string(bounceStr))
 		if err != nil {
 			panic(err)

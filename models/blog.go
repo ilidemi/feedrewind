@@ -96,9 +96,10 @@ type GuidedCrawlingJobScheduleFunc func(tx pgw.Queryable, blogId BlogId, startFe
 func Blog_CreateOrUpdate(
 	tx pgw.Queryable, startFeed *StartFeed, guidedCrawlingJobScheduleFunc GuidedCrawlingJobScheduleFunc,
 ) (*Blog, error) {
+	r := tx.Request()
 	blog, err := Blog_GetLatestByFeedUrl(tx, startFeed.Url)
 	if errors.Is(err, ErrBlogNotFound) {
-		log.Info().Msgf("Creating a new blog for feed url %s", startFeed.Url)
+		log.Info(r).Msgf("Creating a new blog for feed url %s", startFeed.Url)
 		blog, err = func() (blog *Blog, err error) {
 			nestedTx, err := tx.Begin()
 			if err != nil {
@@ -139,7 +140,9 @@ func Blog_CreateOrUpdate(
 
 	// Update blog from feed
 	var blogPostCuris []crawler.CanonicalUri
-	logger := &crawler.ZeroLogger{}
+	logger := &crawler.ZeroLogger{
+		Req: tx.Request(),
+	}
 	rows, err := tx.Query(`select url from blog_posts where blog_id = $1 order by index desc`, blog.Id)
 	if err != nil {
 		return nil, err
@@ -187,13 +190,13 @@ func Blog_CreateOrUpdate(
 	}
 
 	if newLinksOk && len(newLinks) == 0 {
-		log.Info().Msgf("Blog %s doesn't need updating", startFeed.Url)
+		log.Info(r).Msgf("Blog %s doesn't need updating", startFeed.Url)
 		return blog, nil
 	}
 
 	switch blog.UpdateAction {
 	case BlogUpdateActionRecrawl:
-		log.Info().Msgf("Blog %s is marked to recrawl on update", startFeed.Url)
+		log.Info(r).Msgf("Blog %s is marked to recrawl on update", startFeed.Url)
 		return func() (newBlog *Blog, err error) {
 			nestedTx, err := tx.Begin()
 			if err != nil {
@@ -224,7 +227,7 @@ func Blog_CreateOrUpdate(
 		}()
 	case BlogUpdateActionUpdateFromFeedOrFail:
 		if newLinksOk {
-			log.Info().Msgf("Updating blog %s from feed with %d new links", startFeed.Url, len(newLinks))
+			log.Info(r).Msgf("Updating blog %s from feed with %d new links", startFeed.Url, len(newLinks))
 			row := tx.QueryRow(`
 				select id from blog_post_categories
 				where blog_id = $1 and name = 'Everything'
@@ -249,7 +252,7 @@ func Blog_CreateOrUpdate(
 				`, blog.Id)
 				var pgErr *pgconn.PgError
 				if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.LockNotAvailable {
-					log.Info().Msgf("Someone else is updating the blog posts for %s, just waiting till they're done", startFeed.Url)
+					log.Info(r).Msgf("Someone else is updating the blog posts for %s, just waiting till they're done", startFeed.Url)
 					rows, err := nestedTx.Query(`
 						select blog_id from blog_post_locks
 						where blog_id = $1
@@ -259,7 +262,7 @@ func Blog_CreateOrUpdate(
 						return nil, err
 					}
 					rows.Close()
-					log.Info().Msg("Done waiting")
+					log.Info(r).Msg("Done waiting")
 
 					// Assume that the other writer has put the fresh posts in
 					// There could be a race condition where two updates and a post publish happened at the
@@ -315,7 +318,7 @@ func Blog_CreateOrUpdate(
 				return blog, nil
 			}()
 		} else {
-			log.Warn().Msgf("Couldn't update blog %s from feed, marking as failed", startFeed.Url)
+			log.Warn(r).Msgf("Couldn't update blog %s from feed, marking as failed", startFeed.Url)
 			_, err := tx.Exec(`
 				update blogs set status = $1 where id = $2
 			`, BlogStatusUpdateFromFeedFailed, blog.Id)
@@ -326,7 +329,7 @@ func Blog_CreateOrUpdate(
 			return blog, nil
 		}
 	case BlogUpdateActionFail:
-		log.Warn().Msgf("Blog %s is marked to fail on update", startFeed.Url)
+		log.Warn(r).Msgf("Blog %s is marked to fail on update", startFeed.Url)
 		_, err := tx.Exec(`
 			update blogs set status = $1 where id = $2
 		`, BlogStatusUpdateFromFeedFailed, blog.Id)
@@ -336,7 +339,7 @@ func Blog_CreateOrUpdate(
 		blog.Status = BlogStatusUpdateFromFeedFailed
 		return blog, nil
 	case BlogUpdateActionNoOp:
-		log.Info().Msgf("Blog %s is marked to never update", startFeed.Url)
+		log.Info(r).Msgf("Blog %s is marked to never update", startFeed.Url)
 		return blog, nil
 	default:
 		panic(fmt.Errorf("unexpected blog update action: %s", blog.UpdateAction))
@@ -451,6 +454,7 @@ func Blog_GetStatus(tx pgw.Queryable, blogId BlogId) (BlogStatus, error) {
 }
 
 func Blog_GetCrawlProgressMap(tx pgw.Queryable, blogId BlogId) (map[string]any, error) {
+	r := tx.Request()
 	status, err := Blog_GetStatus(tx, blogId)
 	if err != nil {
 		return nil, err
@@ -462,14 +466,14 @@ func Blog_GetCrawlProgressMap(tx pgw.Queryable, blogId BlogId) (map[string]any, 
 			return nil, err
 		}
 
-		log.Info().Msgf("Blog %d crawl in progress (epoch %d)", blogId, blogCrawlProgress.Epoch)
+		log.Info(r).Msgf("Blog %d crawl in progress (epoch %d)", blogId, blogCrawlProgress.Epoch)
 		return map[string]any{
 			"epoch":  blogCrawlProgress.Epoch,
 			"status": blogCrawlProgress.Progress,
 			"count":  blogCrawlProgress.Count,
 		}, nil
 	default:
-		log.Info().Msgf("Blog %d crawl done", blogId)
+		log.Info(r).Msgf("Blog %d crawl done", blogId)
 		return map[string]any{
 			"done": true,
 		}, nil

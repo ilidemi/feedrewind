@@ -101,7 +101,7 @@ func Logger(next http.Handler) http.Handler {
 
 		isStaticFile := strings.HasPrefix(r.URL.Path, util.StaticUrlPrefix)
 		if !isStaticFile {
-			log.Info().
+			log.Info(r).
 				Func(commonFields).
 				Str("ip", util.UserIp(r)).
 				Str("referrer", r.Referer()).
@@ -110,12 +110,12 @@ func Logger(next http.Handler) http.Handler {
 		}
 
 		var errorWrapper errorWrapper
-		r = pgw.WithDBDuration(withErrorWrapper(r, &errorWrapper))
+		r = pgw.WithDBDuration(withCurrentUserData(withErrorWrapper(r, &errorWrapper)))
 
 		defer func() {
 			status := ww.Status()
 			if status/100 == 4 || status/100 == 5 {
-				event := log.Error().Func(commonFields)
+				event := log.Error(r).Func(commonFields)
 				if errorWrapper.err != nil {
 					event.Err(errorWrapper.err)
 				}
@@ -125,7 +125,7 @@ func Logger(next http.Handler) http.Handler {
 					Dur("db_duration", pgw.DbDuration(r.Context())).
 					Msg("failed")
 			} else if !isStaticFile {
-				log.Info().
+				log.Info(r).
 					Func(commonFields).
 					Int("status", status).
 					TimeDiff("duration", time.Now(), t1).

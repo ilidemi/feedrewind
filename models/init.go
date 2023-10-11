@@ -9,6 +9,7 @@ import (
 )
 
 func MustInit(tx pgw.Queryable) {
+	r := tx.Request()
 	var timezoneInExpr bytes.Buffer
 	timezoneInExpr.WriteString("('")
 	isFirst := true
@@ -29,7 +30,7 @@ func MustInit(tx pgw.Queryable) {
 		"select user_id, timezone from user_settings where timezone not in %s", timezoneInExpr.String(),
 	)
 
-	log.Info().Msg("Ensuring user timezones")
+	log.Info(r).Msg("Ensuring user timezones")
 	rows, err := tx.Query(query)
 	if err != nil {
 		panic(err)
@@ -41,7 +42,7 @@ func MustInit(tx pgw.Queryable) {
 		if err != nil {
 			panic(err)
 		}
-		log.Warn().Msgf("User timezone not found in tzdb: %s (user %d)", timezone, userId)
+		log.Warn(r).Msgf("User timezone not found in tzdb: %s (user %d)", timezone, userId)
 	}
 	if err := rows.Err(); err != nil {
 		panic(err)

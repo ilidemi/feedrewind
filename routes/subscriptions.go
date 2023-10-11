@@ -226,7 +226,7 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 	// Feeds that were fetched were handled in onboarding, this one needs to be fetched
 	crawlCtx := &crawler.CrawlContext{}
 	httpClient := &crawler.HttpClient{EnableThrottling: false}
-	logger := &crawler.ZeroLogger{}
+	logger := &crawler.ZeroLogger{Req: r}
 	fetchFeedResult := crawler.FetchFeedAtUrl(startFeed.Url, true, crawlCtx, httpClient, logger)
 	switch fetchResult := fetchFeedResult.(type) {
 	case *crawler.FetchedPage:
@@ -781,21 +781,21 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if clientToken != crawlTimes.BlogCrawlClientToken {
-		log.Info().Msgf(
+		log.Info(r).Msgf(
 			"Client token mismatch: incoming %s, expected %s",
 			clientToken, crawlTimes.BlogCrawlClientToken,
 		)
 		return
 	}
 
-	log.Info().Msgf("Server: %s", crawlTimes.BlogCrawlEpochTimes)
-	log.Info().Msgf("Client: %s", epochDurations)
+	log.Info(r).Msgf("Server: %s", crawlTimes.BlogCrawlEpochTimes)
+	log.Info(r).Msgf("Client: %s", epochDurations)
 	adminTelemetryExtra := map[string]any{
 		"feed_url":        crawlTimes.BlogFeedUrl,
 		"subscription_id": subscriptionId,
 	}
 	if totalReconnectAttempts > 0 {
-		log.Info().Msgf("Total reconnect attempts: %d", totalReconnectAttempts)
+		log.Info(r).Msgf("Total reconnect attempts: %d", totalReconnectAttempts)
 		err := models.AdminTelemetry_Create(
 			conn, "websocket_reconnects", float64(totalReconnectAttempts), adminTelemetryExtra,
 		)
@@ -822,14 +822,14 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		clientDurations = append(clientDurations, duration)
 	}
 	if len(clientDurations) != len(serverDurations) {
-		log.Info().Msgf(
+		log.Info(r).Msgf(
 			"Epoch count mismatch: client %d, server %d", len(clientDurations), len(serverDurations),
 		)
 		return
 	}
 
 	if len(clientDurations) < 3 {
-		log.Info().Msg("Too few client durations to compute anything")
+		log.Info(r).Msg("Too few client durations to compute anything")
 		return
 	}
 
@@ -844,7 +844,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stdDeviation := calcStdDeviation(clientDurations, serverDurations)
-	log.Info().Msgf("Standard deviation (full): %.03f", stdDeviation)
+	log.Info(r).Msgf("Standard deviation (full): %.03f", stdDeviation)
 
 	var clientDurationsAfterInitialLoad []float64
 	for _, clientDuration := range clientDurations[1 : len(clientDurations)-1] {
@@ -856,7 +856,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		serverDurations[len(serverDurations)-len(clientDurationsAfterInitialLoad):]
 	stdDeviationAfterInitialLoad :=
 		calcStdDeviation(clientDurationsAfterInitialLoad, serverDurationsAfterInitialLoad)
-	log.Info().Msgf("Standard deviation after initial load: %.03f", stdDeviationAfterInitialLoad)
+	log.Info(r).Msgf("Standard deviation after initial load: %.03f", stdDeviationAfterInitialLoad)
 	err = models.AdminTelemetry_Create(
 		conn, "progress_timing_std_deviation", stdDeviationAfterInitialLoad, adminTelemetryExtra,
 	)
@@ -867,9 +867,9 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	// E2E for crawling job getting picked up and reporting the first rectangle
 	initialLoadDuration := clientDurations[0]
 	if initialLoadDuration > 10 {
-		log.Warn().Msgf("Initial load duration (exceeds 10 seconds): %.03f", initialLoadDuration)
+		log.Warn(r).Msgf("Initial load duration (exceeds 10 seconds): %.03f", initialLoadDuration)
 	} else {
-		log.Info().Msgf("Initial load duration: %.03f", initialLoadDuration)
+		log.Info(r).Msgf("Initial load duration: %.03f", initialLoadDuration)
 	}
 	err = models.AdminTelemetry_Create(
 		conn, "progress_timing_initial_load", initialLoadDuration, adminTelemetryExtra,
@@ -883,7 +883,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	if realWebsocketWaitDuration < 0 {
 		realWebsocketWaitDuration = 0
 	}
-	log.Info().Msgf("Websocket wait duration: %.03f", realWebsocketWaitDuration)
+	log.Info(r).Msgf("Websocket wait duration: %.03f", realWebsocketWaitDuration)
 	err = models.AdminTelemetry_Create(
 		conn, "websocket_wait_duration", realWebsocketWaitDuration, adminTelemetryExtra,
 	)
@@ -942,7 +942,7 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 		} else {
 			productSelection = "top_category"
 		}
-		log.Info().Msgf("Using top category %s with %d posts", topCategoryName, postsCount)
+		log.Info(r).Msgf("Using top category %s with %d posts", topCategoryName, postsCount)
 	} else {
 		for key, value := range r.Form {
 			if !strings.HasPrefix(key, "post_") {
@@ -959,7 +959,7 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 		}
 		productSelectedCount = len(blogPostIds)
 		productSelection = "custom"
-		log.Info().Msgf("Using custom selection with %d posts", len(blogPostIds))
+		log.Info(r).Msgf("Using custom selection with %d posts", len(blogPostIds))
 	}
 
 	err = models.BlogCrawlVote_Create(
@@ -1053,7 +1053,7 @@ func Subscriptions_MarkWrong(w http.ResponseWriter, r *http.Request) {
 		"user_is_anonymous": rutil.CurrentUser(r) == nil,
 	}, nil)
 
-	log.Warn().Msgf("Blog %d (%s) marked as wrong", status.BlogId, status.BlogName)
+	log.Warn(r).Msgf("Blog %d (%s) marked as wrong", status.BlogId, status.BlogName)
 }
 
 func Subscriptions_Progress(w http.ResponseWriter, r *http.Request) {
@@ -1131,16 +1131,16 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 		}
 		defer util.CommitOrRollbackMsg(tx, &result, "Unlocked daily jobs")
 
-		log.Info().Msg("Locking daily jobs")
+		log.Info(r).Msg("Locking daily jobs")
 		lockedJobs, err := jobs.PublishPostsJob_Lock(tx, currentUser.Id)
 		if err != nil {
 			panic(err)
 		}
-		log.Info().Msgf("Locked daily jobs %d", len(lockedJobs))
+		log.Info(r).Msgf("Locked daily jobs %d", len(lockedJobs))
 
 		for _, job := range lockedJobs {
 			if job.LockedBy != "" {
-				log.Info().Msgf("Some jobs are running, unlocking %d", len(lockedJobs))
+				log.Info(r).Msgf("Some jobs are running, unlocking %d", len(lockedJobs))
 				return false
 			}
 		}
@@ -1237,7 +1237,7 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 			tx, fmt.Sprintf("*%s* subscribed to *<%s|%s>*", slackEmail, slackBlogUrl, slackBlogName),
 		)
 		if err != nil {
-			log.Error().Err(err).Msg("Error while submitting a NotifySlackJob")
+			log.Error(r).Err(err).Msg("Error while submitting a NotifySlackJob")
 		}
 
 		util.MustWrite(w, rutil.SubscriptionSetupPath(subscriptionId))
@@ -1448,6 +1448,7 @@ func subscriptions_MustGetSchedulePreview(
 	tx pgw.Queryable, subscriptionId models.SubscriptionId, subscriptionStatus models.SubscriptionStatus,
 	userId models.UserId, userSettings *models.UserSettings,
 ) schedulePreview {
+	r := tx.Request()
 	preview, err := models.Subscription_GetSchedulePreview(tx, subscriptionId)
 	if err != nil {
 		panic(err)
@@ -1483,7 +1484,7 @@ func subscriptions_MustGetSchedulePreview(
 			panic(err)
 		}
 	}
-	log.Info().Msgf("Preview next schedule date: %s", nextScheduleDate)
+	log.Info(r).Msgf("Preview next schedule date: %s", nextScheduleDate)
 
 	return schedulePreview{
 		PrevPosts:                            preview.PrevPosts,
@@ -1503,6 +1504,7 @@ func subscriptions_MustGetSchedulePreview(
 func subscriptions_GetRealisticScheduleDate(
 	tx pgw.Queryable, userId models.UserId, localTime time.Time, localDate util.Date,
 ) (util.Date, error) {
+	r := tx.Request()
 	nextScheduleDate, err := jobs.PublishPostsJob_GetNextScheduledDate(tx, userId)
 	if err != nil {
 		return "", err
@@ -1515,7 +1517,7 @@ func subscriptions_GetRealisticScheduleDate(
 			return util.Schedule_Date(nextDay), nil
 		}
 	} else if nextScheduleDate < localDate {
-		log.Warn().Msgf("Job is scheduled in the past for user %d: %s (today is %s)", userId, nextScheduleDate, localDate)
+		log.Warn(r).Msgf("Job is scheduled in the past for user %d: %s (today is %s)", userId, nextScheduleDate, localDate)
 		return localDate, nil
 	} else {
 		return nextScheduleDate, nil
@@ -1558,7 +1560,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	listenConn, err := db.Pool.Acquire(r.Context())
+	listenConn, err := db.Pool.Acquire(r)
 	if err != nil {
 		panic(err)
 	}
@@ -1569,7 +1571,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	log.Info().Msgf("Started listen on %s", channelName)
+	log.Info(r).Msgf("Started listen on %s", channelName)
 
 	// Guard against a race condition where the last NOTIFY happened before we
 	// started listening
@@ -1578,7 +1580,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	if statusRefresh.BlogStatus != models.BlogStatusCrawlInProgress {
-		log.Info().Msgf("Blog %d finished crawling before a notification was received", status.BlogId)
+		log.Info(r).Msgf("Blog %d finished crawling before a notification was received", status.BlogId)
 		err := ws.WriteJSON(map[string]any{"done": true})
 		if err != nil {
 			panic(err)
@@ -1612,7 +1614,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			log.Info().Msgf("%s: %s", channelName, notification.Payload)
+			log.Info(r).Msgf("%s: %s", channelName, notification.Payload)
 			err = ws.WriteMessage(websocket.TextMessage, []byte(notification.Payload))
 			if err != nil {
 				panic(err)
@@ -1628,7 +1630,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			log.Info().Msgf("%s: %s", channelName, payload)
+			log.Info(r).Msgf("%s: %s", channelName, payload)
 			err = ws.WriteMessage(websocket.TextMessage, []byte(payload))
 			if err != nil {
 				panic(err)

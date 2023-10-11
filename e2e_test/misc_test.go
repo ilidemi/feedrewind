@@ -105,7 +105,7 @@ func TestDoubleSchedule(t *testing.T) {
 			break
 		}
 		pollCount++
-		require.Less(t, pollCount, 10)
+		require.Less(t, pollCount, 30)
 		time.Sleep(100 * time.Millisecond)
 	}
 

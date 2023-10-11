@@ -31,7 +31,7 @@ func Session(next http.Handler) http.Handler {
 		if err == nil {
 			err := secureCookie.Decode(cookieName, cookie.Value, &session)
 			if err != nil {
-				log.Info().Err(err).Msg("Couldn't decode session cookie")
+				log.Info(r).Err(err).Msg("Couldn't decode session cookie")
 			}
 		}
 
