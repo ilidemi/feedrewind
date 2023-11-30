@@ -3,7 +3,7 @@
 
 ## Ruby -> Go patterns
 ensure -> defer func(){}()
-to_s -> String()
+to_s -> String() (with receiver being a copy, not a pointer)
 Links.each_with_index -> {{range $i, $ := .Links}}
 
 ## View helpers
@@ -19,13 +19,29 @@ Links.each_with_index -> {{range $i, $ := .Links}}
 ## Modeling sum return types as interfaces postmortem
 
 
+## What helped
+Tests tests tests, my and Ruby and E2E
+Log of execution in form of progress status reported to the user. Just lots of tiny errors
+
+
 ## Fuckups
 User and session management doesn't use transactions and that'll probably bite me in the ass at some point
+
+### Ruby date parse porting
+Minor oversights like missing month name -> month number conversion when they're both strings
+Pointer arithmetic on strings is ass, doesn't map well to Go's slicing
+Understanding custom string comparison things in Ruby
+Could I do it without tests? 80% but fishing out the remaining 20 would be hell. there's a reason the original code has tests
+Actually the learning could be don't port code that doesn't have a ton of data driven tests
+Typos typos, especially in the similar looking fields I don't care about
 
 
 ## Not great
 Date parsing is forgiving in Ruby, strict in Go.
 html/template takes 80-100ms on SSC posts list
+Map randomization generated work and removed convenience. Had to pull in a sorted map package
+Matching sorted links except a highlighted one seems fishy, but let's have it break
+Taking pointers to loop variables bitten me multiple times.
 
 
 ## Tests

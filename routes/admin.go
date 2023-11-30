@@ -11,6 +11,7 @@ import (
 	"math"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -124,9 +125,10 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 		var discardedFromFeedEntryUrls []string
 		var missingFromFeedEntryUrls []string
 		if util.EnsureParamStr(r, "skip_feed_validation") != "1" {
-			crawlCtx := crawler.CrawlContext{}
-			httpClient := crawler.HttpClient{EnableThrottling: false}
-			feedResult := crawler.FetchFeedAtUrl(feedUrl, false, &crawlCtx, &httpClient, &logger)
+			httpClient := crawler.NewHttpClientImpl(false)
+			progressLogger := crawler.NewMockProgressLogger(&logger)
+			crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
+			feedResult := crawler.FetchFeedAtUrl(feedUrl, false, &crawlCtx, &logger)
 			feedPage, ok := feedResult.(*crawler.FetchedPage)
 			if !ok {
 				return nil, oops.Newf("Couldn't fetch feed: %s", feedUrl)
@@ -395,7 +397,7 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 		for i := 0; i <= 10; i++ {
 			ticks = append(ticks, Tick{
 				TopPercent: i * 10,
-				Label:      fmt.Sprint(yScaleMax * float64(10-i) / 10), // TODO: insignificant zeros
+				Label:      fmt.Sprint(yScaleMax * float64(10-i) / 10),
 			})
 		}
 
@@ -424,14 +426,14 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			formattedValue := fmt.Sprint(telemetry.Value) // TODO: insignificant zeros
+			formattedValue := strconv.FormatFloat(telemetry.Value, 'f', -1, 64)
 			valuePercent := 5.0
 			if telemetry.Value >= 0 {
 				valuePercent = telemetry.Value * 100 / yScaleMax
 			}
 
 			var hover strings.Builder
-			fmt.Fprintf(&hover, "value: %f", telemetry.Value)
+			fmt.Fprintf(&hover, "value: %s", formattedValue)
 			fmt.Fprintf(&hover, "\ntimestamp: %s", telemetry.CreatedAt.Format("15:04:05 MST"))
 			var extraKeys []string
 			for extraKey := range telemetry.Extra {

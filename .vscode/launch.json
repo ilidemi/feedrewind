@@ -5,11 +5,35 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Package",
+            "name": "Web",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "."
+        },
+        {
+            "name": "Crawl one",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": ".",
+            "args": ["crawl"]
+        },
+        {
+            "name": "Crawl one with JS",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": ".",
+            "args": ["crawl", "--allow-js"]
+        },
+        {
+            "name": "Crawl all",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": ".",
+            "args": ["crawl", "all"]
         },
         {
             "name": "Test current package",

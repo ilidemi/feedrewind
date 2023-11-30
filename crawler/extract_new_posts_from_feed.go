@@ -14,7 +14,7 @@ func ExtractNewPostsFromFeed(
 	curiEqCfg *CanonicalEqualityConfig, logger Logger,
 	parseFeedLogger Logger,
 ) (
-	newLinks []MaybeTitledLink, err error,
+	newLinks []*maybeTitledLink, err error,
 ) {
 	missingFromFeedEntryCurisSet := NewCanonicalUriSet(nil, curiEqCfg)
 	for url := range missingFromFeedEntryUrls {
@@ -61,15 +61,15 @@ func ExtractNewPostsFromFeed(
 		return nil, ErrExtractNewPostsNoMatch
 	}
 
-	suffixLength := feedEntryLinks.sequenceSuffixLength(expectedExistingPostCuris, curiEqCfg)
-	if suffixLength == 0 {
+	suffixLinks, _ := feedEntryLinks.sequenceSuffixMatch(expectedExistingPostCuris, curiEqCfg)
+	if suffixLinks == nil {
 		logger.Info("Can't update from feed because the existing posts don't match")
 		return nil, ErrExtractNewPostsNoMatch
 	}
 
 	// Protects from feed out of order as without it feed [6] [1] [2] [3] [4] [5] would still find suffix in
 	// existing posts [2 3 4 5 6]
-	if suffixLength != overlappingPostsCount {
+	if len(suffixLinks) != overlappingPostsCount {
 		logger.Info("Can't update from feed because the existing posts match but the count is wrong")
 		return nil, ErrExtractNewPostsNoMatch
 	}

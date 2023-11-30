@@ -205,10 +205,9 @@ func Blog_CreateOrUpdate(
 			defer util.CommitOrRollbackErr(nestedTx, &err)
 
 			err = Blog_Downgrade(nestedTx, blog.Id)
-			if err != nil {
+			if err == nil {
 				newBlog, err = blog_CreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobScheduleFunc)
-			}
-			if errors.Is(err, ErrNoLatestVersion) || errors.Is(err, errBlogAlreadyExists) {
+			} else if errors.Is(err, ErrNoLatestVersion) || errors.Is(err, errBlogAlreadyExists) {
 				// Another writer deprecated this blog at the same time
 				newBlog, err = Blog_GetLatestByFeedUrl(nestedTx, startFeed.Url)
 				if errors.Is(err, ErrBlogNotFound) {

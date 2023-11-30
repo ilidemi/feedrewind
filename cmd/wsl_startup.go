@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -6,9 +6,18 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
-func main() {
+var WslStartup = &cobra.Command{
+	Use: "wsl-startup",
+	Run: func(_ *cobra.Command, _ []string) {
+		wslStartup()
+	},
+}
+
+func wslStartup() {
 	ipCmd := exec.Command("wsl", "ip", "addr")
 	ipOut, err := ipCmd.Output()
 	if err != nil {

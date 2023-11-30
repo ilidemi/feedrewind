@@ -1,6 +1,8 @@
 package main
 
 import (
+	"feedrewind/cmd"
+	"feedrewind/cmd/crawl"
 	"feedrewind/config"
 	"feedrewind/db"
 	"feedrewind/log"
@@ -35,7 +37,9 @@ func main() {
 			runServer()
 		},
 	}
-	rootCmd.AddCommand(db.DbCmd)
+	rootCmd.AddCommand(cmd.Db)
+	rootCmd.AddCommand(cmd.WslStartup)
+	rootCmd.AddCommand(crawl.Crawl)
 	rootCmd.AddCommand(&cobra.Command{
 		Use: "log-stalled-jobs",
 		Run: func(_ *cobra.Command, _ []string) {

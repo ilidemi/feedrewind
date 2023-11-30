@@ -224,10 +224,11 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Feeds that were fetched were handled in onboarding, this one needs to be fetched
-	crawlCtx := &crawler.CrawlContext{}
-	httpClient := &crawler.HttpClient{EnableThrottling: false}
+	httpClient := crawler.NewHttpClientImpl(false)
 	logger := &crawler.ZeroLogger{Req: r}
-	fetchFeedResult := crawler.FetchFeedAtUrl(startFeed.Url, true, crawlCtx, httpClient, logger)
+	progressLogger := crawler.NewMockProgressLogger(logger)
+	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
+	fetchFeedResult := crawler.FetchFeedAtUrl(startFeed.Url, true, &crawlCtx, logger)
 	switch fetchResult := fetchFeedResult.(type) {
 	case *crawler.FetchedPage:
 		finalUrl := fetchResult.Page.FetchUri.String()

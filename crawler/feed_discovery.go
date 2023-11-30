@@ -71,7 +71,7 @@ const atomUrlReplacement = "$1atom$2"
 const rssUrlReplacement = "$1rss$2"
 
 func DiscoverFeedsAtUrl(
-	startUrl string, enforceTimeout bool, crawlCtx *CrawlContext, httpClient *HttpClient, logger Logger,
+	startUrl string, enforceTimeout bool, crawlCtx *CrawlContext, logger Logger,
 ) DiscoverFeedsResult {
 	var fullStartUrl string
 	if strings.HasPrefix(startUrl, "http://") || strings.HasPrefix(startUrl, "https://") {
@@ -99,22 +99,18 @@ func DiscoverFeedsAtUrl(
 		startLink, _ = ToCanonicalLink(feedUrl, logger, nil)
 	}
 
-	// TODO mock_progress_logger
-	startResult, err := crawlFeedWithTimeout(startLink, enforceTimeout, crawlCtx, httpClient, logger)
-	if err != nil {
+	startPage, err := crawlFeedWithTimeout(startLink, enforceTimeout, crawlCtx, logger)
+	if errors.Is(err, ErrNotAFeedOrHtmlPage) {
+		logger.Info("Page is not a feed or html: %s", startLink.Url)
+		return &DiscoverFeedsErrorNoFeeds{}
+	} else if err != nil {
 		logger.Info("Error while getting start_link: %v", err)
 		return &DiscoverFeedsErrorCouldNotReach{}
 	}
 
-	if startResult.Content == "" {
-		logger.Info("Page without content: %+v", startResult)
-		return &DiscoverFeedsErrorNoFeeds{}
-	}
-
-	// TODO: DiscoverFeedsErrorCouldNotReach if not a page
-
-	if isFeed(startResult.Content, logger) {
-		parsedFeed, err := ParseFeed(startResult.Content, startLink.Uri, logger)
+	switch p := startPage.(type) {
+	case *feedPage:
+		parsedFeed, err := ParseFeed(p.Content, startLink.Uri, logger)
 		if err != nil {
 			logger.Info("Parse feed error: %v", err)
 			return &DiscoverFeedsErrorBadFeed{}
@@ -123,26 +119,23 @@ func DiscoverFeedsAtUrl(
 		feed := DiscoveredFetchedFeed{
 			Title:      parsedFeed.Title,
 			Url:        startLink.Url,
-			FinalUrl:   startResult.FetchUri.String(),
-			Content:    startResult.Content,
+			FinalUrl:   p.FetchUri.String(),
+			Content:    p.Content,
 			ParsedFeed: parsedFeed,
 		}
 		return &DiscoveredSingleFeed{
 			MaybeStartPage: nil,
 			Feed:           feed,
 		}
-	} else if startResult.Document == nil {
-		logger.Info("Page without document")
-		return &DiscoverFeedsErrorNoFeeds{}
-	} else {
+	case *htmlPage:
 		startPage := DiscoveredStartPage{
 			Url:      startLink.Url,
-			FinalUrl: startResult.FetchUri.String(),
-			Content:  startResult.Content,
+			FinalUrl: p.FetchUri.String(),
+			Content:  p.Content,
 		}
 
 		linkNodes := htmlquery.Find(
-			startResult.Document,
+			p.Document,
 			"//*[self::a or self::area or self::link][@rel='alternate'][@type='application/rss+xml' or @type='application/atom+xml']",
 		)
 		var feeds []DiscoveredFeed
@@ -214,19 +207,17 @@ func DiscoverFeedsAtUrl(
 			feed := &dedupFeeds[i]
 			lowercaseTitle := strings.ToLower(feed.Title)
 			if feed.Title == "" || lowercaseTitle == "rss" || lowercaseTitle == "atom" {
-				feed.Title = findTitle(startResult.Document)
+				feed.Title = findTitle(p.Document)
 			}
 			if feed.Title == "" {
-				feed.Title = startResult.FetchUri.Host
+				feed.Title = p.FetchUri.Host
 			}
 		}
 
 		if len(dedupFeeds) == 0 {
 			return &DiscoverFeedsErrorNoFeeds{}
 		} else if len(dedupFeeds) == 1 {
-			singleFeedResult := FetchFeedAtUrl(
-				dedupFeeds[0].Url, enforceTimeout, crawlCtx, httpClient, logger,
-			)
+			singleFeedResult := FetchFeedAtUrl(dedupFeeds[0].Url, enforceTimeout, crawlCtx, logger)
 			switch r := singleFeedResult.(type) {
 			case *FetchedPage:
 				parsedFeed, err := ParseFeed(r.Page.Content, r.Page.FetchUri, logger)
@@ -257,11 +248,13 @@ func DiscoverFeedsAtUrl(
 				Feeds:     dedupFeeds,
 			}
 		}
+	default:
+		panic("Unknown page type")
 	}
 }
 
 type FetchedPage struct {
-	Page *page
+	Page *feedPage
 }
 
 type FetchFeedErrorBadFeed struct{}
@@ -277,49 +270,42 @@ func (*FetchFeedErrorBadFeed) fetchedFeedTag()       {}
 func (*FetchFeedErrorCouldNotReach) fetchedFeedTag() {}
 
 func FetchFeedAtUrl(
-	feedUrl string, enforceTimeout bool, crawlCtx *CrawlContext, httpClient *HttpClient, logger Logger,
+	feedUrl string, enforceTimeout bool, crawlCtx *CrawlContext, logger Logger,
 ) FetchFeedResult {
-	// TODO mock progress logger
-
 	feedLink, ok := ToCanonicalLink(feedUrl, logger, nil)
 	if !ok {
 		logger.Info("Bad feed url: %s", feedUrl)
 		return &FetchFeedErrorBadFeed{}
 	}
 
-	crawlResult, err := crawlFeedWithTimeout(feedLink, enforceTimeout, crawlCtx, httpClient, logger)
-	if err != nil {
+	crawlResult, err := crawlFeedWithTimeout(feedLink, enforceTimeout, crawlCtx, logger)
+	if errors.Is(err, ErrNotAFeedOrHtmlPage) {
+		logger.Info("Page is not a feed: %s", feedLink.Url)
+		return &FetchFeedErrorBadFeed{}
+	} else if err != nil {
+		logger.Info("Error when fetching a feed at %s: %v", feedLink.Url, err)
 		return &FetchFeedErrorCouldNotReach{}
-	}
-
-	// TODO: DiscoverFeedsErrorBadFeed if not a page
-	if crawlResult.Content == "" {
-		logger.Info("Unexpected crawl result")
+	} else if feedPage, ok := crawlResult.(*feedPage); ok {
+		return &FetchedPage{Page: feedPage}
+	} else {
+		logger.Info("Page is not a feed: %s", feedLink.Url)
 		return &FetchFeedErrorBadFeed{}
 	}
-
-	if !isFeed(crawlResult.Content, logger) {
-		logger.Info("Page is not a feed")
-		return &FetchFeedErrorBadFeed{}
-	}
-
-	return &FetchedPage{Page: crawlResult}
 }
 
 var ErrTimeout = errors.New("timeout")
 
-// TODO ProgressLogger
 func crawlFeedWithTimeout(
-	link *Link, enforceTimeout bool, crawlCtx *CrawlContext, httpClient *HttpClient, logger Logger,
-) (*page, error) {
+	link *Link, enforceTimeout bool, crawlCtx *CrawlContext, logger Logger,
+) (feedOrHtmlPage, error) {
 	if enforceTimeout {
 		type CrawlResult struct {
-			Page  *page
+			Page  feedOrHtmlPage
 			Error error
 		}
 		ch := make(chan CrawlResult)
 		go func() {
-			page, err := crawlRequest(link, true, crawlCtx, httpClient, logger)
+			page, err := crawlFeedOrHtmlPage(link, crawlCtx, logger)
 			ch <- CrawlResult{
 				Page:  page,
 				Error: err,
@@ -333,6 +319,6 @@ func crawlFeedWithTimeout(
 			return result.Page, result.Error
 		}
 	} else {
-		return crawlRequest(link, true, crawlCtx, httpClient, logger)
+		return crawlFeedOrHtmlPage(link, crawlCtx, logger)
 	}
 }

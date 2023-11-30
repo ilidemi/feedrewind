@@ -29,6 +29,14 @@
                     "shell_cmd": "go test ./e2e_test -tags emailtesting,e2etesting,testing -v"
                 },
                 {
+                    "name": "crawl all",
+                    "shell_cmd": "go run . crawl all"
+                },
+                {
+                    "name": "crawl one",
+                    "shell_cmd": "go run . crawl"
+                },
+                {
                     "name": "golangci-lint",
                     "shell_cmd": "golangci-lint cache clean && golangci-lint run --build-tags testing,e2etesting,emailtesting"
                 },
@@ -51,11 +59,11 @@
                     "shell": true
                 },
                 {
-                    "name": "cmd/wsl_startup",
-                    "shell_cmd": "go run cmd/wsl_startup/main.go"
+                    "name": "wsl startup",
+                    "shell_cmd": "go run . wsl-startup"
                 },
                 {
-                    "name": "cmd/timezones",
+                    "name": "generate timezones",
                     "shell_cmd": "go run cmd/timezones/main.go"
                 },
                 {
@@ -78,7 +86,9 @@
                         "-M",
                         "raw-time-zomes\\.json",
                         "-M",
-                        "rewrite-notes\\.txt"
+                        "rewrite-notes\\.txt",
+                        "-M",
+                        "zonetab\\.go"
                     ],
                     "shell": true
                 }
