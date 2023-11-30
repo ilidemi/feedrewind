@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func developmentConfig() Config {
+func DevelopmentDBConfig() DBConfig {
 	for i := 0; ; i++ {
 		if i > 100 {
 			panic("Something went wrong when looking for the feedrewind root dir")
@@ -31,6 +31,17 @@ func developmentConfig() Config {
 		panic("wsl ip is empty")
 	}
 
+	return DBConfig{
+		User:     "postgres",
+		Password: nil,
+		Host:     string(wslIp),
+		Port:     5432,
+		DBName:   "rss_catchup_rails_development",
+	}
+}
+
+func developmentConfig() Config {
+	dbConfig := DevelopmentDBConfig()
 	sessionHashKey, err := hex.DecodeString("REDACTED_DEV_SESSION_HASH_KEY")
 	if err != nil {
 		panic(err)
@@ -41,14 +52,9 @@ func developmentConfig() Config {
 	}
 
 	return Config{
-		Env: EnvDevelopment,
-		DB: DBConfig{
-			User:     "postgres",
-			Password: nil,
-			Host:     string(wslIp),
-			Port:     5432,
-			DBName:   "rss_catchup_rails_development",
-		},
+		Env:                     EnvDevelopment,
+		DB:                      dbConfig,
+		IsHeroku:                false,
 		SessionHashKey:          sessionHashKey,
 		SessionBlockKey:         sessionBlockKey,
 		PostmarkApiSandboxToken: "REDACTED_DEV_POSTMARK_API_SANDBOX_TOKEN",

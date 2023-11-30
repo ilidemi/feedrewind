@@ -2,7 +2,6 @@ package routes
 
 import (
 	"feedrewind/crawler"
-	hardcodedblogs "feedrewind/crawler/hardcoded_blogs"
 	"feedrewind/db/pgw"
 	"feedrewind/jobs"
 	"feedrewind/log"
@@ -303,8 +302,8 @@ func onboarding_MustDiscoverFeeds(
 	tx pgw.Queryable, startUrl string, currentUser *models.User, productUserId models.ProductUserId,
 ) (discoverResult, models.TypedBlogUrlResult) {
 	r := tx.Request()
-	if startUrl == hardcodedblogs.OurMachinery {
-		blog, err := models.Blog_GetLatestByFeedUrl(tx, hardcodedblogs.OurMachinery)
+	if startUrl == crawler.HardcodedOurMachinery {
+		blog, err := models.Blog_GetLatestByFeedUrl(tx, crawler.HardcodedOurMachinery)
 		if errors.Is(err, models.ErrBlogNotFound) {
 			panic("Our Machinery not found")
 		} else if err != nil {
@@ -322,14 +321,13 @@ func onboarding_MustDiscoverFeeds(
 		}
 	}
 
-	crawlCtx := crawler.CrawlContext{}
-	httpClient := crawler.HttpClient{
-		EnableThrottling: false,
-	}
+	httpClient := crawler.NewHttpClientImpl(false)
 	logger := crawler.ZeroLogger{
 		Req: tx.Request(),
 	}
-	discoverFeedsResult := crawler.DiscoverFeedsAtUrl(startUrl, true, &crawlCtx, &httpClient, &logger)
+	progressLogger := crawler.NewMockProgressLogger(&logger)
+	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
+	discoverFeedsResult := crawler.DiscoverFeedsAtUrl(startUrl, true, &crawlCtx, &logger)
 	switch result := discoverFeedsResult.(type) {
 	case *crawler.DiscoveredSingleFeed:
 		log.Info(r).Msgf("Discover feeds at %s - found single feed", startUrl)

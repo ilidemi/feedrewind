@@ -5,3 +5,5 @@
 tmp/
 
 static/tailwind.css
+trace.out
+cpuprofile

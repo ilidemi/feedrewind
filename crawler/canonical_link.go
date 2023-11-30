@@ -6,7 +6,64 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"golang.org/x/exp/slices"
+	"golang.org/x/net/html"
 )
+
+type Link struct {
+	Curi CanonicalUri
+	Uri  *neturl.URL
+	Url  string
+}
+
+type maybeTitledLink struct {
+	Link
+	MaybeTitle *LinkTitle
+}
+
+type maybeTitledHtmlLink struct {
+	maybeTitledLink
+	Element *html.Node
+}
+
+func dropHtml(links []*maybeTitledHtmlLink) []*maybeTitledLink {
+	result := make([]*maybeTitledLink, len(links))
+	for i, link := range links {
+		result[i] = &link.maybeTitledLink
+	}
+	return result
+}
+
+type titledLink struct {
+	Link
+	Title LinkTitle
+}
+
+type xpathLink struct {
+	Link
+	Element    *html.Node
+	XPath      string
+	ClassXPath string
+}
+
+type ilink interface {
+	Lnk() *Link
+}
+
+func (l *Link) Lnk() *Link                { return l }
+func (l *maybeTitledLink) Lnk() *Link     { return &l.Link }
+func (l *maybeTitledHtmlLink) Lnk() *Link { return &l.Link }
+func (l *titledLink) Lnk() *Link          { return &l.Link }
+func (l *xpathLink) Lnk() *Link           { return &l.Link }
+
+func toCanonicalUris[L ilink](links []L) []CanonicalUri {
+	curis := make([]CanonicalUri, len(links))
+	for i, link := range links {
+		curis[i] = link.Lnk().Curi
+	}
+	return curis
+}
 
 var leadingWhitespaceRegex *regexp.Regexp
 var trailingWhitespaceRegex *regexp.Regexp
@@ -52,11 +109,11 @@ func ToCanonicalLink(url string, logger Logger, fetchUri *neturl.URL) (link *Lin
 	}
 
 	if uri.User != nil {
-		logger.Info("Invalid URL: %q%s has userinfo: %s", uri, uri.User)
+		logger.Info("Invalid URL: %q%s has userinfo: %s", uri, fetchUriStr, uri.User)
 		return nil, false
 	}
 	if uri.Opaque != "" {
-		logger.Info("Invalid URL: %q%s has opaque: %s", uri, uri.Opaque)
+		logger.Info("Invalid URL: %q%s has opaque: %s", uri, fetchUriStr, uri.Opaque)
 		return nil, false
 	}
 
@@ -174,13 +231,20 @@ func CanonicalUriFromDbString(dbString string) CanonicalUri {
 	return CanonicalUriFromUri(dummyUri)
 }
 
-func (c *CanonicalUri) String() string {
+func (c CanonicalUri) String() string {
 	return fmt.Sprintf("%s%s%s%s", c.Host, c.Port, c.Path, c.Query)
 }
 
 type CanonicalEqualityConfig struct {
 	SameHosts         map[string]bool
 	ExpectTumblrPaths bool
+}
+
+func NewCanonicalEqualityConfig() CanonicalEqualityConfig {
+	return CanonicalEqualityConfig{
+		SameHosts:         nil,
+		ExpectTumblrPaths: false,
+	}
 }
 
 func CanonicalEqualityConfigEqual(curiEqCfg1, curiEqCfg2 *CanonicalEqualityConfig) bool {
@@ -230,6 +294,46 @@ func CanonicalUriEqual(curi1, curi2 CanonicalUri, curiEqCfg *CanonicalEqualityCo
 	return curi1.Query == curi2.Query
 }
 
+type CanonicalUriMap[T any] struct {
+	Links  []Link
+	Length int
+
+	curiEqCfg   *CanonicalEqualityConfig
+	valuesByKey map[string]T
+}
+
+func NewCanonicalUriMap[T any](curiEqCfg *CanonicalEqualityConfig) CanonicalUriMap[T] {
+	return CanonicalUriMap[T]{
+		Links:       nil,
+		Length:      0,
+		curiEqCfg:   curiEqCfg,
+		valuesByKey: make(map[string]T),
+	}
+}
+
+func (m *CanonicalUriMap[T]) Add(link Link, value T) {
+	key := canonicalUriGetKey(link.Curi, m.curiEqCfg)
+	if _, ok := m.valuesByKey[key]; ok {
+		return
+	}
+
+	m.valuesByKey[key] = value
+	m.Links = append(m.Links, link)
+	m.Length++
+}
+
+func (m *CanonicalUriMap[T]) Contains(curi CanonicalUri) bool {
+	key := canonicalUriGetKey(curi, m.curiEqCfg)
+	_, ok := m.valuesByKey[key]
+	return ok
+}
+
+func (m *CanonicalUriMap[T]) Get(curi CanonicalUri) (T, bool) {
+	key := canonicalUriGetKey(curi, m.curiEqCfg)
+	value, ok := m.valuesByKey[key]
+	return value, ok
+}
+
 type CanonicalUriSet struct {
 	Curis  []CanonicalUri
 	Length int
@@ -254,7 +358,6 @@ func (s *CanonicalUriSet) Contains(curi CanonicalUri) bool {
 	return s.keys[key]
 }
 
-//nolint:unused
 func (s *CanonicalUriSet) updateEqualityConfig(curiEqCfg *CanonicalEqualityConfig) {
 	curis := s.Curis
 	s.Curis = nil
@@ -264,20 +367,13 @@ func (s *CanonicalUriSet) updateEqualityConfig(curiEqCfg *CanonicalEqualityConfi
 	s.addMany(curis)
 }
 
-//nolint:unused
-func (s *CanonicalUriSet) merge(other *CanonicalUriSet) CanonicalUriSet {
-	if !CanonicalEqualityConfigEqual(s.curiEqCfg, other.curiEqCfg) {
-		panic("canonical equality configs are not equal")
-	}
-
-	result := CanonicalUriSet{
-		Curis:     s.Curis,
+func (s *CanonicalUriSet) clone() CanonicalUriSet {
+	return CanonicalUriSet{
+		Curis:     slices.Clone(s.Curis),
 		Length:    s.Length,
 		curiEqCfg: s.curiEqCfg,
 		keys:      s.keys,
 	}
-	result.addMany(other.Curis)
-	return result
 }
 
 func (s *CanonicalUriSet) addMany(curis []CanonicalUri) {

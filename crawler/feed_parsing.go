@@ -5,12 +5,14 @@ import (
 	"feedrewind/oops"
 	"fmt"
 	"html"
+	"io"
 	neturl "net/url"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/antchfx/xmlquery"
+	"golang.org/x/text/encoding/charmap"
 )
 
 func isFeed(body string, logger Logger) bool {
@@ -18,13 +20,28 @@ func isFeed(body string, logger Logger) bool {
 		return false
 	}
 
-	reader := strings.NewReader(body)
-	xml, err := xmlquery.Parse(reader)
+	xml, err := parseXML(body)
 	if err != nil {
 		return false
 	}
 
 	return isRSS(xml) || isRDF(xml) || isAtom(xml)
+}
+
+func parseXML(body string) (*xmlquery.Node, error) {
+	reader := strings.NewReader(body)
+	xml, err := xmlquery.ParseWithOptions(reader, xmlquery.ParserOptions{
+		Decoder: &xmlquery.DecoderOptions{ //nolint:exhaustruct
+			Strict: false,
+			CharsetReader: func(charset string, input io.Reader) (io.Reader, error) {
+				if strings.ToLower(charset) == "iso-8859-1" {
+					return charmap.ISO8859_1.NewDecoder().Reader(input), nil
+				}
+				return nil, fmt.Errorf("Unknown XML charset: %s", charset)
+			},
+		},
+	})
+	return xml, err
 }
 
 func isRSS(xml *xmlquery.Node) bool {
@@ -78,8 +95,7 @@ type feedEntry struct {
 }
 
 func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed, error) {
-	reader := strings.NewReader(content)
-	xml, err := xmlquery.Parse(reader)
+	xml, err := parseXML(content)
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
@@ -99,9 +115,12 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 		if feedTitleNode != nil {
 			feedTitle = strings.TrimSpace(feedTitleNode.InnerText())
 		}
-		rootUrlNode := xmlquery.FindOne(channel, "link")
-		if rootUrlNode != nil {
-			rootUrl = rootUrlNode.InnerText()
+		rootUrlNodes := xmlquery.Find(channel, "link")
+		for _, node := range rootUrlNodes {
+			if node.NamespaceURI == "" {
+				rootUrl = node.InnerText()
+				break
+			}
 		}
 
 		isPermalinkGuidUsed := false
@@ -162,7 +181,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 				continue
 			}
 
-			return nil, errors.New("couldn't extract item urls from RSS")
+			return nil, oops.New("couldn't extract item urls from RSS")
 		}
 
 		if isPermalinkGuidUsed {
@@ -227,7 +246,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 				continue
 			}
 
-			return nil, errors.New("couldn't extract item urls from RDF")
+			return nil, oops.New("couldn't extract item urls from RDF")
 		}
 
 		// Generator stays uninitialized
@@ -281,7 +300,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 
 			url, err := getAtomUrl(entryNode, hasFeedburnerNamespace)
 			if err != nil {
-				return nil, fmt.Errorf("couldn't extract entry urls from Atom: %w", err)
+				return nil, oops.Newf("couldn't extract entry urls from Atom: %w", err)
 			}
 
 			entries = append(entries, feedEntry{
@@ -331,7 +350,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 		var ok bool
 		rootLink, ok = ToCanonicalLink(rootUrl, logger, fetchUri)
 		if !ok {
-			rootLink = nil
+			logger.Info("Malformed root url: %s", rootUrl)
 		}
 	}
 	if rootLink != nil {
@@ -343,11 +362,11 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 	sortedEntries, areDatesCertain := trySortReverseChronological(entries, logger)
 	entryTitleCount := 0
 	entryTitleNeedsDecodingCount := 0
-	var entryLinks []MaybeTitledLink
+	var entryLinks []maybeTitledLink
 	for _, entry := range sortedEntries {
 		link, ok := ToCanonicalLink(entry.url, logger, fetchUri)
 		if !ok {
-			return nil, fmt.Errorf("couldn't parse link: %s", entry.url)
+			return nil, oops.Newf("couldn't parse link: %s", entry.url)
 		}
 		decodedEntryTitle := decodeHtmlTitle(entry.title)
 		if decodedEntryTitle != entry.title {
@@ -360,7 +379,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 			linkTitle := NewLinkTitle(linkTitleValue, LinkTitleSourceFeed, nil)
 			maybeLinkTitle = &linkTitle
 		}
-		entryLinks = append(entryLinks, MaybeTitledLink{
+		entryLinks = append(entryLinks, maybeTitledLink{
 			Link:       *link,
 			MaybeTitle: maybeLinkTitle,
 		})
@@ -428,7 +447,12 @@ func getAtomUrl(nodeWithLink *xmlquery.Node, hasFeedburnerNamespace bool) (strin
 	if len(linkCandidates) != 1 {
 		return "", fmt.Errorf("more than one candidate link: %d", len(linkCandidates))
 	}
-	url := linkCandidates[0].SelectAttr("href")
+	var url string
+	for _, attr := range linkCandidates[0].Attr {
+		if attr.Name.Local == "href" {
+			url = attr.Value
+		}
+	}
 	if url == "" {
 		return "", fmt.Errorf("no url in link")
 	}

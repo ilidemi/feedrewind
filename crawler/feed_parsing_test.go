@@ -938,7 +938,7 @@ func TestParseFeedEntryUrls(t *testing.T) {
 			for _, url := range tc.expectedEntryUrls {
 				entryCuris = append(entryCuris, CanonicalUriFromDbString(url))
 			}
-			matchedLinks := parsedFeed.EntryLinks.sequenceMatch(entryCuris, curiEqCfg)
+			matchedLinks, _ := parsedFeed.EntryLinks.sequenceMatch(entryCuris, curiEqCfg)
 			require.Equal(t, len(tc.expectedEntryUrls), len(matchedLinks), tc.description)
 
 			if tc.expectedNotEntryUrls != nil {
@@ -946,7 +946,7 @@ func TestParseFeedEntryUrls(t *testing.T) {
 				for _, url := range tc.expectedNotEntryUrls {
 					notEntryCuris = append(notEntryCuris, CanonicalUriFromDbString(url))
 				}
-				notMatchedLinks := parsedFeed.EntryLinks.sequenceMatch(notEntryCuris, curiEqCfg)
+				notMatchedLinks, _ := parsedFeed.EntryLinks.sequenceMatch(notEntryCuris, curiEqCfg)
 				require.Zero(t, len(notMatchedLinks), tc.description)
 			}
 		}

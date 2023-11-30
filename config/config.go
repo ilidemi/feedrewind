@@ -8,6 +8,7 @@ import (
 type Config struct {
 	Env                     Env
 	DB                      DBConfig
+	IsHeroku                bool
 	SessionHashKey          []byte
 	SessionBlockKey         []byte
 	PostmarkApiSandboxToken string
