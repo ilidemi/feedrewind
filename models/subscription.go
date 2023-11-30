@@ -585,11 +585,15 @@ func Subscription_GetBlogCrawlTimes(
 		where subscriptions_without_discarded.id = $1
 	`, subscriptionId)
 	var d SubscriptionBlogCrawlTimes
+	var userId *UserId
 	err := row.Scan(
-		&d.UserId, &d.BlogFeedUrl, &d.BlogCrawlClientToken, &d.BlogCrawlEpoch, &d.BlogCrawlEpochTimes,
+		&userId, &d.BlogFeedUrl, &d.BlogCrawlClientToken, &d.BlogCrawlEpoch, &d.BlogCrawlEpochTimes,
 	)
 	if err != nil {
 		return nil, err
+	}
+	if userId != nil {
+		d.UserId = *userId
 	}
 	return &d, nil
 }
