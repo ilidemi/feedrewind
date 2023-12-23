@@ -7,10 +7,8 @@ import (
 	"feedrewind/models/mutil"
 	"feedrewind/oops"
 	"feedrewind/util"
-	"feedrewind/util/schedule"
 	"fmt"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgerrcode"
@@ -162,18 +160,66 @@ func Blog_CreateOrUpdate(
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	curiEqCfg, err := blogCanonicalEqualityConfig_Get(tx, blog.Id)
+
+	row := tx.QueryRow(`
+		select same_hosts, expect_tumblr_paths from blog_canonical_equality_configs
+		where blog_id = $1
+	`, blog.Id)
+	var sameHostsSlice []string
+	var expectTumblrPaths bool
+	err = row.Scan(&sameHostsSlice, &expectTumblrPaths)
 	if err != nil {
 		return nil, err
 	}
-	discardedFeedEntryUrls, err := blogDiscardedFeedEntry_ListUrls(tx, blog.Id)
+	sameHosts := make(map[string]bool)
+	for _, sameHost := range sameHostsSlice {
+		sameHosts[sameHost] = true
+	}
+	curiEqCfg := &crawler.CanonicalEqualityConfig{
+		SameHosts:         sameHosts,
+		ExpectTumblrPaths: expectTumblrPaths,
+	}
+
+	rows, err = tx.Query(`
+		select url from blog_discarded_feed_entries
+		where blog_id = $1
+	`, blog.Id)
 	if err != nil {
 		return nil, err
 	}
-	missingFromFeedEntryUrls, err := blogMissingFromFeedEntry_ListUrls(tx, blog.Id)
+	discardedFeedEntryUrls := make(map[string]bool)
+	for rows.Next() {
+		var url string
+		err := rows.Scan(&url)
+		if err != nil {
+			return nil, err
+		}
+		discardedFeedEntryUrls[url] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	rows, err = tx.Query(`
+		select url from blog_missing_from_feed_entries
+		where blog_id = $1
+	`, blog.Id)
 	if err != nil {
 		return nil, err
 	}
+	missingFromFeedEntryUrls := make(map[string]bool)
+	for rows.Next() {
+		var url string
+		err := rows.Scan(&url)
+		if err != nil {
+			return nil, err
+		}
+		missingFromFeedEntryUrls[url] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	finalUri, err := url.Parse(startFeed.Url)
 	if err != nil {
 		return nil, oops.Wrap(err)
@@ -370,11 +416,11 @@ func blog_CreateWithCrawling(
 		return nil, err
 	}
 
-	err = blogCrawlProgress_Create(tx, blogId)
+	_, err = tx.Exec(`insert into blog_crawl_progresses (blog_id, epoch) values ($1, 0)`, blogId)
 	if err != nil {
 		return nil, err
 	}
-	err = BlogPostLock_Create(tx, blogId)
+	_, err = tx.Exec(`insert into blog_post_locks (blog_id) values ($1)`, blogId)
 	if err != nil {
 		return nil, err
 	}
@@ -390,22 +436,6 @@ func blog_CreateWithCrawling(
 		UpdateAction: updateAction,
 		BestUrl:      startFeed.Url,
 	}, nil
-}
-
-func Blog_Create(
-	tx pgw.Queryable, name string, feedUrl string, url string, status BlogStatus, version int32,
-	updateAction BlogUpdateAction,
-) (BlogId, error) {
-	blogIdInt, err := mutil.RandomId(tx, "blogs")
-	if err != nil {
-		return 0, err
-	}
-	blogId := BlogId(blogIdInt)
-	_, err = tx.Exec(`
-		insert into blogs(id, name, feed_url, url, status, status_updated_at, version, update_action)
-		values ($1, $2, $3, $4, $5, utc_now(), $6, $7)
-	`, blogId, name, feedUrl, url, status, version, updateAction)
-	return blogId, err
 }
 
 var ErrNoLatestVersion = errors.New("blog with latest version not found")
@@ -430,56 +460,6 @@ func Blog_Downgrade(tx pgw.Queryable, blogId BlogId) (int32, error) {
 	}
 
 	return version, nil
-}
-
-func Blog_ResetFailed(tx pgw.Queryable, cutoffTime schedule.Time) error {
-	logger := tx.Logger()
-	var sb strings.Builder
-	for status := range BlogFailedStatuses {
-		if sb.Len() > 0 {
-			sb.WriteString(", ")
-		}
-		sb.WriteString("'")
-		sb.WriteString(string(status))
-		sb.WriteString("'")
-	}
-	rows, err := tx.Query(`
-		select id, feed_url from blogs
-		where status in (`+sb.String()+`) and
-			version = $1 and
-			status_updated_at < $2
-	`, BlogLatestVersion, cutoffTime)
-	if err != nil {
-		return err
-	}
-
-	var blogIds []BlogId
-	var feedUrls []string
-	for rows.Next() {
-		var blogId BlogId
-		var feedUrl string
-		err := rows.Scan(&blogId, &feedUrl)
-		if err != nil {
-			return err
-		}
-		blogIds = append(blogIds, blogId)
-		feedUrls = append(feedUrls, feedUrl)
-	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	logger.Info().Msgf("Resetting %d failed blogs", len(blogIds))
-	for i, blogId := range blogIds {
-		newVersion, err := Blog_Downgrade(tx, blogId)
-		if err != nil {
-			return err
-		}
-
-		logger.Info().Msgf("Blog %d (%s) -> new version %d", blogId, feedUrls[i], newVersion)
-	}
-
-	return nil
 }
 
 type CrawledBlogPost struct {
@@ -601,55 +581,6 @@ func Blog_InitCrawled(
 	return updatedAt, nil
 }
 
-func Blog_GetNameStatus(tx pgw.Queryable, blogId BlogId) (name string, status BlogStatus, err error) {
-	row := tx.QueryRow("select name, status from blogs where id = $1", blogId)
-	err = row.Scan(&name, &status)
-	if err != nil {
-		return "", "", err
-	}
-
-	return name, status, nil
-}
-
-func Blog_GetStatus(tx pgw.Queryable, blogId BlogId) (BlogStatus, error) {
-	row := tx.QueryRow("select status from blogs where id = $1", blogId)
-	var status BlogStatus
-	err := row.Scan(&status)
-	if err != nil {
-		return "", err
-	}
-
-	return status, nil
-}
-
-func Blog_GetCrawlProgressMap(tx pgw.Queryable, blogId BlogId) (map[string]any, error) {
-	logger := tx.Logger()
-	status, err := Blog_GetStatus(tx, blogId)
-	if err != nil {
-		return nil, err
-	}
-	switch status {
-	case BlogStatusCrawlInProgress:
-		blogCrawlProgress, err := BlogCrawlProgress_Get(tx, blogId)
-		if err != nil {
-			return nil, err
-		}
-
-		logger.Info().Msgf("Blog %d crawl in progress (epoch %d)", blogId, blogCrawlProgress.Epoch)
-		return map[string]any{
-			"epoch":  blogCrawlProgress.Epoch,
-			"status": blogCrawlProgress.Progress,
-			"count":  blogCrawlProgress.Count,
-		}, nil
-	default:
-		logger.Info().Msgf("Blog %d crawl done", blogId)
-		return map[string]any{
-			"done": true,
-		}, nil
-	}
-
-}
-
 func Blog_GetBestUrl(tx pgw.Queryable, blogId BlogId) (string, error) {
 	row := tx.QueryRow(`
 		select coalesce(url, feed_url) from blogs
@@ -659,113 +590,6 @@ func Blog_GetBestUrl(tx pgw.Queryable, blogId BlogId) (string, error) {
 	var result string
 	err := row.Scan(&result)
 	return result, err
-}
-
-type BlogWithCounts struct {
-	Name            string
-	FeedUrl         string
-	PostsCount      int
-	CategoriesCount int
-}
-
-func Blog_GetWithCounts(tx pgw.Queryable, blogId BlogId) (*BlogWithCounts, error) {
-	row := tx.QueryRow(`
-		select
-			name,
-			feed_url,
-			(select count(1) from blog_posts where blog_id = $1),
-			(select count(1) from blog_post_categories where blog_id = $1)
-		from blogs
-		where id = $1
-	`, blogId)
-	var b BlogWithCounts
-	err := row.Scan(&b.Name, &b.FeedUrl, &b.PostsCount, &b.CategoriesCount)
-	return &b, err
-}
-
-// BlogCanonicalEqualityConfig
-
-func blogCanonicalEqualityConfig_Get(
-	tx pgw.Queryable, blogId BlogId,
-) (*crawler.CanonicalEqualityConfig, error) {
-	row := tx.QueryRow(`
-		select same_hosts, expect_tumblr_paths from blog_canonical_equality_configs
-		where blog_id = $1
-	`, blogId)
-	var sameHostsSlice []string
-	var expectTumblrPaths bool
-	err := row.Scan(&sameHostsSlice, &expectTumblrPaths)
-	if err != nil {
-		return nil, err
-	}
-	sameHosts := make(map[string]bool)
-	for _, sameHost := range sameHostsSlice {
-		sameHosts[sameHost] = true
-	}
-	return &crawler.CanonicalEqualityConfig{
-		SameHosts:         sameHosts,
-		ExpectTumblrPaths: expectTumblrPaths,
-	}, nil
-}
-
-func BlogCanonicalEqualityConfig_Create(
-	tx pgw.Queryable, blogId BlogId, sameHosts []string, expectTumblrPaths bool,
-) error {
-	_, err := tx.Exec(`
-		insert into blog_canonical_equality_configs(blog_id, same_hosts, expect_tumblr_paths)
-		values ($1, $2, $3)
-	`, blogId, sameHosts, expectTumblrPaths)
-	return err
-}
-
-// BlogDiscardedFeedEntry, BlogMissingFeedEntry
-
-func blogDiscardedFeedEntry_ListUrls(tx pgw.Queryable, blogId BlogId) (map[string]bool, error) {
-	return blogFeedEntry_ListUrls(tx, "blog_discarded_feed_entries", blogId)
-}
-
-func blogMissingFromFeedEntry_ListUrls(tx pgw.Queryable, blogId BlogId) (map[string]bool, error) {
-	return blogFeedEntry_ListUrls(tx, "blog_missing_from_feed_entries", blogId)
-}
-
-func blogFeedEntry_ListUrls(tx pgw.Queryable, table string, blogId BlogId) (map[string]bool, error) {
-	rows, err := tx.Query("select url from "+table+" where blog_id = $1", blogId)
-	if err != nil {
-		return nil, err
-	}
-	urls := make(map[string]bool)
-	for rows.Next() {
-		var url string
-		err := rows.Scan(&url)
-		if err != nil {
-			return nil, err
-		}
-		urls[url] = true
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return urls, nil
-}
-
-func BlogDiscardedFeedEntry_CreateMany(tx pgw.Queryable, blogId BlogId, urls []string) error {
-	return blogFeedEntry_CreateMany(tx, "blog_discarded_feed_entries", blogId, urls)
-}
-
-func BlogMissingFromFeedEntry_CreateMany(tx pgw.Queryable, blogId BlogId, urls []string) error {
-	return blogFeedEntry_CreateMany(tx, "blog_missing_from_feed_entries", blogId, urls)
-}
-
-func blogFeedEntry_CreateMany(tx pgw.Queryable, table string, blogId BlogId, urls []string) error {
-	batch := tx.NewBatch()
-	for _, url := range urls {
-		batch.Queue(`
-			insert into `+table+`(blog_id, url)
-			values ($1, $2)
-		`, blogId, url)
-	}
-	err := tx.SendBatch(batch).Close()
-	return err
 }
 
 // BlogPostLock
@@ -810,13 +634,6 @@ func BlogCrawlProgress_Get(tx pgw.Queryable, blogId BlogId) (*BlogCrawlProgress,
 		Progress: progress,
 		Epoch:    epoch,
 	}, nil
-}
-
-func blogCrawlProgress_Create(tx pgw.Queryable, blogId BlogId) error {
-	_, err := tx.Exec(`
-		insert into blog_crawl_progresses (blog_id, epoch) values ($1, 0)
-	`, blogId)
-	return err
 }
 
 // BlogCrawlClientToken
@@ -885,42 +702,6 @@ func BlogCrawlVote_Create(
 
 type BlogPostId int64
 
-type NewBlogPost struct {
-	Index int32
-	Url   string
-	Title string
-}
-
-type CreatedBlogPost struct {
-	Id  BlogPostId
-	Url string
-}
-
-func BlogPost_CreateMany(tx pgw.Queryable, blogId BlogId, posts []NewBlogPost) ([]CreatedBlogPost, error) {
-	batch := tx.NewBatch()
-	var createdPosts []CreatedBlogPost
-	for _, post := range posts {
-		batch.
-			Queue(`
-				insert into blog_posts(blog_id, index, url, title)
-				values ($1, $2, $3, $4)
-				returning id, url
-			`, blogId, post.Index, post.Url, post.Title).
-			QueryRow(func(row pgw.Row) error {
-				var p CreatedBlogPost
-				err := row.Scan(&p.Id, &p.Url)
-				if err != nil {
-					return err
-				}
-
-				createdPosts = append(createdPosts, p)
-				return nil
-			})
-	}
-	err := tx.SendBatch(batch).Close()
-	return createdPosts, err
-}
-
 type BlogPost struct {
 	Id    BlogPostId
 	Index int32
@@ -961,38 +742,6 @@ type NewBlogPostCategory struct {
 	Name  string
 	Index int32
 	IsTop bool
-}
-
-type CreatedBlogPostCategory struct {
-	Id   BlogPostCategoryId
-	Name string
-}
-
-func BlogPostCategory_CreateMany(
-	tx pgw.Queryable, blogId BlogId, categories []NewBlogPostCategory,
-) ([]CreatedBlogPostCategory, error) {
-	batch := tx.NewBatch()
-	var createdCategories []CreatedBlogPostCategory
-	for _, category := range categories {
-		batch.
-			Queue(`
-				insert into blog_post_categories(blog_id, name, index, is_top)
-				values ($1, $2, $3, $4)
-				returning id, name
-			`, blogId, category.Name, category.Index, category.IsTop).
-			QueryRow(func(row pgw.Row) error {
-				var p CreatedBlogPostCategory
-				err := row.Scan(&p.Id, &p.Name)
-				if err != nil {
-					return err
-				}
-
-				createdCategories = append(createdCategories, p)
-				return nil
-			})
-	}
-	err := tx.SendBatch(batch).Close()
-	return createdCategories, err
 }
 
 type BlogPostCategory struct {
@@ -1069,23 +818,4 @@ func BlogPostCategory_GetNamePostsCountById(
 	`, categoryId)
 	err = row.Scan(&name, &postsCount)
 	return name, postsCount, err
-}
-
-// BlogPostCategoryAssignment
-
-type NewBlogPostCategoryAssignment struct {
-	BlogPostId BlogPostId
-	CategoryId BlogPostCategoryId
-}
-
-func BlogPostCategoryAssignment_CreateMany(tx pgw.Queryable, assignments []NewBlogPostCategoryAssignment) error {
-	batch := tx.NewBatch()
-	for _, assignment := range assignments {
-		batch.Queue(`
-			insert into blog_post_category_assignments(blog_post_id, category_id)
-			values ($1, $2)
-		`, assignment.BlogPostId, assignment.CategoryId)
-	}
-	err := tx.SendBatch(batch).Close()
-	return err
 }

@@ -6,6 +6,7 @@ import (
 	"feedrewind/models"
 	"feedrewind/oops"
 	"feedrewind/util/schedule"
+	"strings"
 	"time"
 )
 
@@ -33,12 +34,53 @@ func ResetFailedBlogsJob_PerformAt(tx pgw.Queryable, runAt schedule.Time, enqueu
 }
 
 func ResetFailedBlogsJob_Perform(ctx context.Context, conn *pgw.Conn, enqueueNext bool) error {
+	logger := conn.Logger()
 	utcNow := schedule.UTCNow()
 	cutoffTime := utcNow.Add(-30 * 24 * time.Hour)
 
-	err := models.Blog_ResetFailed(conn, cutoffTime)
+	var sb strings.Builder
+	for status := range models.BlogFailedStatuses {
+		if sb.Len() > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString("'")
+		sb.WriteString(string(status))
+		sb.WriteString("'")
+	}
+	rows, err := conn.Query(`
+		select id, feed_url from blogs
+		where status in (`+sb.String()+`) and
+			version = $1 and
+			status_updated_at < $2
+	`, models.BlogLatestVersion, cutoffTime)
 	if err != nil {
 		return err
+	}
+
+	var blogIds []models.BlogId
+	var feedUrls []string
+	for rows.Next() {
+		var blogId models.BlogId
+		var feedUrl string
+		err := rows.Scan(&blogId, &feedUrl)
+		if err != nil {
+			return err
+		}
+		blogIds = append(blogIds, blogId)
+		feedUrls = append(feedUrls, feedUrl)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	logger.Info().Msgf("Resetting %d failed blogs", len(blogIds))
+	for i, blogId := range blogIds {
+		newVersion, err := models.Blog_Downgrade(conn, blogId)
+		if err != nil {
+			return err
+		}
+
+		logger.Info().Msgf("Blog %d (%s) -> new version %d", blogId, feedUrls[i], newVersion)
 	}
 
 	if enqueueNext {
