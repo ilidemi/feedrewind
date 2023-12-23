@@ -747,7 +747,7 @@ func getMaskedXPathExtraction(
 			linksMatchingFeed = append(linksMatchingFeed, link)
 		}
 	}
-	curisMatchingFeed := toCanonicalUris(linksMatchingFeed)
+	curisMatchingFeed := ToCanonicalUris(linksMatchingFeed)
 	uniqueLinksMatchingFeedCount := NewCanonicalUriSet(curisMatchingFeed, curiEqCfg).Length
 
 	matchingMaybeMarkupDates, maybeMarkupDatesLogLines := extractMaybeMarkupDates(
@@ -847,7 +847,7 @@ func getMaskedXPathExtraction(
 		}
 	}
 
-	filteredCuris := toCanonicalUris(filteredLinks)
+	filteredCuris := ToCanonicalUris(filteredLinks)
 	filteredCurisSet := NewCanonicalUriSet(filteredCuris, curiEqCfg)
 	hasDuplicates := filteredCurisSet.Length != len(filteredCuris)
 	linksExtraction := linksExtraction{

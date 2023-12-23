@@ -4,6 +4,7 @@ package e2etest
 
 import (
 	"feedrewind/oops"
+	"feedrewind/util/schedule"
 	"testing"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 )
 
 func TestOnboardingSuggestion(t *testing.T) {
-	email := "test_onboarding@test.com"
+	email := "test_onboarding@feedrewind.com"
 	timezone := "America/Los_Angeles"
 
 	l := launcher.New().Headless(false)
@@ -24,7 +25,7 @@ func TestOnboardingSuggestion(t *testing.T) {
 	page := visitAdminf(browser, "destroy_user?email=%s", email)
 	require.Contains(t, []string{"OK", "NotFound"}, pageText(page))
 
-	todayUtc := time.Date(2022, 6, 1, 0, 0, 0, 0, time.UTC)
+	todayUtc := schedule.NewTime(2022, 6, 1, 0, 0, 0, 0, time.UTC)
 	todayLocal := todayUtc.Add(7 * time.Hour)
 	signupTimestamp := todayLocal.Add(1 * time.Hour)
 	rssPublishTimestamp := todayLocal.Add(2 * time.Hour)
@@ -79,7 +80,7 @@ func TestOnboardingSuggestion(t *testing.T) {
 }
 
 func TestOnboardingCustomLink(t *testing.T) {
-	email := "test_onboarding@test.com"
+	email := "test_onboarding@feedrewind.com"
 	timezone := "America/Los_Angeles"
 
 	l := launcher.New().Headless(false)
@@ -89,7 +90,7 @@ func TestOnboardingCustomLink(t *testing.T) {
 	page := visitAdminf(browser, "destroy_user?email=%s", email)
 	require.Contains(t, []string{"OK", "NotFound"}, pageText(page))
 
-	todayUtc := time.Date(2022, 6, 1, 0, 0, 0, 0, time.UTC)
+	todayUtc := schedule.NewTime(2022, 6, 1, 0, 0, 0, 0, time.UTC)
 	todayLocal := todayUtc.Add(7 * time.Hour)
 	signupTimestamp := todayLocal.Add(1 * time.Hour)
 	rssPublishTimestamp := todayLocal.Add(2 * time.Hour)

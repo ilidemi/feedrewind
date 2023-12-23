@@ -12,6 +12,14 @@
             "program": "."
         },
         {
+            "name": "Worker",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": ".",
+            "args": ["worker"]
+        },
+        {
             "name": "Crawl one",
             "type": "go",
             "request": "launch",

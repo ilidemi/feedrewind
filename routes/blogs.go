@@ -21,7 +21,7 @@ func Blogs_Unsupported(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	if !(blogStatus == models.BlogStatusCrawlFailed || blogStatus == models.BlogStatusCrawledLooksWrong) {
+	if !models.BlogFailedStatuses[blogStatus] {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

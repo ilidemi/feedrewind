@@ -4,7 +4,6 @@ import (
 	"feedrewind/crawler"
 	"feedrewind/db/pgw"
 	"feedrewind/jobs"
-	"feedrewind/log"
 	"feedrewind/models"
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
@@ -301,7 +300,7 @@ func (*discoverError) discoverResultTag()             {}
 func onboarding_MustDiscoverFeeds(
 	tx pgw.Queryable, startUrl string, currentUser *models.User, productUserId models.ProductUserId,
 ) (discoverResult, models.TypedBlogUrlResult) {
-	r := tx.Request()
+	logger := tx.Logger()
 	if startUrl == crawler.HardcodedOurMachinery {
 		blog, err := models.Blog_GetLatestByFeedUrl(tx, crawler.HardcodedOurMachinery)
 		if errors.Is(err, models.ErrBlogNotFound) {
@@ -311,26 +310,24 @@ func onboarding_MustDiscoverFeeds(
 		}
 		subscription, err := models.Subscription_CreateForBlog(tx, blog, currentUser, productUserId)
 		if errors.Is(err, models.ErrBlogFailed) {
-			log.Info(r).Msg("Discover feeds for Our Machinery - unsupported blog")
+			logger.Info().Msg("Discover feeds for Our Machinery - unsupported blog")
 			return &discoveredUnsupportedBlog{blog: blog}, models.TypedBlogUrlResultHardcoded
 		} else if err != nil {
 			panic(err)
 		} else {
-			log.Info(r).Msg("Discover feeds for Our Machinery - created subscription")
+			logger.Info().Msg("Discover feeds for Our Machinery - created subscription")
 			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultHardcoded
 		}
 	}
 
-	httpClient := crawler.NewHttpClientImpl(false)
-	logger := crawler.ZeroLogger{
-		Req: tx.Request(),
-	}
-	progressLogger := crawler.NewMockProgressLogger(&logger)
+	httpClient := crawler.NewHttpClientImpl(tx.Context(), false)
+	zlogger := crawler.ZeroLogger{Logger: logger}
+	progressLogger := crawler.NewMockProgressLogger(&zlogger)
 	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
-	discoverFeedsResult := crawler.DiscoverFeedsAtUrl(startUrl, true, &crawlCtx, &logger)
+	discoverFeedsResult := crawler.DiscoverFeedsAtUrl(startUrl, true, &crawlCtx, &zlogger)
 	switch result := discoverFeedsResult.(type) {
 	case *crawler.DiscoveredSingleFeed:
-		log.Info(r).Msgf("Discover feeds at %s - found single feed", startUrl)
+		logger.Info().Msgf("Discover feeds at %s - found single feed", startUrl)
 		var maybeStartPageId *models.StartPageId
 		if result.MaybeStartPage != nil {
 			startPageId, err := models.StartPage_Create(tx, *result.MaybeStartPage)
@@ -338,6 +335,11 @@ func onboarding_MustDiscoverFeeds(
 				panic(err)
 			}
 			maybeStartPageId = &startPageId
+		}
+		feedLink, _ := crawler.ToCanonicalLink(result.Feed.FinalUrl, &zlogger, nil)
+		curiEqCfg := crawler.NewCanonicalEqualityConfig()
+		if crawler.CanonicalUriEqual(feedLink.Curi, crawler.HardcodedDanLuuFeed, &curiEqCfg) {
+			result.Feed.Title = crawler.HardcodedDanLuuFeedName
 		}
 		startFeed, err := models.StartFeed_CreateFetched(tx, maybeStartPageId, result.Feed)
 		if err != nil {
@@ -349,16 +351,16 @@ func onboarding_MustDiscoverFeeds(
 		}
 		subscription, err := models.Subscription_CreateForBlog(tx, updatedBlog, currentUser, productUserId)
 		if errors.Is(err, models.ErrBlogFailed) {
-			log.Info(r).Msgf("Discover feeds at %s - unsupported blog", startUrl)
+			logger.Info().Msgf("Discover feeds at %s - unsupported blog", startUrl)
 			return &discoveredUnsupportedBlog{blog: updatedBlog}, models.TypedBlogUrlResultKnownUnsupported
 		} else if err != nil {
 			panic(err)
 		} else {
-			log.Info(r).Msgf("Discover feeds at %s - created subscription", startUrl)
+			logger.Info().Msgf("Discover feeds at %s - created subscription", startUrl)
 			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultFeed
 		}
 	case *crawler.DiscoveredMultipleFeeds:
-		log.Info(r).Msgf("Discover feeds at %s - found %d feeds", startUrl, len(result.Feeds))
+		logger.Info().Msgf("Discover feeds at %s - found %d feeds", startUrl, len(result.Feeds))
 		startPageId, err := models.StartPage_Create(tx, result.StartPage)
 		if err != nil {
 			panic(err)
@@ -373,16 +375,16 @@ func onboarding_MustDiscoverFeeds(
 		}
 		return &discoveredFeeds{feeds: startFeeds}, models.TypedBlogUrlResultPageWithMultipleFeeds
 	case *crawler.DiscoverFeedsErrorNotAUrl:
-		log.Info(r).Msgf("Discover feeds at %s - not a url", startUrl)
+		logger.Info().Msgf("Discover feeds at %s - not a url", startUrl)
 		return &discoverError{}, models.TypedBlogUrlResultNotAUrl
 	case *crawler.DiscoverFeedsErrorCouldNotReach:
-		log.Info(r).Msgf("Discover feeds at %s - could not reach", startUrl)
+		logger.Info().Msgf("Discover feeds at %s - could not reach", startUrl)
 		return &discoverError{}, models.TypedBlogUrlResultCouldNotReach
 	case *crawler.DiscoverFeedsErrorNoFeeds:
-		log.Info(r).Msgf("Discover feeds at %s - no feeds", startUrl)
+		logger.Info().Msgf("Discover feeds at %s - no feeds", startUrl)
 		return &discoverError{}, models.TypedBlogUrlResultNoFeeds
 	case *crawler.DiscoverFeedsErrorBadFeed:
-		log.Info(r).Msgf("Discover feeds at %s - bad feed", startUrl)
+		logger.Info().Msgf("Discover feeds at %s - bad feed", startUrl)
 		return &discoverError{}, models.TypedBlogUrlResultBadFeed
 	default:
 		panic("unknown discover feeds result type")

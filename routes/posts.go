@@ -10,15 +10,33 @@ import (
 func Posts_Post(w http.ResponseWriter, r *http.Request) {
 	randomId := models.SubscriptionPostRandomId(util.URLParamStr(r, "random_id"))
 	conn := rutil.DBConn(r)
-	post, err := models.SubscriptionPost_GetByRandomId(conn, randomId)
+	row := conn.QueryRow(`
+		select
+			(select url from blog_posts where blog_posts.id = subscription_posts.blog_post_id),
+			subscription_id,
+			(select coalesce(url, feed_url) from blogs where blogs.id = (
+				select blog_id from blog_posts where blog_posts.id = subscription_posts.blog_post_id
+			)),
+			(select product_user_id from users where users.id = (
+				select user_id from subscriptions_with_discarded
+				where subscriptions_with_discarded.id = subscription_id
+			))
+		from subscription_posts
+		where random_id = $1
+	`, randomId)
+	var url string
+	var subscriptionId models.SubscriptionId
+	var blogBestUrl string
+	var productUserId models.ProductUserId
+	err := row.Scan(&url, &subscriptionId, &blogBestUrl, &productUserId)
 	if err != nil {
 		panic(err)
 	}
 
-	models.ProductEvent_MustEmit(conn, post.ProductUserId, "open post", map[string]any{
-		"subscription_id": post.SubscriptionId,
-		"blog_url":        post.BlogBestUrl,
+	models.ProductEvent_MustEmit(conn, productUserId, "open post", map[string]any{
+		"subscription_id": subscriptionId,
+		"blog_url":        blogBestUrl,
 	}, nil)
 
-	http.Redirect(w, r, post.Url, http.StatusFound)
+	http.Redirect(w, r, url, http.StatusFound)
 }

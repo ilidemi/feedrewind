@@ -4,12 +4,14 @@ import (
 	"errors"
 	"feedrewind/crawler"
 	"feedrewind/db/pgw"
-	"feedrewind/log"
 	"feedrewind/models/mutil"
 	"feedrewind/oops"
 	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -96,10 +98,10 @@ type GuidedCrawlingJobScheduleFunc func(tx pgw.Queryable, blogId BlogId, startFe
 func Blog_CreateOrUpdate(
 	tx pgw.Queryable, startFeed *StartFeed, guidedCrawlingJobScheduleFunc GuidedCrawlingJobScheduleFunc,
 ) (*Blog, error) {
-	r := tx.Request()
+	logger := tx.Logger()
 	blog, err := Blog_GetLatestByFeedUrl(tx, startFeed.Url)
 	if errors.Is(err, ErrBlogNotFound) {
-		log.Info(r).Msgf("Creating a new blog for feed url %s", startFeed.Url)
+		logger.Info().Msgf("Creating a new blog for feed url %s", startFeed.Url)
 		blog, err = func() (blog *Blog, err error) {
 			nestedTx, err := tx.Begin()
 			if err != nil {
@@ -140,9 +142,7 @@ func Blog_CreateOrUpdate(
 
 	// Update blog from feed
 	var blogPostCuris []crawler.CanonicalUri
-	logger := &crawler.ZeroLogger{
-		Req: tx.Request(),
-	}
+	zlogger := crawler.ZeroLogger{Logger: logger}
 	rows, err := tx.Query(`select url from blog_posts where blog_id = $1 order by index desc`, blog.Id)
 	if err != nil {
 		return nil, err
@@ -153,7 +153,7 @@ func Blog_CreateOrUpdate(
 		if err != nil {
 			return nil, err
 		}
-		blogPostLink, ok := crawler.ToCanonicalLink(blogPostUrl, logger, nil)
+		blogPostLink, ok := crawler.ToCanonicalLink(blogPostUrl, &zlogger, nil)
 		if !ok {
 			return nil, oops.Newf("couldn't parse blog post url: %s", blogPostUrl)
 		}
@@ -180,7 +180,7 @@ func Blog_CreateOrUpdate(
 	}
 	newLinks, err := crawler.ExtractNewPostsFromFeed(
 		startFeed.MaybeParsedFeed, finalUri, blogPostCuris, discardedFeedEntryUrls, missingFromFeedEntryUrls,
-		curiEqCfg, logger, logger,
+		curiEqCfg, &zlogger, &zlogger,
 	)
 	newLinksOk := true
 	if errors.Is(err, crawler.ErrExtractNewPostsNoMatch) {
@@ -190,13 +190,13 @@ func Blog_CreateOrUpdate(
 	}
 
 	if newLinksOk && len(newLinks) == 0 {
-		log.Info(r).Msgf("Blog %s doesn't need updating", startFeed.Url)
+		logger.Info().Msgf("Blog %s doesn't need updating", startFeed.Url)
 		return blog, nil
 	}
 
 	switch blog.UpdateAction {
 	case BlogUpdateActionRecrawl:
-		log.Info(r).Msgf("Blog %s is marked to recrawl on update", startFeed.Url)
+		logger.Info().Msgf("Blog %s is marked to recrawl on update", startFeed.Url)
 		return func() (newBlog *Blog, err error) {
 			nestedTx, err := tx.Begin()
 			if err != nil {
@@ -204,7 +204,7 @@ func Blog_CreateOrUpdate(
 			}
 			defer util.CommitOrRollbackErr(nestedTx, &err)
 
-			err = Blog_Downgrade(nestedTx, blog.Id)
+			_, err = Blog_Downgrade(nestedTx, blog.Id)
 			if err == nil {
 				newBlog, err = blog_CreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobScheduleFunc)
 			} else if errors.Is(err, ErrNoLatestVersion) || errors.Is(err, errBlogAlreadyExists) {
@@ -226,7 +226,7 @@ func Blog_CreateOrUpdate(
 		}()
 	case BlogUpdateActionUpdateFromFeedOrFail:
 		if newLinksOk {
-			log.Info(r).Msgf("Updating blog %s from feed with %d new links", startFeed.Url, len(newLinks))
+			logger.Info().Msgf("Updating blog %s from feed with %d new links", startFeed.Url, len(newLinks))
 			row := tx.QueryRow(`
 				select id from blog_post_categories
 				where blog_id = $1 and name = 'Everything'
@@ -251,7 +251,7 @@ func Blog_CreateOrUpdate(
 				`, blog.Id)
 				var pgErr *pgconn.PgError
 				if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.LockNotAvailable {
-					log.Info(r).Msgf("Someone else is updating the blog posts for %s, just waiting till they're done", startFeed.Url)
+					logger.Info().Msgf("Someone else is updating the blog posts for %s, just waiting till they're done", startFeed.Url)
 					rows, err := nestedTx.Query(`
 						select blog_id from blog_post_locks
 						where blog_id = $1
@@ -261,7 +261,7 @@ func Blog_CreateOrUpdate(
 						return nil, err
 					}
 					rows.Close()
-					log.Info(r).Msg("Done waiting")
+					logger.Info().Msg("Done waiting")
 
 					// Assume that the other writer has put the fresh posts in
 					// There could be a race condition where two updates and a post publish happened at the
@@ -290,7 +290,7 @@ func Blog_CreateOrUpdate(
 				if err != nil {
 					return nil, err
 				}
-				batch := &pgx.Batch{} //nolint:exhaustruct
+				batch := nestedTx.NewBatch()
 				for i := 0; i < len(newLinks); i++ {
 					index := maxIndex + 1 + i
 					link := newLinks[len(newLinks)-1-i]
@@ -317,7 +317,7 @@ func Blog_CreateOrUpdate(
 				return blog, nil
 			}()
 		} else {
-			log.Warn(r).Msgf("Couldn't update blog %s from feed, marking as failed", startFeed.Url)
+			logger.Warn().Msgf("Couldn't update blog %s from feed, marking as failed", startFeed.Url)
 			_, err := tx.Exec(`
 				update blogs set status = $1 where id = $2
 			`, BlogStatusUpdateFromFeedFailed, blog.Id)
@@ -328,7 +328,7 @@ func Blog_CreateOrUpdate(
 			return blog, nil
 		}
 	case BlogUpdateActionFail:
-		log.Warn(r).Msgf("Blog %s is marked to fail on update", startFeed.Url)
+		logger.Warn().Msgf("Blog %s is marked to fail on update", startFeed.Url)
 		_, err := tx.Exec(`
 			update blogs set status = $1 where id = $2
 		`, BlogStatusUpdateFromFeedFailed, blog.Id)
@@ -338,7 +338,7 @@ func Blog_CreateOrUpdate(
 		blog.Status = BlogStatusUpdateFromFeedFailed
 		return blog, nil
 	case BlogUpdateActionNoOp:
-		log.Info(r).Msgf("Blog %s is marked to never update", startFeed.Url)
+		logger.Info().Msgf("Blog %s is marked to never update", startFeed.Url)
 		return blog, nil
 	default:
 		panic(fmt.Errorf("unexpected blog update action: %s", blog.UpdateAction))
@@ -393,7 +393,7 @@ func blog_CreateWithCrawling(
 }
 
 func Blog_Create(
-	tx pgw.Queryable, name string, feedUrl string, url string, status BlogStatus, version int,
+	tx pgw.Queryable, name string, feedUrl string, url string, status BlogStatus, version int32,
 	updateAction BlogUpdateAction,
 ) (BlogId, error) {
 	blogIdInt, err := mutil.RandomId(tx, "blogs")
@@ -410,25 +410,195 @@ func Blog_Create(
 
 var ErrNoLatestVersion = errors.New("blog with latest version not found")
 
-func Blog_Downgrade(tx pgw.Queryable, blogId BlogId) error {
+func Blog_Downgrade(tx pgw.Queryable, blogId BlogId) (int32, error) {
 	row := tx.QueryRow(`
 		update blogs
 		set version = (
-			select max(version) from blogs
+			select coalesce(max(version), 0) from blogs
 			where feed_url = (select feed_url from blogs where id = $1) and version != $2
-		) + 1
+		) + 1,
+			status_updated_at = utc_now()
 		where id = $1 and version = $2
 		returning version
 	`, blogId, BlogLatestVersion)
-	var version int64
+	var version int32
 	err := row.Scan(&version)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrNoLatestVersion
+		return 0, ErrNoLatestVersion
 	} else if err != nil {
+		return 0, err
+	}
+
+	return version, nil
+}
+
+func Blog_ResetFailed(tx pgw.Queryable, cutoffTime schedule.Time) error {
+	logger := tx.Logger()
+	var sb strings.Builder
+	for status := range BlogFailedStatuses {
+		if sb.Len() > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString("'")
+		sb.WriteString(string(status))
+		sb.WriteString("'")
+	}
+	rows, err := tx.Query(`
+		select id, feed_url from blogs
+		where status in (`+sb.String()+`) and
+			version = $1 and
+			status_updated_at < $2
+	`, BlogLatestVersion, cutoffTime)
+	if err != nil {
 		return err
 	}
 
+	var blogIds []BlogId
+	var feedUrls []string
+	for rows.Next() {
+		var blogId BlogId
+		var feedUrl string
+		err := rows.Scan(&blogId, &feedUrl)
+		if err != nil {
+			return err
+		}
+		blogIds = append(blogIds, blogId)
+		feedUrls = append(feedUrls, feedUrl)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	logger.Info().Msgf("Resetting %d failed blogs", len(blogIds))
+	for i, blogId := range blogIds {
+		newVersion, err := Blog_Downgrade(tx, blogId)
+		if err != nil {
+			return err
+		}
+
+		logger.Info().Msgf("Blog %d (%s) -> new version %d", blogId, feedUrls[i], newVersion)
+	}
+
 	return nil
+}
+
+type CrawledBlogPost struct {
+	Url        string
+	Title      string
+	Categories []string
+}
+
+func Blog_InitCrawled(
+	tx *pgw.Tx, blogId BlogId, url string, crawledBlogPosts []CrawledBlogPost,
+	categories []NewBlogPostCategory, discardedFeedUrls []string, curiEqCfg *crawler.CanonicalEqualityConfig,
+) (updatedAt time.Time, err error) {
+	row := tx.QueryRow(`select status from blogs where id = $1`, blogId)
+	var status BlogStatus
+	err = row.Scan(&status)
+	if err != nil {
+		return updatedAt, err
+	}
+	if status != BlogStatusCrawlInProgress {
+		return updatedAt, oops.Newf(
+			"Can only init posts when status is %s, got %s instead", BlogStatusCrawlInProgress, status,
+		)
+	}
+
+	batch := tx.NewBatch()
+	blogPostIds := make([]BlogPostId, len(crawledBlogPosts))
+	for i, crawledBlogPost := range crawledBlogPosts {
+		i := i
+		batch.Queue(`
+				insert into blog_posts (blog_id, index, url, title)
+				values ($1, $2, $3, $4)
+				returning id
+			`, blogId, len(crawledBlogPosts)-i-1, crawledBlogPost.Url, crawledBlogPost.Title,
+		).QueryRow(func(row pgw.Row) error {
+			return row.Scan(&blogPostIds[i])
+		})
+	}
+	err = tx.SendBatch(batch).Close()
+	if err != nil {
+		return updatedAt, err
+	}
+
+	if len(categories) > 0 {
+		batch := tx.NewBatch()
+		categoryIds := make([]BlogPostCategoryId, len(categories))
+		for i, category := range categories {
+			i := i
+			batch.Queue(`
+					insert into blog_post_categories (blog_id, name, index, is_top)
+					values ($1, $2, $3, $4)
+					returning id
+				`, blogId, category.Name, category.Index, category.IsTop,
+			).QueryRow(func(row pgw.Row) error {
+				return row.Scan(&categoryIds[i])
+			})
+		}
+		err := tx.SendBatch(batch).Close()
+		if err != nil {
+			return updatedAt, err
+		}
+
+		categoryIdsByName := make(map[string]BlogPostCategoryId)
+		for i, category := range categories {
+			categoryIdsByName[category.Name] = categoryIds[i]
+		}
+
+		batch = tx.NewBatch()
+		for i, crawledBlogPost := range crawledBlogPosts {
+			for _, categoryName := range crawledBlogPost.Categories {
+				batch.Queue(`
+					insert into blog_post_category_assignments (blog_post_id, category_id)
+					values ($1, $2)
+				`, blogPostIds[i], categoryIdsByName[categoryName])
+			}
+		}
+		err = tx.SendBatch(batch).Close()
+		if err != nil {
+			return updatedAt, err
+		}
+	}
+
+	sameHosts := make([]string, 0, len(curiEqCfg.SameHosts))
+	for sameHost := range curiEqCfg.SameHosts {
+		sameHosts = append(sameHosts, sameHost)
+	}
+	_, err = tx.Exec(`
+		insert into blog_canonical_equality_configs (blog_id, same_hosts, expect_tumblr_paths)
+		values ($1, $2, $3)
+	`, blogId, sameHosts, curiEqCfg.ExpectTumblrPaths)
+	if err != nil {
+		return updatedAt, err
+	}
+
+	batch = tx.NewBatch()
+	for _, discardedFeedUrl := range discardedFeedUrls {
+		batch.Queue(`
+			insert into blog_discarded_feed_entries (blog_id, url)
+			values ($1, $2)
+		`, blogId, discardedFeedUrl)
+	}
+	err = tx.SendBatch(batch).Close()
+	if err != nil {
+		return updatedAt, err
+	}
+
+	_, err = tx.Exec(`
+			update blogs set url = $1, status = $2 where id = $3
+		`, url, BlogStatusCrawledVoting, blogId)
+	if err != nil {
+		return updatedAt, err
+	}
+
+	row = tx.QueryRow(`select updated_at from blogs where id = $1`, blogId)
+	err = row.Scan(&updatedAt)
+	if err != nil {
+		return updatedAt, err
+	}
+
+	return updatedAt, nil
 }
 
 func Blog_GetNameStatus(tx pgw.Queryable, blogId BlogId) (name string, status BlogStatus, err error) {
@@ -453,7 +623,7 @@ func Blog_GetStatus(tx pgw.Queryable, blogId BlogId) (BlogStatus, error) {
 }
 
 func Blog_GetCrawlProgressMap(tx pgw.Queryable, blogId BlogId) (map[string]any, error) {
-	r := tx.Request()
+	logger := tx.Logger()
 	status, err := Blog_GetStatus(tx, blogId)
 	if err != nil {
 		return nil, err
@@ -465,14 +635,14 @@ func Blog_GetCrawlProgressMap(tx pgw.Queryable, blogId BlogId) (map[string]any, 
 			return nil, err
 		}
 
-		log.Info(r).Msgf("Blog %d crawl in progress (epoch %d)", blogId, blogCrawlProgress.Epoch)
+		logger.Info().Msgf("Blog %d crawl in progress (epoch %d)", blogId, blogCrawlProgress.Epoch)
 		return map[string]any{
 			"epoch":  blogCrawlProgress.Epoch,
 			"status": blogCrawlProgress.Progress,
 			"count":  blogCrawlProgress.Count,
 		}, nil
 	default:
-		log.Info(r).Msgf("Blog %d crawl done", blogId)
+		logger.Info().Msgf("Blog %d crawl done", blogId)
 		return map[string]any{
 			"done": true,
 		}, nil
@@ -587,14 +757,14 @@ func BlogMissingFromFeedEntry_CreateMany(tx pgw.Queryable, blogId BlogId, urls [
 }
 
 func blogFeedEntry_CreateMany(tx pgw.Queryable, table string, blogId BlogId, urls []string) error {
-	var batch pgx.Batch
+	batch := tx.NewBatch()
 	for _, url := range urls {
 		batch.Queue(`
 			insert into `+table+`(blog_id, url)
 			values ($1, $2)
 		`, blogId, url)
 	}
-	err := tx.SendBatch(&batch).Close()
+	err := tx.SendBatch(batch).Close()
 	return err
 }
 
@@ -727,7 +897,7 @@ type CreatedBlogPost struct {
 }
 
 func BlogPost_CreateMany(tx pgw.Queryable, blogId BlogId, posts []NewBlogPost) ([]CreatedBlogPost, error) {
-	var batch pgx.Batch
+	batch := tx.NewBatch()
 	var createdPosts []CreatedBlogPost
 	for _, post := range posts {
 		batch.
@@ -736,7 +906,7 @@ func BlogPost_CreateMany(tx pgw.Queryable, blogId BlogId, posts []NewBlogPost) (
 				values ($1, $2, $3, $4)
 				returning id, url
 			`, blogId, post.Index, post.Url, post.Title).
-			QueryRow(func(row pgx.Row) error {
+			QueryRow(func(row pgw.Row) error {
 				var p CreatedBlogPost
 				err := row.Scan(&p.Id, &p.Url)
 				if err != nil {
@@ -747,7 +917,7 @@ func BlogPost_CreateMany(tx pgw.Queryable, blogId BlogId, posts []NewBlogPost) (
 				return nil
 			})
 	}
-	err := tx.SendBatch(&batch).Close()
+	err := tx.SendBatch(batch).Close()
 	return createdPosts, err
 }
 
@@ -801,7 +971,7 @@ type CreatedBlogPostCategory struct {
 func BlogPostCategory_CreateMany(
 	tx pgw.Queryable, blogId BlogId, categories []NewBlogPostCategory,
 ) ([]CreatedBlogPostCategory, error) {
-	var batch pgx.Batch
+	batch := tx.NewBatch()
 	var createdCategories []CreatedBlogPostCategory
 	for _, category := range categories {
 		batch.
@@ -810,7 +980,7 @@ func BlogPostCategory_CreateMany(
 				values ($1, $2, $3, $4)
 				returning id, name
 			`, blogId, category.Name, category.Index, category.IsTop).
-			QueryRow(func(row pgx.Row) error {
+			QueryRow(func(row pgw.Row) error {
 				var p CreatedBlogPostCategory
 				err := row.Scan(&p.Id, &p.Name)
 				if err != nil {
@@ -821,7 +991,7 @@ func BlogPostCategory_CreateMany(
 				return nil
 			})
 	}
-	err := tx.SendBatch(&batch).Close()
+	err := tx.SendBatch(batch).Close()
 	return createdCategories, err
 }
 
@@ -909,13 +1079,13 @@ type NewBlogPostCategoryAssignment struct {
 }
 
 func BlogPostCategoryAssignment_CreateMany(tx pgw.Queryable, assignments []NewBlogPostCategoryAssignment) error {
-	var batch pgx.Batch
+	batch := tx.NewBatch()
 	for _, assignment := range assignments {
 		batch.Queue(`
 			insert into blog_post_category_assignments(blog_post_id, category_id)
 			values ($1, $2)
 		`, assignment.BlogPostId, assignment.CategoryId)
 	}
-	err := tx.SendBatch(&batch).Close()
+	err := tx.SendBatch(batch).Close()
 	return err
 }

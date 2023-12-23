@@ -3,14 +3,13 @@ package log
 
 import (
 	"feedrewind/oops"
-	"net/http"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
-var logger zerolog.Logger
+var Base zerolog.Logger
 
 func init() {
 	zerolog.ErrorStackMarshaler = marshalStack
@@ -18,44 +17,34 @@ func init() {
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 }
 
-var ErrUserUnknown = errors.New("User is unknown")
-var ErrUserAnonymous = errors.New("User is anonymous")
-var GetCurrentUserId func(r *http.Request) (int64, error)
+type Logger interface {
+	Info() *zerolog.Event
+	Warn() *zerolog.Event
+	Error() *zerolog.Event
+}
 
-func Info(r *http.Request) *zerolog.Event {
-	event := logger.Info().Timestamp()
-	event = logCommon(event, r)
+type BackgroundLogger struct{}
+
+func (l *BackgroundLogger) Info() *zerolog.Event {
+	event := Base.Info()
+	event = l.logBackgroundCommon(event)
 	return event
 }
 
-func Warn(r *http.Request) *zerolog.Event {
-	event := logger.Warn().Timestamp()
-	event = logCommon(event, r)
+func (l *BackgroundLogger) Warn() *zerolog.Event {
+	event := Base.Warn()
+	event = l.logBackgroundCommon(event)
 	return event
 }
 
-func Error(r *http.Request) *zerolog.Event {
-	event := logger.Error().Timestamp()
-	event = logCommon(event, r)
+func (l *BackgroundLogger) Error() *zerolog.Event {
+	event := Base.Error()
+	event = l.logBackgroundCommon(event)
 	return event
 }
 
-func logCommon(event *zerolog.Event, r *http.Request) *zerolog.Event {
-	if r == nil {
-		return event
-	}
-	userId, err := GetCurrentUserId(r)
-	if errors.Is(err, ErrUserUnknown) {
-		// Don't log user id
-	} else if errors.Is(err, ErrUserAnonymous) {
-		event = event.Int64("user_id", 0)
-	} else if err != nil {
-		panic(err)
-	} else {
-		event = event.Int64("user_id", userId)
-	}
-	requestId := r.Header.Get("X-Request-ID")
-	event = event.Str("request_id", requestId)
+func (l *BackgroundLogger) logBackgroundCommon(event *zerolog.Event) *zerolog.Event {
+	event = event.Timestamp().Str("logger", "background")
 	return event
 }
 

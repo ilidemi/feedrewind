@@ -14,6 +14,13 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+type Feed struct {
+	Title    string
+	Url      string
+	FinalUrl string
+	Content  string
+}
+
 type GuidedCrawlResult struct {
 	FeedResult       FeedResult
 	CuriEqCfg        *CanonicalEqualityConfig
@@ -70,8 +77,7 @@ func categoryCountsString(categories []HistoricalBlogPostCategory) string {
 }
 
 func GuidedCrawl(
-	maybeStartPage *DiscoveredStartPage, feed DiscoveredFetchedFeed, crawlCtx *CrawlContext,
-	httpClient HttpClient, puppeteerClient PuppeteerClient, progressSaver ProgressSaver, logger Logger,
+	maybeStartPage *DiscoveredStartPage, feed Feed, crawlCtx *CrawlContext, logger Logger,
 ) (*GuidedCrawlResult, error) {
 	guidedCrawlResult := GuidedCrawlResult{} //nolint:exhaustruct
 	feedResult := &guidedCrawlResult.FeedResult
@@ -206,7 +212,10 @@ func GuidedCrawl(
 	var historicalResult *HistoricalResult
 	var historicalMaybeTitledLinks []*maybeTitledLink
 	var historicalError error
-	if parsedFeed.EntryLinks.Length <= 50 || parsedFeed.EntryLinks.Length%100 == 0 {
+	if parsedFeed.EntryLinks.Length <= 50 ||
+		parsedFeed.EntryLinks.Length%100 == 0 ||
+		CanonicalUriEqual(feedLink.Curi, HardcodedDanLuuFeed, &curiEqCfg) {
+
 		var postprocessedResult *postprocessedResult
 		if parsedFeed.Generator != FeedGeneratorTumblr {
 			postprocessedResult, historicalError = guidedCrawlHistorical(
@@ -244,7 +253,6 @@ func GuidedCrawl(
 				Extra:                  postprocessedResult.Extra,
 			}
 		}
-
 	} else {
 		logger.Info("Feed is long with %d entries", parsedFeed.EntryLinks.Length)
 
@@ -276,7 +284,7 @@ func GuidedCrawl(
 		)
 		titleSources := countLinkTitleSources(historicalResult.Links)
 		historicalResult.Extra = append(historicalResult.Extra, fmt.Sprintf("title_xpaths: %s", titleSources))
-		historicalCuris := toCanonicalUris(historicalMaybeTitledLinks)
+		historicalCuris := ToCanonicalUris(historicalMaybeTitledLinks)
 		feedLinksMatchingResult, ok := parsedFeed.EntryLinks.sequenceMatch(historicalCuris, &curiEqCfg)
 		feedTitlesPresent := true
 		for _, link := range parsedFeed.EntryLinks.ToSlice() {
@@ -524,7 +532,7 @@ func guidedCrawlHistorical(
 	entry2Links := extractLinks(
 		entry2Page.Document, entry2Page.FetchUri, allowedHosts, crawlCtx.Redirects, logger, includeXPathNone,
 	)
-	entry1Curis := toCanonicalUris(entry1Links)
+	entry1Curis := ToCanonicalUris(entry1Links)
 	entry1CurisSet := NewCanonicalUriSet(entry1Curis, curiEqCfg)
 
 	var twoEntriesLinks []*Link
@@ -1429,7 +1437,7 @@ func compareWithFeed(
 		return true
 	}
 
-	sortedCuris := toCanonicalUris(sortedLinks)
+	sortedCuris := ToCanonicalUris(sortedLinks)
 	curisSet := NewCanonicalUriSet(sortedCuris, curiEqCfg)
 	presentFeedEntryLinks := feedEntryLinks.filterIncluded(&curisSet)
 	if _, ok := presentFeedEntryLinks.sequenceMatch(sortedCuris, curiEqCfg); ok {
@@ -1444,7 +1452,7 @@ func compareWithFeed(
 	}
 	logger.Info("%v%s", sortedLinksTrimmedByFeed, sortedLinksEllipsis)
 	logger.Info("are not matching filtered feed:")
-	presentCuris := toCanonicalUris(presentFeedEntryLinks.ToSlice())
+	presentCuris := ToCanonicalUris(presentFeedEntryLinks.ToSlice())
 	logger.Info("%v", presentCuris)
 	return false
 }
@@ -1635,7 +1643,7 @@ func fetchMissingTitles(
 		logger.Info("Found common suffix for page titles: %s", suffix)
 	}
 	if prefixLength > 0 || suffixLength > 0 {
-		curis := toCanonicalUris(pageTitleLinks)
+		curis := ToCanonicalUris(pageTitleLinks)
 		curisSet := NewCanonicalUriSet(curis, curiEqCfg)
 		var testLink Link
 		for _, link := range links {

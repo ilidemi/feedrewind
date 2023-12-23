@@ -6,13 +6,13 @@ import (
 	"feedrewind/db"
 	"feedrewind/db/pgw"
 	"feedrewind/jobs"
-	"feedrewind/log"
 	"feedrewind/models"
 	"feedrewind/publish"
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
 	"feedrewind/third_party/tzdata"
 	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
 	"html/template"
 	"math"
@@ -108,10 +108,10 @@ func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 
 type subscriptionsScheduleResult struct {
 	Name               string
-	CurrentCountByDay  map[util.DayOfWeek]int
+	CurrentCountByDay  map[schedule.DayOfWeek]int
 	HasOtherSubs       bool
-	OtherSubNamesByDay map[util.DayOfWeek][]string
-	DaysOfWeek         []util.DayOfWeek
+	OtherSubNamesByDay map[schedule.DayOfWeek][]string
+	DaysOfWeek         []schedule.DayOfWeek
 }
 
 type subscriptionsScheduleJsResult struct {
@@ -198,12 +198,12 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 			CurrentCountByDay:  countByDay,
 			HasOtherSubs:       len(otherSubNamesByDay) > 0,
 			OtherSubNamesByDay: otherSubNamesByDay,
-			DaysOfWeek:         util.DaysOfWeek,
+			DaysOfWeek:         schedule.DaysOfWeek,
 		},
 		ScheduleVersion: subscription.ScheduleVersion,
 		SchedulePreview: preview,
 		ScheduleJS: subscriptionsScheduleJsResult{
-			DaysOfWeekJson:        util.DaysOfWeekJson,
+			DaysOfWeekJson:        schedule.DaysOfWeekJson,
 			ValidateCallback:      template.JS("onValidateSchedule"),
 			SetNameChangeCallback: template.JS("setNameChangeScheduleCallback"),
 		},
@@ -212,6 +212,7 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 }
 
 func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
 	conn := rutil.DBConn(r)
 	currentUser := rutil.CurrentUser(r)
 	productUserId := rutil.CurrentProductUserId(r)
@@ -224,15 +225,15 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Feeds that were fetched were handled in onboarding, this one needs to be fetched
-	httpClient := crawler.NewHttpClientImpl(false)
-	logger := &crawler.ZeroLogger{Req: r}
-	progressLogger := crawler.NewMockProgressLogger(logger)
+	httpClient := crawler.NewHttpClientImpl(r.Context(), false)
+	zlogger := crawler.ZeroLogger{Logger: logger}
+	progressLogger := crawler.NewMockProgressLogger(&zlogger)
 	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
-	fetchFeedResult := crawler.FetchFeedAtUrl(startFeed.Url, true, &crawlCtx, logger)
+	fetchFeedResult := crawler.FetchFeedAtUrl(startFeed.Url, true, &crawlCtx, &zlogger)
 	switch fetchResult := fetchFeedResult.(type) {
 	case *crawler.FetchedPage:
 		finalUrl := fetchResult.Page.FetchUri.String()
-		parsedFeed, err := crawler.ParseFeed(fetchResult.Page.Content, fetchResult.Page.FetchUri, logger)
+		parsedFeed, err := crawler.ParseFeed(fetchResult.Page.Content, fetchResult.Page.FetchUri, &zlogger)
 		if err != nil {
 			models.ProductEvent_MustEmitDiscoverFeeds(
 				pc, startFeed.Url, models.TypedBlogUrlResultBadFeed, userIsAnonymous,
@@ -659,14 +660,14 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			SubscriptionName: status.SubscriptionName,
 			Schedule: subscriptionsScheduleResult{
 				Name:               status.SubscriptionName,
-				CurrentCountByDay:  make(map[util.DayOfWeek]int),
+				CurrentCountByDay:  make(map[schedule.DayOfWeek]int),
 				HasOtherSubs:       len(otherSubNamesByDay) > 0,
 				OtherSubNamesByDay: otherSubNamesByDay,
-				DaysOfWeek:         util.DaysOfWeek,
+				DaysOfWeek:         schedule.DaysOfWeek,
 			},
 			SchedulePreview: preview,
 			ScheduleJS: subscriptionsScheduleJsResult{
-				DaysOfWeekJson:        util.DaysOfWeekJson,
+				DaysOfWeekJson:        schedule.DaysOfWeekJson,
 				ValidateCallback:      template.JS("onValidateSchedule"),
 				SetNameChangeCallback: template.JS("setNameChangeScheduleCallback"),
 			},
@@ -684,10 +685,16 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		publishedCount, err := models.SubscriptionPost_GetPublishedCount(conn, subscriptionId)
+
+		row := conn.QueryRow(`
+			select count(1) from subscription_posts where subscription_id = $1 and published_at is not null
+		`, subscriptionId)
+		var publishedCount int
+		err = row.Scan(&publishedCount)
 		if err != nil {
 			panic(err)
 		}
+
 		var willArriveDate string
 		var willArriveOne bool
 		if publishedCount == 0 {
@@ -695,10 +702,10 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			utcNow := util.Schedule_UTCNow()
+			utcNow := schedule.UTCNow()
 			location := tzdata.LocationByName[userSettings.Timezone]
 			localTime := utcNow.In(location)
-			localDate := util.Schedule_Date(localTime)
+			localDate := localTime.Date()
 
 			nextJobScheduleDate, err := subscriptions_GetRealisticScheduleDate(
 				conn, currentUser.Id, localTime, localDate,
@@ -707,17 +714,17 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 			todaysJobAlreadyRan := nextJobScheduleDate > localDate
-			willArriveDateTime := util.Schedule_TimeFromDate(localDate)
+			willArriveDateTime := localDate.Time()
 			if todaysJobAlreadyRan {
 				willArriveDateTime = willArriveDateTime.AddDate(0, 0, 1)
 			}
-			for countsByDay[util.Schedule_DayOfWeek(willArriveDateTime)] <= 0 {
+			for countsByDay[willArriveDateTime.DayOfWeek()] <= 0 {
 				willArriveDateTime = willArriveDateTime.AddDate(0, 0, 1)
 			}
 
 			willArriveDate = willArriveDateTime.Format("Monday, January 2") +
 				util.Ordinal(willArriveDateTime.Day())
-			willArriveOne = countsByDay[util.Schedule_DayOfWeek(willArriveDateTime)] == 1
+			willArriveOne = countsByDay[willArriveDateTime.DayOfWeek()] == 1
 		}
 		type HeresFeedOrEmailResult struct {
 			Title            string
@@ -760,6 +767,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 }
 
 func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
 	conn := rutil.DBConn(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
@@ -782,21 +790,21 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if clientToken != crawlTimes.BlogCrawlClientToken {
-		log.Info(r).Msgf(
+		logger.Info().Msgf(
 			"Client token mismatch: incoming %s, expected %s",
 			clientToken, crawlTimes.BlogCrawlClientToken,
 		)
 		return
 	}
 
-	log.Info(r).Msgf("Server: %s", crawlTimes.BlogCrawlEpochTimes)
-	log.Info(r).Msgf("Client: %s", epochDurations)
+	logger.Info().Msgf("Server: %s", crawlTimes.BlogCrawlEpochTimes)
+	logger.Info().Msgf("Client: %s", epochDurations)
 	adminTelemetryExtra := map[string]any{
 		"feed_url":        crawlTimes.BlogFeedUrl,
 		"subscription_id": subscriptionId,
 	}
 	if totalReconnectAttempts > 0 {
-		log.Info(r).Msgf("Total reconnect attempts: %d", totalReconnectAttempts)
+		logger.Info().Msgf("Total reconnect attempts: %d", totalReconnectAttempts)
 		err := models.AdminTelemetry_Create(
 			conn, "websocket_reconnects", float64(totalReconnectAttempts), adminTelemetryExtra,
 		)
@@ -823,14 +831,14 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		clientDurations = append(clientDurations, duration)
 	}
 	if len(clientDurations) != len(serverDurations) {
-		log.Info(r).Msgf(
+		logger.Info().Msgf(
 			"Epoch count mismatch: client %d, server %d", len(clientDurations), len(serverDurations),
 		)
 		return
 	}
 
 	if len(clientDurations) < 3 {
-		log.Info(r).Msg("Too few client durations to compute anything")
+		logger.Info().Msg("Too few client durations to compute anything")
 		return
 	}
 
@@ -845,7 +853,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stdDeviation := calcStdDeviation(clientDurations, serverDurations)
-	log.Info(r).Msgf("Standard deviation (full): %.03f", stdDeviation)
+	logger.Info().Msgf("Standard deviation (full): %.03f", stdDeviation)
 
 	var clientDurationsAfterInitialLoad []float64
 	for _, clientDuration := range clientDurations[1 : len(clientDurations)-1] {
@@ -857,7 +865,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		serverDurations[len(serverDurations)-len(clientDurationsAfterInitialLoad):]
 	stdDeviationAfterInitialLoad :=
 		calcStdDeviation(clientDurationsAfterInitialLoad, serverDurationsAfterInitialLoad)
-	log.Info(r).Msgf("Standard deviation after initial load: %.03f", stdDeviationAfterInitialLoad)
+	logger.Info().Msgf("Standard deviation after initial load: %.03f", stdDeviationAfterInitialLoad)
 	err = models.AdminTelemetry_Create(
 		conn, "progress_timing_std_deviation", stdDeviationAfterInitialLoad, adminTelemetryExtra,
 	)
@@ -868,9 +876,9 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	// E2E for crawling job getting picked up and reporting the first rectangle
 	initialLoadDuration := clientDurations[0]
 	if initialLoadDuration > 10 {
-		log.Warn(r).Msgf("Initial load duration (exceeds 10 seconds): %.03f", initialLoadDuration)
+		logger.Warn().Msgf("Initial load duration (exceeds 10 seconds): %.03f", initialLoadDuration)
 	} else {
-		log.Info(r).Msgf("Initial load duration: %.03f", initialLoadDuration)
+		logger.Info().Msgf("Initial load duration: %.03f", initialLoadDuration)
 	}
 	err = models.AdminTelemetry_Create(
 		conn, "progress_timing_initial_load", initialLoadDuration, adminTelemetryExtra,
@@ -884,7 +892,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	if realWebsocketWaitDuration < 0 {
 		realWebsocketWaitDuration = 0
 	}
-	log.Info(r).Msgf("Websocket wait duration: %.03f", realWebsocketWaitDuration)
+	logger.Info().Msgf("Websocket wait duration: %.03f", realWebsocketWaitDuration)
 	err = models.AdminTelemetry_Create(
 		conn, "websocket_wait_duration", realWebsocketWaitDuration, adminTelemetryExtra,
 	)
@@ -894,6 +902,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 }
 
 func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
 	conn := rutil.DBConn(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
@@ -943,7 +952,7 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 		} else {
 			productSelection = "top_category"
 		}
-		log.Info(r).Msgf("Using top category %s with %d posts", topCategoryName, postsCount)
+		logger.Info().Msgf("Using top category %s with %d posts", topCategoryName, postsCount)
 	} else {
 		for key, value := range r.Form {
 			if !strings.HasPrefix(key, "post_") {
@@ -960,7 +969,7 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 		}
 		productSelectedCount = len(blogPostIds)
 		productSelection = "custom"
-		log.Info(r).Msgf("Using custom selection with %d posts", len(blogPostIds))
+		logger.Info().Msgf("Using custom selection with %d posts", len(blogPostIds))
 	}
 
 	err = models.BlogCrawlVote_Create(
@@ -1011,6 +1020,7 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 }
 
 func Subscriptions_MarkWrong(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
 	conn := rutil.DBConn(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
@@ -1054,7 +1064,7 @@ func Subscriptions_MarkWrong(w http.ResponseWriter, r *http.Request) {
 		"user_is_anonymous": rutil.CurrentUser(r) == nil,
 	}, nil)
 
-	log.Warn(r).Msgf("Blog %d (%s) marked as wrong", status.BlogId, status.BlogName)
+	logger.Warn().Msgf("Blog %d (%s) marked as wrong", status.BlogId, status.BlogName)
 }
 
 func Subscriptions_Progress(w http.ResponseWriter, r *http.Request) {
@@ -1083,6 +1093,7 @@ func Subscriptions_Progress(w http.ResponseWriter, r *http.Request) {
 }
 
 func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
 	conn := rutil.DBConn(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
@@ -1106,9 +1117,9 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 
 	subscriptionName := util.EnsureParamStr(r, "name")
 
-	countsByDay := make(map[util.DayOfWeek]int)
+	countsByDay := make(map[schedule.DayOfWeek]int)
 	totalCount := 0
-	for _, dayOfWeek := range util.DaysOfWeek {
+	for _, dayOfWeek := range schedule.DaysOfWeek {
 		count := util.EnsureParamInt(r, string(dayOfWeek)+"_count")
 		if count < 0 {
 			panic("Expecting counts to be 0+")
@@ -1132,16 +1143,16 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 		}
 		defer util.CommitOrRollbackMsg(tx, &result, "Unlocked daily jobs")
 
-		log.Info(r).Msg("Locking daily jobs")
+		logger.Info().Msg("Locking daily jobs")
 		lockedJobs, err := jobs.PublishPostsJob_Lock(tx, currentUser.Id)
 		if err != nil {
 			panic(err)
 		}
-		log.Info(r).Msgf("Locked daily jobs %d", len(lockedJobs))
+		logger.Info().Msgf("Locked daily jobs %d", len(lockedJobs))
 
 		for _, job := range lockedJobs {
 			if job.LockedBy != "" {
-				log.Info(r).Msgf("Some jobs are running, unlocking %d", len(lockedJobs))
+				logger.Info().Msgf("Some jobs are running, unlocking %d", len(lockedJobs))
 				return false
 			}
 		}
@@ -1190,10 +1201,10 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 
-		utcNow := util.Schedule_UTCNow()
+		utcNow := schedule.UTCNow()
 		location := tzdata.LocationByName[oldUserSettings.Timezone]
 		localTime := utcNow.In(location)
-		localDate := util.Schedule_Date(localTime)
+		localDate := localTime.Date()
 
 		// If subscription got added early morning, the first post needs to go out the same day, either via
 		// the daily job or right away if the update rss job has already ran
@@ -1202,7 +1213,7 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 		todaysJobAlreadyRan := nextJobDate > localDate
-		isAddedEarlyMorning := util.Schedule_IsEarlyMorning(localTime)
+		isAddedEarlyMorning := localTime.IsEarlyMorning()
 		shouldPublishRssPosts := todaysJobAlreadyRan && isAddedEarlyMorning
 
 		err = models.Subscription_FinishSetup(
@@ -1238,7 +1249,7 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 			tx, fmt.Sprintf("*%s* subscribed to *<%s|%s>*", slackEmail, slackBlogUrl, slackBlogName),
 		)
 		if err != nil {
-			log.Error(r).Err(err).Msg("Error while submitting a NotifySlackJob")
+			logger.Error().Err(err).Msg("Error while submitting a NotifySlackJob")
 		}
 
 		util.MustWrite(w, rutil.SubscriptionSetupPath(subscriptionId))
@@ -1314,7 +1325,7 @@ func subscriptions_MustPauseUnpause(
 var dayCountNames []string
 
 func init() {
-	for _, day := range util.DaysOfWeek {
+	for _, day := range schedule.DaysOfWeek {
 		dayCountNames = append(dayCountNames, string(day)+"_count")
 	}
 }
@@ -1368,9 +1379,9 @@ func Subscriptions_Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	productActiveDays := 0
-	countsByDay := make(map[util.DayOfWeek]int)
+	countsByDay := make(map[schedule.DayOfWeek]int)
 	for _, dayCountName := range dayCountNames {
-		dayOfWeek := util.DayOfWeek(dayCountName[:3])
+		dayOfWeek := schedule.DayOfWeek(dayCountName[:3])
 		dayCount := util.EnsureParamInt64(r, dayCountName)
 		countsByDay[dayOfWeek] = int(dayCount)
 		if dayCount > 0 {
@@ -1437,8 +1448,8 @@ type schedulePreview struct {
 	NextPosts                            []models.SchedulePreviewNextPost
 	PrevHasMore                          bool
 	NextHasMore                          bool
-	TodayDate                            util.Date
-	NextScheduleDate                     util.Date
+	TodayDate                            schedule.Date
+	NextScheduleDate                     schedule.Date
 	Timezone                             string
 	Location                             *time.Location
 	ShortFriendlySuffixNameByGroupIdJson template.JS
@@ -1449,7 +1460,7 @@ func subscriptions_MustGetSchedulePreview(
 	tx pgw.Queryable, subscriptionId models.SubscriptionId, subscriptionStatus models.SubscriptionStatus,
 	userId models.UserId, userSettings *models.UserSettings,
 ) schedulePreview {
-	r := tx.Request()
+	logger := tx.Logger()
 	preview, err := models.Subscription_GetSchedulePreview(tx, subscriptionId)
 	if err != nil {
 		panic(err)
@@ -1471,12 +1482,12 @@ func subscriptions_MustGetSchedulePreview(
 	if !ok {
 		panic(fmt.Errorf("Timezone not found: %s", userSettings.Timezone))
 	}
-	utcNow := util.Schedule_UTCNow()
+	utcNow := schedule.UTCNow()
 	localTime := utcNow.In(location)
-	localDate := util.Schedule_Date(localTime)
+	localDate := localTime.Date()
 
-	var nextScheduleDate util.Date
-	if subscriptionStatus != models.SubscriptionStatusLive && util.Schedule_IsEarlyMorning(localTime) {
+	var nextScheduleDate schedule.Date
+	if subscriptionStatus != models.SubscriptionStatusLive && localTime.IsEarlyMorning() {
 		nextScheduleDate = localDate
 	} else {
 		var err error
@@ -1485,7 +1496,7 @@ func subscriptions_MustGetSchedulePreview(
 			panic(err)
 		}
 	}
-	log.Info(r).Msgf("Preview next schedule date: %s", nextScheduleDate)
+	logger.Info().Msgf("Preview next schedule date: %s", nextScheduleDate)
 
 	return schedulePreview{
 		PrevPosts:                            preview.PrevPosts,
@@ -1503,22 +1514,22 @@ func subscriptions_MustGetSchedulePreview(
 }
 
 func subscriptions_GetRealisticScheduleDate(
-	tx pgw.Queryable, userId models.UserId, localTime time.Time, localDate util.Date,
-) (util.Date, error) {
-	r := tx.Request()
+	tx pgw.Queryable, userId models.UserId, localTime schedule.Time, localDate schedule.Date,
+) (schedule.Date, error) {
+	logger := tx.Logger()
 	nextScheduleDate, err := jobs.PublishPostsJob_GetNextScheduledDate(tx, userId)
 	if err != nil {
 		return "", err
 	}
 	if nextScheduleDate == "" {
-		if util.Schedule_IsEarlyMorning(localTime) {
+		if localTime.IsEarlyMorning() {
 			return localDate, nil
 		} else {
 			nextDay := localTime.AddDate(0, 0, 1)
-			return util.Schedule_Date(nextDay), nil
+			return nextDay.Date(), nil
 		}
 	} else if nextScheduleDate < localDate {
-		log.Warn(r).Msgf("Job is scheduled in the past for user %d: %s (today is %s)", userId, nextScheduleDate, localDate)
+		logger.Warn().Msgf("Job is scheduled in the past for user %d: %s (today is %s)", userId, nextScheduleDate, localDate)
 		return localDate, nil
 	} else {
 		return nextScheduleDate, nil
@@ -1526,6 +1537,7 @@ func subscriptions_GetRealisticScheduleDate(
 }
 
 func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
 	conn := rutil.DBConn(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
@@ -1561,18 +1573,18 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	listenConn, err := db.Pool.Acquire(r)
+	listenConn, err := db.Pool.Acquire(r.Context(), logger)
 	if err != nil {
 		panic(err)
 	}
 	defer listenConn.Release()
 
-	channelName := fmt.Sprintf("discovery_%d", status.BlogId)
+	channelName := jobs.DiscoveryChannelName(status.BlogId)
 	_, err = listenConn.Exec("listen " + channelName)
 	if err != nil {
 		panic(err)
 	}
-	log.Info(r).Msgf("Started listen on %s", channelName)
+	logger.Info().Msgf("Started listen on %s", channelName)
 
 	// Guard against a race condition where the last NOTIFY happened before we
 	// started listening
@@ -1581,7 +1593,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	if statusRefresh.BlogStatus != models.BlogStatusCrawlInProgress {
-		log.Info(r).Msgf("Blog %d finished crawling before a notification was received", status.BlogId)
+		logger.Info().Msgf("Blog %d finished crawling before a notification was received", status.BlogId)
 		err := ws.WriteJSON(map[string]any{"done": true})
 		if err != nil {
 			panic(err)
@@ -1615,7 +1627,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			log.Info(r).Msgf("%s: %s", channelName, notification.Payload)
+			logger.Info().Msgf("%s: %s", channelName, notification.Payload)
 			err = ws.WriteMessage(websocket.TextMessage, []byte(notification.Payload))
 			if err != nil {
 				panic(err)
@@ -1631,7 +1643,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			log.Info(r).Msgf("%s: %s", channelName, payload)
+			logger.Info().Msgf("%s: %s", channelName, payload)
 			err = ws.WriteMessage(websocket.TextMessage, []byte(payload))
 			if err != nil {
 				panic(err)

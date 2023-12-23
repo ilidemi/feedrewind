@@ -1,0 +1,2 @@
+Manage subscription:
+{{.Url}}

@@ -2,6 +2,7 @@ package rutil
 
 import (
 	"feedrewind/db/pgw"
+	"feedrewind/log"
 	"feedrewind/middleware"
 	"feedrewind/models"
 	"feedrewind/util"
@@ -11,6 +12,10 @@ import (
 )
 
 // This file wraps calls to the middleware package so that the routes don't have to reference it
+
+func Logger(r *http.Request) log.Logger {
+	return middleware.GetLogger(r)
+}
 
 func DBConn(r *http.Request) *pgw.Conn {
 	return middleware.GetDBConn(r)

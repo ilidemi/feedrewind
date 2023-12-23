@@ -4,6 +4,7 @@ package pgw
 import (
 	"context"
 	"errors"
+	"feedrewind/log"
 	"feedrewind/oops"
 	"net/http"
 	"regexp"
@@ -19,8 +20,10 @@ type Queryable interface {
 	Exec(sql string, args ...any) (pgconn.CommandTag, error)
 	Query(sql string, args ...any) (*Rows, error)
 	QueryRow(sql string, args ...any) *Row
-	SendBatch(batch *pgx.Batch) *BatchResults
-	Request() *http.Request
+	NewBatch() *Batch
+	SendBatch(batch *Batch) *BatchResults
+	Logger() log.Logger
+	Context() context.Context
 }
 
 type Pool struct {
@@ -35,8 +38,7 @@ func NewPool(ctx context.Context, connString string) (*Pool, error) {
 	return &Pool{pool}, nil
 }
 
-func (pool *Pool) Acquire(r *http.Request) (*Conn, error) {
-	ctx := r.Context()
+func (pool *Pool) Acquire(ctx context.Context, logger log.Logger) (*Conn, error) {
 	t1 := time.Now()
 	defer addDuration(ctx, t1)()
 
@@ -46,9 +48,9 @@ func (pool *Pool) Acquire(r *http.Request) (*Conn, error) {
 	}
 
 	return &Conn{
-		Req:  r,
-		impl: conn,
-		ctx:  ctx,
+		logger: logger,
+		impl:   conn,
+		ctx:    ctx,
 	}, nil
 }
 
@@ -62,16 +64,16 @@ func (pool *Pool) AcquireBackground() (*Conn, error) {
 	}
 
 	return &Conn{
-		Req:  nil,
-		impl: conn,
-		ctx:  ctx,
+		logger: &log.BackgroundLogger{},
+		impl:   conn,
+		ctx:    ctx,
 	}, nil
 }
 
 type Conn struct {
-	Req  *http.Request
-	impl *pgxpool.Conn
-	ctx  context.Context
+	logger log.Logger
+	impl   *pgxpool.Conn
+	ctx    context.Context
 }
 
 func (conn *Conn) Begin() (*Tx, error) {
@@ -83,9 +85,9 @@ func (conn *Conn) Begin() (*Tx, error) {
 		return nil, oops.Wrap(err)
 	}
 	return &Tx{
-		Req:  conn.Req,
-		impl: tx,
-		ctx:  conn.ctx,
+		logger: conn.logger,
+		impl:   tx,
+		ctx:    conn.ctx,
 	}, nil
 }
 
@@ -133,15 +135,26 @@ func (conn *Conn) QueryRow(sql string, args ...any) *Row {
 	return newRow(row)
 }
 
-func (conn *Conn) SendBatch(batch *pgx.Batch) *BatchResults {
+func (conn *Conn) NewBatch() *Batch {
+	return &Batch{
+		impl: pgx.Batch{}, //nolint:exhaustruct
+		ctx:  conn.ctx,
+	}
+}
+
+func (conn *Conn) SendBatch(batch *Batch) *BatchResults {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
 
-	return newBatchResults(conn.impl.SendBatch(conn.ctx, batch))
+	return newBatchResults(conn.impl.SendBatch(conn.ctx, &batch.impl))
 }
 
-func (conn *Conn) Request() *http.Request {
-	return conn.Req
+func (conn *Conn) Logger() log.Logger {
+	return conn.logger
+}
+
+func (conn *Conn) Context() context.Context {
+	return conn.ctx
 }
 
 func (conn *Conn) Release() {
@@ -159,9 +172,9 @@ func (conn *Conn) WaitForNotification() (*pgconn.Notification, error) {
 }
 
 type Tx struct {
-	Req  *http.Request
-	impl pgx.Tx
-	ctx  context.Context
+	logger log.Logger
+	impl   pgx.Tx
+	ctx    context.Context
 }
 
 // Begin starts a pseudo nested transaction.
@@ -175,9 +188,9 @@ func (tx *Tx) Begin() (*Tx, error) {
 	}
 
 	return &Tx{
-		Req:  tx.Req,
-		impl: nested,
-		ctx:  tx.ctx,
+		logger: tx.logger,
+		impl:   nested,
+		ctx:    tx.ctx,
 	}, nil
 }
 
@@ -242,15 +255,26 @@ func (tx *Tx) QueryRow(sql string, arguments ...any) *Row {
 	return newRow(row)
 }
 
-func (tx *Tx) SendBatch(batch *pgx.Batch) *BatchResults {
+func (tx *Tx) NewBatch() *Batch {
+	return &Batch{
+		impl: pgx.Batch{}, //nolint:exhaustruct
+		ctx:  tx.ctx,
+	}
+}
+
+func (tx *Tx) SendBatch(batch *Batch) *BatchResults {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
-	return newBatchResults(tx.impl.SendBatch(tx.ctx, batch))
+	return newBatchResults(tx.impl.SendBatch(tx.ctx, &batch.impl))
 }
 
-func (tx *Tx) Request() *http.Request {
-	return tx.Req
+func (tx *Tx) Logger() log.Logger {
+	return tx.logger
+}
+
+func (tx *Tx) Context() context.Context {
+	return tx.ctx
 }
 
 type Rows struct {
@@ -329,6 +353,50 @@ func (row *Row) Scan(dest ...any) error {
 
 	err := row.impl.Scan(dest...)
 	return oops.Wrap(err)
+}
+
+type Batch struct {
+	impl pgx.Batch
+	ctx  context.Context
+}
+
+func NewBatch(ctx context.Context) *Batch {
+	return &Batch{
+		impl: pgx.Batch{},
+		ctx:  ctx,
+	}
+}
+
+// Queue queues a query to batch b. query can be an SQL query or the name of a prepared statement.
+func (b *Batch) Queue(query string, arguments ...any) *QueuedQuery {
+	return &QueuedQuery{
+		impl: b.impl.Queue(query, arguments...),
+		ctx:  b.ctx,
+	}
+}
+
+type QueuedQuery struct {
+	impl *pgx.QueuedQuery
+	ctx  context.Context
+}
+
+// Query sets fn to be called when the response to qq is received.
+func (qq *QueuedQuery) Query(fn func(rows Rows) error) {
+	qq.impl.Query(func(rows pgx.Rows) error {
+		return fn(*newRows(rows, qq.ctx))
+	})
+}
+
+// Query sets fn to be called when the response to qq is received.
+func (qq *QueuedQuery) QueryRow(fn func(row Row) error) {
+	qq.impl.QueryRow(func(row pgx.Row) error {
+		return fn(*newRow(row))
+	})
+}
+
+// Exec sets fn to be called when the response to qq is received.
+func (qq *QueuedQuery) Exec(fn func(ct pgconn.CommandTag) error) {
+	qq.impl.Exec(fn)
 }
 
 type BatchResults struct {

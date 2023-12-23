@@ -2,7 +2,6 @@ package routes
 
 import (
 	"feedrewind/jobs"
-	"feedrewind/log"
 	"feedrewind/middleware"
 	"feedrewind/models"
 	"feedrewind/publish"
@@ -59,6 +58,7 @@ func Login_Page(w http.ResponseWriter, r *http.Request) {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
 	if rutil.CurrentUser(r) != nil {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
@@ -75,7 +75,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	user, err := models.FullUser_FindByEmail(conn, email)
 	if errors.Is(err, models.ErrUserNotFound) {
-		log.Info(r).Msg("User not found")
+		logger.Info().Msg("User not found")
 	} else if err != nil {
 		panic(err)
 	} else {
@@ -114,7 +114,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, redirect, http.StatusFound)
 			return
 		} else {
-			log.Info(r).Err(err).Msg("Password doesn't match")
+			logger.Info().Err(err).Msg("Password doesn't match")
 		}
 	}
 
@@ -160,6 +160,7 @@ func SignUp_Page(w http.ResponseWriter, r *http.Request) {
 }
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
 	if rutil.CurrentUser(r) != nil {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
@@ -227,21 +228,21 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		if _, ok := util.GroupIdByTimezoneId[timezone]; ok {
 			timezoneOut = timezone
 		} else {
-			log.Warn(r).Msgf("Unknown timezone: %s", timezone)
+			logger.Warn().Msgf("Unknown timezone: %s", timezone)
 			timeOffset, err := strconv.ParseInt(timeOffsetStr, 10, 32)
 			if err != nil {
-				log.Warn(r).Msgf("Couldn't parse time offset: %s", timeOffsetStr)
+				logger.Warn().Msgf("Couldn't parse time offset: %s", timeOffsetStr)
 				timeOffset = 0
 			}
 			offsetHoursInverted := int(timeOffset) / 60
 			var ok bool
 			timezoneOut, ok = util.UnfriendlyGroupIdByOffset[offsetHoursInverted]
 			if !ok {
-				log.Warn(r).Msgf("Time offset too large: %s", timeOffsetStr)
+				logger.Warn().Msgf("Time offset too large: %s", timeOffsetStr)
 				timezoneOut = util.TimezoneUTC
 			}
 		}
-		log.Info(r).Msgf("Timezone out: %s", timezoneOut)
+		logger.Info().Msgf("Timezone out: %s", timezoneOut)
 
 		err = models.UserSettings_Create(tx, user.Id, timezoneOut)
 		if err != nil {

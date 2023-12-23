@@ -5,11 +5,13 @@ import (
 	"feedrewind/cmd/crawl"
 	"feedrewind/config"
 	"feedrewind/db"
+	"feedrewind/jobs"
 	"feedrewind/log"
 	frmiddleware "feedrewind/middleware"
 	"feedrewind/models"
 	"feedrewind/routes"
 	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
 	"net/http"
 	"time"
@@ -26,17 +28,13 @@ import (
 //go:generate go run third_party/tzdata/generate_zipdata.go
 
 func main() {
-	// pprof
-	go func() {
-		fmt.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-
 	rootCmd := &cobra.Command{
 		Use: "feedrewind",
 		Run: func(_ *cobra.Command, _ []string) {
 			runServer()
 		},
 	}
+	rootCmd.AddCommand(jobs.Worker)
 	rootCmd.AddCommand(cmd.Db)
 	rootCmd.AddCommand(cmd.WslStartup)
 	rootCmd.AddCommand(crawl.Crawl)
@@ -53,6 +51,10 @@ func main() {
 }
 
 func runServer() {
+	go func() {
+		fmt.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	conn, err := db.Pool.AcquireBackground()
 	if err != nil {
 		panic(err)
@@ -156,21 +158,23 @@ func runServer() {
 	staticR.Get(util.StaticRouteTemplate, routes.Static_File)
 	staticR.NotFound(routes.Misc_NotFound)
 
-	log.Info(nil).Msg("Started")
+	logger := &log.BackgroundLogger{}
+	logger.Info().Msg("Started")
 	if err := http.ListenAndServe(":3000", staticR); err != nil {
 		panic(err)
 	}
 }
 
 func logStalledJobs() {
-	log.Info(nil).Msg("Checking for stalled jobs")
+	logger := &log.BackgroundLogger{}
+	logger.Info().Msg("Checking for stalled jobs")
 	conn, err := db.Pool.AcquireBackground()
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Release()
 
-	hourAgo := time.Now().UTC().Add(-1 * time.Hour)
+	hourAgo := schedule.UTCNow().Add(-1 * time.Hour)
 	rows, err := conn.Query(`
 		select id, handler from delayed_jobs where locked_at < $1
 	`, hourAgo)
@@ -184,7 +188,7 @@ func logStalledJobs() {
 		if err != nil {
 			panic(err)
 		}
-		log.Warn(nil).Msgf("Stalled job (%d): %s", id, handler)
+		logger.Warn().Msgf("Stalled job (%d): %s", id, handler)
 	}
 	if err := rows.Err(); err != nil {
 		panic(err)

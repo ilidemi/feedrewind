@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"feedrewind/models"
 	"feedrewind/oops"
+	"feedrewind/util/schedule"
 	"fmt"
 	"regexp"
 	"testing"
@@ -24,7 +25,7 @@ func TestDoubleSchedule(t *testing.T) {
 	browser := rod.New().ControlURL(browserUrl).MustConnect()
 	defer browser.MustClose()
 
-	email := "test_pst@test.com"
+	email := "test_pst@feedrewind.com"
 
 	page := visitDev(browser, "login")
 	page.MustElement("#email").MustInput(email)
@@ -35,7 +36,7 @@ func TestDoubleSchedule(t *testing.T) {
 	page = visitAdmin(browser, "destroy_user_subscriptions")
 	require.Equal(t, "OK", pageText(page))
 
-	todayUtc := time.Date(2022, 6, 1, 0, 0, 0, 0, time.UTC)
+	todayUtc := schedule.NewTime(2022, 6, 1, 0, 0, 0, 0, time.UTC)
 	todayLocal := todayUtc.Add(7 * time.Hour)
 	todayLocal1AM := todayLocal.Add(1 * time.Hour)
 	todayLocal1AMStr := todayLocal1AM.Format(time.RFC3339)
@@ -137,7 +138,7 @@ func TestUpdateFromFeed(t *testing.T) {
 	defer browser.MustClose()
 
 	page := visitDev(browser, "login")
-	page.MustElement("#email").MustInput("test_pst@test.com")
+	page.MustElement("#email").MustInput("test_pst@feedrewind.com")
 	page.MustElement("#current-password").MustInput("tz123456")
 	page.MustElementR("input", "Sign in").MustClick()
 	page.MustWaitLoad()

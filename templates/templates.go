@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -23,7 +24,7 @@ func init() {
 	caser := cases.Title(language.AmericanEnglish)
 	funcMap := template.FuncMap{
 		"static": util.StaticHashedPath,
-		"title": func(dayOfWeek util.DayOfWeek) string {
+		"title": func(dayOfWeek schedule.DayOfWeek) string {
 			return caser.String(string(dayOfWeek))
 		},
 	}
@@ -39,7 +40,8 @@ func init() {
 		panic(err)
 	}
 
-	const ext = ".gohtml"
+	const txt = ".txt"
+	const gohtml = ".gohtml"
 	for _, dir := range dirs {
 		if !dir.IsDir() {
 			continue
@@ -53,7 +55,7 @@ func init() {
 
 		for _, file := range files {
 			filename := file.Name()
-			if !strings.HasSuffix(filename, ext) {
+			if !strings.HasSuffix(filename, gohtml) && !strings.HasSuffix(filename, txt) {
 				continue
 			}
 
@@ -62,7 +64,12 @@ func init() {
 				panic(err)
 			}
 
-			templateName := filename[:len(filename)-len(ext)]
+			var templateName string
+			if strings.HasSuffix(filename, gohtml) {
+				templateName = filename[:len(filename)-len(gohtml)]
+			} else {
+				templateName = filename
+			}
 			allTemplates[dirName] = append(allTemplates[dir.Name()], NamedTemplate{
 				DirName: dirName,
 				Name:    templateName,
@@ -148,4 +155,19 @@ func MustWrite(w http.ResponseWriter, templateName string, data any) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func MustFormat(templateName string, data any) string {
+	tmpl, ok := templatesByName[templateName]
+	if !ok {
+		panic(fmt.Errorf("Template not found: %s", templateName))
+	}
+
+	var builder strings.Builder
+	err := tmpl.Execute(&builder, data)
+	if err != nil {
+		panic(err)
+	}
+
+	return builder.String()
 }

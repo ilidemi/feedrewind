@@ -9,5 +9,5 @@ import (
 )
 
 func init() {
-	logger = zerolog.New(os.Stderr).With().Stack().Logger()
+	Base = zerolog.New(os.Stderr).With().Stack().Logger()
 }

@@ -5,6 +5,7 @@ package e2etest
 import (
 	"feedrewind/oops"
 	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
 	"testing"
 	"time"
@@ -24,22 +25,22 @@ func TestSignupEmail(t *testing.T) {
 
 	tests := []TestCase{
 		{
-			Email:                 "test_email_nz@test.com",
+			Email:                 "test_email_signup_nz@feedrewind.com",
 			Timezone:              "Pacific/Auckland",
 			SetDeliveryInSettings: true,
 		},
 		{
-			Email:                 "test_email_pst@test.com",
+			Email:                 "test_email_signup_pst@feedrewind.com",
 			Timezone:              "America/Los_Angeles",
 			SetDeliveryInSettings: true,
 		},
 		{
-			Email:                 "test_email_nz@test.com",
+			Email:                 "test_email_signup_nz@feedrewind.com",
 			Timezone:              "Pacific/Auckland",
 			SetDeliveryInSettings: false,
 		},
 		{
-			Email:                 "test_email_pst@test.com",
+			Email:                 "test_email_signup_pst@feedrewind.com",
 			Timezone:              "America/Los_Angeles",
 			SetDeliveryInSettings: false,
 		},
@@ -61,8 +62,8 @@ func TestSignupEmail(t *testing.T) {
 		page := visitAdminf(browser, "destroy_user?email=%s", tc.Email)
 		require.Contains(t, []string{"OK", "NotFound"}, pageText(page), description)
 
-		todayUtc := time.Date(2022, 6, 1, 0, 0, 0, 0, time.UTC)
-		var todayLocal time.Time
+		todayUtc := schedule.NewTime(2022, 6, 1, 0, 0, 0, 0, time.UTC)
+		var todayLocal schedule.Time
 		switch tc.Timezone {
 		case "America/Los_Angeles":
 			todayLocal = todayUtc.Add(7 * time.Hour)
@@ -127,8 +128,7 @@ func TestSignupEmail(t *testing.T) {
 		require.Equal(t, emailTimestampStr, pageText(page), description)
 		page = visitAdmin(browser, "wait_for_publish_posts_job")
 		require.Equal(t, "OK", pageText(page), description)
-		emailTimestampUTCStr, err := util.Schedule_ToUTCStr(emailTimestamp)
-		oops.RequireNoError(t, err, description)
+		emailTimestampUTCStr := emailTimestamp.MustUTCString()
 		page = visitAdminf(
 			browser,
 			"assert_email_count_with_metadata?value=%d&count=2&last_timestamp=%s&last_tag=subscription_post",
@@ -142,7 +142,9 @@ func TestSignupEmail(t *testing.T) {
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60, description)
-		page = visitAdminf(browser, "destroy_user?email=%s", tc.Email)
+		page = visitAdmin(browser, "reschedule_user_job")
+		require.Equal(t, "OK", pageText(page), description)
+		page = visitAdmin(browser, "delete_email_metadata")
 		require.Equal(t, "OK", pageText(page), description)
 
 		browser.MustClose()

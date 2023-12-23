@@ -4,6 +4,7 @@ package e2etest
 
 import (
 	"feedrewind/oops"
+	"feedrewind/util/schedule"
 	"fmt"
 	"strings"
 	"testing"
@@ -48,37 +49,37 @@ func TestRssSchedule(t *testing.T) {
 	}
 
 	tests := []Test{
-		{"test_pst@test.com", 1, VeryEarly, true, true, "job_today_job_tomorrow"},
-		{"test_pst@test.com", 1, VeryEarly, true, false, "job_today_no_tomorrow"},
-		{"test_pst@test.com", 1, VeryEarly, false, true, "no_today_job_tomorrow"},
-		{"test_pst@test.com", 1, Early, true, true, "init_today_job_tomorrow"},
-		{"test_pst@test.com", 1, Early, true, false, "init_today_no_tomorrow"},
-		{"test_pst@test.com", 1, Early, false, true, "no_today_job_tomorrow"},
-		{"test_pst@test.com", 1, Day, true, true, "no_today_job_tomorrow"},
-		{"test_pst@test.com", 1, Day, true, false, "no_today_no_tomorrow"},
-		{"test_pst@test.com", 1, Day, false, true, "no_today_job_tomorrow"},
-		{"test_nz@test.com", 2, VeryEarly, true, true, "x2_job_today_job_tomorrow"},
-		{"test_nz@test.com", 2, VeryEarly, true, false, "x2_job_today_no_tomorrow"},
-		{"test_nz@test.com", 2, VeryEarly, false, true, "x2_no_today_job_tomorrow"},
-		{"test_nz@test.com", 2, Early, true, true, "x2_init_today_job_tomorrow"},
-		{"test_nz@test.com", 2, Early, true, false, "x2_init_today_no_tomorrow"},
-		{"test_nz@test.com", 2, Early, false, true, "x2_no_today_job_tomorrow"},
-		{"test_nz@test.com", 2, Day, true, true, "x2_no_today_job_tomorrow"},
-		{"test_nz@test.com", 2, Day, true, false, "x2_no_today_no_tomorrow"},
-		{"test_nz@test.com", 2, Day, false, true, "x2_no_today_job_tomorrow"},
+		{"test_pst@feedrewind.com", 1, VeryEarly, true, true, "job_today_job_tomorrow"},
+		{"test_pst@feedrewind.com", 1, VeryEarly, true, false, "job_today_no_tomorrow"},
+		{"test_pst@feedrewind.com", 1, VeryEarly, false, true, "no_today_job_tomorrow"},
+		{"test_pst@feedrewind.com", 1, Early, true, true, "init_today_job_tomorrow"},
+		{"test_pst@feedrewind.com", 1, Early, true, false, "init_today_no_tomorrow"},
+		{"test_pst@feedrewind.com", 1, Early, false, true, "no_today_job_tomorrow"},
+		{"test_pst@feedrewind.com", 1, Day, true, true, "no_today_job_tomorrow"},
+		{"test_pst@feedrewind.com", 1, Day, true, false, "no_today_no_tomorrow"},
+		{"test_pst@feedrewind.com", 1, Day, false, true, "no_today_job_tomorrow"},
+		{"test_nz@feedrewind.com", 2, VeryEarly, true, true, "x2_job_today_job_tomorrow"},
+		{"test_nz@feedrewind.com", 2, VeryEarly, true, false, "x2_job_today_no_tomorrow"},
+		{"test_nz@feedrewind.com", 2, VeryEarly, false, true, "x2_no_today_job_tomorrow"},
+		{"test_nz@feedrewind.com", 2, Early, true, true, "x2_init_today_job_tomorrow"},
+		{"test_nz@feedrewind.com", 2, Early, true, false, "x2_init_today_no_tomorrow"},
+		{"test_nz@feedrewind.com", 2, Early, false, true, "x2_no_today_job_tomorrow"},
+		{"test_nz@feedrewind.com", 2, Day, true, true, "x2_no_today_job_tomorrow"},
+		{"test_nz@feedrewind.com", 2, Day, true, false, "x2_no_today_no_tomorrow"},
+		{"test_nz@feedrewind.com", 2, Day, false, true, "x2_no_today_job_tomorrow"},
 	}
 
 	timezoneByEmail := map[string]string{
-		"test_pst@test.com": "America/Los_Angeles",
-		"test_nz@test.com":  "Pacific/Auckland",
+		"test_pst@feedrewind.com": "America/Los_Angeles",
+		"test_nz@feedrewind.com":  "Pacific/Auckland",
 	}
 
 	for _, tc := range tests {
 		description := fmt.Sprintf("%#v", tc)
 		timezone := timezoneByEmail[tc.Email]
 
-		todayUtc := time.Date(2022, 6, 1, 0, 0, 0, 0, time.UTC)
-		var todayLocal time.Time
+		todayUtc := schedule.NewTime(2022, 6, 1, 0, 0, 0, 0, time.UTC)
+		var todayLocal schedule.Time
 		switch timezone {
 		case "America/Los_Angeles":
 			todayLocal = todayUtc.Add(7 * time.Hour)
@@ -88,7 +89,7 @@ func TestRssSchedule(t *testing.T) {
 			require.FailNowf(t, description, "Unknown timezone: %s", timezone)
 		}
 
-		var creationTimestamp time.Time
+		var creationTimestamp schedule.Time
 		switch tc.CreationTime {
 		case VeryEarly:
 			creationTimestamp = todayLocal.Add(1 * time.Hour)

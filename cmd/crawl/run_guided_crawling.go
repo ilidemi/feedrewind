@@ -285,7 +285,7 @@ func runGuidedCrawl(
 	}
 	discoverFeedsResult := crawler.DiscoverFeedsAtUrl(startUrl, false, &crawlCtx, logger)
 	err = nil
-	var feed crawler.DiscoveredFetchedFeed
+	var feed crawler.Feed
 	var maybeStartPage *crawler.DiscoveredStartPage
 	switch dResult := discoverFeedsResult.(type) {
 	case *crawler.DiscoverFeedsErrorBadFeed:
@@ -299,7 +299,12 @@ func runGuidedCrawl(
 	case *crawler.DiscoveredMultipleFeeds:
 		err = oops.Newf("Multiple feeds at %s", startUrl)
 	case *crawler.DiscoveredSingleFeed:
-		feed = dResult.Feed
+		feed = crawler.Feed{
+			Title:    dResult.Feed.Title,
+			Url:      dResult.Feed.Url,
+			FinalUrl: dResult.Feed.FinalUrl,
+			Content:  dResult.Feed.Content,
+		}
 		maybeStartPage = dResult.MaybeStartPage
 	default:
 		panic("unknown discover feeds result type")
@@ -310,10 +315,7 @@ func runGuidedCrawl(
 
 	mockProgressLogger := crawler.NewMockProgressLogger(logger)
 	crawlCtx.ProgressLogger = &mockProgressLogger
-	progressSaver := crawler.NewMockProgressSaver(logger)
-	guidedCrawlResult, err := crawler.GuidedCrawl(
-		maybeStartPage, feed, &crawlCtx, &mockHttpClient, puppeteerClient, progressSaver, logger,
-	)
+	guidedCrawlResult, err := crawler.GuidedCrawl(maybeStartPage, feed, &crawlCtx, logger)
 	if err != nil {
 		return &result, newError(err, result)
 	}

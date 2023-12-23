@@ -30,6 +30,7 @@ func Admin_AddBlog(w http.ResponseWriter, r *http.Request) {
 }
 
 func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
 	postBlogImpl := func() (blog *models.BlogWithCounts, err error) {
 		name := util.EnsureParamStr(r, "name")
 
@@ -111,9 +112,9 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 
 		var postLinks []*crawler.Link
 		var postCuris []crawler.CanonicalUri
-		logger := crawler.ZeroLogger{Req: r}
+		zlogger := crawler.ZeroLogger{Logger: logger}
 		for _, urlTitle := range postUrlsTitles {
-			postLink, ok := crawler.ToCanonicalLink(urlTitle.Url, &logger, nil)
+			postLink, ok := crawler.ToCanonicalLink(urlTitle.Url, &zlogger, nil)
 			if !ok {
 				return nil, oops.Newf("Bad post link: %s", urlTitle.Url)
 			}
@@ -125,21 +126,21 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 		var discardedFromFeedEntryUrls []string
 		var missingFromFeedEntryUrls []string
 		if util.EnsureParamStr(r, "skip_feed_validation") != "1" {
-			httpClient := crawler.NewHttpClientImpl(false)
-			progressLogger := crawler.NewMockProgressLogger(&logger)
+			httpClient := crawler.NewHttpClientImpl(r.Context(), false)
+			progressLogger := crawler.NewMockProgressLogger(&zlogger)
 			crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
-			feedResult := crawler.FetchFeedAtUrl(feedUrl, false, &crawlCtx, &logger)
+			feedResult := crawler.FetchFeedAtUrl(feedUrl, false, &crawlCtx, &zlogger)
 			feedPage, ok := feedResult.(*crawler.FetchedPage)
 			if !ok {
 				return nil, oops.Newf("Couldn't fetch feed: %s", feedUrl)
 			}
 
-			feedLink, ok := crawler.ToCanonicalLink(feedUrl, &logger, nil)
+			feedLink, ok := crawler.ToCanonicalLink(feedUrl, &zlogger, nil)
 			if !ok {
 				return nil, oops.Newf("Bad feed url: %s", feedUrl)
 			}
 
-			parsedFeed, err := crawler.ParseFeed(feedPage.Page.Content, feedLink.Uri, &logger)
+			parsedFeed, err := crawler.ParseFeed(feedPage.Page.Content, feedLink.Uri, &zlogger)
 			if err != nil {
 				return nil, err
 			}
@@ -182,7 +183,7 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 		if !errors.Is(err, models.ErrBlogNotFound) && err != nil {
 			return nil, err
 		} else if err == nil {
-			err = models.Blog_Downgrade(tx, oldBlog.Id)
+			_, err = models.Blog_Downgrade(tx, oldBlog.Id)
 			if err != nil {
 				return nil, err
 			}

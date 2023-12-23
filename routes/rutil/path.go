@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+const SubscriptionAddUrl = "https://feedrewind.com/subscriptions/add"
+
 func BlogUnsupportedPath(blogId models.BlogId) string {
 	return fmt.Sprintf("/blogs/%d/unsupported", blogId)
 }

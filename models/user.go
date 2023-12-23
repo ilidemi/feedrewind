@@ -55,6 +55,19 @@ func user_FindBy(tx pgw.Queryable, column string, value string) (*User, error) {
 	return &user, nil
 }
 
+func User_Exists(tx pgw.Queryable, userId UserId) (bool, error) {
+	row := tx.QueryRow("select 1 from users where id = $1", userId)
+	var one int
+	err := row.Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 func User_ExistsByProductUserId(tx pgw.Queryable, productUserId ProductUserId) (bool, error) {
 	row := tx.QueryRow("select 1 from users where product_user_id = $1", productUserId)
 	var one int
@@ -66,6 +79,16 @@ func User_ExistsByProductUserId(tx pgw.Queryable, productUserId ProductUserId) (
 	}
 
 	return true, nil
+}
+
+func User_GetProductUserId(tx pgw.Queryable, userId UserId) (ProductUserId, error) {
+	row := tx.QueryRow(`select product_user_id from users where id = $1`, userId)
+	var productUserId ProductUserId
+	err := row.Scan(&productUserId)
+	if err != nil {
+		return "", err
+	}
+	return productUserId, nil
 }
 
 type UserWithRss struct {

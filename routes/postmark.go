@@ -3,7 +3,6 @@ package routes
 import (
 	"feedrewind/config"
 	"feedrewind/jobs"
-	"feedrewind/log"
 	"feedrewind/models"
 	"feedrewind/oops"
 	"feedrewind/routes/rutil"
@@ -16,6 +15,7 @@ import (
 )
 
 func Postmark_ReportBounce(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
 	webhookSecret := r.Header.Get("webhook-secret")
 	if webhookSecret != config.Cfg.PostmarkWebhookSecret {
 		panic(oops.Newf("Webhook secret not matching: %s", webhookSecret))
@@ -45,10 +45,10 @@ func Postmark_ReportBounce(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if exists {
-		log.Info(r).Msgf("Bounce already seen: %d", bounce.ID)
+		logger.Info().Msgf("Bounce already seen: %d", bounce.ID)
 	} else {
-		log.Warn(r).Msgf("New bounce: %d", bounce.ID)
-		err := models.PostmarkBounce_Create(tx, bounce, string(bounceStr))
+		logger.Warn().Msgf("New bounce: %d", bounce.ID)
+		err := models.PostmarkBounce_CreateIfNotExists(tx, bounce)
 		if err != nil {
 			panic(err)
 		}

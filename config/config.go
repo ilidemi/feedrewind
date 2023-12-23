@@ -11,8 +11,11 @@ type Config struct {
 	IsHeroku                bool
 	SessionHashKey          []byte
 	SessionBlockKey         []byte
+	AmplitudeApiKey         string
 	PostmarkApiSandboxToken string
+	PostmarkApiToken        string
 	PostmarkWebhookSecret   string
+	SlackWebhook            string
 	AdminUserIds            map[int64]bool
 }
 
