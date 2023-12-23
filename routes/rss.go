@@ -56,21 +56,37 @@ func Rss_UserFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userId := models.UserId(userIdInt)
-	user, err := models.User_GetWithRss(conn, userId)
+	var hasActiveSubscriptions bool
+	var rss string
+	var productUserId models.ProductUserId
+	row := conn.QueryRow(`
+		select (
+			select count(1) from subscriptions_without_discarded
+			where subscriptions_without_discarded.user_id = $1 and
+				not is_paused and
+				final_item_published_at is null
+		) > 0, (
+			select body from user_rsses where user_id = $1
+		),
+		product_user_id
+		from users
+		where id = $1
+	`, userId)
+	err := row.Scan(&hasActiveSubscriptions, &rss, &productUserId)
 	if err != nil {
 		panic(err)
 	}
 
-	if user.AnySubcriptionNotPausedOrFinished {
+	if hasActiveSubscriptions {
 		productRssClient := resolveRssClient(r)
-		models.ProductEvent_MustEmit(conn, user.ProductUserId, "poll feed", map[string]any{
+		models.ProductEvent_MustEmit(conn, productUserId, "poll feed", map[string]any{
 			"feed_type": "user",
 			"client":    productRssClient,
 		}, nil)
 	}
 
 	w.Header().Set("Content-Type", "application/xml")
-	util.MustWrite(w, user.Rss)
+	util.MustWrite(w, rss)
 }
 
 func resolveRssClient(r *http.Request) string {

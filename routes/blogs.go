@@ -17,11 +17,14 @@ func Blogs_Unsupported(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	blogId := models.BlogId(blogIdInt)
-	blogName, blogStatus, err := models.Blog_GetNameStatus(conn, blogId)
+	row := conn.QueryRow("select name, status from blogs where id = $1", blogId)
+	var name string
+	var status models.BlogStatus
+	err := row.Scan(&name, &status)
 	if err != nil {
 		panic(err)
 	}
-	if !models.BlogFailedStatuses[blogStatus] {
+	if !models.BlogFailedStatuses[status] {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -34,6 +37,6 @@ func Blogs_Unsupported(w http.ResponseWriter, r *http.Request) {
 	templates.MustWrite(w, "blogs/unsupported", Result{
 		Title:    util.DecorateTitle("Blog not supported"),
 		Session:  rutil.Session(r),
-		BlogName: blogName,
+		BlogName: name,
 	})
 }

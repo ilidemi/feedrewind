@@ -2,7 +2,9 @@ package routes
 
 import (
 	"feedrewind/crawler"
+	"feedrewind/db/pgw"
 	"feedrewind/models"
+	"feedrewind/models/mutil"
 	"feedrewind/oops"
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
@@ -31,7 +33,13 @@ func Admin_AddBlog(w http.ResponseWriter, r *http.Request) {
 
 func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	postBlogImpl := func() (blog *models.BlogWithCounts, err error) {
+	type BlogWithCounts struct {
+		Name            string
+		FeedUrl         string
+		PostsCount      int
+		CategoriesCount int
+	}
+	postBlogImpl := func() (blog *BlogWithCounts, err error) {
 		name := util.EnsureParamStr(r, "name")
 
 		feedUrl := util.EnsureParamStr(r, "feed_url")
@@ -189,25 +197,49 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		blogId, err := models.Blog_Create(
-			tx, name, feedUrl, blogUrl, models.BlogStatusManuallyInserted, models.BlogLatestVersion, updateAction,
-		)
+		blogIdInt, err := mutil.RandomId(tx, "blogs")
+		if err != nil {
+			return nil, err
+		}
+		blogId := models.BlogId(blogIdInt)
+		_, err = tx.Exec(`
+			insert into blogs(id, name, feed_url, url, status, status_updated_at, version, update_action)
+			values ($1, $2, $3, $4, $5, utc_now(), $6, $7)
+		`, blogId, name, feedUrl, blogUrl, models.BlogStatusManuallyInserted, models.BlogLatestVersion,
+			updateAction)
 		if err != nil {
 			return nil, err
 		}
 
-		var newPosts []models.NewBlogPost
-		for i, urlTitle := range postUrlsTitles {
-			newPosts = append(newPosts, models.NewBlogPost{
-				Index: int32(i),
-				Url:   urlTitle.Url,
-				Title: urlTitle.Label,
-			})
+		batch := tx.NewBatch()
+		type CreatedBlogPost struct {
+			Id  models.BlogPostId
+			Url string
 		}
-		createdPosts, err := models.BlogPost_CreateMany(tx, blogId, newPosts)
+		var createdPosts []CreatedBlogPost
+		for i, urlTitle := range postUrlsTitles {
+			batch.
+				Queue(`
+					insert into blog_posts(blog_id, index, url, title)
+					values ($1, $2, $3, $4)
+					returning id, url
+				`, blogId, int32(i), urlTitle.Url, urlTitle.Label).
+				QueryRow(func(row pgw.Row) error {
+					var p CreatedBlogPost
+					err := row.Scan(&p.Id, &p.Url)
+					if err != nil {
+						return err
+					}
+
+					createdPosts = append(createdPosts, p)
+					return nil
+				})
+		}
+		err = tx.SendBatch(batch).Close()
 		if err != nil {
 			return nil, err
 		}
+
 		blogPostIdsByUrl := make(map[string][]models.BlogPostId)
 		for _, post := range createdPosts {
 			blogPostIdsByUrl[post.Url] = append(blogPostIdsByUrl[post.Url], post.Id)
@@ -221,51 +253,107 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 				IsTop: topCategoriesSet[name],
 			})
 		}
-		createdCategories, err := models.BlogPostCategory_CreateMany(tx, blogId, newCategories)
+		batch = tx.NewBatch()
+		categoryIdsByName := make(map[string]models.BlogPostCategoryId)
+		for _, category := range newCategories {
+			batch.
+				Queue(`
+					insert into blog_post_categories(blog_id, name, index, is_top)
+					values ($1, $2, $3, $4)
+					returning id, name
+				`, blogId, category.Name, category.Index, category.IsTop).
+				QueryRow(func(row pgw.Row) error {
+					var id models.BlogPostCategoryId
+					var name string
+					err := row.Scan(&id, &name)
+					if err != nil {
+						return err
+					}
+
+					categoryIdsByName[name] = id
+					return nil
+				})
+		}
+		err = tx.SendBatch(batch).Close()
 		if err != nil {
 			return nil, err
 		}
-		categoryIdsByName := make(map[string]models.BlogPostCategoryId)
-		for _, category := range createdCategories {
-			categoryIdsByName[category.Name] = category.Id
-		}
 
-		var newAssignments []models.NewBlogPostCategoryAssignment
+		batch = tx.NewBatch()
 		for _, urlCategory := range postUrlsCategories {
 			for _, blogPostId := range blogPostIdsByUrl[urlCategory.Url] {
-				newAssignments = append(newAssignments, models.NewBlogPostCategoryAssignment{
-					BlogPostId: blogPostId,
-					CategoryId: categoryIdsByName[urlCategory.Label],
-				})
+				batch.Queue(`
+					insert into blog_post_category_assignments(blog_post_id, category_id)
+					values ($1, $2)
+				`, blogPostId, categoryIdsByName[urlCategory.Label])
 			}
 		}
-		err = models.BlogPostCategoryAssignment_CreateMany(tx, newAssignments)
+		err = tx.SendBatch(batch).Close()
 		if err != nil {
 			return nil, err
 		}
 
-		err = models.BlogPostLock_Create(tx, blogId)
+		_, err = tx.Exec(`insert into blog_post_locks (blog_id) values ($1)`, blogId)
 		if err != nil {
 			return nil, err
 		}
 
-		err = models.BlogCanonicalEqualityConfig_Create(tx, blogId, sameHosts, expectTumblrPaths)
+		_, err = tx.Exec(`
+			insert into blog_canonical_equality_configs(blog_id, same_hosts, expect_tumblr_paths)
+			values ($1, $2, $3)
+		`, blogId, sameHosts, expectTumblrPaths)
 		if err != nil {
 			return nil, err
 		}
 
-		err = models.BlogDiscardedFeedEntry_CreateMany(tx, blogId, discardedFromFeedEntryUrls)
+		batch = tx.NewBatch()
+		for _, url := range discardedFromFeedEntryUrls {
+			batch.Queue(`
+				insert into blog_discarded_feed_entries (blog_id, url)
+				values ($1, $2)
+			`, blogId, url)
+		}
+		err = tx.SendBatch(batch).Close()
 		if err != nil {
 			return nil, err
 		}
 
-		err = models.BlogMissingFromFeedEntry_CreateMany(tx, blogId, missingFromFeedEntryUrls)
+		batch = tx.NewBatch()
+		for _, url := range missingFromFeedEntryUrls {
+			batch.Queue(`
+				insert into blog_missing_from_feed_entries (blog_id, url)
+				values ($1, $2)
+			`, blogId, url)
+		}
+		err = tx.SendBatch(batch).Close()
 		if err != nil {
 			return nil, err
 		}
 
-		blog, err = models.Blog_GetWithCounts(tx, blogId)
-		return blog, err
+		var resultName string
+		var resultFeedUrl string
+		var postsCount int
+		var categoriesCount int
+		row := tx.QueryRow(`
+			select
+				name,
+				feed_url,
+				(select count(1) from blog_posts where blog_id = $1),
+				(select count(1) from blog_post_categories where blog_id = $1)
+			from blogs
+			where id = $1
+		`, blogId)
+		err = row.Scan(&resultName, &resultFeedUrl, &postsCount, &categoriesCount)
+		if err != nil {
+			return nil, err
+		}
+
+		return &BlogWithCounts{
+			Name:            resultName,
+			FeedUrl:         resultFeedUrl,
+			PostsCount:      postsCount,
+			CategoriesCount: categoriesCount,
+		}, nil
 	}
 
 	var message string
@@ -326,16 +414,39 @@ func admin_ParseUrlsLabels(text string) ([]urlLabel, error) {
 }
 
 func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
+	type AdminTelemetry struct {
+		Key       string
+		Value     float64
+		Extra     map[string]any
+		CreatedAt time.Time
+	}
 	year, month, day := time.Now().UTC().AddDate(0, 0, -6).Date()
 	weekAgo := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
-
-	conn := rutil.DBConn(r)
-	telemetries, err := models.AdminTelemetry_GetSince(conn, weekAgo)
+	rows, err := conn.Query(`
+		select key, value, extra, created_at from admin_telemetries
+		where created_at > $1
+		order by created_at asc
+	`, weekAgo)
 	if err != nil {
 		panic(err)
 	}
 
-	telemetriesByKey := make(map[string][]models.AdminTelemetry)
+	var telemetries []AdminTelemetry
+	for rows.Next() {
+		var t AdminTelemetry
+		err := rows.Scan(&t.Key, &t.Value, &t.Extra, &t.CreatedAt)
+		if err != nil {
+			panic(err)
+		}
+
+		telemetries = append(telemetries, t)
+	}
+	if err := rows.Err(); err != nil {
+		panic(err)
+	}
+
+	telemetriesByKey := make(map[string][]AdminTelemetry)
 	for _, telemetry := range telemetries {
 		telemetriesByKey[telemetry.Key] = append(telemetriesByKey[telemetry.Key], telemetry)
 	}
