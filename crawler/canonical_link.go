@@ -57,7 +57,7 @@ func (l *maybeTitledHtmlLink) Lnk() *Link { return &l.Link }
 func (l *titledLink) Lnk() *Link          { return &l.Link }
 func (l *xpathLink) Lnk() *Link           { return &l.Link }
 
-func toCanonicalUris[L ilink](links []L) []CanonicalUri {
+func ToCanonicalUris[L ilink](links []L) []CanonicalUri {
 	curis := make([]CanonicalUri, len(links))
 	for i, link := range links {
 		curis[i] = link.Lnk().Curi

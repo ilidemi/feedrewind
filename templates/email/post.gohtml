@@ -1,0 +1,10 @@
+{{template "layouts/email" .}}
+
+{{define "content"}}
+<span style="font-size: 15px;">(by {{.SubscriptionName}})</span>
+<br>
+<a href="{{.PostUrl}}" style="font-size: 19px;">{{.PostTitle}}</a>
+<br>
+<br>
+<a href="{{.SubscriptionUrl}}" style="color: #6b7280; font-size: 15px;">Manage subscription</a>
+{{end}}

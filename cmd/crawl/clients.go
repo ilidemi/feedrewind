@@ -1,6 +1,7 @@
 package crawl
 
 import (
+	"context"
 	"errors"
 	"feedrewind/crawler"
 	"feedrewind/db/pgw"
@@ -22,7 +23,7 @@ func NewMockHttpClient(conn *pgw.Conn, startLinkId int) MockHttpClient {
 		NetworkRequestsMade: 0,
 		conn:                conn,
 		startLinkId:         startLinkId,
-		httpClient:          crawler.NewHttpClientImpl(true),
+		httpClient:          crawler.NewHttpClientImpl(context.Background(), true),
 	}
 }
 

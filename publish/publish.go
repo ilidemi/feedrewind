@@ -6,12 +6,10 @@ import (
 	"encoding/hex"
 	"encoding/xml"
 	"feedrewind/db/pgw"
-	"feedrewind/jobs"
-	"feedrewind/log"
 	"feedrewind/models"
 	"feedrewind/oops"
 	"feedrewind/routes/rutil"
-	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
 	"sort"
 	"time"
@@ -20,10 +18,10 @@ import (
 const defaultPostsInRss = 30
 
 func InitSubscription(
-	tx pgw.Queryable, userId models.UserId, productUserId models.ProductUserId,
+	tx *pgw.Tx, userId models.UserId, productUserId models.ProductUserId,
 	subscriptionId models.SubscriptionId, subscriptionName string, blogBestUrl string,
-	deliveryChannel models.DeliveryChannel, shouldPublishRssPosts bool, utcNow time.Time, localTime time.Time,
-	localDate util.Date,
+	deliveryChannel models.DeliveryChannel, shouldPublishRssPosts bool, utcNow schedule.Time,
+	localTime schedule.Time, localDate schedule.Date,
 ) error {
 	return initSubscriptionImpl(
 		tx, userId, productUserId, subscriptionId, subscriptionName, blogBestUrl, deliveryChannel,
@@ -32,9 +30,9 @@ func InitSubscription(
 }
 
 func PublishForUser(
-	tx pgw.Queryable, userId models.UserId, productUserId models.ProductUserId,
-	deliveryChannel models.DeliveryChannel, utcNow time.Time, localTime time.Time, localDate util.Date,
-	scheduledFor string,
+	tx *pgw.Tx, userId models.UserId, productUserId models.ProductUserId,
+	deliveryChannel models.DeliveryChannel, utcNow schedule.Time, localTime schedule.Time,
+	localDate schedule.Date, scheduledFor string,
 ) error {
 	return publishForUserImpl(
 		tx, userId, productUserId, deliveryChannel, utcNow, localTime, localDate, scheduledFor,
@@ -42,13 +40,22 @@ func PublishForUser(
 	)
 }
 
+var EmailInitialItemJob_PerformNowFunc func(
+	tx pgw.Queryable, userId models.UserId, subscriptionId models.SubscriptionId, scheduledFor string,
+) error
+
+var EmailPostsJob_PerformNowFunc func(
+	tx pgw.Queryable, userId models.UserId, date schedule.Date, scheduledFor string,
+	finalItemSubscriptionIds []models.SubscriptionId,
+) error
+
 func initSubscriptionImpl(
-	tx pgw.Queryable, userId models.UserId, productUserId models.ProductUserId,
+	tx *pgw.Tx, userId models.UserId, productUserId models.ProductUserId,
 	subscriptionId models.SubscriptionId, subscriptionName string, blogBestUrl string,
-	deliveryChannel models.DeliveryChannel, shouldPublishRssPosts bool, utcNow time.Time, localTime time.Time,
-	localDate util.Date, postsInRss int,
+	deliveryChannel models.DeliveryChannel, shouldPublishRssPosts bool, utcNow schedule.Time,
+	localTime schedule.Time, localDate schedule.Date, postsInRss int,
 ) error {
-	r := tx.Request()
+	logger := tx.Logger()
 	subscriptions, err := models.Subscription_ListSortedToPublish(tx, userId)
 	if err != nil {
 		return err
@@ -67,7 +74,7 @@ func initSubscriptionImpl(
 		publishStatus = models.PostPublishStatusRssPublished
 		var newPosts []models.SubscriptionBlogPost
 		if shouldPublishRssPosts {
-			dayOfWeek := util.Schedule_DayOfWeek(localTime)
+			dayOfWeek := localTime.DayOfWeek()
 			dayCount, err := models.Schedule_GetCount(tx, subscriptionId, dayOfWeek)
 			if err != nil {
 				return err
@@ -80,7 +87,7 @@ func initSubscriptionImpl(
 			for i := range newPosts {
 				newPosts[i].PublishedAt = &utcNow
 			}
-			log.Info(r).Msgf("Subscription %d: will publish %d new posts", subscriptionId, len(newPosts))
+			logger.Info().Msgf("Subscription %d: will publish %d new posts", subscriptionId, len(newPosts))
 
 			unpublishedCount, err := models.SubscriptionPost_GetUnpublishedCount(tx, subscriptionId)
 			if err != nil {
@@ -90,11 +97,15 @@ func initSubscriptionImpl(
 				// So that publishRssFeeds() knows about the update too
 				subscription.FinalItemPublishedAt = &utcNow
 
-				err := models.Subscription_SetFinalItemPublished(tx, subscriptionId, utcNow, publishStatus)
+				_, err := tx.Exec(`
+					update subscriptions_without_discarded
+					set final_item_published_at = $1, final_item_publish_status = $2
+					where id = $3
+				`, utcNow, publishStatus, subscriptionId)
 				if err != nil {
 					return err
 				}
-				log.Info(r).Msgf("Will publish the final item for subscription %d", subscriptionId)
+				logger.Info().Msgf("Will publish the final item for subscription %d", subscriptionId)
 
 				models.ProductEvent_MustEmit(tx, productUserId, "finish subscription", map[string]any{
 					"subscription_id": subscriptionId,
@@ -120,12 +131,9 @@ func initSubscriptionImpl(
 		}
 	case models.DeliveryChannelEmail:
 		publishStatus = models.PostPublishStatusEmailPending
-		scheduledFor, err := util.Schedule_ToUTCStr(utcNow)
-		if err != nil {
-			return err
-		}
+		scheduledFor := utcNow.MustUTCString()
 		// The job won't be visible until the transaction is committed
-		err = jobs.EmailInitialItemJob_PerformNow(tx, userId, subscriptionId, scheduledFor)
+		err = EmailInitialItemJob_PerformNowFunc(tx, userId, subscriptionId, scheduledFor)
 		if err != nil {
 			return err
 		}
@@ -138,21 +146,23 @@ func initSubscriptionImpl(
 		panic(fmt.Errorf("Unknown delivery channel: %s", deliveryChannel))
 	}
 
-	err = models.Subscription_SetInitialItemPublishStatus(tx, subscriptionId, publishStatus)
+	_, err = tx.Exec(`
+		update subscriptions_without_discarded set initial_item_publish_status = $1 where id = $2
+	`, publishStatus, subscriptionId)
 	return err
 }
 
 func publishForUserImpl(
-	tx pgw.Queryable, userId models.UserId, productUserId models.ProductUserId,
-	deliveryChannel models.DeliveryChannel, utcNow time.Time, localTime time.Time, localDate util.Date,
-	scheduledFor string, postsInRss int,
+	tx *pgw.Tx, userId models.UserId, productUserId models.ProductUserId,
+	deliveryChannel models.DeliveryChannel, utcNow schedule.Time, localTime schedule.Time,
+	localDate schedule.Date, scheduledFor string, postsInRss int,
 ) error {
-	r := tx.Request()
+	logger := tx.Logger()
 	subscriptions, err := models.Subscription_ListSortedToPublish(tx, userId)
 	if err != nil {
 		return err
 	}
-	log.Info(r).Msgf("%d subscriptions", len(subscriptions))
+	logger.Info().Msgf("%d subscriptions", len(subscriptions))
 
 	newPostsBySubscriptionId := make(map[models.SubscriptionId][]models.SubscriptionBlogPost)
 	var finalItemSubscriptionIds []models.SubscriptionId
@@ -161,7 +171,7 @@ func publishForUserImpl(
 
 		var newPosts []models.SubscriptionBlogPost
 		if !(subscription.IsPaused != nil && *subscription.IsPaused) {
-			dayOfWeek := util.Schedule_DayOfWeek(localTime)
+			dayOfWeek := localTime.DayOfWeek()
 			dayCount, err := models.Schedule_GetCount(tx, subscription.Id, dayOfWeek)
 			if err != nil {
 				return err
@@ -174,9 +184,9 @@ func publishForUserImpl(
 			for i := range newPosts {
 				newPosts[i].PublishedAt = &utcNow
 			}
-			log.Info(r).Msgf("Subscription %d: will publish %d new posts", subscription.Id, len(newPosts))
+			logger.Info().Msgf("Subscription %d: will publish %d new posts", subscription.Id, len(newPosts))
 		} else {
-			log.Info(r).Msgf("Skipping subscription %d", subscription.Id)
+			logger.Info().Msgf("Skipping subscription %d", subscription.Id)
 		}
 		newPostsBySubscriptionId[subscription.Id] = newPosts
 
@@ -188,7 +198,7 @@ func publishForUserImpl(
 			// So that publishRssFeeds() knows about the update too
 			subscription.FinalItemPublishedAt = &utcNow
 			finalItemSubscriptionIds = append(finalItemSubscriptionIds, subscription.Id)
-			log.Info(r).Msgf("Will publish the final item for subscription %d", subscription.Id)
+			logger.Info().Msgf("Will publish the final item for subscription %d", subscription.Id)
 
 			blogBestUrl, err := models.Blog_GetBestUrl(tx, subscription.BlogId)
 			if err != nil {
@@ -211,7 +221,7 @@ func publishForUserImpl(
 		publishStatus = models.PostPublishStatusRssPublished
 	case models.DeliveryChannelEmail:
 		// The job won't be visible until the transaction is committed
-		err := jobs.EmailPostsJob_PerformNow(tx, userId, localDate, scheduledFor, finalItemSubscriptionIds)
+		err := EmailPostsJob_PerformNowFunc(tx, userId, localDate, scheduledFor, finalItemSubscriptionIds)
 		if err != nil {
 			return err
 		}
@@ -229,7 +239,11 @@ func publishForUserImpl(
 		}
 	}
 	for _, subscriptionId := range finalItemSubscriptionIds {
-		err := models.Subscription_SetFinalItemPublished(tx, subscriptionId, utcNow, publishStatus)
+		_, err := tx.Exec(`
+			update subscriptions_without_discarded
+			set final_item_published_at = $1, final_item_publish_status = $2
+			where id = $3
+		`, utcNow, publishStatus, subscriptionId)
 		if err != nil {
 			return err
 		}
@@ -239,17 +253,17 @@ func publishForUserImpl(
 }
 
 func publishRssFeeds(
-	tx pgw.Queryable, userId models.UserId, subscriptions []models.SubscriptionToPublish,
+	tx *pgw.Tx, userId models.UserId, subscriptions []models.SubscriptionToPublish,
 	newPostsBySubscriptionId map[models.SubscriptionId][]models.SubscriptionBlogPost, postsInRss int,
 ) error {
-	r := tx.Request()
+	logger := tx.Logger()
 	type UserDateItem struct {
-		PublishedAt time.Time
+		PublishedAt schedule.Time
 		Item        item
 	}
 	var userDatesItems []UserDateItem
 	for _, subscription := range subscriptions {
-		log.Info(r).Msgf("Generating RSS for subscription %d", subscription.Id)
+		logger.Info().Msgf("Generating RSS for subscription %d", subscription.Id)
 		newPosts := newPostsBySubscriptionId[subscription.Id]
 		remainingPostsCount := postsInRss - len(newPosts)
 		if subscription.FinalItemPublishedAt != nil {
@@ -266,7 +280,7 @@ func publishRssFeeds(
 		subscriptionUrl := rutil.SubscriptionUrl(subscription.Id)
 		var subscriptionItems []item
 		if subscription.FinalItemPublishedAt != nil {
-			log.Info(r).Msgf("Generating final item for subscription %d", subscription.Id)
+			logger.Info().Msgf("Generating final item for subscription %d", subscription.Id)
 			finalItem := item{
 				Title: fmt.Sprintf("You're all caught up with %s", subscription.Name),
 				Link:  subscriptionUrl,
@@ -326,7 +340,7 @@ func publishRssFeeds(
 		}
 
 		if len(subscriptionItems) < postsInRss {
-			log.Info(r).Msgf("Generating initial item for subscription %d", subscription.Id)
+			logger.Info().Msgf("Generating initial item for subscription %d", subscription.Id)
 			initialItem := item{
 				Title: fmt.Sprintf("%s added to FeedRewind", subscription.Name),
 				Link:  subscriptionUrl,
@@ -350,13 +364,13 @@ func publishRssFeeds(
 		if err != nil {
 			return err
 		}
-		log.Info(r).Msgf("Total items for subscription %d: %d", subscription.Id, len(subscriptionItems))
+		logger.Info().Msgf("Total items for subscription %d: %d", subscription.Id, len(subscriptionItems))
 
 		err = models.SubscriptionRss_Upsert(tx, subscription.Id, subscriptionRssText)
 		if err != nil {
 			return err
 		}
-		log.Info(r).Msgf("Saved RSS for subscription %d", subscription.Id)
+		logger.Info().Msgf("Saved RSS for subscription %d", subscription.Id)
 	}
 
 	// Date desc, index asc (= publish date desc, sub date desc, post index desc)
@@ -375,7 +389,7 @@ func publishRssFeeds(
 	for _, newPosts := range newPostsBySubscriptionId {
 		newUserItemsCount += len(newPosts)
 	}
-	log.Info(r).Msgf("Total items for user %d: %d (%d new)", userId, len(userItems), newUserItemsCount)
+	logger.Info().Msgf("Total items for user %d: %d (%d new)", userId, len(userItems), newUserItemsCount)
 	userRssText, err := generateUserRss(userItems)
 	if err != nil {
 		return err
@@ -385,7 +399,7 @@ func publishRssFeeds(
 	if err != nil {
 		return err
 	}
-	log.Info(r).Msgf("Saved RSS for user %d", userId)
+	logger.Info().Msgf("Saved RSS for user %d", userId)
 
 	return nil
 }
@@ -402,9 +416,9 @@ func makeGuid(value string) string {
 }
 
 func createEmptySubscriptionFeed(
-	tx pgw.Queryable, subscriptionId models.SubscriptionId, subscriptionName string,
+	tx *pgw.Tx, subscriptionId models.SubscriptionId, subscriptionName string,
 ) error {
-	r := tx.Request()
+	logger := tx.Logger()
 	subscriptionUrl := rutil.SubscriptionUrl(subscriptionId)
 	subscriptionRssText, err := generateSubscriptionRss(subscriptionName, subscriptionUrl, nil)
 	if err != nil {
@@ -414,12 +428,12 @@ func createEmptySubscriptionFeed(
 	if err != nil {
 		return err
 	}
-	log.Info(r).Msgf("Created empty RSS for subscription %d", subscriptionId)
+	logger.Info().Msgf("Created empty RSS for subscription %d", subscriptionId)
 	return nil
 }
 
-func CreateEmptyUserFeed(tx pgw.Queryable, userId models.UserId) error {
-	r := tx.Request()
+func CreateEmptyUserFeed(tx *pgw.Tx, userId models.UserId) error {
+	logger := tx.Logger()
 	userRssText, err := generateUserRss(nil)
 	if err != nil {
 		return err
@@ -428,7 +442,7 @@ func CreateEmptyUserFeed(tx pgw.Queryable, userId models.UserId) error {
 	if err != nil {
 		return err
 	}
-	log.Info(r).Msg("Created empty user RSS")
+	logger.Info().Msg("Created empty user RSS")
 	return nil
 }
 

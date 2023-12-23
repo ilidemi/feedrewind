@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"feedrewind/config"
-	"feedrewind/log"
 	"feedrewind/models"
 	"net/http"
 	"time"
@@ -31,7 +30,11 @@ func Session(next http.Handler) http.Handler {
 		if err == nil {
 			err := secureCookie.Decode(cookieName, cookie.Value, &session)
 			if err != nil {
-				log.Info(r).Err(err).Msg("Couldn't decode session cookie")
+				logger := GetLogger(r)
+				logger.
+					Info().
+					Err(err).
+					Msg("Couldn't decode session cookie")
 			}
 		}
 

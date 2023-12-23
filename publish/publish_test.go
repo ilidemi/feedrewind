@@ -1,3 +1,5 @@
+//go:build testing
+
 package publish
 
 import (
@@ -6,17 +8,17 @@ import (
 	"feedrewind/models"
 	"feedrewind/oops"
 	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestInitSubscription(t *testing.T) {
 	type subscriptionDesc struct {
-		CountByDay map[util.DayOfWeek]int
+		CountByDay map[schedule.DayOfWeek]int
 	}
 
 	type test struct {
@@ -32,7 +34,7 @@ func TestInitSubscription(t *testing.T) {
 		{
 			Description: "init with 0 posts",
 			Subscription: subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"fri": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"fri": 1},
 			},
 			ExistingSubscription:  nil,
 			ShouldPublishRssPosts: true,
@@ -68,7 +70,7 @@ func TestInitSubscription(t *testing.T) {
 		{
 			Description: "init with schedule but 0 posts",
 			Subscription: subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"thu": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"thu": 1},
 			},
 			ExistingSubscription:  nil,
 			ShouldPublishRssPosts: false,
@@ -104,7 +106,7 @@ func TestInitSubscription(t *testing.T) {
 		{
 			Description: "init with some posts",
 			Subscription: subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"thu": 2, "fri": 2},
+				CountByDay: map[schedule.DayOfWeek]int{"thu": 2, "fri": 2},
 			},
 			ExistingSubscription:  nil,
 			ShouldPublishRssPosts: true,
@@ -168,7 +170,7 @@ func TestInitSubscription(t *testing.T) {
 		{
 			Description: "init with some posts",
 			Subscription: subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"thu": 2, "fri": 2},
+				CountByDay: map[schedule.DayOfWeek]int{"thu": 2, "fri": 2},
 			},
 			ExistingSubscription:  nil,
 			ShouldPublishRssPosts: true,
@@ -232,10 +234,10 @@ func TestInitSubscription(t *testing.T) {
 		{
 			Description: "init another with 0 posts",
 			Subscription: subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"fri": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"fri": 1},
 			},
 			ExistingSubscription: &subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"wed": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"wed": 1},
 			},
 			ShouldPublishRssPosts: true,
 			ExpectedSubBody: `<?xml version="1.0" encoding="UTF-8"?>
@@ -284,10 +286,10 @@ func TestInitSubscription(t *testing.T) {
 		{
 			Description: "init another with schedule but 0 posts",
 			Subscription: subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"thu": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"thu": 1},
 			},
 			ExistingSubscription: &subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"wed": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"wed": 1},
 			},
 			ShouldPublishRssPosts: false,
 			ExpectedSubBody: `<?xml version="1.0" encoding="UTF-8"?>
@@ -336,10 +338,10 @@ func TestInitSubscription(t *testing.T) {
 		{
 			Description: "init another with some posts",
 			Subscription: subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"thu": 2, "fri": 2},
+				CountByDay: map[schedule.DayOfWeek]int{"thu": 2, "fri": 2},
 			},
 			ExistingSubscription: &subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"wed": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"wed": 1},
 			},
 			ShouldPublishRssPosts: true,
 			ExpectedSubBody: `<?xml version="1.0" encoding="UTF-8"?>
@@ -427,7 +429,7 @@ func TestInitSubscription(t *testing.T) {
 		user, err := createUser(conn)
 		oops.RequireNoError(t, err, tc.Description)
 
-		finishedSetupAt, err := time.Parse(timeFormat, thu)
+		finishedSetupAt, err := schedule.ParseTime(timeFormat, thu)
 		oops.RequireNoError(t, err, tc.Description)
 
 		subscription, err := createSubscription(
@@ -436,7 +438,7 @@ func TestInitSubscription(t *testing.T) {
 		oops.RequireNoError(t, err, tc.Description)
 
 		if tc.ExistingSubscription != nil {
-			existingFinishedSetupAt, err := time.Parse(timeFormat, wed)
+			existingFinishedSetupAt, err := schedule.ParseTime(timeFormat, wed)
 			oops.RequireNoError(t, err, tc.Description)
 
 			_, err = createSubscription(
@@ -446,11 +448,13 @@ func TestInitSubscription(t *testing.T) {
 		}
 
 		utcNow := finishedSetupAt
-		utcNowDate := util.Schedule_Date(utcNow)
-		err = InitSubscription(
-			conn, user.Id, user.ProductUserId, subscription.Id, subscription.Name, subscription.BlogBestUrl,
-			user.DeliveryChannel, tc.ShouldPublishRssPosts, utcNow, utcNow, utcNowDate,
-		)
+		utcNowDate := utcNow.Date()
+		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+			return InitSubscription(
+				tx, user.Id, user.ProductUserId, subscription.Id, subscription.Name, subscription.BlogBestUrl,
+				user.DeliveryChannel, tc.ShouldPublishRssPosts, utcNow, utcNow, utcNowDate,
+			)
+		})
 		oops.RequireNoError(t, err, tc.Description)
 
 		subBody, err := models.SubscriptionRss_GetBody(conn, subscription.Id)
@@ -468,7 +472,7 @@ func TestInitSubscription(t *testing.T) {
 
 func TestPublishForUser(t *testing.T) {
 	type subscriptionDesc struct {
-		CountByDay      map[util.DayOfWeek]int
+		CountByDay      map[schedule.DayOfWeek]int
 		ExpectedRssBody string
 	}
 
@@ -484,7 +488,7 @@ func TestPublishForUser(t *testing.T) {
 			Description:   "update one",
 			Subscription1: nil,
 			Subscription2: subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"thu": 2, "fri": 2},
+				CountByDay: map[schedule.DayOfWeek]int{"thu": 2, "fri": 2},
 				ExpectedRssBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -574,7 +578,7 @@ func TestPublishForUser(t *testing.T) {
 		{
 			Description: "update multiple at once",
 			Subscription1: &subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"wed": 2, "fri": 2},
+				CountByDay: map[schedule.DayOfWeek]int{"wed": 2, "fri": 2},
 				ExpectedRssBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -619,7 +623,7 @@ func TestPublishForUser(t *testing.T) {
 </rss>`,
 			},
 			Subscription2: subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"thu": 1, "fri": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"thu": 1, "fri": 1},
 				ExpectedRssBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -716,7 +720,7 @@ func TestPublishForUser(t *testing.T) {
 		{
 			Description: "update some but not all",
 			Subscription1: &subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"wed": 1, "fri": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"wed": 1, "fri": 1},
 				ExpectedRssBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -747,7 +751,7 @@ func TestPublishForUser(t *testing.T) {
 </rss>`,
 			},
 			Subscription2: subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"thu": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"thu": 1},
 				ExpectedRssBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -816,7 +820,7 @@ func TestPublishForUser(t *testing.T) {
 		{
 			Description: "update none",
 			Subscription1: &subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"wed": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"wed": 1},
 				ExpectedRssBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -840,7 +844,7 @@ func TestPublishForUser(t *testing.T) {
 </rss>`,
 			},
 			Subscription2: subscriptionDesc{
-				CountByDay: map[util.DayOfWeek]int{"thu": 1},
+				CountByDay: map[schedule.DayOfWeek]int{"thu": 1},
 				ExpectedRssBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -916,7 +920,7 @@ func TestPublishForUser(t *testing.T) {
 
 		var subscription1 *testSubscription
 		if tc.Subscription1 != nil {
-			finishedSetupAt1, err := time.Parse(timeFormat, wed)
+			finishedSetupAt1, err := schedule.ParseTime(timeFormat, wed)
 			oops.RequireNoError(t, err, tc.Description)
 
 			subscription1, err = createSubscription(
@@ -924,16 +928,18 @@ func TestPublishForUser(t *testing.T) {
 			)
 			oops.RequireNoError(t, err, tc.Description)
 
-			finishedSetupAt1Date := util.Schedule_Date(finishedSetupAt1)
-			err = InitSubscription(
-				conn, user.Id, user.ProductUserId, subscription1.Id, subscription1.Name,
-				subscription1.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt1, finishedSetupAt1,
-				finishedSetupAt1Date,
-			)
+			finishedSetupAt1Date := finishedSetupAt1.Date()
+			err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+				return InitSubscription(
+					tx, user.Id, user.ProductUserId, subscription1.Id, subscription1.Name,
+					subscription1.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt1, finishedSetupAt1,
+					finishedSetupAt1Date,
+				)
+			})
 			oops.RequireNoError(t, err, tc.Description)
 		}
 
-		finishedSetupAt2, err := time.Parse(timeFormat, thu)
+		finishedSetupAt2, err := schedule.ParseTime(timeFormat, thu)
 		oops.RequireNoError(t, err, tc.Description)
 
 		subscription2, err := createSubscription(
@@ -941,26 +947,29 @@ func TestPublishForUser(t *testing.T) {
 		)
 		oops.RequireNoError(t, err, tc.Description)
 
-		finishedSetupAt2Date := util.Schedule_Date(finishedSetupAt2)
-		err = InitSubscription(
-			conn, user.Id, user.ProductUserId, subscription2.Id, subscription2.Name,
-			subscription2.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt2, finishedSetupAt2,
-			finishedSetupAt2Date,
-		)
+		finishedSetupAt2Date := finishedSetupAt2.Date()
+		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+			return InitSubscription(
+				tx, user.Id, user.ProductUserId, subscription2.Id, subscription2.Name,
+				subscription2.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt2, finishedSetupAt2,
+				finishedSetupAt2Date,
+			)
+		})
 		oops.RequireNoError(t, err, tc.Description)
 
-		utcNow, err := time.Parse(timeFormat, fri)
+		utcNow, err := schedule.ParseTime(timeFormat, fri)
 		oops.RequireNoError(t, err, tc.Description)
 
 		utcNow = utcNow.UTC()
-		utcNowDate := util.Schedule_Date(utcNow)
-		utcNowScheduledFor, err := util.Schedule_ToUTCStr(utcNow)
-		oops.RequireNoError(t, err, tc.Description)
+		utcNowDate := utcNow.Date()
+		utcNowScheduledFor := utcNow.MustUTCString()
 
-		err = PublishForUser(
-			conn, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
-			utcNowScheduledFor,
-		)
+		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+			return PublishForUser(
+				tx, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
+				utcNowScheduledFor,
+			)
+		})
 		oops.RequireNoError(t, err, tc.Description)
 
 		if tc.Subscription1 != nil {
@@ -1193,36 +1202,39 @@ func TestRssCountLimit(t *testing.T) {
 		user, err := createUser(conn)
 		oops.RequireNoError(t, err, tc.Description)
 
-		finishedSetupAt, err := time.Parse(timeFormat, thu)
+		finishedSetupAt, err := schedule.ParseTime(timeFormat, thu)
 		oops.RequireNoError(t, err, tc.Description)
 
 		subscription, err := createSubscription(
 			conn, user.Id, 1, finishedSetupAt, tc.TotalPosts, tc.PublishedPosts,
-			map[util.DayOfWeek]int{"fri": 1},
+			map[schedule.DayOfWeek]int{"fri": 1},
 		)
 		oops.RequireNoError(t, err, tc.Description)
 
-		finishedSetupAtDate := util.Schedule_Date(finishedSetupAt)
+		finishedSetupAtDate := finishedSetupAt.Date()
 		postsInRss := 5
-		err = initSubscriptionImpl(
-			conn, user.Id, user.ProductUserId, subscription.Id, subscription.Name,
-			subscription.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt, finishedSetupAt,
-			finishedSetupAtDate, postsInRss,
-		)
+		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+			return initSubscriptionImpl(
+				tx, user.Id, user.ProductUserId, subscription.Id, subscription.Name,
+				subscription.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt, finishedSetupAt,
+				finishedSetupAtDate, postsInRss,
+			)
+		})
 		oops.RequireNoError(t, err, tc.Description)
 
-		utcNow, err := time.Parse(timeFormat, fri)
+		utcNow, err := schedule.ParseTime(timeFormat, fri)
 		oops.RequireNoError(t, err, tc.Description)
 
 		utcNow = utcNow.UTC()
-		utcNowDate := util.Schedule_Date(utcNow)
-		utcNowScheduledFor, err := util.Schedule_ToUTCStr(utcNow)
-		oops.RequireNoError(t, err, tc.Description)
+		utcNowDate := utcNow.Date()
+		utcNowScheduledFor := utcNow.MustUTCString()
 
-		err = publishForUserImpl(
-			conn, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
-			utcNowScheduledFor, postsInRss,
-		)
+		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+			return publishForUserImpl(
+				tx, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
+				utcNowScheduledFor, postsInRss,
+			)
+		})
 		oops.RequireNoError(t, err, tc.Description)
 
 		subBody, err := models.SubscriptionRss_GetBody(conn, subscription.Id)
@@ -1246,11 +1258,11 @@ func TestIsPausedHandling(t *testing.T) {
 	user, err := createUser(conn)
 	oops.RequireNoError(t, err)
 
-	finishedSetupAt, err := time.Parse(timeFormat, thu)
+	finishedSetupAt, err := schedule.ParseTime(timeFormat, thu)
 	oops.RequireNoError(t, err)
 
 	subscription, err := createSubscription(
-		conn, user.Id, 1, finishedSetupAt, 5, 0, map[util.DayOfWeek]int{"fri": 1},
+		conn, user.Id, 1, finishedSetupAt, 5, 0, map[schedule.DayOfWeek]int{"fri": 1},
 	)
 	oops.RequireNoError(t, err)
 
@@ -1260,26 +1272,29 @@ func TestIsPausedHandling(t *testing.T) {
     `, subscription.Id)
 	oops.RequireNoError(t, err)
 
-	finishedSetupAtDate := util.Schedule_Date(finishedSetupAt)
-	err = InitSubscription(
-		conn, user.Id, user.ProductUserId, subscription.Id, subscription.Name,
-		subscription.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt, finishedSetupAt,
-		finishedSetupAtDate,
-	)
+	finishedSetupAtDate := finishedSetupAt.Date()
+	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		return InitSubscription(
+			tx, user.Id, user.ProductUserId, subscription.Id, subscription.Name,
+			subscription.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt, finishedSetupAt,
+			finishedSetupAtDate,
+		)
+	})
 	oops.RequireNoError(t, err)
 
-	utcNow, err := time.Parse(timeFormat, fri)
+	utcNow, err := schedule.ParseTime(timeFormat, fri)
 	oops.RequireNoError(t, err)
 
 	utcNow = utcNow.UTC()
-	utcNowDate := util.Schedule_Date(utcNow)
-	utcNowScheduledFor, err := util.Schedule_ToUTCStr(utcNow)
-	oops.RequireNoError(t, err)
+	utcNowDate := utcNow.Date()
+	utcNowScheduledFor := utcNow.MustUTCString()
 
-	err = PublishForUser(
-		conn, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
-		utcNowScheduledFor,
-	)
+	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		return PublishForUser(
+			tx, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
+			utcNowScheduledFor,
+		)
+	})
 	oops.RequireNoError(t, err)
 
 	subBody, err := models.SubscriptionRss_GetBody(conn, subscription.Id)
@@ -1319,50 +1334,53 @@ func TestUserFeedStableSort(t *testing.T) {
 	user, err := createUser(conn)
 	oops.RequireNoError(t, err)
 
-	finishedSetupAt1, err := time.Parse(timeFormat, tue)
+	finishedSetupAt1, err := schedule.ParseTime(timeFormat, tue)
 	oops.RequireNoError(t, err)
 
 	_, err = createSubscription(
-		conn, user.Id, 1, finishedSetupAt1, 5, 0, map[util.DayOfWeek]int{"fri": 2},
+		conn, user.Id, 1, finishedSetupAt1, 5, 0, map[schedule.DayOfWeek]int{"fri": 2},
 	)
 	oops.RequireNoError(t, err)
 
-	finishedSetupAt2, err := time.Parse(timeFormat, wed)
+	finishedSetupAt2, err := schedule.ParseTime(timeFormat, wed)
 	oops.RequireNoError(t, err)
 
 	_, err = createSubscription(
-		conn, user.Id, 2, finishedSetupAt2, 5, 0, map[util.DayOfWeek]int{"fri": 1},
+		conn, user.Id, 2, finishedSetupAt2, 5, 0, map[schedule.DayOfWeek]int{"fri": 1},
 	)
 	oops.RequireNoError(t, err)
 
-	finishedSetupAt3, err := time.Parse(timeFormat, thu)
+	finishedSetupAt3, err := schedule.ParseTime(timeFormat, thu)
 	oops.RequireNoError(t, err)
 
 	subscription3, err := createSubscription(
-		conn, user.Id, 3, finishedSetupAt3, 1, 1, map[util.DayOfWeek]int{"sat": 1},
+		conn, user.Id, 3, finishedSetupAt3, 1, 1, map[schedule.DayOfWeek]int{"sat": 1},
 	)
 	oops.RequireNoError(t, err)
 
-	finishedSetupAt3Date := util.Schedule_Date(finishedSetupAt3)
-	err = InitSubscription(
-		conn, user.Id, user.ProductUserId, subscription3.Id, subscription3.Name,
-		subscription3.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt3, finishedSetupAt3,
-		finishedSetupAt3Date,
-	)
+	finishedSetupAt3Date := finishedSetupAt3.Date()
+	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		return InitSubscription(
+			tx, user.Id, user.ProductUserId, subscription3.Id, subscription3.Name,
+			subscription3.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt3, finishedSetupAt3,
+			finishedSetupAt3Date,
+		)
+	})
 	oops.RequireNoError(t, err)
 
-	utcNow, err := time.Parse(timeFormat, fri)
+	utcNow, err := schedule.ParseTime(timeFormat, fri)
 	oops.RequireNoError(t, err)
 
 	utcNow = utcNow.UTC()
-	utcNowDate := util.Schedule_Date(utcNow)
-	utcNowScheduledFor, err := util.Schedule_ToUTCStr(utcNow)
-	oops.RequireNoError(t, err)
+	utcNowDate := utcNow.Date()
+	utcNowScheduledFor := utcNow.MustUTCString()
 
-	err = PublishForUser(
-		conn, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
-		utcNowScheduledFor,
-	)
+	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		return PublishForUser(
+			tx, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
+			utcNowScheduledFor,
+		)
+	})
 	oops.RequireNoError(t, err)
 
 	userBody, err := models.UserRss_GetBody(conn, user.Id)
@@ -1460,7 +1478,7 @@ func createUser(tx pgw.Queryable) (*testUser, error) {
 	productUserId := models.ProductUserId("00000000-0000-0000-0000-000000000000")
 	_, err := tx.Exec(`
         insert into users (id, email, name, password_digest, auth_token, product_user_id)
-        values ($1, 'test@test.com', 'test', 'asdf', 'asdf', $2)
+        values ($1, 'test@feedrewind.com', 'test', 'asdf', 'asdf', $2)
     `, userId, productUserId)
 	if err != nil {
 		return nil, err
@@ -1489,8 +1507,8 @@ type testSubscription struct {
 }
 
 func createSubscription(
-	tx pgw.Queryable, userId models.UserId, id int64, finishedSetupAt time.Time, totalCount int,
-	publishedCount int, countsByDay map[util.DayOfWeek]int,
+	tx pgw.Queryable, userId models.UserId, id int64, finishedSetupAt schedule.Time, totalCount int,
+	publishedCount int, countsByDay map[schedule.DayOfWeek]int,
 ) (*testSubscription, error) {
 	if err := ensureTestDb(tx); err != nil {
 		return nil, err
@@ -1523,7 +1541,7 @@ func createSubscription(
 		return nil, err
 	}
 
-	for _, dayOfWeek := range util.DaysOfWeek {
+	for _, dayOfWeek := range schedule.DaysOfWeek {
 		_, err := tx.Exec(`
             insert into schedules (subscription_id, day_of_week, count)
             values ($1, $2, $3)
@@ -1545,7 +1563,7 @@ func createSubscription(
 			return nil, err
 		}
 		randomId := fmt.Sprintf("%d_%d", id, i)
-		var publishedAt *time.Time
+		var publishedAt *schedule.Time
 		if i <= publishedCount {
 			publishedAt = &finishedSetupAt
 		}

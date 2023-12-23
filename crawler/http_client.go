@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"context"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -34,15 +35,17 @@ type HttpClient interface {
 }
 
 type HttpClientImpl struct {
+	Context          context.Context
 	EnableThrottling bool
 	PrevTimestamp    time.Time
 	Client           *http.Client
 }
 
-func NewHttpClientImpl(enableThrottling bool) *HttpClientImpl {
+func NewHttpClientImpl(ctx context.Context, enableThrottling bool) *HttpClientImpl {
 	var client http.Client
 	client.Timeout = time.Minute
 	return &HttpClientImpl{
+		Context:          ctx,
 		EnableThrottling: enableThrottling,
 		PrevTimestamp:    time.Time{},
 		Client:           &client,
@@ -55,6 +58,10 @@ const codeSSLError = "SSLError"
 const codeResponseBodyTooBig = "ResponseBodyTooBig"
 
 func (c *HttpClientImpl) Request(uri *url.URL, shouldThrottle bool, logger Logger) (*HttpResponse, error) {
+	if err := c.Context.Err(); err != nil {
+		return nil, err
+	}
+
 	if c.EnableThrottling && shouldThrottle {
 		newTimestamp := time.Now().UTC()
 		if !c.PrevTimestamp.IsZero() {

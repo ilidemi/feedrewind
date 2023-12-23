@@ -89,7 +89,7 @@ func tryExtractArchivesCategories(
 			}
 
 			feedMatchingLinks := feedEntryLinks.filterIncluded(&curisSet).ToSlice()
-			feedMatchingCuris := toCanonicalUris(feedMatchingLinks)
+			feedMatchingCuris := ToCanonicalUris(feedMatchingLinks)
 			feedMatchingCurisSet := NewCanonicalUriSet(feedMatchingCuris, curiEqCfg)
 			if feedMatchingCurisSet.Length < 2 {
 				continue

@@ -106,7 +106,8 @@ func tryExtractArchives(
 	extractionsByStarCount []starCountExtractions, almostMatchThreshold int,
 	guidedCtx *guidedCrawlContext, logger Logger,
 ) []crawlHistoricalResult {
-	if guidedCtx.FeedEntryLinks.countIncluded(pageCurisSet) < almostMatchThreshold {
+	if guidedCtx.FeedEntryLinks.countIncluded(pageCurisSet) < almostMatchThreshold &&
+		!CanonicalUriEqual(fetchLink.Curi, hardcodedDanLuu, guidedCtx.CuriEqCfg) {
 		return nil
 	}
 
@@ -119,6 +120,31 @@ func tryExtractArchives(
 
 	var mainResult crawlHistoricalResult
 	minLinksCount := 1
+
+	if CanonicalUriEqual(fetchLink.Curi, hardcodedDanLuu, guidedCtx.CuriEqCfg) {
+		logger.Info("Extracting archives for Dan Luu")
+		links := extractionsByStarCount[0].Extractions[0].LinksExtraction.Links
+		firstIdx := 0
+		for !(links[firstIdx].Curi.Host == "danluu.com" && links[firstIdx].Curi.TrimmedPath != "") {
+			firstIdx++
+		}
+		lastIdx := 0
+		for !(links[lastIdx].Curi.Host == "danluu.com" &&
+			links[lastIdx].Curi.TrimmedPath == "/why-hardware-development-is-hard") {
+			lastIdx++
+		}
+		postLinks := links[firstIdx : lastIdx+1]
+		return []crawlHistoricalResult{
+			&archivesSortedResult{
+				MainLnk:        *fetchLink,
+				Pattern:        "archives_sorted",
+				Links:          dropHtml(postLinks),
+				HasDates:       false,
+				PostCategories: nil,
+				Extra:          nil,
+			},
+		}
+	}
 
 	if CanonicalUriEqual(fetchLink.Curi, hardcodedJuliaEvans, guidedCtx.CuriEqCfg) {
 		logger.Info("Extracting archives for Julia Evans")
@@ -147,7 +173,7 @@ func tryExtractArchives(
 		); ok {
 			mainResult = sortedResult
 			minLinksCount = len(sortedResult.Links) + 1
-			sortedFewerStarsCuris = toCanonicalUris(sortedResult.Links)
+			sortedFewerStarsCuris = ToCanonicalUris(sortedResult.Links)
 			sortedFewerStarsHaveDates = sortedResult.HasDates
 		}
 	}
@@ -166,7 +192,7 @@ func tryExtractArchives(
 			); ok {
 				mainResult = sortedHighlightResult
 				minLinksCount = len(sortedHighlightResult.Links) + 1
-				sortedHighlightFewerStarsCuris = toCanonicalUris(sortedHighlightResult.Links)
+				sortedHighlightFewerStarsCuris = ToCanonicalUris(sortedHighlightResult.Links)
 			}
 		}
 	}
@@ -187,7 +213,7 @@ func tryExtractArchives(
 		); ok {
 			mainResult = sorted2XPathsResult
 			minLinksCount = len(sorted2XPathsResult.Links) + 1
-			sorted2XPathsFewerStarsCuris = toCanonicalUris(sorted2XPathsResult.Links)
+			sorted2XPathsFewerStarsCuris = ToCanonicalUris(sorted2XPathsResult.Links)
 		}
 	}
 
@@ -205,7 +231,7 @@ func tryExtractArchives(
 			); ok {
 				mainResult = almostFeedResult
 				minLinksCount = len(almostFeedResult.Links) + 1
-				almostFeedFewerStarsCuris = toCanonicalUris(almostFeedResult.Links)
+				almostFeedFewerStarsCuris = ToCanonicalUris(almostFeedResult.Links)
 			}
 		}
 	}
@@ -236,7 +262,7 @@ func tryExtractArchives(
 		); ok {
 			mainResult = sortedAlmostResult
 			minLinksCount = len(sortedAlmostResult.Links) + 1
-			sortedAlmostFewerStarsCuris = toCanonicalUris(sortedAlmostResult.Links)
+			sortedAlmostFewerStarsCuris = ToCanonicalUris(sortedAlmostResult.Links)
 			sortedAlmostFewerStarsHaveDates = sortedAlmostResult.HasDates
 		}
 	}
@@ -462,7 +488,7 @@ func tryExtractSorted(
 			for i := range sortedLinksDates {
 				sortedLinks[i] = &sortedLinksDates[i].Link
 			}
-			sortedCuris := toCanonicalUris(sortedLinks)
+			sortedCuris := ToCanonicalUris(sortedLinks)
 			_, isSortedMatchingFeed := targetFeedEntryLinks.sequenceMatch(sortedCuris, curiEqCfg)
 			if !isSortedMatchingFeed {
 				logger.Info(
@@ -820,7 +846,7 @@ func tryExtractSorted2XPaths(
 		logger.Info("Suffix XPath: %s%s", suffixExtraction.MaskedXPath, suffixLogStr)
 
 		combinedLinks := append(slices.Clone(prefixLinks), suffixLinks...)
-		combinedCuris := toCanonicalUris(combinedLinks)
+		combinedCuris := ToCanonicalUris(combinedLinks)
 		combinedCurisSet := NewCanonicalUriSet(combinedCuris, curiEqCfg)
 		if len(combinedCuris) != combinedCurisSet.Length {
 			logger.Info("Combination has all feed links but also duplicates: %s", combinedCuris)
@@ -1082,7 +1108,7 @@ func tryExtractShuffled(
 			Pattern:        fmt.Sprintf("archives_shuffled%s", almostSuffix),
 			Links:          bestLinks,
 			MaybeDates:     bestMaybeDates,
-			PostCategories: nil,
+			PostCategories: postCategories,
 			Extra:          extra,
 		}, true
 	}

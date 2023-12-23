@@ -57,8 +57,11 @@ func developmentConfig() Config {
 		IsHeroku:                false,
 		SessionHashKey:          sessionHashKey,
 		SessionBlockKey:         sessionBlockKey,
+		AmplitudeApiKey:         "REDACTED_DEV_AMPLITUDE_API_KEY",
 		PostmarkApiSandboxToken: "REDACTED_DEV_POSTMARK_API_SANDBOX_TOKEN",
+		PostmarkApiToken:        "REDACTED_DEV_POSTMARK_API_TOKEN", // FeedRewindDevelopment
 		PostmarkWebhookSecret:   "REDACTED_DEV_POSTMARK_WEBHOOK_SECRET",
+		SlackWebhook:            "REDACTED_DEV_SLACK_WEBHOOK",
 		AdminUserIds:            nil,
 	}
 }

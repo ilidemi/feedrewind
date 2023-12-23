@@ -180,7 +180,7 @@ func tryExtractPage1(
 			links = links[1:]
 		}
 
-		curis := toCanonicalUris(links)
+		curis := ToCanonicalUris(links)
 		page2LinkIndex := slices.IndexFunc(curis, func(curi CanonicalUri) bool {
 			return CanonicalUriEqual(curi, linkToPage2.Curi, curiEqCfg)
 		})
@@ -348,10 +348,10 @@ func tryExtractPage2(
 		page2.Document, page2.FetchUri, allowedHosts, map[string]*Link{}, logger, includeXPathOnly,
 	)
 	linksToPage3 := pagingPattern.FindLinksToNextPage(page2, page2Links, 3)
-	curisToPage3 := toCanonicalUris(linksToPage3)
+	curisToPage3 := ToCanonicalUris(linksToPage3)
 	curisToPage3Set := NewCanonicalUriSet(curisToPage3, curiEqCfg)
 	if curisToPage3Set.Length > 1 {
-		page3Curis := toCanonicalUris(linksToPage3)
+		page3Curis := ToCanonicalUris(linksToPage3)
 		logger.Info("Multiple links to page 3: %v", page3Curis)
 		return nil, false
 	}
@@ -402,7 +402,7 @@ func tryExtractPage2(
 			continue
 		}
 
-		page2XPathCuris := toCanonicalUris(page2XPathLinks)
+		page2XPathCuris := ToCanonicalUris(page2XPathLinks)
 		page2XPathCurisSet := NewCanonicalUriSet(page2XPathCuris, curiEqCfg)
 		neighborOverlapIndex := slices.IndexFunc(neighborPageLinks, func(link Link) bool {
 			return page2XPathCurisSet.Contains(link.Curi)
@@ -566,7 +566,7 @@ func tryExtractPage2(
 			}
 			page2MaskedXPath := page2XPathPrefix + maskedXPathSuffix // /div(x)[2]/article(y)[*]/a(z)[1]
 
-			page1XPathCuris := toCanonicalUris(page1XPathLinks)
+			page1XPathCuris := ToCanonicalUris(page1XPathLinks)
 			page1XPathCurisSet := NewCanonicalUriSet(page1XPathCuris, curiEqCfg)
 			overlapIndex := slices.IndexFunc(page2XPathLinks, func(link *maybeTitledHtmlLink) bool {
 				return page1XPathCurisSet.Contains(link.Curi)
@@ -575,7 +575,7 @@ func tryExtractPage2(
 				continue
 			}
 
-			page2XPathCuris := toCanonicalUris(page2XPathLinks)
+			page2XPathCuris := ToCanonicalUris(page2XPathLinks)
 			if _, ok := feedEntryLinks.subsequenceMatch(page2XPathCuris, page1Size, curiEqCfg); !ok {
 				continue
 			}
@@ -614,14 +614,17 @@ func tryExtractPage2(
 		logger.Info("Best count: %d with 2 pages of %v", len(entryLinks), pageSizes)
 		pageSizeCountStr := countPageSizesStr(pageSizes)
 
+		var postCategoriesOrTags []HistoricalBlogPostCategory
 		postCategories := postCategoriesMap.flatten()
 		postTags := postTagsMap.flatten()
 		var postCategoriesExtra []string
 		if !(len(postCategories) == 1 && postCategories[0].Name == uncategorized) {
+			postCategoriesOrTags = postCategories
 			postCategoriesStr := categoryCountsString(postCategories)
 			logger.Info("Categories: %s", postCategoriesStr)
 			appendLogLinef(&postCategoriesExtra, "categories: %s", postCategoriesStr)
 		} else if !(len(postTags) == 1 && postTags[0].Name == uncategorized) {
+			postCategoriesOrTags = postTags
 			postCategoriesStr := categoryCountsString(postTags)
 			logger.Info("Categories from tags: %s", postCategoriesStr)
 			appendLogLinef(&postCategoriesExtra, "categories from tags: %s", postCategoriesStr)
@@ -641,12 +644,12 @@ func tryExtractPage2(
 			MainLnk:        page2State.MainLnk,
 			Pattern:        "paged_last",
 			Lnks:           entryLinks,
-			PostCategories: postCategories,
+			PostCategories: postCategoriesOrTags,
 			Extra:          extra,
 		}, true
 	}
 
-	entryCuris := toCanonicalUris(entryLinks)
+	entryCuris := ToCanonicalUris(entryLinks)
 	knownEntryCurisSet := NewCanonicalUriSet(entryCuris, curiEqCfg)
 
 	return &partialPagedResult{
@@ -732,7 +735,7 @@ func tryExtractNextPage(
 		logger.Info("Page %d has known links: %v", pageNumber, pageKnownCuris)
 	}
 
-	pageEntryCuris := toCanonicalUris(pageXPathLinks)
+	pageEntryCuris := ToCanonicalUris(pageXPathLinks)
 	if _, ok := feedEntryLinks.subsequenceMatch(pageEntryCuris, len(entryLinks), curiEqCfg); !ok {
 		logger.Info("Page %d doesn't overlap with feed", pageNumber)
 		logger.Info("Page urls: %v", pageEntryCuris)
@@ -748,10 +751,10 @@ func tryExtractNextPage(
 	)
 	nextPageNumber := pageNumber + 1
 	linksToNextPage := pagingPattern.FindLinksToNextPage(page, pageLinks, nextPageNumber)
-	curisToNextPage := toCanonicalUris(linksToNextPage)
+	curisToNextPage := ToCanonicalUris(linksToNextPage)
 	curisToNextPageSet := NewCanonicalUriSet(curisToNextPage, curiEqCfg)
 	if curisToNextPageSet.Length > 1 {
-		curisToNextPage := toCanonicalUris(linksToNextPage)
+		curisToNextPage := ToCanonicalUris(linksToNextPage)
 		logger.Info("Found multiple links to the next page, can't decide: %v", curisToNextPage)
 		return nil, false
 	}
@@ -838,7 +841,7 @@ func tryExtractNextPage(
 		postTags := postTagsMap.flatten()
 		if !(len(postCategories) == 1 && postCategories[0].Name == uncategorized) {
 			postCategoriesOrTags = postCategories
-		} else if !(len(postCategories) == 1 && postCategories[0].Name == uncategorized) {
+		} else if !(len(postTags) == 1 && postTags[0].Name == uncategorized) {
 			postCategoriesOrTags = postTags
 			postCategoriesSource = " from tags"
 		}
@@ -953,7 +956,7 @@ func findLinkToPage2(
 
 	if feedGenerator == FeedGeneratorBlogger && len(bloggerNextPageLinks) > 0 {
 		linksToPage2 := bloggerNextPageLinks
-		linksToPage2Curis := toCanonicalUris(linksToPage2)
+		linksToPage2Curis := ToCanonicalUris(linksToPage2)
 		linksToPage2CurisSet := NewCanonicalUriSet(linksToPage2Curis, curiEqCfg)
 		if linksToPage2CurisSet.Length > 1 {
 			logger.Info("Page %s has multiple page 2 links: %v", page1.Curi, linksToPage2Curis)
@@ -1005,7 +1008,7 @@ func findLinkToPage2(
 		return nil, false
 	}
 
-	linksToPage2Curis := toCanonicalUris(linksToPage2)
+	linksToPage2Curis := ToCanonicalUris(linksToPage2)
 
 	if !isCertain {
 		logger.Info(
@@ -1219,19 +1222,16 @@ func getPostCategoriesTags(
 				continue
 			}
 
-			var dest *postCategoriesMap
 			if categoryRegex.MatchString(rel) {
 				hasCategory = true
-				dest = &categories
-			} else if tagRegex.MatchString(rel) {
-				hasTag = true
-				dest = &tags
-			} else {
-				continue
+				categoryName := innerText(linkElement)
+				categories.add(categoryName, link.Link)
 			}
-
-			categoryName := innerText(linkElement)
-			dest.add(categoryName, link.Link)
+			if tagRegex.MatchString(rel) {
+				hasTag = true
+				categoryName := innerText(linkElement)
+				tags.add(categoryName, link.Link)
+			}
 		}
 
 		if !hasCategory {

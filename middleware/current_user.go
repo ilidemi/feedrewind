@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"errors"
-	"feedrewind/log"
 	"feedrewind/models"
 	"net/http"
 )
@@ -45,6 +44,12 @@ func CurrentUser(next http.Handler) http.Handler {
 			currentUserHasBounced = false
 		}
 
+		if currentUser != nil {
+			setLoggerUserId(r, currentUser.Id)
+		} else {
+			setLoggerUserId(r, 0)
+		}
+
 		setCurrentUserData(r, currentUser, productUserId, currentUserHasBounced)
 		next.ServeHTTP(w, r)
 	}
@@ -82,22 +87,6 @@ func setCurrentUserData(
 
 func GetCurrentUser(r *http.Request) *models.User {
 	return r.Context().Value(currentUserDataKey).(*currentUserData).User
-}
-
-func getCurrentUserId(r *http.Request) (int64, error) {
-	data := r.Context().Value(currentUserDataKey)
-	if data == nil || !data.(*currentUserData).IsSet {
-		return 0, log.ErrUserUnknown
-	}
-	currentUser := data.(*currentUserData).User
-	if currentUser == nil {
-		return 0, log.ErrUserAnonymous
-	}
-	return int64(currentUser.Id), nil
-}
-
-func init() {
-	log.GetCurrentUserId = getCurrentUserId
 }
 
 func GetCurrentProductUserId(r *http.Request) models.ProductUserId {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 	neturl "net/url"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -23,6 +25,7 @@ func getTumblrApiHistorical(
 	var blogLink *Link
 	var blogTitle string
 	var expectedCount int
+	categoriesByName := make(map[string]*HistoricalBlogPostCategory)
 	for {
 		uri, err := neturl.Parse(url)
 		if err != nil {
@@ -55,6 +58,7 @@ func getTumblrApiHistorical(
 					Title     *string
 					Summary   string
 					Timestamp int64
+					Tags      []string
 				}
 				Total_Posts *int
 				Links       struct {
@@ -120,6 +124,29 @@ func getTumblrApiHistorical(
 				MaybeTitle: &linkTitle,
 			})
 			timestamps = append(timestamps, post.Timestamp)
+			for _, tag := range post.Tags {
+				tagLower := strings.ToLower(tag)
+				if _, ok := categoriesByName[tagLower]; !ok {
+					categoriesByName[tagLower] = &HistoricalBlogPostCategory{
+						Name:      tag,
+						IsTop:     false,
+						PostLinks: nil,
+					}
+				}
+				categoriesByName[tagLower].PostLinks = append(categoriesByName[tagLower].PostLinks, *postLink)
+			}
+			if len(post.Tags) == 0 {
+				uncategorizedLower := strings.ToLower(uncategorized)
+				if _, ok := categoriesByName[uncategorizedLower]; !ok {
+					categoriesByName[uncategorizedLower] = &HistoricalBlogPostCategory{
+						Name:      uncategorized,
+						IsTop:     false,
+						PostLinks: nil,
+					}
+				}
+				categoriesByName[uncategorizedLower].PostLinks =
+					append(categoriesByName[uncategorizedLower].PostLinks, *postLink)
+			}
 		}
 
 		requestsRemaining := int(math.Ceil(float64(expectedCount-len(links)) / 20))
@@ -144,13 +171,27 @@ func getTumblrApiHistorical(
 		return nil, oops.Newf("Tumblr posts are not sorted: %v", timestamps)
 	}
 
+	categories := make([]HistoricalBlogPostCategory, 0, len(categoriesByName))
+	for _, category := range categoriesByName {
+		categories = append(categories, *category)
+	}
+	sort.Slice(categories, func(i, j int) bool {
+		count1 := len(categories[i].PostLinks)
+		count2 := len(categories[j].PostLinks)
+		if count1 != count2 {
+			return count1 > count2
+		}
+		return strings.ToLower(categories[i].Name) < strings.ToLower(categories[j].Name)
+	})
+	logger.Info("Categories: %s", categoryCountsString(categories))
+
 	logger.Info("Get Tumblr historical finish")
 	return &postprocessedResult{
 		MainLnk:                 *blogLink,
 		Pattern:                 "tumblr",
 		Links:                   links,
 		IsMatchingFeed:          true,
-		PostCategories:          nil,
+		PostCategories:          categories,
 		Extra:                   nil,
 		MaybePartialPagedResult: nil,
 	}, nil

@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"feedrewind/db/pgw"
-	"feedrewind/log"
 	"feedrewind/oops"
 	"fmt"
 	"html/template"
@@ -32,7 +31,7 @@ type Session struct {
 func CommitOrRollbackMsg(tx *pgw.Tx, isSuccess *bool, successMsg string) {
 	if rvr := recover(); rvr != nil {
 		if err := tx.Rollback(); err != nil {
-			log.Error(tx.Req).Err(err).Msg("Rollback error")
+			tx.Logger().Error().Err(err).Msg("Rollback error")
 		}
 		panic(rvr)
 	} else if *isSuccess {
@@ -40,17 +39,13 @@ func CommitOrRollbackMsg(tx *pgw.Tx, isSuccess *bool, successMsg string) {
 			panic(err)
 		}
 		if successMsg != "" {
-			log.Info(tx.Req).Msg(successMsg)
+			tx.Logger().Info().Msg(successMsg)
 		}
 	} else {
 		if err := tx.Rollback(); err != nil {
 			panic(err)
 		}
 	}
-}
-
-func CommitOrRollback(tx *pgw.Tx, isSuccess *bool) {
-	CommitOrRollbackMsg(tx, isSuccess, "")
 }
 
 func CommitOrRollbackErr(tx *pgw.Tx, err *error) {
@@ -61,6 +56,32 @@ func CommitOrRollbackErr(tx *pgw.Tx, err *error) {
 func CommitOrRollbackOnPanic(tx *pgw.Tx) {
 	isSuccess := true
 	CommitOrRollbackMsg(tx, &isSuccess, "")
+}
+
+// Helps the caller of Tx to clobber the variable that's passed as parentTx, preventing accidental use
+type Clobber struct{}
+
+func Tx(parentTx pgw.Queryable, f func(*pgw.Tx, Clobber) error) error {
+	tx, err := parentTx.Begin()
+	if err != nil {
+		return err
+	}
+
+	err = f(tx, Clobber{})
+	if err != nil {
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			parentTx.Logger().Error().Err(rollbackErr).Msg("Rollback error")
+		}
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func Ordinal(number int) string {

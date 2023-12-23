@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/mileusna/useragent"
@@ -32,15 +33,35 @@ func ProductEvent_MustEmit(
 	tx pgw.Queryable, productUserId ProductUserId, eventType string, eventProperties map[string]any,
 	userProperties map[string]any,
 ) {
+	err := ProductEvent_Emit(tx, productUserId, eventType, eventProperties, userProperties)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ProductEvent_Emit(
+	tx pgw.Queryable, productUserId ProductUserId, eventType string, eventProperties map[string]any,
+	userProperties map[string]any,
+) error {
 	_, err := tx.Exec(`
 		insert into product_events (
 			event_type, event_properties, user_properties, product_user_id
 		)
 		values ($1, $2, $3, $4)
 	`, eventType, eventProperties, userProperties, productUserId)
-	if err != nil {
-		panic(err)
-	}
+	return err
+}
+
+func ProductEvent_EmitToBatch(
+	batch *pgw.Batch, productUserId ProductUserId, eventType string, eventProperties map[string]any,
+	userProperties map[string]any,
+) {
+	batch.Queue(`
+		insert into product_events (
+			event_type, event_properties, user_properties, product_user_id
+		)
+		values ($1, $2, $3, $4)
+	`, eventType, eventProperties, userProperties, productUserId)
 }
 
 func NewProductEventContext(
@@ -120,6 +141,65 @@ func ProductEvent_MustEmitCreateSubscription(
 		"is_blog_crawled":   BlogCrawledStatuses[subscription.BlogStatus],
 		"user_is_anonymous": userIsAnonymous,
 	}, nil)
+}
+
+type ProductEventId int64
+
+type ProductEvent struct {
+	Id                   ProductEventId
+	ProductUserId        ProductUserId
+	EventType            string
+	CreatedAt            time.Time
+	MaybeEventProperties map[string]any
+	MaybeUserProperties  map[string]any
+	MaybeUserIp          *string
+	MaybeBrowser         *string
+	MaybeOsName          *string
+	MaybeOsVersion       *string
+	MaybeBotName         *string
+}
+
+func ProductEvent_GetNotDispatched(tx pgw.Queryable) ([]ProductEvent, error) {
+	rows, err := tx.Query(`
+		select id, product_user_id, event_type, created_at, event_properties, user_properties, user_ip,
+			browser, os_name, os_version, bot_name
+		from product_events
+		where dispatched_at is null
+	`)
+	if err != nil {
+		return nil, err
+	}
+
+	var productEvents []ProductEvent
+	for rows.Next() {
+		var e ProductEvent
+		err := rows.Scan(
+			&e.Id, &e.ProductUserId, &e.EventType, &e.CreatedAt, &e.MaybeEventProperties,
+			&e.MaybeUserProperties, &e.MaybeUserIp, &e.MaybeBrowser, &e.MaybeOsName, &e.MaybeOsVersion,
+			&e.MaybeBotName,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		productEvents = append(productEvents, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return productEvents, nil
+}
+
+func ProductEvent_MarkAsDispatched(
+	tx pgw.Queryable, productEventId ProductEventId, dispatchedAt time.Time,
+) error {
+	_, err := tx.Exec(`
+		update product_events
+		set dispatched_at = $1
+		where id = $2
+	`, dispatchedAt, productEventId)
+	return err
 }
 
 var userIpRegex = regexp.MustCompile(`.\d+.\d+$`)

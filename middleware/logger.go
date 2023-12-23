@@ -4,8 +4,10 @@ import (
 	"context"
 	"feedrewind/db/pgw"
 	"feedrewind/log"
+	"feedrewind/models"
 	"feedrewind/oops"
 	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"net/http"
 	"regexp"
 	"sort"
@@ -99,9 +101,16 @@ func Logger(next http.Handler) http.Handler {
 			}
 		}
 
+		requestId := r.Header.Get("X-Request-ID")
+		logger := &WebLogger{
+			MaybeUserId: nil, // To be set by CurrentUser middleware
+			RequestId:   requestId,
+		}
+
 		isStaticFile := strings.HasPrefix(r.URL.Path, util.StaticUrlPrefix)
 		if !isStaticFile {
-			log.Info(r).
+			logger.
+				Info().
 				Func(commonFields).
 				Str("ip", util.UserIp(r)).
 				Str("referrer", r.Referer()).
@@ -110,12 +119,14 @@ func Logger(next http.Handler) http.Handler {
 		}
 
 		var errorWrapper errorWrapper
-		r = pgw.WithDBDuration(withCurrentUserData(withErrorWrapper(r, &errorWrapper)))
+		r = pgw.WithDBDuration(withCurrentUserData(withLogger(withErrorWrapper(r, &errorWrapper), logger)))
 
 		defer func() {
 			status := ww.Status()
 			if status/100 == 4 || status/100 == 5 {
-				event := log.Error(r).Func(commonFields)
+				event := logger.
+					Error().
+					Func(commonFields)
 				if errorWrapper.err != nil {
 					event.Err(errorWrapper.err)
 				}
@@ -125,7 +136,8 @@ func Logger(next http.Handler) http.Handler {
 					Dur("db_duration", pgw.DbDuration(r.Context())).
 					Msg("failed")
 			} else if !isStaticFile {
-				log.Info(r).
+				logger.
+					Info().
 					Func(commonFields).
 					Int("status", status).
 					TimeDiff("duration", time.Now(), t1).
@@ -154,4 +166,57 @@ func withErrorWrapper(r *http.Request, errorWrapper *errorWrapper) *http.Request
 func setError(r *http.Request, error *oops.Error) {
 	errorWrapper, _ := r.Context().Value(errorWrapperKey).(*errorWrapper)
 	errorWrapper.err = error
+}
+
+type loggerKeyType struct{}
+
+var loggerKey = &loggerKeyType{}
+
+func withLogger(r *http.Request, logger *WebLogger) *http.Request {
+	r = r.WithContext(context.WithValue(r.Context(), loggerKey, logger))
+	return r
+}
+
+func GetLogger(r *http.Request) *WebLogger {
+	return r.Context().Value(loggerKey).(*WebLogger)
+}
+
+func setLoggerUserId(r *http.Request, userId models.UserId) {
+	logger := GetLogger(r)
+	(*logger).MaybeUserId = &userId
+}
+
+type WebLogger struct {
+	MaybeUserId *models.UserId
+	RequestId   string
+}
+
+func (l *WebLogger) Info() *zerolog.Event {
+	event := log.Base.Info()
+	event = l.logWebCommon(event)
+	return event
+}
+
+func (l *WebLogger) Warn() *zerolog.Event {
+	event := log.Base.Warn()
+	event = l.logWebCommon(event)
+	return event
+}
+
+func (l *WebLogger) Error() *zerolog.Event {
+	event := log.Base.Error()
+	event = l.logWebCommon(event)
+	return event
+}
+
+func (l *WebLogger) logWebCommon(event *zerolog.Event) *zerolog.Event {
+	event = event.Timestamp()
+	if schedule.IsSetUTCNowOverride() {
+		event = event.Time("time_override", time.Time(schedule.UTCNow()))
+	}
+	if l.MaybeUserId != nil {
+		event = event.Int64("user_id", int64(*l.MaybeUserId))
+	}
+	event = event.Str("request_id", l.RequestId)
+	return event
 }

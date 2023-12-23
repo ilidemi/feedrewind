@@ -3,13 +3,12 @@ package models
 import (
 	"bytes"
 	"feedrewind/db/pgw"
-	"feedrewind/log"
 	"feedrewind/util"
 	"fmt"
 )
 
 func MustInit(tx pgw.Queryable) {
-	r := tx.Request()
+	logger := tx.Logger()
 	var timezoneInExpr bytes.Buffer
 	timezoneInExpr.WriteString("('")
 	isFirst := true
@@ -30,7 +29,7 @@ func MustInit(tx pgw.Queryable) {
 		"select user_id, timezone from user_settings where timezone not in %s", timezoneInExpr.String(),
 	)
 
-	log.Info(r).Msg("Ensuring user timezones")
+	logger.Info().Msg("Ensuring user timezones")
 	rows, err := tx.Query(query)
 	if err != nil {
 		panic(err)
@@ -42,7 +41,7 @@ func MustInit(tx pgw.Queryable) {
 		if err != nil {
 			panic(err)
 		}
-		log.Warn(r).Msgf("User timezone not found in tzdb: %s (user %d)", timezone, userId)
+		logger.Warn().Msgf("User timezone not found in tzdb: %s (user %d)", timezone, userId)
 	}
 	if err := rows.Err(); err != nil {
 		panic(err)

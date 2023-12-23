@@ -5,6 +5,7 @@ import (
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
 	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"net/http"
 )
 
@@ -25,7 +26,7 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 	type Screenshot struct {
 		Links           []rutil.ScreenshotLink
 		LinksCount      int
-		DaysOfWeek      []util.DayOfWeek
+		DaysOfWeek      []schedule.DayOfWeek
 		ScheduleColumns [][]ScheduleCell
 	}
 	type LandingResult struct {
@@ -38,7 +39,7 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 		Screenshot: Screenshot{
 			Links:      rutil.ScreenshotLinks,
 			LinksCount: len(rutil.ScreenshotLinks),
-			DaysOfWeek: util.DaysOfWeek,
+			DaysOfWeek: schedule.DaysOfWeek,
 			ScheduleColumns: [][]ScheduleCell{
 				{
 					{IsAdd: true},

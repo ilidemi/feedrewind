@@ -1,0 +1,104 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="x-apple-disable-message-reformatting"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="supported-color-schemes" content="light dark"/>
+  <title></title>
+  <style type="text/css" rel="stylesheet" media="all">
+      @import url("https://fonts.googleapis.com/css?family=Roboto&display=swap");
+
+      body {
+          width: 100% !important;
+          height: 100%;
+          margin: 0;
+          -webkit-text-size-adjust: none;
+      }
+
+      a {
+          color: #1d4ed8;
+      }
+
+      a img {
+          border: none;
+      }
+
+      td {
+          word-break: break-word;
+      }
+
+      /* Type ------------------------------ */
+
+      body,
+      td,
+      th {
+          font-family: Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
+      }
+
+      td,
+      th {
+          font-size: 17px;
+      }
+
+      p,
+      ul,
+      ol,
+      blockquote {
+          margin: .4em 0 1.1875em;
+          font-size: 17px;
+          line-height: 1.625;
+      }
+
+      body {
+          background-color: #FFF;
+          color: #333;
+      }
+
+      .content-cell {
+          padding: 10px;
+      }
+
+      /*Media Queries ------------------------------ */
+
+      @media (prefers-color-scheme: dark) {
+          body {
+              background-color: #1c1c1d !important;
+              color: #FFF !important;
+          }
+
+          p,
+          ul,
+          ol,
+          blockquote,
+          h1,
+          h2,
+          h3,
+          span {
+            color: #FFF !important;
+          }
+      }
+
+      :root {
+          color-scheme: light dark;
+          supported-color-schemes: light dark;
+      }
+  </style>
+  <!--[if mso]>
+  <style type="text/css">
+    .f-fallback {
+      font-family: Verdana, sans-serif;
+    }
+  </style>
+  <![endif]-->
+</head>
+<body>
+<div class="content-cell">
+  <div class="f-fallback">
+    {{block "content" .}}
+    {{end}}
+  </div>
+</div>
+</body>
+</html>

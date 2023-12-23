@@ -5,6 +5,7 @@ package e2etest
 import (
 	"feedrewind/oops"
 	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
 	"strings"
 	"testing"
@@ -74,8 +75,8 @@ func TestEmailSchedule(t *testing.T) {
 		description := fmt.Sprintf("%#v", tc)
 		timezone := timezoneByEmail[tc.Email]
 
-		todayUtc := time.Date(2022, 6, 1, 0, 0, 0, 0, time.UTC)
-		var todayLocal time.Time
+		todayUtc := schedule.NewTime(2022, 6, 1, 0, 0, 0, 0, time.UTC)
+		var todayLocal schedule.Time
 		switch timezone {
 		case "America/Los_Angeles":
 			todayLocal = todayUtc.Add(7 * time.Hour)
@@ -85,7 +86,7 @@ func TestEmailSchedule(t *testing.T) {
 			require.FailNowf(t, description, "Unknown timezone: %s", timezone)
 		}
 
-		var creationTimestamp time.Time
+		var creationTimestamp schedule.Time
 		switch tc.CreationTime {
 		case VeryEarly:
 			creationTimestamp = todayLocal.Add(1 * time.Hour)
@@ -206,8 +207,7 @@ func TestEmailSchedule(t *testing.T) {
 		subscriptionPath := fmt.Sprintf("subscriptions/%s", subscriptionId)
 
 		// Assert published at creation
-		creationTimestampUTCStr, err := util.Schedule_ToUTCStr(creationTimestamp)
-		oops.RequireNoError(t, err, description)
+		creationTimestampUTCStr := creationTimestamp.MustUTCString()
 		page = visitAdminf(
 			browser,
 			"assert_email_count_with_metadata?value=%d&count=%s&last_timestamp=%s&last_tag=subscription_initial",
@@ -225,7 +225,7 @@ func TestEmailSchedule(t *testing.T) {
 		require.Equal(t, lateTimestampStr, pageText(page), description)
 		page = visitAdmin(browser, "wait_for_publish_posts_job")
 		require.Equal(t, "OK", pageText(page), description)
-		var lastTimestampLate time.Time
+		var lastTimestampLate schedule.Time
 		var lastTagLate string
 		switch outputLastTimestampLate {
 		case "crt":
@@ -237,8 +237,7 @@ func TestEmailSchedule(t *testing.T) {
 		default:
 			require.FailNowf(t, description, "Unexpected last timestamp late: %s", outputLastTimestampLate)
 		}
-		lastTimestampLateStr, err := util.Schedule_ToUTCStr(lastTimestampLate)
-		oops.RequireNoError(t, err, description)
+		lastTimestampLateStr := lastTimestampLate.MustUTCString()
 		page = visitAdminf(
 			browser,
 			"assert_email_count_with_metadata?value=%d&count=%s&last_timestamp=%s&last_tag=%s",
@@ -263,7 +262,7 @@ func TestEmailSchedule(t *testing.T) {
 		require.Equal(t, tomorrowTimestampStr, pageText(page), description)
 		page = visitAdmin(browser, "wait_for_publish_posts_job")
 		require.Equal(t, "OK", pageText(page), description)
-		var lastTimestampTomorrow time.Time
+		var lastTimestampTomorrow schedule.Time
 		var lastTagTomorrow string
 		switch outputLastTimestampTomorrow {
 		case "crt":
@@ -280,8 +279,7 @@ func TestEmailSchedule(t *testing.T) {
 				t, description, "Unexpected last timestamp tomorrow: %s", outputLastTimestampTomorrow,
 			)
 		}
-		lastTimestampTomorrowStr, err := util.Schedule_ToUTCStr(lastTimestampTomorrow)
-		oops.RequireNoError(t, err, description)
+		lastTimestampTomorrowStr := lastTimestampTomorrow.MustUTCString()
 		page = visitAdminf(
 			browser,
 			"assert_email_count_with_metadata?value=%d&count=%s&last_timestamp=%s&last_tag=%s",

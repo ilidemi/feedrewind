@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"feedrewind/config"
 	"feedrewind/db/pgw"
 	"feedrewind/jobs"
 	"feedrewind/models"
@@ -9,11 +8,11 @@ import (
 	"feedrewind/routes/rutil"
 	"feedrewind/third_party/tzdata"
 	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
-
-	"github.com/mrz1836/postmark"
 )
 
 func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +99,8 @@ func AdminTest_AssertEmailCountWithMetadata(w http.ResponseWriter, r *http.Reque
 	lastTag := util.EnsureParamStr(r, "last_tag")
 
 	pollCount := 0
-	postmarkClient := postmark.NewClient(config.Cfg.PostmarkApiSandboxToken, "")
+	conn := rutil.DBConn(r)
+	postmarkClient, _ := jobs.GetPostmarkClientAndMaybeMetadata(conn)
 	for {
 		messages, _, err := postmarkClient.GetOutboundMessages(
 			r.Context(), 100, 0, map[string]any{"metadata_test": value},
@@ -110,14 +110,26 @@ func AdminTest_AssertEmailCountWithMetadata(w http.ResponseWriter, r *http.Reque
 		}
 
 		if len(messages) == count {
-			if count != 0 && messages[0].Metadata["server_timestamp"] != lastTimestamp {
+			lastMessage := messages[0]
+			for i := 1; i < len(messages); i++ {
+				if messages[i].Metadata["server_timestamp"].(string) >
+					lastMessage.Metadata["server_timestamp"].(string) {
+
+					lastMessage = messages[i]
+				}
+			}
+
+			if count != 0 && lastMessage.Metadata["server_timestamp"] != lastTimestamp {
 				panic(oops.Newf(
-					"Last message timestamp doesn't match. Expected: %s, actual: %s", lastTimestamp, messages[0].Metadata["server_timestamp"],
+					"Last message timestamp doesn't match. Expected: %s, actual: %s",
+					lastTimestamp, lastMessage.Metadata["server_timestamp"],
 				))
 			}
 
-			if count != 0 && messages[0].Tag != lastTag {
-				panic(oops.Newf("Last message tag doesn't match. Expected: %s, actual: %s", lastTag, messages[0].Tag))
+			if count != 0 && lastMessage.Tag != lastTag {
+				panic(oops.Newf(
+					"Last message tag doesn't match. Expected: %s, actual: %s", lastTag, lastMessage.Tag,
+				))
 			}
 
 			util.MustWrite(w, "OK")
@@ -154,7 +166,7 @@ func AdminTest_TravelTo(w http.ResponseWriter, r *http.Request) {
 	if timestamp.Location() != nil && timestamp.Location().String() != "UTC" {
 		panic("Expected UTC timestamp")
 	}
-	util.Schedule_UTCNowOverride = timestamp
+	schedule.MustSetUTCNowOverride(timestamp)
 
 	conn := rutil.DBConn(r)
 	commandId, err := util.RandomInt63()
@@ -170,11 +182,11 @@ func AdminTest_TravelTo(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	util.MustWrite(w, util.Schedule_UTCNow().Format(time.RFC3339))
+	util.MustWrite(w, schedule.UTCNow().Format(time.RFC3339))
 }
 
 func AdminTest_TravelBack(w http.ResponseWriter, r *http.Request) {
-	util.Schedule_UTCNowOverride = time.Time{}
+	schedule.ResetUTCNowOverride()
 
 	conn := rutil.DBConn(r)
 	commandId, err := util.RandomInt63()
@@ -190,20 +202,20 @@ func AdminTest_TravelBack(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	util.MustWrite(w, util.Schedule_UTCNow().Format(time.RFC3339))
+	util.MustWrite(w, schedule.UTCNow().Format(time.RFC3339))
 }
 
 func AdminTest_WaitForPublishPostsJob(w http.ResponseWriter, r *http.Request) {
 	currentUserId := rutil.CurrentUserId(r)
 
-	utcNow := util.Schedule_UTCNow()
+	utcNow := schedule.UTCNow()
 	conn := rutil.DBConn(r)
 	userSettings, err := models.UserSettings_Get(conn, currentUserId)
 	if err != nil {
 		panic(err)
 	}
 	localTime := utcNow.In(tzdata.LocationByName[userSettings.Timezone])
-	localDate := util.Schedule_Date(localTime)
+	localDate := localTime.Date()
 
 	for pollCount := 0; pollCount < 50; pollCount++ {
 		isScheduledForDate, err := jobs.PublishPostsJob_IsScheduledForDate(conn, currentUserId, localDate)
@@ -240,16 +252,38 @@ func AdminTest_ExecuteSql(w http.ResponseWriter, r *http.Request) {
 
 func adminTest_CompareTimestamps(conn *pgw.Conn, commandId int64) error {
 	commandIdStr := fmt.Sprint(commandId)
-	for pollCount := 0; pollCount < 50; pollCount++ {
+	pollCount := 0
+	for {
 		workerCommandIdStr, err := models.TestSingleton_GetValue(conn, "time_travel_command_id")
 		if err != nil {
 			return err
 		}
-		if workerCommandIdStr == commandIdStr {
-			return nil
+		if workerCommandIdStr != nil && *workerCommandIdStr == commandIdStr {
+			break
 		}
 
 		time.Sleep(100 * time.Millisecond)
+		pollCount++
+		if pollCount >= 50 {
+			return oops.Newf("Worker didn't time travel (command id %s)", commandIdStr)
+		}
 	}
-	return oops.Newf("Worker didn't time travel (command id %s)", commandIdStr)
+
+	webTimestamp := schedule.UTCNow()
+	maybeWorkerTimestampStr, err := models.TestSingleton_GetValue(conn, "time_travel_timestamp")
+	if err != nil {
+		return err
+	}
+	if maybeWorkerTimestampStr == nil {
+		return oops.New("Time travel timestamp can't be null")
+	}
+	workerTimestamp, err := schedule.ParseTime(jobs.TimeTravelFormat, *maybeWorkerTimestampStr)
+	if err != nil {
+		return oops.Wrap(err)
+	}
+	difference := workerTimestamp.Sub(webTimestamp).Seconds()
+	if math.Abs(difference) > 60 {
+		return oops.Newf("Web timestamp %s doesn't match worker timestamp %s", webTimestamp, workerTimestamp)
+	}
+	return nil
 }

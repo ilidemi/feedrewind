@@ -16,6 +16,7 @@ import (
 
 // Hardcoded as a fake feed, actual post links are stored in the db
 const HardcodedOurMachinery = "https://ourmachinery.com"
+const HardcodedDanLuuFeedName = "Dan Luu"
 
 var hardcodedACOUP CanonicalUri
 var hardcodedBenKuhn *Link
@@ -24,6 +25,8 @@ var hardcodedCaseyHandmer CanonicalUri
 var hardcodedCaseyHandmerSpaceMisconceptions *Link
 var hardcodedCryptographyEngineering CanonicalUri
 var hardcodedCryptographyEngineeringAll CanonicalUri
+var hardcodedDanLuu CanonicalUri
+var HardcodedDanLuuFeed CanonicalUri
 var hardcodedFactorio CanonicalUri
 var hardcodedJuliaEvans CanonicalUri
 var hardcodedKalzumeus CanonicalUri
@@ -43,12 +46,15 @@ func init() {
 		caseyHandmer+"2019/08/17/blog-series-countering-misconceptions-in-space-journalism/",
 		logger, nil,
 	)
+	danLuu := "https://danluu.com"
+	hardcodedDanLuu = hardcodedMustParse(danLuu)
+	HardcodedDanLuuFeed = hardcodedMustParse(danLuu + "/atom.xml")
 	cryptographyEngineering := "https://blog.cryptographyengineering.com"
 	hardcodedCryptographyEngineering = hardcodedMustParse(cryptographyEngineering)
 	hardcodedCryptographyEngineeringAll = hardcodedMustParse(cryptographyEngineering + "/all-posts/")
 	hardcodedFactorio = hardcodedMustParse("https://www.factorio.com/blog/")
 	hardcodedJuliaEvans = hardcodedMustParse("https://jvns.ca")
-	hardcodedKalzumeus = hardcodedMustParse("https://kalzumeus.com/archive/")
+	hardcodedKalzumeus = hardcodedMustParse("https://www.kalzumeus.com/archive/")
 	hardcodedMrMoneyMustache = hardcodedMustParse("https://www.mrmoneymustache.com/blog")
 	hardcodedPaulGraham = hardcodedMustParse("http://www.aaronsw.com/2002/feeds/pgessays.rss")
 }
@@ -141,7 +147,6 @@ func init() {
 		"https://www.mrmoneymustache.com/2012/06/01/raising-a-family-on-under-2000-per-year/",
 		"https://www.mrmoneymustache.com/2011/09/15/a-brief-history-of-the-stash-how-we-saved-from-zero-to-retirement-in-ten-years/",
 		"https://www.mrmoneymustache.com/2011/05/12/the-coffee-machine-that-can-pay-for-a-university-education/",
-		"https://www.mrmoneymustache.com/2013/02/07/interview-with-a-ceo-ridiculous-student-loans-vs-the-future-of-education/",
 		"https://www.mrmoneymustache.com/2012/01/13/the-shockingly-simple-math-behind-early-retirement/",
 		"https://www.mrmoneymustache.com/2011/10/02/what-is-stoicism-and-how-can-it-turn-your-life-to-solid-gold/",
 		"https://www.mrmoneymustache.com/2012/09/18/is-it-convenient-would-i-enjoy-it-wrong-question/",
@@ -156,13 +161,11 @@ func init() {
 		"https://www.mrmoneymustache.com/2011/05/06/mmm-challenge-cut-your-cash-leaking-umbilical-cord/",
 		"https://www.mrmoneymustache.com/2012/03/29/killing-your-1000-grocery-bill/",
 		"https://www.mrmoneymustache.com/2011/10/12/avoiding-ivy-league-preschool-syndrome/",
-		"https://www.mrmoneymustache.com/coveragecritic/",
 		"https://www.mrmoneymustache.com/2011/12/05/muscle-over-motor/",
 		"https://www.mrmoneymustache.com/2012/10/03/the-practical-benefits-of-outrageous-optimism/",
 		"https://www.mrmoneymustache.com/2011/05/18/how-to-make-money-in-the-stock-market/",
 		"https://www.mrmoneymustache.com/2012/05/29/how-much-do-i-need-for-retirement/",
 		"https://www.mrmoneymustache.com/2012/06/07/safety-is-an-expensive-illusion/",
-		"https://www.mrmoneymustache.com/2011/10/17/its-all-about-the-safety-margin/",
 	}
 	hardcodedMrMoneyMustacheCategories = makeTopCategory("Start Here", mrMoneyMustacheStartHereUrls)
 
@@ -207,21 +210,23 @@ func init() {
 		"http://www.paulgraham.com/genius.html",
 		"http://www.paulgraham.com/work.html",
 		"http://www.paulgraham.com/before.html",
+		"http://www.paulgraham.com/greatwork.html",
+		"http://www.paulgraham.com/cities.html",
 	}
 
 	hardcodedPaulGrahamCategories = makeTopCategory("Top", paulGrahamTopUrls)
 }
 
-var acoupArticleRegex *regexp.Regexp
+var acoupNonArticleRegex *regexp.Regexp
 
 func init() {
-	acoupArticleRegex = regexp.MustCompile(`/\d+/\d+/\d+/(gap-week|fireside)-`)
+	acoupNonArticleRegex = regexp.MustCompile(`/\d+/\d+/\d+/(gap-week|fireside)-`)
 }
 
 func extractACOUPCategories(postLinks []*maybeTitledLink) ([]HistoricalBlogPostCategory, error) {
 	var articlesLinks []Link
 	for _, link := range postLinks {
-		if acoupArticleRegex.MatchString(link.Curi.Path) {
+		if !acoupNonArticleRegex.MatchString(link.Curi.Path) {
 			articlesLinks = append(articlesLinks, link.Link)
 		}
 	}

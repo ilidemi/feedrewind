@@ -1,0 +1,6 @@
+(by {{.SubscriptionName}})
+{{.PostTitle}}
+{{.PostUrl}}
+
+Manage subscription:
+{{.SubscriptionUrl}}

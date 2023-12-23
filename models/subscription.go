@@ -3,10 +3,9 @@ package models
 import (
 	"feedrewind/db/pgw"
 	"feedrewind/models/mutil"
-	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
 	"strings"
-	"time"
 
 	"errors"
 
@@ -212,7 +211,7 @@ func Subscription_GetName(tx pgw.Queryable, subscriptionId SubscriptionId) (stri
 
 func Subscription_GetOtherNamesByDay(
 	tx pgw.Queryable, currentSubscriptionId SubscriptionId, userId UserId,
-) (map[util.DayOfWeek][]string, error) {
+) (map[schedule.DayOfWeek][]string, error) {
 	rows, err := tx.Query(`
 		with user_subscriptions as (
 			select id, name, created_at from subscriptions_without_discarded
@@ -241,10 +240,10 @@ func Subscription_GetOtherNamesByDay(
 		return nil, err
 	}
 
-	result := make(map[util.DayOfWeek][]string)
+	result := make(map[schedule.DayOfWeek][]string)
 	for rows.Next() {
 		var name string
-		var dayOfWeek util.DayOfWeek
+		var dayOfWeek schedule.DayOfWeek
 		var count int
 		err := rows.Scan(&name, &dayOfWeek, &count)
 		if err != nil {
@@ -272,7 +271,7 @@ type SchedulePreview struct {
 type SchedulePreviewPrevPost struct {
 	Url         string
 	Title       string
-	PublishDate util.Date
+	PublishDate schedule.Date
 }
 
 type SchedulePreviewNextPost struct {
@@ -318,7 +317,7 @@ func Subscription_GetSchedulePreview(
 	for rows.Next() {
 		var tag string
 		var url, title *string
-		var publishDate *util.Date
+		var publishDate *schedule.Date
 		var count *int
 		err := rows.Scan(&tag, &url, &title, &publishDate, &count)
 		if err != nil {
@@ -644,7 +643,7 @@ func Subscription_UpdateStatus(
 
 func Subscription_FinishSetup(
 	tx pgw.Queryable, subscriptionId SubscriptionId, name string, status SubscriptionStatus,
-	finishedSetupAt time.Time, scheduleVersion int, isAddedPastMidnight bool,
+	finishedSetupAt schedule.Time, scheduleVersion int, isAddedPastMidnight bool,
 ) error {
 	_, err := tx.Exec(`
 		update subscriptions_without_discarded
@@ -658,8 +657,8 @@ type SubscriptionToPublish struct {
 	Id                   SubscriptionId
 	Name                 string
 	IsPaused             *bool
-	FinishedSetupAt      time.Time
-	FinalItemPublishedAt *time.Time
+	FinishedSetupAt      schedule.Time
+	FinalItemPublishedAt *schedule.Time
 	BlogId               BlogId
 }
 
@@ -690,46 +689,6 @@ func Subscription_ListSortedToPublish(tx pgw.Queryable, userId UserId) ([]Subscr
 	return result, nil
 }
 
-func Subscription_SetInitialItemPublishStatus(
-	tx pgw.Queryable, subscriptionId SubscriptionId, initialItemPublishStatus PostPublishStatus,
-) error {
-	_, err := tx.Exec(`
-		update subscriptions_without_discarded set initial_item_publish_status = $1 where id = $2
-	`, initialItemPublishStatus, subscriptionId)
-	return err
-}
-
-func Subscription_SetFinalItemPublished(
-	tx pgw.Queryable, subscriptionId SubscriptionId, finalItemPublishedAt time.Time,
-	finalItemPublishStatus PostPublishStatus,
-) error {
-	_, err := tx.Exec(`
-		update subscriptions_without_discarded set final_item_published_at = $1 where id = $2
-	`, finalItemPublishedAt, subscriptionId)
-	return err
-}
-
-type SubscriptionWithRss struct {
-	IsPausedOrFinished bool
-	Rss                string
-	BlogBestUrl        string
-	ProductUserId      ProductUserId
-}
-
-func Subscription_GetWithRss(tx pgw.Queryable, subscriptionId SubscriptionId) (*SubscriptionWithRss, error) {
-	row := tx.QueryRow(`
-		select
-			(is_paused or final_item_published_at is not null),
-			(select body from subscription_rsses where subscription_id = $1),
-			(select coalesce(url, feed_url) from blogs where blogs.id = blog_id),
-			(select product_user_id from users where users.id = user_id)
-		from subscriptions_without_discarded where id = $1
-	`, subscriptionId)
-	var s SubscriptionWithRss
-	err := row.Scan(&s.IsPausedOrFinished, &s.Rss, &s.BlogBestUrl, &s.ProductUserId)
-	return &s, err
-}
-
 // SubscriptionPost
 
 type SubscriptionPostId int64
@@ -739,7 +698,7 @@ type SubscriptionBlogPost struct {
 	Id          SubscriptionPostId
 	Title       string
 	RandomId    SubscriptionPostRandomId
-	PublishedAt *time.Time
+	PublishedAt *schedule.Time
 }
 
 type PostPublishStatus string
@@ -812,8 +771,8 @@ func SubscriptionPost_GetLastPublishedDesc(
 }
 
 func SubscriptionPost_UpdatePublished(
-	tx pgw.Queryable, postId SubscriptionPostId, publishedAt time.Time, publishedAtLocalDate util.Date,
-	publishStatus PostPublishStatus,
+	tx pgw.Queryable, postId SubscriptionPostId, publishedAt schedule.Time,
+	publishedAtLocalDate schedule.Date, publishStatus PostPublishStatus,
 ) error {
 	_, err := tx.Exec(`
 		update subscription_posts
@@ -823,15 +782,6 @@ func SubscriptionPost_UpdatePublished(
 	return err
 }
 
-func SubscriptionPost_GetPublishedCount(tx pgw.Queryable, subscriptionId SubscriptionId) (int, error) {
-	row := tx.QueryRow(`
-		select count(1) from subscription_posts where subscription_id = $1 and published_at is not null
-	`, subscriptionId)
-	var result int
-	err := row.Scan(&result)
-	return result, err
-}
-
 func SubscriptionPost_GetUnpublishedCount(tx pgw.Queryable, subscriptionId SubscriptionId) (int, error) {
 	row := tx.QueryRow(`
 		select count(1) from subscription_posts where subscription_id = $1 and published_at is null
@@ -839,36 +789,4 @@ func SubscriptionPost_GetUnpublishedCount(tx pgw.Queryable, subscriptionId Subsc
 	var result int
 	err := row.Scan(&result)
 	return result, err
-}
-
-type SubscriptionBlogPostBestUrl struct {
-	Url            string
-	SubscriptionId SubscriptionId
-	BlogBestUrl    string
-	ProductUserId  ProductUserId
-}
-
-func SubscriptionPost_GetByRandomId(
-	tx pgw.Queryable, randomId SubscriptionPostRandomId,
-) (*SubscriptionBlogPostBestUrl, error) {
-	row := tx.QueryRow(`
-		select
-			(select url from blog_posts where blog_posts.id = subscription_posts.blog_post_id),
-			subscription_id,
-			(select coalesce(url, feed_url) from blogs where blogs.id = (
-				select blog_id from blog_posts where blog_posts.id = subscription_posts.blog_post_id
-			)),
-			(select product_user_id from users where users.id = (
-				select user_id from subscriptions_with_discarded
-				where subscriptions_with_discarded.id = subscription_id
-			))
-		from subscription_posts
-		where random_id = $1
-	`, randomId)
-	var p SubscriptionBlogPostBestUrl
-	err := row.Scan(&p.Url, &p.SubscriptionId, &p.BlogBestUrl, &p.ProductUserId)
-	if err != nil {
-		return nil, err
-	}
-	return &p, nil
 }

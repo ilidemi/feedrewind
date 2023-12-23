@@ -4,6 +4,7 @@ package e2etest
 
 import (
 	"feedrewind/oops"
+	"feedrewind/util/schedule"
 	"fmt"
 	"testing"
 	"time"
@@ -23,22 +24,22 @@ func TestSignupRss(t *testing.T) {
 
 	tests := []TestCase{
 		{
-			Email:                 "test_nz@test.com",
+			Email:                 "test_nz@feedrewind.com",
 			Timezone:              "Pacific/Auckland",
 			SetDeliveryInSettings: true,
 		},
 		{
-			Email:                 "test_pst@test.com",
+			Email:                 "test_pst@feedrewind.com",
 			Timezone:              "America/Los_Angeles",
 			SetDeliveryInSettings: true,
 		},
 		{
-			Email:                 "test_nz@test.com",
+			Email:                 "test_nz@feedrewind.com",
 			Timezone:              "Pacific/Auckland",
 			SetDeliveryInSettings: false,
 		},
 		{
-			Email:                 "test_pst@test.com",
+			Email:                 "test_pst@feedrewind.com",
 			Timezone:              "America/Los_Angeles",
 			SetDeliveryInSettings: false,
 		},
@@ -60,8 +61,8 @@ func TestSignupRss(t *testing.T) {
 		page := visitAdminf(browser, "destroy_user?email=%s", tc.Email)
 		require.Contains(t, []string{"OK", "NotFound"}, pageText(page), description)
 
-		todayUtc := time.Date(2022, 6, 1, 0, 0, 0, 0, time.UTC)
-		var todayLocal time.Time
+		todayUtc := schedule.NewTime(2022, 6, 1, 0, 0, 0, 0, time.UTC)
+		var todayLocal schedule.Time
 		switch tc.Timezone {
 		case "America/Los_Angeles":
 			todayLocal = todayUtc.Add(7 * time.Hour)
@@ -132,8 +133,6 @@ func TestSignupRss(t *testing.T) {
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60)
-		page = visitAdminf(browser, "destroy_user?email=%s", tc.Email)
-		require.Equal(t, "OK", pageText(page), description)
 
 		browser.MustClose()
 		l.Cleanup()

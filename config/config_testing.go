@@ -18,8 +18,11 @@ func testingConfig() Config {
 		IsHeroku:                false,
 		SessionHashKey:          devCfg.SessionHashKey,
 		SessionBlockKey:         devCfg.SessionBlockKey,
+		AmplitudeApiKey:         devCfg.AmplitudeApiKey,
 		PostmarkApiSandboxToken: devCfg.PostmarkApiSandboxToken,
+		PostmarkApiToken:        devCfg.PostmarkApiToken,
 		PostmarkWebhookSecret:   devCfg.PostmarkWebhookSecret,
+		SlackWebhook:            devCfg.SlackWebhook,
 		AdminUserIds:            nil,
 	}
 }

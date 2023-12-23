@@ -3,7 +3,7 @@ package jobs
 import (
 	"bytes"
 	"feedrewind/db/pgw"
-	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
 	"strings"
 	"time"
@@ -13,7 +13,6 @@ import (
 
 type JobId int64
 
-const runAtFormat = "2006-01-02 15:04:05.000"
 const defaultQueue = "default"
 
 type yamlString string
@@ -30,6 +29,10 @@ func strToYaml(str string) yamlString {
 
 // Assumes top-level array and enmeshes indentation handling with the rest of args serialization
 func int64ListToYaml(values []int64) yamlString {
+	if len(values) == 0 {
+		return yamlString("[]")
+	}
+
 	var b strings.Builder
 	for i, value := range values {
 		if i == 0 {
@@ -42,10 +45,12 @@ func int64ListToYaml(values []int64) yamlString {
 	return yamlString(b.String())
 }
 
+const yamlTimeFormat = "2006-01-02T15:04:05.000000000-07:00"
+
 func timeToYaml(value time.Time) yamlString {
 	return yamlString(fmt.Sprintf(
 		"_aj_serialized: ActiveJob::Serializers::DateTimeSerializer\n    value: '%s'",
-		value.Format("2006-01-02T15:04:05.000000000-07:00"),
+		value.Format(yamlTimeFormat),
 	))
 }
 
@@ -54,10 +59,13 @@ func boolToYaml(value bool) yamlString {
 }
 
 func performNow(tx pgw.Queryable, class string, queue string, arguments ...yamlString) error {
-	return performAt(tx, util.Schedule_UTCNow(), class, queue, arguments...)
+	return performAt(tx, schedule.UTCNow(), class, queue, arguments...)
 }
 
-func performAt(tx pgw.Queryable, runAt time.Time, class string, queue string, arguments ...yamlString) error {
+func performAt(
+	tx pgw.Queryable, runAt schedule.Time, class string, queue string, arguments ...yamlString,
+) error {
+	logger := tx.Logger()
 	const format1 = `--- !ruby/object:ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper
 job_data:
   job_class: %s
@@ -82,12 +90,23 @@ job_data:
 			fmt.Fprintf(&handler, "  - %s\n", argument)
 		}
 	}
-	fmt.Fprintf(&handler, format2, runAt.Format(time.RFC3339))
+	fmt.Fprintf(&handler, format2, schedule.UTCNow().Format(time.RFC3339))
 
-	runAtStr := runAt.Format(runAtFormat)
-	_, err := tx.Exec(`
+	row := tx.QueryRow(`
 		insert into delayed_jobs (handler, run_at, queue)
 		values ($1, $2, $3)
-	`, handler.String(), runAtStr, queue)
+		returning id
+	`, handler.String(), runAt, queue)
+	var jobId JobId
+	err := row.Scan(&jobId)
+	if err != nil {
+		logger.Error().Err(err).Msgf("Failed to enqueue job: %s %v", class, arguments)
+	} else {
+		if len(arguments) > 0 {
+			logger.Info().Msgf("Enqueued job %d for %s: %s %v", jobId, runAt, class, arguments)
+		} else {
+			logger.Info().Msgf("Enqueued job %d for %s: %s", jobId, runAt, class)
+		}
+	}
 	return err
 }

@@ -3,13 +3,13 @@ package models
 import (
 	"bytes"
 	"feedrewind/db/pgw"
-	"feedrewind/util"
+	"feedrewind/util/schedule"
 	"fmt"
 	"strings"
 )
 
 func Schedule_Create(
-	tx pgw.Queryable, subscriptionId SubscriptionId, countsByDay map[util.DayOfWeek]int,
+	tx pgw.Queryable, subscriptionId SubscriptionId, countsByDay map[schedule.DayOfWeek]int,
 ) error {
 	var valuesSql strings.Builder
 	for dayOfWeek, count := range countsByDay {
@@ -26,7 +26,7 @@ func Schedule_Create(
 }
 
 func Schedule_GetCount(
-	tx pgw.Queryable, subscriptionId SubscriptionId, dayOfWeek util.DayOfWeek,
+	tx pgw.Queryable, subscriptionId SubscriptionId, dayOfWeek schedule.DayOfWeek,
 ) (int, error) {
 	row := tx.QueryRow(`
 		select count from schedules where subscription_id = $1 and day_of_week = $2
@@ -38,7 +38,7 @@ func Schedule_GetCount(
 
 func Schedule_GetCountsByDay(
 	tx pgw.Queryable, subscriptionId SubscriptionId,
-) (map[util.DayOfWeek]int, error) {
+) (map[schedule.DayOfWeek]int, error) {
 	rows, err := tx.Query(`
 		select day_of_week, count
 		from schedules
@@ -48,9 +48,9 @@ func Schedule_GetCountsByDay(
 		return nil, err
 	}
 
-	countByDay := make(map[util.DayOfWeek]int)
+	countByDay := make(map[schedule.DayOfWeek]int)
 	for rows.Next() {
-		var day util.DayOfWeek
+		var day schedule.DayOfWeek
 		var count int
 		err := rows.Scan(&day, &count)
 		if err != nil {
@@ -67,7 +67,7 @@ func Schedule_GetCountsByDay(
 }
 
 func Schedule_Update(
-	tx pgw.Queryable, subscriptionId SubscriptionId, countsByDay map[util.DayOfWeek]int,
+	tx pgw.Queryable, subscriptionId SubscriptionId, countsByDay map[schedule.DayOfWeek]int,
 ) error {
 	var queryBuf bytes.Buffer
 	queryBuf.WriteString(`
