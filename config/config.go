@@ -58,12 +58,11 @@ func init() {
 		return
 	}
 
-	env, ok := os.LookupEnv("FEEDREWIND_ENV")
+	_, ok := os.LookupEnv("FEEDREWIND_ENV")
 	if !ok {
 		Cfg = developmentConfig()
 		return
 	}
 
-	_ = env
-	panic("Production config not supported yet")
+	Cfg = productionConfig()
 }

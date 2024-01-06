@@ -13,6 +13,7 @@ require (
 	github.com/google/uuid v1.4.0
 	github.com/gorilla/securecookie v1.1.2
 	github.com/gorilla/websocket v1.5.1
+	github.com/heroku/x v0.1.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.5.0
 	github.com/mileusna/useragent v1.3.4
