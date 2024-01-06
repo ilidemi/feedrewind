@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
+	"feedrewind/config"
 	"feedrewind/db"
 	"feedrewind/db/pgw"
 	"feedrewind/log"
@@ -13,8 +14,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
+
+	_ "net/http/pprof"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog"
@@ -31,16 +36,36 @@ func init() {
 			go func() {
 				fmt.Println(http.ListenAndServe("localhost:6061", nil))
 			}()
-			err := startWorker()
-			logger := &log.BackgroundLogger{}
+
+			dynoIdIdx := strings.LastIndex(config.Cfg.Dyno, ".") + 1
+			dynoId, err := strconv.Atoi(config.Cfg.Dyno[dynoIdIdx:])
+			if err != nil {
+				(&log.BackgroundLogger{}).Error().Err(err).Msg("Couldn't parse dyno id")
+				os.Exit(1)
+			}
+			workerRootName := fmt.Sprintf("%s-%d", workerNameBase, dynoId)
+			logger := &WorkerLogger{WorkerName: workerRootName}
+
+			conn, err := db.Pool.AcquireBackground()
+			if err != nil {
+				logger.Error().Err(err).Msg("Couldn't connect to db")
+				os.Exit(1)
+			}
+
+			availableWorkers := make([]bool, workerCount)
+			for i := range availableWorkers {
+				availableWorkers[i] = true
+			}
+			finishedJobs := make(chan jobResult, workerCount)
+
+			err = startWorker(conn, dynoId, availableWorkers, finishedJobs, logger)
 			if errors.Is(err, context.Canceled) {
 				logger.Info().Msg("Context canceled, shutting down")
+				waitForJobs(conn, dynoId, availableWorkers, finishedJobs, logger)
 				os.Exit(0)
 			} else if err != nil {
-				logger.
-					Error().
-					Err(err).
-					Msg("Error occurred in the worker")
+				logger.Error().Err(err).Msg("Error occurred in the worker, shutting down")
+				waitForJobs(conn, dynoId, availableWorkers, finishedJobs, logger)
 				os.Exit(1)
 			}
 		},
@@ -63,7 +88,11 @@ func registerJobNameFunc(className string, f jobFunc) {
 	})
 }
 
-const workerName = "go-worker"
+// Has to be at most (max_db_connections / 2) - 2 to continue serving requests while every worker is crawling
+// and as many websockets are streaming
+const workerCount = 7
+
+const workerNameBase = "go-worker"
 const sleepDelay = 100 * time.Millisecond
 const maxPollFailures = 600 // One minute of sleeps with sleepDelay
 const maxAttempts = 25
@@ -87,19 +116,22 @@ type jobData struct {
 	Enqueued_At string
 }
 
-func startWorker() error {
+type jobResult struct {
+	WorkerId int
+	Id       JobId
+	Status   jobStatus
+	Err      error
+}
+
+func startWorker(
+	conn *pgw.Conn, dynoId int, availableWorkers []bool, finishedJobs chan jobResult, logger log.Logger,
+) error {
 	jobFuncsByClassName := make(map[string]jobFunc)
 	for _, jobNameFunc := range jobNameFuncs {
 		if _, ok := jobFuncsByClassName[jobNameFunc.ClassName]; ok {
 			return oops.Newf("Duplicate job class name: %s", jobNameFunc.ClassName)
 		}
 		jobFuncsByClassName[jobNameFunc.ClassName] = jobNameFunc.Func
-	}
-
-	conn, err := db.Pool.AcquireBackground()
-	logger := &WorkerLogger{WorkerName: workerName}
-	if err != nil {
-		return err
 	}
 
 	signalCtx, signalCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -109,14 +141,62 @@ func startWorker() error {
 		logger.Info().Msg("Caught termination signal")
 	}()
 
+	lockFailures := 0
+	for {
+		row := conn.QueryRow(`select pg_try_advisory_lock($1)`, dynoId)
+		var succeeded bool
+		err := row.Scan(&succeeded)
+		if err != nil {
+			return err
+		}
+		if succeeded {
+			break
+		}
+
+		lockFailures++
+		if lockFailures >= 60 {
+			return oops.Newf("Couldn't acquire advisory lock after %d attempts", lockFailures)
+		}
+		logger.Info().Msgf("Acquiring advisory lock - attempt %d", lockFailures)
+		time.Sleep(time.Second)
+	}
+
 	logger.Info().Msg("Worker started")
 
 	pollFailures := 0
+mainLoop:
 	for {
 		if err := signalCtx.Err(); err != nil {
 			return err
 		}
+	checkFinished:
+		for {
+			select {
+			case jobResult := <-finishedJobs:
+				err := finishJob(conn, dynoId, jobResult, availableWorkers, logger)
+				if err != nil {
+					return err
+				}
+				continue
+			default:
+				break checkFinished
+			}
+		}
 
+		assignedWorkerId := -1
+		for workerId, isAvailable := range availableWorkers {
+			if isAvailable {
+				assignedWorkerId = workerId
+				break
+			}
+		}
+		if assignedWorkerId == -1 {
+			time.Sleep(sleepDelay)
+			continue
+		}
+		assignedWorkerName := fmt.Sprintf("%s-%d-%d", workerNameBase, dynoId, assignedWorkerId)
+
+		var j job
 		jobPollTime := schedule.UTCNow()
 		lockExpiredTimestamp := jobPollTime.Add(-maxRunTimeDeadline)
 		row := conn.QueryRow(`
@@ -125,24 +205,20 @@ func startWorker() error {
 			where id in (
 				select id
 				from delayed_jobs
-				where
-					(
-						(run_at <= $1 and (locked_at is null or locked_at < $2)) or
-						locked_by = $3
-					) and
-					failed_at is null
+				where (
+					(run_at <= $1 and (locked_at is null or locked_at < $2)) or
+					locked_by = $3
+				) and failed_at is null
 				order by priority asc, run_at asc
 				limit 1
 				for update
 			)
 			returning id, attempts, handler
-		`, jobPollTime, lockExpiredTimestamp, workerName)
-
-		var j job
+		`, jobPollTime, lockExpiredTimestamp, assignedWorkerName)
 		err := row.Scan(&j.Id, &j.Attempts, &j.RawHandler)
 		if errors.Is(err, pgx.ErrNoRows) {
 			time.Sleep(sleepDelay)
-			continue
+			continue mainLoop
 		} else if err != nil {
 			pollFailures++
 			logger.Error().Err(err).Msgf("Poll failures: %d", pollFailures)
@@ -150,10 +226,15 @@ func startWorker() error {
 				return oops.New("Max poll failures reached")
 			}
 			time.Sleep(sleepDelay)
+			continue mainLoop
+		}
+		pollFailures = 0
+
+		availableWorkers[assignedWorkerId] = false
+		if assignedWorkerId == -1 {
+			time.Sleep(sleepDelay)
 			continue
 		}
-
-		pollFailures = 0
 
 		var h handler
 		err = yaml.Unmarshal([]byte(j.RawHandler), &h)
@@ -168,113 +249,105 @@ func startWorker() error {
 		}
 		j.JobData = h.Job_Data
 
-		jobFunc, ok := jobFuncsByClassName[j.JobData.Job_Class]
-		if !ok {
-			jobErr := oops.Newf("Couldn't find job func for class %s", j.JobData.Job_Class)
-			logger.Error().Err(jobErr).Send()
-			err := failJob(conn, j, jobErr)
-			if err != nil {
-				return err
-			}
-			continue
-		}
-
-		jobLogger := &JobLogger{
-			WorkerName: workerName,
-			ClassName:  j.JobData.Job_Class,
-			JobId:      j.Id,
-		}
-		timeoutCtx, timeoutCancel := context.WithTimeout(signalCtx, maxRunTimeTimeout)
-		jobConn, err := db.Pool.Acquire(timeoutCtx, jobLogger)
-		if signalErr := signalCtx.Err(); signalErr != nil {
-			timeoutCancel()
-			return signalErr
-		} else if err != nil {
-			connFailures := 0
-			for {
-				connFailures++
-				logger.Error().Err(err).Msgf("Job DB connection failures: %d", connFailures)
-				if connFailures >= maxPollFailures {
-					timeoutCancel()
-					return oops.New("Max DB connection failures reached")
-				}
-				time.Sleep(sleepDelay)
-				jobConn, err = db.Pool.Acquire(timeoutCtx, jobLogger)
-				if err == nil {
-					break
-				}
-			}
-		}
-
-		jobLogger.
-			Info().
-			Any("args", j.JobData.Arguments).
-			Str("enqueued_at", j.JobData.Enqueued_At).
-			Msg("Performing job")
-		jobStart := time.Now().UTC()
-		jobErr := jobFunc(timeoutCtx, jobConn, j.JobData.Arguments)
-		timeoutCancel()
-		jobConn.Release()
-		if jobErr != nil {
-			if errors.Is(jobErr, context.Canceled) {
-				jobLogger.
-					Info().
-					Any("args", j.JobData.Arguments).
-					Msgf("Canceled job after %s (%d prior attempts)", time.Since(jobStart), j.Attempts)
-			} else {
-				jobLogger.
-					Error().
-					Any("args", j.JobData.Arguments).
-					Err(jobErr).
-					Msgf("Failed job in %s (%d prior attempts)", time.Since(jobStart), j.Attempts)
-			}
-			err := failJob(conn, j, jobErr)
-			if err != nil {
-				failFailures := 0
-				for {
-					failFailures++
-					jobLogger.
-						Error().
-						Err(err).
-						Msgf("Fail job failures: %d", failFailures)
-					if failFailures >= maxPollFailures {
-						return oops.New("Max fail failures reached")
-					}
-					time.Sleep(sleepDelay)
-					err = failJob(conn, j, jobErr)
-					if err == nil {
-						break
+		go func() {
+			assignedWorkerId := assignedWorkerId
+			assignedWorkerName := assignedWorkerName
+			j := j
+			defer func() {
+				if r := recover(); r != nil {
+					finishedJobs <- jobResult{
+						WorkerId: assignedWorkerId,
+						Id:       j.Id,
+						Status:   jobStatusFatal,
+						Err:      oops.Newf("panic: %v", r),
 					}
 				}
+			}()
+			status, err := runJob(signalCtx, j, jobFuncsByClassName, assignedWorkerId, assignedWorkerName)
+			finishedJobs <- jobResult{
+				WorkerId: assignedWorkerId,
+				Id:       j.Id,
+				Status:   status,
+				Err:      err,
 			}
-			continue
-		}
+		}()
+	}
+}
 
-		jobLogger.
-			Info().
-			Any("args", j.JobData.Arguments).
-			Msgf("Completed job in %s", time.Since(jobStart))
+type jobStatus int
 
-		_, err = conn.Exec(`delete from delayed_jobs where id = $1`, j.Id)
+const (
+	jobStatusFatal jobStatus = iota
+	jobStatusFail
+	jobStatusOk
+)
+
+func runJob(
+	signalCtx context.Context, j job, jobFuncsByClassName map[string]jobFunc, workerId int, workerName string,
+) (jobStatus, error) {
+	jobLogger := &JobLogger{
+		WorkerName: workerName,
+		ClassName:  j.JobData.Job_Class,
+		JobId:      j.Id,
+	}
+	timeoutCtx, timeoutCancel := context.WithTimeout(signalCtx, maxRunTimeTimeout)
+	jobConn, err := db.Pool.Acquire(timeoutCtx, jobLogger)
+	jobFunc, ok := jobFuncsByClassName[j.JobData.Job_Class]
+	if !ok {
+		jobErr := oops.Newf("Couldn't find job func for class %s", j.JobData.Job_Class)
+		jobLogger.Error().Err(jobErr).Send()
+		err := failJob(jobConn, j, jobErr)
 		if err != nil {
-			deleteFailures := 0
-			for {
-				deleteFailures++
-				jobLogger.
-					Error().
-					Err(err).
-					Msgf("Delete failures: %d", deleteFailures)
-				if deleteFailures >= maxPollFailures {
-					return oops.New("Max delete failures reached")
-				}
-				time.Sleep(sleepDelay)
-				_, err = conn.Exec(`delete from delayed_jobs where id = $1`, j.Id)
-				if err == nil {
-					break
-				}
-			}
+			timeoutCancel()
+			return jobStatusFatal, err
+		}
+
+		timeoutCancel()
+		return jobStatusFail, nil
+	}
+
+	if errors.Is(err, context.Canceled) {
+		timeoutCancel()
+		return jobStatusFatal, err
+	} else if err != nil {
+		err := retryAction(err, jobLogger, "job DB connection", func() error {
+			var innerErr error
+			jobConn, innerErr = db.Pool.Acquire(timeoutCtx, jobLogger)
+			return innerErr
+		})
+		if err != nil {
+			timeoutCancel()
+			return jobStatusFatal, err
 		}
 	}
+
+	jobLogger.LogPerforming(j)
+	jobStart := time.Now().UTC()
+	jobErr := jobFunc(timeoutCtx, jobConn, j.JobData.Arguments)
+	timeoutCancel()
+	defer jobConn.Release()
+	if jobErr != nil {
+		if errors.Is(jobErr, context.Canceled) {
+			jobLogger.LogCanceled(j, jobStart)
+		} else {
+			jobLogger.LogFailed(j, jobStart, jobErr)
+		}
+		err := failJob(jobConn, j, jobErr)
+		if errors.Is(err, context.Canceled) {
+			return jobStatusFatal, err
+		} else if err != nil {
+			err := retryAction(err, jobLogger, "fail job", func() error {
+				return failJob(jobConn, j, jobErr)
+			})
+			if err != nil {
+				return jobStatusFatal, err
+			}
+		}
+		return jobStatusFail, nil
+	}
+
+	jobLogger.LogCompleted(j, jobStart)
+	return jobStatusOk, nil
 }
 
 func failJob(conn *pgw.Conn, j job, jobErr error) error {
@@ -312,6 +385,89 @@ func failJob(conn *pgw.Conn, j job, jobErr error) error {
 		where id = $4
 	`, j.Attempts+1, errorStr, nextRunAt, j.Id)
 	return err
+}
+
+func waitForJobs(
+	conn *pgw.Conn, dynoId int, availableWorkers []bool, finishedJobs chan jobResult, logger log.Logger,
+) {
+	allFinished := true
+	for _, isAvailable := range availableWorkers {
+		if !isAvailable {
+			allFinished = false
+			break
+		}
+	}
+	if allFinished {
+		return
+	}
+
+	timeout := 30 * time.Second
+	timer := time.NewTimer(timeout)
+	startTime := time.Now().UTC()
+
+checkFinished:
+	for {
+		select {
+		case jobResult := <-finishedJobs:
+			err := finishJob(conn, dynoId, jobResult, availableWorkers, logger)
+			if err != nil {
+				logger.Error().Err(err).Msgf("Error while finishing job %d", jobResult.Id)
+			}
+			for _, isAvailable := range availableWorkers {
+				if !isAvailable {
+					continue checkFinished
+				}
+			}
+			timer.Stop()
+			logger.Info().Msgf("Jobs finished in %v", time.Since(startTime))
+			return
+		case <-timer.C:
+			logger.Error().Msgf("Jobs didn't finish within a %v timeout", timeout)
+			return
+		}
+	}
+}
+
+func finishJob(
+	conn *pgw.Conn, dynoId int, jobResult jobResult, availableWorkers []bool, logger log.Logger,
+) error {
+	switch jobResult.Status {
+	case jobStatusFatal:
+		return jobResult.Err
+	case jobStatusOk:
+		_, err := conn.Exec(`delete from delayed_jobs where id = $1`, jobResult.Id)
+		if err != nil {
+			err := retryAction(err, logger, "delete job", func() error {
+				_, innerErr := conn.Exec(`delete from delayed_jobs where id = $1`, jobResult.Id)
+				return innerErr
+			})
+			if err != nil {
+				return err
+			}
+		}
+		fallthrough
+	case jobStatusFail:
+		availableWorkers[jobResult.WorkerId] = true
+	default:
+		panic("unknown job status")
+	}
+	return nil
+}
+
+func retryAction(err error, logger log.Logger, actionName string, action func() error) error {
+	failures := 0
+	for {
+		failures++
+		logger.Error().Err(err).Msgf("%s failures: %d", actionName, failures)
+		if failures >= maxPollFailures {
+			return oops.Newf("Max %s failures reached", actionName)
+		}
+		time.Sleep(sleepDelay)
+		err = action()
+		if err == nil {
+			return nil
+		}
+	}
 }
 
 type WorkerLogger struct {
@@ -379,4 +535,30 @@ func (l *JobLogger) logJobCommon(event *zerolog.Event) *zerolog.Event {
 		Int64("job_id", int64(l.JobId)).
 		Str("class_name", l.ClassName)
 	return event
+}
+
+func (l *JobLogger) LogPerforming(j job) {
+	l.Info().
+		Any("args", j.JobData.Arguments).
+		Str("enqueued_at", j.JobData.Enqueued_At).
+		Msg("Performing job")
+}
+
+func (l *JobLogger) LogCanceled(j job, jobStart time.Time) {
+	l.Info().
+		Any("args", j.JobData.Arguments).
+		Msgf("Canceled job after %s (%d prior attempts)", time.Since(jobStart), j.Attempts)
+}
+
+func (l *JobLogger) LogFailed(j job, jobStart time.Time, jobErr error) {
+	l.Error().
+		Any("args", j.JobData.Arguments).
+		Err(jobErr).
+		Msgf("Failed job in %s (%d prior attempts)", time.Since(jobStart), j.Attempts)
+}
+
+func (l *JobLogger) LogCompleted(j job, jobStart time.Time) {
+	l.Info().
+		Any("args", j.JobData.Arguments).
+		Msgf("Completed job in %s", time.Since(jobStart))
 }

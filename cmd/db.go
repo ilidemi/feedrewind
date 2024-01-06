@@ -34,7 +34,7 @@ func init() {
 	}
 
 	generateMigraionCmd := &cobra.Command{
-		Use:  "generate-migration",
+		Use:  "generate-migration [name]",
 		Args: cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
 			generateMigration(args[0])
@@ -262,7 +262,7 @@ func rollback() {
 	lockId := migrationLock(conn)
 	defer migrationUnlock(conn, lockId)()
 
-	maxVersionRow := conn.QueryRow("select max(version) from schema_migrations")
+	maxVersionRow := conn.QueryRow("select max(version) from schema_s")
 	var maxVersion string
 	if err := maxVersionRow.Scan(&maxVersion); err != nil {
 		panic(err)

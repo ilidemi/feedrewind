@@ -164,7 +164,7 @@ func PublishPostsJob_Perform(
 }
 
 func PublishPostsJob_ScheduleInitial(
-	tx pgw.Queryable, userId models.UserId, userSettings *models.UserSettings,
+	tx pgw.Queryable, userId models.UserId, userSettings *models.UserSettings, isManual bool,
 ) error {
 	utcNow := schedule.UTCNow()
 	location := tzdata.LocationByName[userSettings.Timezone]
@@ -177,12 +177,7 @@ func PublishPostsJob_ScheduleInitial(
 	}
 	nextRunDate := nextRun.MustUTCString()
 
-	return performAt(
-		tx, nextRun, "PublishPostsJob", defaultQueue,
-		yamlString(fmt.Sprint(userId)),
-		strToYaml(string(date.Date())),
-		strToYaml(nextRunDate),
-	)
+	return PublishPostsJob_PerformAt(tx, nextRun, userId, date.Date(), nextRunDate, isManual)
 }
 
 type LockedPublishPostsJob struct {

@@ -152,3 +152,17 @@ Subscription select posts status mismatch
 Subscription select posts from top category
 Subscription select posts custom
 Subscription mark wrong
+
+Worker concurrency test:
+start http://localhost:3000/subscriptions/add/https:%2F%2Fwww.drmaciver.com%2Ffeed%2F
+start http://localhost:3000/subscriptions/add/http:%2F%2Fpjf.id.au%2Ffeed.xml
+start http://localhost:3000/subscriptions/add/http:%2F%2Fwww.notesfromandy.com%2Ffeed%2F
+start http://localhost:3000/subscriptions/add/https:%2F%2Fmedium.com%2Ffeed%2F@carohadad
+start http://localhost:3000/subscriptions/add/https:%2F%2Falok.github.io%2Ffeed.xml
+start http://localhost:3000/subscriptions/add/https:%2F%2Fparkerhiggins.net%2Ffeed.xml
+start http://localhost:3000/subscriptions/add/https:%2F%2Fwww.roborooter.com%2Ffeed%2F
+start http://localhost:3000/subscriptions/add/https:%2F%2Fthewitchofendor.com%2Ffeed%2F
+start http://localhost:3000/subscriptions/add/https:%2F%2Fjavascriptandjava.wordpress.com%2Ffeed%2F
+start http://localhost:3000/subscriptions/add/https:%2F%2Fthewebivore.com%2Ffeed%2F
+start http://localhost:3000/subscriptions/add/https:%2F%2Fxcorr.net%2Ffeed%2F
+start http://localhost:3000/subscriptions/add/https:%2F%2Ftynan.com%2Ffeed%2F
