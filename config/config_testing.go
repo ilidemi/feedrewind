@@ -7,7 +7,8 @@ const isTesting = true
 func testingConfig() Config {
 	devCfg := developmentConfig()
 	return Config{
-		Env: EnvTesting,
+		Env:  EnvTesting,
+		Dyno: devCfg.Dyno,
 		DB: DBConfig{
 			User:     devCfg.DB.User,
 			Password: devCfg.DB.Password,

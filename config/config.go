@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	Env                     Env
+	Dyno                    string
 	DB                      DBConfig
 	IsHeroku                bool
 	SessionHashKey          []byte

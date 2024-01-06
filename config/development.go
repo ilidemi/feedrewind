@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -41,6 +42,8 @@ func DevelopmentDBConfig() DBConfig {
 }
 
 func developmentConfig() Config {
+	pid := os.Getpid()
+	dyno := fmt.Sprintf("local.%d", pid)
 	dbConfig := DevelopmentDBConfig()
 	sessionHashKey, err := hex.DecodeString("REDACTED_DEV_SESSION_HASH_KEY")
 	if err != nil {
@@ -53,6 +56,7 @@ func developmentConfig() Config {
 
 	return Config{
 		Env:                     EnvDevelopment,
+		Dyno:                    dyno,
 		DB:                      dbConfig,
 		IsHeroku:                false,
 		SessionHashKey:          sessionHashKey,
