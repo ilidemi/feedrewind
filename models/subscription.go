@@ -48,8 +48,9 @@ func Subscription_SetIsPaused(tx pgw.Queryable, subscriptionId SubscriptionId, i
 }
 
 func Subscription_Delete(tx pgw.Queryable, subscriptionId SubscriptionId) error {
+	// Has to be with_discarded because adding timestamp to without_discarded is a constraint violation
 	_, err := tx.Exec(`
-		update subscriptions_without_discarded
+		update subscriptions_with_discarded
 		set discarded_at = utc_now()
 		where id = $1
 	`, subscriptionId)

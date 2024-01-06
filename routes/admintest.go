@@ -24,7 +24,7 @@ func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
 			handler like '%class: EmailInitialItemJob%' or
 			handler like '%class: EmailPostsJob%' or
 			handler like '%class: EmailFinalItemJob%') and
-			handler like concat('%', $1::text, '%')
+			handler like concat('%- ', $1::text, E'\n%')
 	`, fmt.Sprint(currentUserId))
 	if err != nil {
 		panic(err)
@@ -35,7 +35,7 @@ func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	err = jobs.PublishPostsJob_ScheduleInitial(conn, currentUserId, userSettings)
+	err = jobs.PublishPostsJob_ScheduleInitial(conn, currentUserId, userSettings, false)
 	if err != nil {
 		panic(err)
 	}

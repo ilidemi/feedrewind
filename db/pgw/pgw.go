@@ -111,6 +111,18 @@ func (conn *Conn) Exec(sql string, args ...any) (pgconn.CommandTag, error) {
 	return result, oops.Wrap(err)
 }
 
+func (conn *Conn) ExecWithContext(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
+	t1 := time.Now()
+	defer addDuration(ctx, t1)()
+
+	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
+		return pgconn.CommandTag{}, oops.Wrap(ErrDontUseSubscriptions) // nolint:exhaustruct
+	}
+
+	result, err := conn.impl.Exec(ctx, sql, args...)
+	return result, oops.Wrap(err)
+}
+
 func (conn *Conn) Query(sql string, args ...any) (*Rows, error) {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()

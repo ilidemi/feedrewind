@@ -290,39 +290,34 @@ func runJob(
 		ClassName:  j.JobData.Job_Class,
 		JobId:      j.Id,
 	}
-	timeoutCtx, timeoutCancel := context.WithTimeout(signalCtx, maxRunTimeTimeout)
-	jobConn, err := db.Pool.Acquire(timeoutCtx, jobLogger)
+	// Context cancellation is handled manually at the job level and not at db level
+	// Quick-running jobs should be able to gracefully finish and reschedule themselves
+	jobConn, err := db.Pool.Acquire(context.Background(), jobLogger)
 	jobFunc, ok := jobFuncsByClassName[j.JobData.Job_Class]
 	if !ok {
 		jobErr := oops.Newf("Couldn't find job func for class %s", j.JobData.Job_Class)
 		jobLogger.Error().Err(jobErr).Send()
 		err := failJob(jobConn, j, jobErr)
 		if err != nil {
-			timeoutCancel()
 			return jobStatusFatal, err
 		}
-
-		timeoutCancel()
 		return jobStatusFail, nil
 	}
 
-	if errors.Is(err, context.Canceled) {
-		timeoutCancel()
-		return jobStatusFatal, err
-	} else if err != nil {
+	if err != nil {
 		err := retryAction(err, jobLogger, "job DB connection", func() error {
 			var innerErr error
-			jobConn, innerErr = db.Pool.Acquire(timeoutCtx, jobLogger)
+			jobConn, innerErr = db.Pool.Acquire(context.Background(), jobLogger)
 			return innerErr
 		})
 		if err != nil {
-			timeoutCancel()
 			return jobStatusFatal, err
 		}
 	}
 
 	jobLogger.LogPerforming(j)
 	jobStart := time.Now().UTC()
+	timeoutCtx, timeoutCancel := context.WithTimeout(signalCtx, maxRunTimeTimeout)
 	jobErr := jobFunc(timeoutCtx, jobConn, j.JobData.Arguments)
 	timeoutCancel()
 	defer jobConn.Release()
@@ -360,7 +355,7 @@ func failJob(conn *pgw.Conn, j job, jobErr error) error {
 	}
 
 	if j.Attempts+1 >= maxAttempts {
-		_, err := conn.Exec(`
+		_, err := conn.ExecWithContext(context.Background(), `
 			update delayed_jobs
 			set locked_at = null,
 				locked_by = null,
@@ -375,7 +370,7 @@ func failJob(conn *pgw.Conn, j job, jobErr error) error {
 	retryInSeconds := math.Pow(float64(j.Attempts), 4) + 5
 	nextRunAt := utcNow.Add(time.Duration(retryInSeconds) * time.Second)
 
-	_, err := conn.Exec(`
+	_, err := conn.ExecWithContext(context.Background(), `
 		update delayed_jobs
 		set locked_at = null,
 			locked_by = null,
@@ -435,10 +430,14 @@ func finishJob(
 	case jobStatusFatal:
 		return jobResult.Err
 	case jobStatusOk:
-		_, err := conn.Exec(`delete from delayed_jobs where id = $1`, jobResult.Id)
+		_, err := conn.ExecWithContext(context.Background(), `
+			delete from delayed_jobs where id = $1
+		`, jobResult.Id)
 		if err != nil {
 			err := retryAction(err, logger, "delete job", func() error {
-				_, innerErr := conn.Exec(`delete from delayed_jobs where id = $1`, jobResult.Id)
+				_, innerErr := conn.ExecWithContext(context.Background(), `
+					delete from delayed_jobs where id = $1
+				`, jobResult.Id)
 				return innerErr
 			})
 			if err != nil {

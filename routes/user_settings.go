@@ -291,7 +291,7 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			err = jobs.PublishPostsJob_ScheduleInitial(tx, currentUser.Id, newUserSettings)
+			err = jobs.PublishPostsJob_ScheduleInitial(tx, currentUser.Id, newUserSettings, false)
 			if err != nil {
 				panic(err)
 			}
