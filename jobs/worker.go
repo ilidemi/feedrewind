@@ -33,9 +33,11 @@ func init() {
 	Worker = &cobra.Command{
 		Use: "worker",
 		Run: func(_ *cobra.Command, _ []string) {
-			go func() {
-				fmt.Println(http.ListenAndServe("localhost:6061", nil))
-			}()
+			if config.Cfg.Env.IsDevOrTest() {
+				go func() {
+					fmt.Println(http.ListenAndServe("localhost:6061", nil))
+				}()
+			}
 
 			dynoIdIdx := strings.LastIndex(config.Cfg.Dyno, ".") + 1
 			dynoId, err := strconv.Atoi(config.Cfg.Dyno[dynoIdIdx:])

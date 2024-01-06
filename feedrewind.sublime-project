@@ -45,18 +45,8 @@
                     "shell_cmd": "golangci-lint run --build-tags testing,e2etesting,emailtesting"
                 },
                 {
-                    "name": "tailwindcss",
-                    "cmd":
-                    [
-                        "tailwind\\bin\\tailwindcss-3.0.23-windows-x64.exe",
-                        "-i",
-                        "tailwind/application.tailwind.css",
-                        "-c",
-                        "tailwind/tailwind.config.js",
-                        "-o",
-                        "static/tailwind.css"
-                    ],
-                    "shell": true
+                    "name": "tailwind",
+                    "shell_cmd": "go run . tailwind"
                 },
                 {
                     "name": "wsl startup",

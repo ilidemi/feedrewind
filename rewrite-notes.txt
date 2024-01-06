@@ -42,6 +42,7 @@ html/template takes 80-100ms on SSC posts list
 Map randomization generated work and removed convenience. Had to pull in a sorted map package
 Matching sorted links except a highlighted one seems fishy, but let's have it break
 Taking pointers to loop variables bitten me multiple times.
+I don't know how to test worker infra properly besides just running it. Designing as I go made it harder to keep track of invariants but not having invariants at the end is more bad
 
 
 ## Tests

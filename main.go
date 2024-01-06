@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"feedrewind/cmd"
 	"feedrewind/cmd/crawl"
 	"feedrewind/config"
@@ -20,7 +21,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-
+	"github.com/heroku/x/hmetrics"
 	"github.com/spf13/cobra"
 )
 
@@ -30,12 +31,21 @@ import (
 func main() {
 	rootCmd := &cobra.Command{
 		Use: "feedrewind",
+	}
+
+	var port *int
+	webCmd := &cobra.Command{
+		Use: "web",
 		Run: func(_ *cobra.Command, _ []string) {
-			runServer()
+			runServer(*port)
 		},
 	}
+	port = webCmd.PersistentFlags().Int("port", 3000, "Web Port")
+
+	rootCmd.AddCommand(webCmd)
 	rootCmd.AddCommand(jobs.Worker)
 	rootCmd.AddCommand(cmd.Db)
+	rootCmd.AddCommand(cmd.Tailwind)
 	rootCmd.AddCommand(cmd.WslStartup)
 	rootCmd.AddCommand(crawl.Crawl)
 	rootCmd.AddCommand(&cobra.Command{
@@ -50,10 +60,34 @@ func main() {
 	}
 }
 
-func runServer() {
-	go func() {
-		fmt.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
+func runServer(port int) {
+	if config.Cfg.Env.IsDevOrTest() {
+		go func() {
+			fmt.Println(http.ListenAndServe("localhost:6060", nil))
+		}()
+	}
+
+	logger := &log.BackgroundLogger{}
+	if config.Cfg.IsHeroku {
+		// Adapted from https://github.com/heroku/x/blob/v0.1.0/hmetrics/onload/init.go
+		go func() {
+			var errorHandler hmetrics.ErrHandler = func(err error) error {
+				logger.Error().Err(err).Msg("Error sending heroku metrics")
+				return nil
+			}
+			for backoff := int64(1); ; backoff++ {
+				start := time.Now()
+				err := hmetrics.Report(context.Background(), hmetrics.DefaultEndpoint, errorHandler)
+				if time.Since(start) > 5*time.Minute {
+					backoff = 1
+				}
+				if err != nil {
+					_ = errorHandler(err)
+				}
+				time.Sleep(time.Duration(backoff*10) * time.Second)
+			}
+		}()
+	}
 
 	conn, err := db.Pool.AcquireBackground()
 	if err != nil {
@@ -158,9 +192,9 @@ func runServer() {
 	staticR.Get(util.StaticRouteTemplate, routes.Static_File)
 	staticR.NotFound(routes.Misc_NotFound)
 
-	logger := &log.BackgroundLogger{}
-	logger.Info().Msg("Started")
-	if err := http.ListenAndServe(":3000", staticR); err != nil {
+	logger.Info().Msgf("Started on port %d", port)
+	addr := fmt.Sprintf(":%d", port)
+	if err := http.ListenAndServe(addr, staticR); err != nil {
 		panic(err)
 	}
 }
