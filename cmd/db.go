@@ -62,9 +62,11 @@ func init() {
 }
 
 func ensurePgDump() {
-	_, err := exec.LookPath("pg_dump")
-	if err != nil {
-		panic(err)
+	if config.Cfg.Env.IsDevOrTest() {
+		_, err := exec.LookPath("pg_dump")
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -247,7 +249,9 @@ func migrate() {
 			panic(err)
 		}
 
-		dumpStructure()
+		if config.Cfg.Env.IsDevOrTest() {
+			dumpStructure()
+		}
 		fmt.Println(version)
 	}
 }
@@ -297,7 +301,9 @@ func rollback() {
 			panic(err)
 		}
 
-		dumpStructure()
+		if config.Cfg.Env.IsDevOrTest() {
+			dumpStructure()
+		}
 		fmt.Println(maxVersion, "rolled back")
 
 		break
