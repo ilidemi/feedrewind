@@ -53,8 +53,6 @@ func DispatchAmplitudeJob_Perform(ctx context.Context, conn *pgw.Conn, isManual 
 	failedCount := 0
 	for i, productEvent := range eventsToDispatch {
 		if err := ctx.Err(); err != nil {
-			// TODO remove
-			logger.Info().Err(err).Msg("Context error")
 			return err
 		}
 
