@@ -54,7 +54,7 @@ func init() {
 	for {
 		parentDir, curDirName := filepath.Split(rootDir)
 		if curDirName == "" {
-			panic("couldn't find root dir")
+			panic(fmt.Errorf("couldn't find root dir: %v", rootDir))
 		} else if curDirName == "feedrewind" {
 			break
 		} else {
