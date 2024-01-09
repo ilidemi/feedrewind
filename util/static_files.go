@@ -51,12 +51,20 @@ func init() {
 		panic(err)
 	}
 	rootDir := cwd
+findRoot:
 	for {
+		entries, err := os.ReadDir(rootDir)
+		if err != nil {
+			panic(err)
+		}
+		for _, entry := range entries {
+			if (entry.Type()&os.ModeDir == 0) && entry.Name() == "Procfile" {
+				break findRoot
+			}
+		}
 		parentDir, curDirName := filepath.Split(rootDir)
 		if curDirName == "" {
-			panic(fmt.Errorf("couldn't find root dir: %v", rootDir))
-		} else if curDirName == "feedrewind" {
-			break
+			panic("couldn't find root dir")
 		} else {
 			rootDir = strings.TrimRight(parentDir, string(filepath.Separator))
 		}
