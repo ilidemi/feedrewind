@@ -66,7 +66,7 @@ func SubscriptionPath(subscriptionId models.SubscriptionId) string {
 
 func SubscriptionProgressStreamUrl(r *http.Request, subscriptionId models.SubscriptionId) string {
 	proto := "ws"
-	if r.TLS != nil {
+	if !config.Cfg.Env.IsDevOrTest() {
 		proto = "wss"
 	}
 	host, port := parseHostPort(r)
@@ -75,7 +75,7 @@ func SubscriptionProgressStreamUrl(r *http.Request, subscriptionId models.Subscr
 
 func SubscriptionFeedUrl(r *http.Request, subscriptionId models.SubscriptionId) string {
 	proto := "http"
-	if config.Cfg.IsHeroku {
+	if !config.Cfg.Env.IsDevOrTest() {
 		proto = "https"
 	}
 	host, port := parseHostPort(r)
@@ -91,10 +91,10 @@ func parseHostPort(r *http.Request) (host, port string) {
 		host = r.Host
 		port = ""
 	}
-	if port == ":80" && r.TLS == nil {
+	if port == ":80" && config.Cfg.Env.IsDevOrTest() {
 		port = ""
 	}
-	if port == ":443" && r.TLS != nil {
+	if port == ":443" && !config.Cfg.Env.IsDevOrTest() {
 		port = ""
 	}
 	return host, port
