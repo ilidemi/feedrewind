@@ -4,10 +4,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strings"
 )
 
 func DevelopmentDBConfig() DBConfig {
+findRoot:
 	for i := 0; ; i++ {
 		if i > 100 {
 			panic("Something went wrong when looking for the feedrewind root dir")
@@ -16,8 +16,14 @@ func DevelopmentDBConfig() DBConfig {
 		if err != nil {
 			panic(err)
 		}
-		if strings.HasSuffix(cwd, "/feedrewind") || strings.HasSuffix(cwd, "\\feedrewind") {
-			break
+		entries, err := os.ReadDir(cwd)
+		if err != nil {
+			panic(err)
+		}
+		for _, entry := range entries {
+			if (entry.Type()&os.ModeDir == 0) && entry.Name() == "Procfile" {
+				break findRoot
+			}
 		}
 		err = os.Chdir("..")
 		if err != nil {
