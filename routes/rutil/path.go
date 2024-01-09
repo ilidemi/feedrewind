@@ -1,6 +1,7 @@
 package rutil
 
 import (
+	"feedrewind/config"
 	"feedrewind/models"
 	"fmt"
 	"net/http"
@@ -74,7 +75,7 @@ func SubscriptionProgressStreamUrl(r *http.Request, subscriptionId models.Subscr
 
 func SubscriptionFeedUrl(r *http.Request, subscriptionId models.SubscriptionId) string {
 	proto := "http"
-	if r.TLS != nil {
+	if config.Cfg.IsHeroku {
 		proto = "https"
 	}
 	host, port := parseHostPort(r)
