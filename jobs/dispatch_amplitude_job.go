@@ -62,18 +62,18 @@ func DispatchAmplitudeJob_Perform(ctx context.Context, conn *pgw.Conn, isManual 
 			logger.Info().Msgf("Event %d", i)
 		}
 
-		if productEvent.MaybeBotName != nil &&
-			productEvent.MaybeUserProperties != nil &&
-			!productEvent.MaybeUserProperties["allow_bots"].(bool) {
-
-			botSkippedCount++
-			botName := *productEvent.MaybeBotName
-			botCounts[botName]++
-			err := models.ProductEvent_MarkAsDispatched(conn, productEvent.Id, time.Now().UTC())
-			if err != nil {
-				return err
+		if productEvent.MaybeBotName != nil && productEvent.MaybeUserProperties != nil {
+			botIsAllowed, ok := productEvent.MaybeUserProperties["bot_is_allowed"].(bool)
+			if ok && !botIsAllowed {
+				botSkippedCount++
+				botName := *productEvent.MaybeBotName
+				botCounts[botName]++
+				err := models.ProductEvent_MarkAsDispatched(conn, productEvent.Id, time.Now().UTC())
+				if err != nil {
+					return err
+				}
+				continue
 			}
-			continue
 		}
 
 		body := map[string]any{
