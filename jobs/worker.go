@@ -257,11 +257,15 @@ mainLoop:
 			j := j
 			defer func() {
 				if r := recover(); r != nil {
+					err, ok := r.(error)
+					if !ok {
+						err = oops.Newf("%v", r)
+					}
 					finishedJobs <- jobResult{
 						WorkerId: assignedWorkerId,
 						Id:       j.Id,
 						Status:   jobStatusFatal,
-						Err:      oops.Newf("panic: %v", r),
+						Err:      err,
 					}
 				}
 			}()
