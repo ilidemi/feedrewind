@@ -44,8 +44,6 @@ func (c DBConfig) DSN() string {
 	password := ""
 	if c.Password != nil {
 		password = fmt.Sprintf(" password=%s", *c.Password)
-		// TODO remove
-		fmt.Printf("DB password length: %d\n", len(password))
 	}
 	return fmt.Sprintf("user=%s%s host=%s port=%d dbname=%s", c.User, password, c.Host, c.Port, c.DBName)
 }
