@@ -770,7 +770,7 @@ CREATE TABLE public.subscriptions (
     blog_id bigint NOT NULL,
     name character varying NOT NULL,
     status public.subscription_status NOT NULL,
-    is_paused boolean,
+    is_paused boolean NOT NULL,
     is_added_past_midnight boolean,
     discarded_at timestamp without time zone,
     created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
@@ -1879,4 +1879,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20230817035655'),
 ('20230920040801'),
 ('20231006024221'),
-('20240105034032');
+('20240105034032'),
+('20240108100234');
