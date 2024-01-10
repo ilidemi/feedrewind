@@ -257,7 +257,7 @@
             const body = await response.json();
             displayProgress(body);
 
-            setTimeout(() => pollProgressTillWebsocketStarts(), 100);
+            setTimeout(() => pollProgressTillWebsocketStarts(), 500);
         }
         pollProgressTillWebsocketStarts();
     </script>

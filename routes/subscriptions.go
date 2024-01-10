@@ -926,12 +926,14 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		serverDurations = append(serverDurations, duration)
 	}
 	var clientDurations []float64
-	for _, token := range strings.Split(epochDurations, ";") {
-		duration, err := strconv.ParseFloat(token, 64)
-		if err != nil {
-			panic(err)
+	if len(epochDurations) > 0 {
+		for _, token := range strings.Split(epochDurations, ";") {
+			duration, err := strconv.ParseFloat(token, 64)
+			if err != nil {
+				panic(err)
+			}
+			clientDurations = append(clientDurations, duration)
 		}
-		clientDurations = append(clientDurations, duration)
 	}
 	if len(clientDurations) != len(serverDurations) {
 		logger.Info().Msgf(
