@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version 12.5 (Ubuntu 12.5-0ubuntu0.20.04.1)
--- Dumped by pg_dump version 12.15
+-- Dumped by pg_dump version 14.10
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -1288,10 +1288,31 @@ CREATE INDEX delayed_jobs_priority ON public.delayed_jobs USING btree (priority,
 
 
 --
+-- Name: index_blog_post_categories_on_blog_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_blog_post_categories_on_blog_id ON public.blog_post_categories USING btree (blog_id);
+
+
+--
+-- Name: index_blog_post_category_assignments_on_blog_post_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_blog_post_category_assignments_on_blog_post_id ON public.blog_post_category_assignments USING btree (blog_post_id);
+
+
+--
 -- Name: index_blog_post_category_assignments_on_category_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_blog_post_category_assignments_on_category_id ON public.blog_post_category_assignments USING btree (category_id);
+
+
+--
+-- Name: index_blog_posts_on_blog_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_blog_posts_on_blog_id ON public.blog_posts USING btree (blog_id);
 
 
 --
@@ -1309,10 +1330,24 @@ CREATE INDEX index_start_feeds_on_start_page_id ON public.start_feeds USING btre
 
 
 --
+-- Name: index_subscription_posts_on_blog_post_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscription_posts_on_blog_post_id ON public.subscription_posts USING btree (blog_post_id);
+
+
+--
 -- Name: index_subscription_posts_on_random_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX index_subscription_posts_on_random_id ON public.subscription_posts USING btree (random_id);
+
+
+--
+-- Name: index_subscriptions_on_blog_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_blog_id ON public.subscriptions USING btree (blog_id);
 
 
 --
@@ -1880,4 +1915,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20230920040801'),
 ('20231006024221'),
 ('20240105034032'),
-('20240108100234');
+('20240108100234'),
+('20240110082145'),
+('20240110082440');
