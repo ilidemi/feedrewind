@@ -103,7 +103,7 @@ func getExtractionsByStarCount(
 type xpathTreeNode struct {
 	XPathSegments []xpathSegment
 	Children      *om.OrderedMap[xpathSegment, *xpathTreeNode]
-	Parent        *xpathTreeNode
+	MaybeParent   *xpathTreeNode
 	IsLink        bool
 	IsFeedLink    bool
 }
@@ -194,7 +194,7 @@ func groupLinksByMaskedXPath(
 		xpathTree := &xpathTreeNode{
 			XPathSegments: nil,
 			Children:      om.New[xpathSegment, *xpathTreeNode](),
-			Parent:        nil,
+			MaybeParent:   nil,
 			IsLink:        false,
 			IsFeedLink:    false,
 		}
@@ -213,7 +213,7 @@ func groupLinksByMaskedXPath(
 					currentNode.Children.Set(segment, &xpathTreeNode{
 						XPathSegments: childXPathSegments,
 						Children:      om.New[xpathSegment, *xpathTreeNode](),
-						Parent:        currentNode,
+						MaybeParent:   currentNode,
 						IsLink:        isLink,
 						IsFeedLink:    isFeedLink,
 					})
@@ -250,9 +250,10 @@ func groupLinksByMaskedXPath(
 		startNode *xpathTreeNode, startXPathSegmentsSuffix []xpathSegment, starsRemaining int,
 		pageFeedMaskedXPathsSegments *om.OrderedMap[string, []xpathSegment],
 	) {
-		ancestorNode := startNode.Parent
+		maybeAncestorNode := startNode.MaybeParent
 		xpathSegmentsSuffix := startXPathSegmentsSuffix
-		for ancestorNode != nil {
+		for maybeAncestorNode != nil {
+			ancestorNode := maybeAncestorNode
 			childSegment := startNode.XPathSegments[len(ancestorNode.XPathSegments)]
 			maskedXPathSegments := slices.Clone(ancestorNode.XPathSegments)
 			maskedXPathSegments = append(maskedXPathSegments, xpathSegment{
@@ -322,7 +323,7 @@ func groupLinksByMaskedXPath(
 			xpathSegmentsSuffix = append([]xpathSegment{
 				startNode.XPathSegments[len(ancestorNode.XPathSegments)],
 			}, xpathSegmentsSuffix...)
-			ancestorNode = ancestorNode.Parent
+			maybeAncestorNode = ancestorNode.MaybeParent
 		}
 	}
 

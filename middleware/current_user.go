@@ -12,16 +12,16 @@ func CurrentUser(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		conn := GetDBConn(r)
 		authToken := GetSessionAuthToken(r)
-		currentUser, err := models.User_FindByAuthToken(conn, authToken)
+		maybeCurrentUser, err := models.User_FindByAuthToken(conn, authToken)
 		if errors.Is(err, models.ErrUserNotFound) {
-			currentUser = nil
+			maybeCurrentUser = nil
 		} else if err != nil {
 			panic(err)
 		}
 
 		var productUserId models.ProductUserId
-		if currentUser != nil {
-			productUserId = currentUser.ProductUserId
+		if maybeCurrentUser != nil {
+			productUserId = maybeCurrentUser.ProductUserId
 		} else if sessionProductUserId := GetSessionProductUserId(r); sessionProductUserId != "" {
 			productUserId = sessionProductUserId
 		} else {
@@ -34,9 +34,9 @@ func CurrentUser(next http.Handler) http.Handler {
 		}
 
 		var currentUserHasBounced bool
-		if currentUser != nil {
+		if maybeCurrentUser != nil {
 			var err error
-			currentUserHasBounced, err = models.PostmarkBouncedUser_Exists(conn, currentUser.Id)
+			currentUserHasBounced, err = models.PostmarkBouncedUser_Exists(conn, maybeCurrentUser.Id)
 			if err != nil {
 				panic(err)
 			}
@@ -44,13 +44,13 @@ func CurrentUser(next http.Handler) http.Handler {
 			currentUserHasBounced = false
 		}
 
-		if currentUser != nil {
-			setLoggerUserId(r, currentUser.Id)
+		if maybeCurrentUser != nil {
+			setLoggerUserId(r, maybeCurrentUser.Id)
 		} else {
 			setLoggerUserId(r, 0)
 		}
 
-		setCurrentUserData(r, currentUser, productUserId, currentUserHasBounced)
+		setCurrentUserData(r, maybeCurrentUser, productUserId, currentUserHasBounced)
 		next.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)
@@ -62,7 +62,7 @@ var currentUserDataKey = &currentUserDataKeyType{}
 
 type currentUserData struct {
 	IsSet         bool
-	User          *models.User
+	MaybeUser     *models.User
 	ProductUserId models.ProductUserId
 	HasBounced    bool
 }
@@ -76,17 +76,17 @@ func withCurrentUserData(r *http.Request) *http.Request {
 
 // To be called by CurrentUser middleware
 func setCurrentUserData(
-	r *http.Request, user *models.User, productUserId models.ProductUserId, hasBounced bool,
+	r *http.Request, maybeUser *models.User, productUserId models.ProductUserId, hasBounced bool,
 ) {
 	data := r.Context().Value(currentUserDataKey).(*currentUserData)
 	data.IsSet = true
-	data.User = user
+	data.MaybeUser = maybeUser
 	data.ProductUserId = productUserId
 	data.HasBounced = hasBounced
 }
 
 func GetCurrentUser(r *http.Request) *models.User {
-	return r.Context().Value(currentUserDataKey).(*currentUserData).User
+	return r.Context().Value(currentUserDataKey).(*currentUserData).MaybeUser
 }
 
 func GetCurrentProductUserId(r *http.Request) models.ProductUserId {

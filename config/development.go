@@ -39,11 +39,11 @@ findRoot:
 	}
 
 	return DBConfig{
-		User:     "postgres",
-		Password: nil,
-		Host:     string(wslIp),
-		Port:     5432,
-		DBName:   "rss_catchup_rails_development",
+		User:          "postgres",
+		MaybePassword: nil,
+		Host:          string(wslIp),
+		Port:          5432,
+		DBName:        "rss_catchup_rails_development",
 	}
 }
 

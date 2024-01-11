@@ -63,10 +63,10 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 	userIsAnonymous := currentUser == nil
 
 	type OnboardingResult struct {
-		Title       string
-		Session     *util.Session
-		FeedsData   *feedsData
-		Suggestions *rutil.Suggestions
+		Title            string
+		Session          *util.Session
+		MaybeFeedsData   *feedsData
+		MaybeSuggestions *rutil.Suggestions
 	}
 	var result OnboardingResult
 	title := util.DecorateTitle("Add blog")
@@ -106,19 +106,19 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 			result = OnboardingResult{
 				Title:   title,
 				Session: rutil.Session(r),
-				FeedsData: &feedsData{ //nolint:exhaustruct
+				MaybeFeedsData: &feedsData{ //nolint:exhaustruct
 					StartUrl: startUrl,
 					Feeds:    discoverResult.feeds,
 				},
-				Suggestions: nil,
+				MaybeSuggestions: nil,
 			}
 		case *discoverError:
 			feeds := feedsDataFromTypedResult(startUrl, typedResult)
 			result = OnboardingResult{
-				Title:       title,
-				Session:     rutil.Session(r),
-				FeedsData:   &feeds,
-				Suggestions: nil,
+				Title:            title,
+				Session:          rutil.Session(r),
+				MaybeFeedsData:   &feeds,
+				MaybeSuggestions: nil,
 			}
 		default:
 			panic("Unknown discover feeds result type")
@@ -126,10 +126,10 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 	} else {
 		models.ProductEvent_MustEmitVisitAddPage(pc, "/subscriptions/add", userIsAnonymous, nil)
 		result = OnboardingResult{
-			Title:     title,
-			Session:   rutil.Session(r),
-			FeedsData: nil,
-			Suggestions: &rutil.Suggestions{
+			Title:          title,
+			Session:        rutil.Session(r),
+			MaybeFeedsData: nil,
+			MaybeSuggestions: &rutil.Suggestions{
 				SuggestedCategories: rutil.SuggestedCategories,
 				MiscellaneousBlogs:  rutil.MiscellaneousBlogs,
 				WidthClass:          "max-w-full",
@@ -148,10 +148,10 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 	userIsAnonymous := currentUser == nil
 
 	type OnboardingResult struct {
-		Title       string
-		Session     *util.Session
-		FeedsData   *feedsData
-		Suggestions *rutil.Suggestions
+		Title            string
+		Session          *util.Session
+		MaybeFeedsData   *feedsData
+		MaybeSuggestions *rutil.Suggestions
 	}
 	var result OnboardingResult
 	title := util.DecorateTitle("Add blog")
@@ -184,19 +184,19 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 		result = OnboardingResult{
 			Title:   title,
 			Session: rutil.Session(r),
-			FeedsData: &feedsData{ //nolint:exhaustruct
+			MaybeFeedsData: &feedsData{ //nolint:exhaustruct
 				StartUrl: startUrl,
 				Feeds:    discoverResult.feeds,
 			},
-			Suggestions: nil,
+			MaybeSuggestions: nil,
 		}
 	case *discoverError:
 		feeds := feedsDataFromTypedResult(startUrl, typedResult)
 		result = OnboardingResult{
-			Title:       title,
-			Session:     rutil.Session(r),
-			FeedsData:   &feeds,
-			Suggestions: nil,
+			Title:            title,
+			Session:          rutil.Session(r),
+			MaybeFeedsData:   &feeds,
+			MaybeSuggestions: nil,
 		}
 	default:
 		panic("Unknown discover feeds result type")

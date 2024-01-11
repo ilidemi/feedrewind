@@ -26,8 +26,8 @@
         id="start_url"
         name="start_url"
         type="url"
-        {{if .FeedsData}}
-        value="{{.FeedsData.StartUrl}}"
+        {{if .MaybeFeedsData}}
+        value="{{.MaybeFeedsData.StartUrl}}"
         {{end}}
         placeholder="Feed or blog link"
         autocomplete="off"
@@ -257,13 +257,13 @@
   </script>
 
   <div id="feeds">
-    {{if .FeedsData}}
-      {{template "partial_feeds" .FeedsData}}
+    {{if .MaybeFeedsData}}
+      {{template "partial_feeds" .MaybeFeedsData}}
       <script>setUpFeedsCallbacks();</script>
     {{end}}
   </div>
 
-  {{if .Suggestions}}
+  {{if .MaybeSuggestions}}
     <div id="suggestions" class="mt-10 flex flex-col gap-y-2">
       <div id="suggestions_toggle" class="max-w-lg py-2 border-y flex flex-row items-center hover:cursor-pointer no-tap-highlight">
         <div class="flex-1">Not sure what to read?</div>
@@ -279,7 +279,7 @@
           <div class="text-xs text-gray-500">(not affiliated with FeedRewind)</div>
         </div>
 
-        {{template "partial_suggestions" .Suggestions}}
+        {{template "partial_suggestions" .MaybeSuggestions}}
       </div>
 
       <script>

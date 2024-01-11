@@ -177,7 +177,7 @@ func publishForUserImpl(
 		subscription := &subscriptions[i]
 
 		var newPosts []models.PublishedSubscriptionBlogPost
-		if !(subscription.IsPaused != nil && *subscription.IsPaused) {
+		if !subscription.IsPaused {
 			dayOfWeek := localTime.DayOfWeek()
 			dayCount, err := models.Schedule_GetCount(tx, subscription.Id, dayOfWeek)
 			if err != nil {
