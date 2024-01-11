@@ -349,7 +349,7 @@ func Subscription_FinishSetup(
 type SubscriptionToPublish struct {
 	Id                        SubscriptionId
 	Name                      string
-	IsPaused                  *bool
+	IsPaused                  bool
 	FinishedSetupAt           schedule.Time
 	MaybeFinalItemPublishedAt *schedule.Time
 	BlogId                    BlogId

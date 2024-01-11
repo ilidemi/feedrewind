@@ -22,12 +22,12 @@ func TestInitSubscription(t *testing.T) {
 	}
 
 	type test struct {
-		Description           string
-		Subscription          subscriptionDesc
-		ExistingSubscription  *subscriptionDesc
-		ShouldPublishRssPosts bool
-		ExpectedSubBody       string
-		ExpectedUserBody      string
+		Description               string
+		Subscription              subscriptionDesc
+		MaybeExistingSubscription *subscriptionDesc
+		ShouldPublishRssPosts     bool
+		ExpectedSubBody           string
+		ExpectedUserBody          string
 	}
 
 	tests := []test{
@@ -36,8 +36,8 @@ func TestInitSubscription(t *testing.T) {
 			Subscription: subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"fri": 1},
 			},
-			ExistingSubscription:  nil,
-			ShouldPublishRssPosts: true,
+			MaybeExistingSubscription: nil,
+			ShouldPublishRssPosts:     true,
 			ExpectedSubBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -72,8 +72,8 @@ func TestInitSubscription(t *testing.T) {
 			Subscription: subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"thu": 1},
 			},
-			ExistingSubscription:  nil,
-			ShouldPublishRssPosts: false,
+			MaybeExistingSubscription: nil,
+			ShouldPublishRssPosts:     false,
 			ExpectedSubBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -108,8 +108,8 @@ func TestInitSubscription(t *testing.T) {
 			Subscription: subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"thu": 2, "fri": 2},
 			},
-			ExistingSubscription:  nil,
-			ShouldPublishRssPosts: true,
+			MaybeExistingSubscription: nil,
+			ShouldPublishRssPosts:     true,
 			ExpectedSubBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -172,8 +172,8 @@ func TestInitSubscription(t *testing.T) {
 			Subscription: subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"thu": 2, "fri": 2},
 			},
-			ExistingSubscription:  nil,
-			ShouldPublishRssPosts: true,
+			MaybeExistingSubscription: nil,
+			ShouldPublishRssPosts:     true,
 			ExpectedSubBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -236,7 +236,7 @@ func TestInitSubscription(t *testing.T) {
 			Subscription: subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"fri": 1},
 			},
-			ExistingSubscription: &subscriptionDesc{
+			MaybeExistingSubscription: &subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"wed": 1},
 			},
 			ShouldPublishRssPosts: true,
@@ -288,7 +288,7 @@ func TestInitSubscription(t *testing.T) {
 			Subscription: subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"thu": 1},
 			},
-			ExistingSubscription: &subscriptionDesc{
+			MaybeExistingSubscription: &subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"wed": 1},
 			},
 			ShouldPublishRssPosts: false,
@@ -340,7 +340,7 @@ func TestInitSubscription(t *testing.T) {
 			Subscription: subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"thu": 2, "fri": 2},
 			},
-			ExistingSubscription: &subscriptionDesc{
+			MaybeExistingSubscription: &subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"wed": 1},
 			},
 			ShouldPublishRssPosts: true,
@@ -437,12 +437,12 @@ func TestInitSubscription(t *testing.T) {
 		)
 		oops.RequireNoError(t, err, tc.Description)
 
-		if tc.ExistingSubscription != nil {
+		if tc.MaybeExistingSubscription != nil {
 			existingFinishedSetupAt, err := schedule.ParseTime(timeFormat, wed)
 			oops.RequireNoError(t, err, tc.Description)
 
 			_, err = createSubscription(
-				conn, user.Id, 2, existingFinishedSetupAt, 5, 1, tc.ExistingSubscription.CountByDay,
+				conn, user.Id, 2, existingFinishedSetupAt, 5, 1, tc.MaybeExistingSubscription.CountByDay,
 			)
 			oops.RequireNoError(t, err, tc.Description)
 		}
@@ -477,16 +477,16 @@ func TestPublishForUser(t *testing.T) {
 	}
 
 	type test struct {
-		Description      string
-		Subscription1    *subscriptionDesc
-		Subscription2    subscriptionDesc
-		ExpectedUserBody string
+		Description        string
+		MaybeSubscription1 *subscriptionDesc
+		Subscription2      subscriptionDesc
+		ExpectedUserBody   string
 	}
 
 	tests := []test{
 		{
-			Description:   "update one",
-			Subscription1: nil,
+			Description:        "update one",
+			MaybeSubscription1: nil,
 			Subscription2: subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"thu": 2, "fri": 2},
 				ExpectedRssBody: `<?xml version="1.0" encoding="UTF-8"?>
@@ -577,7 +577,7 @@ func TestPublishForUser(t *testing.T) {
 		},
 		{
 			Description: "update multiple at once",
-			Subscription1: &subscriptionDesc{
+			MaybeSubscription1: &subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"wed": 2, "fri": 2},
 				ExpectedRssBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
@@ -719,7 +719,7 @@ func TestPublishForUser(t *testing.T) {
 		},
 		{
 			Description: "update some but not all",
-			Subscription1: &subscriptionDesc{
+			MaybeSubscription1: &subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"wed": 1, "fri": 1},
 				ExpectedRssBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
@@ -819,7 +819,7 @@ func TestPublishForUser(t *testing.T) {
 		},
 		{
 			Description: "update none",
-			Subscription1: &subscriptionDesc{
+			MaybeSubscription1: &subscriptionDesc{
 				CountByDay: map[schedule.DayOfWeek]int{"wed": 1},
 				ExpectedRssBody: `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
@@ -918,21 +918,21 @@ func TestPublishForUser(t *testing.T) {
 		user, err := createUser(conn)
 		oops.RequireNoError(t, err, tc.Description)
 
-		var subscription1 *testSubscription
-		if tc.Subscription1 != nil {
+		var Maybesubscription1 *testSubscription
+		if tc.MaybeSubscription1 != nil {
 			finishedSetupAt1, err := schedule.ParseTime(timeFormat, wed)
 			oops.RequireNoError(t, err, tc.Description)
 
-			subscription1, err = createSubscription(
-				conn, user.Id, 1, finishedSetupAt1, 5, 0, tc.Subscription1.CountByDay,
+			Maybesubscription1, err = createSubscription(
+				conn, user.Id, 1, finishedSetupAt1, 5, 0, tc.MaybeSubscription1.CountByDay,
 			)
 			oops.RequireNoError(t, err, tc.Description)
 
 			finishedSetupAt1Date := finishedSetupAt1.Date()
 			err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
 				return InitSubscription(
-					tx, user.Id, user.ProductUserId, subscription1.Id, subscription1.Name,
-					subscription1.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt1, finishedSetupAt1,
+					tx, user.Id, user.ProductUserId, Maybesubscription1.Id, Maybesubscription1.Name,
+					Maybesubscription1.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt1, finishedSetupAt1,
 					finishedSetupAt1Date,
 				)
 			})
@@ -972,10 +972,10 @@ func TestPublishForUser(t *testing.T) {
 		})
 		oops.RequireNoError(t, err, tc.Description)
 
-		if tc.Subscription1 != nil {
-			sub1Body, err := models.SubscriptionRss_GetBody(conn, subscription1.Id)
+		if tc.MaybeSubscription1 != nil {
+			sub1Body, err := models.SubscriptionRss_GetBody(conn, Maybesubscription1.Id)
 			oops.RequireNoError(t, err, tc.Description)
-			require.Equal(t, tc.Subscription1.ExpectedRssBody, sub1Body, tc.Description)
+			require.Equal(t, tc.MaybeSubscription1.ExpectedRssBody, sub1Body, tc.Description)
 		}
 
 		sub2Body, err := models.SubscriptionRss_GetBody(conn, subscription2.Id)

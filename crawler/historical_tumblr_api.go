@@ -51,7 +51,6 @@ func getTumblrApiHistorical(
 				Blog struct {
 					Url   string
 					Title *string
-					Posts *int
 				}
 				Posts []struct {
 					Post_Url  string
@@ -91,11 +90,11 @@ func getTumblrApiHistorical(
 				return nil, oops.Newf("Couldn't parse Tumblr blog link: %s", blogUrl)
 			}
 
-			title := tumblrResp.Response.Blog.Title
-			if title == nil {
+			maybeTitle := tumblrResp.Response.Blog.Title
+			if maybeTitle == nil {
 				return nil, oops.New("No blog title in Tumblr response")
 			}
-			blogTitle = *title
+			blogTitle = *maybeTitle
 
 			totalPosts := tumblrResp.Response.Total_Posts
 			if totalPosts == nil {

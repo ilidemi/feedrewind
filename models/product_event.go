@@ -77,7 +77,7 @@ func ProductEvent_DummyEmitOrLog(
 		)
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`, productUserId, eventType, eventProperties, userProperties, anonIp, platform.Browser, platform.OsName,
-		platform.OsVersion, platform.BotName,
+		platform.OsVersion, platform.MaybeBotName,
 	)
 	if err != nil {
 		errorLogger.Error().Err(err).Msg("Product event emit error")
@@ -119,7 +119,7 @@ func ProductEvent_MustEmitFromRequest(
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`,
 		eventType, eventProperties, userProperties, anonIp, pc.ProductUserId, platform.Browser,
-		platform.OsName, platform.OsVersion, platform.BotName,
+		platform.OsName, platform.OsVersion, platform.MaybeBotName,
 	)
 	if err != nil {
 		panic(err)
@@ -241,27 +241,27 @@ func anonymizeUserIp(userIp string) string {
 }
 
 type userPlatform struct {
-	Browser   string
-	OsName    string
-	OsVersion string
-	BotName   *string
+	Browser      string
+	OsName       string
+	OsVersion    string
+	MaybeBotName *string
 }
 
 func resolveUserAgent(userAgentStr string) userPlatform {
 	userAgent := useragent.Parse(userAgentStr)
 	if userAgent.Bot {
 		return userPlatform{
-			Browser:   "Crawler",
-			OsName:    "Crawler",
-			OsVersion: "Crawler",
-			BotName:   &userAgent.Name,
+			Browser:      "Crawler",
+			OsName:       "Crawler",
+			OsVersion:    "Crawler",
+			MaybeBotName: &userAgent.Name,
 		}
 	} else {
 		return userPlatform{
-			Browser:   userAgent.Name,
-			OsName:    userAgent.OS,
-			OsVersion: userAgent.OSVersion,
-			BotName:   nil,
+			Browser:      userAgent.Name,
+			OsName:       userAgent.OS,
+			OsVersion:    userAgent.OSVersion,
+			MaybeBotName: nil,
 		}
 	}
 }

@@ -33,17 +33,17 @@ func (e Env) IsDevOrTest() bool {
 }
 
 type DBConfig struct {
-	User     string
-	Password *string
-	Host     string
-	Port     int
-	DBName   string
+	User          string
+	MaybePassword *string
+	Host          string
+	Port          int
+	DBName        string
 }
 
 func (c DBConfig) DSN() string {
 	password := ""
-	if c.Password != nil {
-		password = fmt.Sprintf(" password=%s", *c.Password)
+	if c.MaybePassword != nil {
+		password = fmt.Sprintf(" password=%s", *c.MaybePassword)
 	}
 	return fmt.Sprintf("user=%s%s host=%s port=%d dbname=%s", c.User, password, c.Host, c.Port, c.DBName)
 }

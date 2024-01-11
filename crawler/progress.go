@@ -13,20 +13,20 @@ type ProgressSaver interface {
 }
 
 type ProgressLogger struct {
-	ProgressSaver        ProgressSaver
-	Status               string
-	PrevIsPostprocessing *bool
-	PrevFetchedCount     *int
-	PrevRemainingCount   *int
+	ProgressSaver             ProgressSaver
+	Status                    string
+	MaybePrevIsPostprocessing *bool
+	MaybePrevFetchedCount     *int
+	MaybePrevRemainingCount   *int
 }
 
 func NewProgressLogger(progressSaver ProgressSaver) ProgressLogger {
 	return ProgressLogger{
-		ProgressSaver:        progressSaver,
-		Status:               "",
-		PrevIsPostprocessing: nil,
-		PrevFetchedCount:     nil,
-		PrevRemainingCount:   nil,
+		ProgressSaver:             progressSaver,
+		Status:                    "",
+		MaybePrevIsPostprocessing: nil,
+		MaybePrevFetchedCount:     nil,
+		MaybePrevRemainingCount:   nil,
 	}
 }
 
@@ -93,43 +93,43 @@ func (l *ProgressLogger) trackRegressions(
 	extra := make(map[string]any)
 
 	if trackIsPostprocessing {
-		if l.PrevIsPostprocessing != nil && *l.PrevIsPostprocessing &&
+		if l.MaybePrevIsPostprocessing != nil && *l.MaybePrevIsPostprocessing &&
 			isPostprocessing != nil && !*isPostprocessing {
 
 			regressions = append(regressions, "postprocessing_reset")
 			extra["status"] = l.Status
 		}
-		l.PrevIsPostprocessing = isPostprocessing
+		l.MaybePrevIsPostprocessing = isPostprocessing
 	}
 
 	if trackRemainingCount {
-		if l.PrevRemainingCount != nil &&
-			(remainingCount == nil || *remainingCount >= *l.PrevRemainingCount) {
+		if l.MaybePrevRemainingCount != nil &&
+			(remainingCount == nil || *remainingCount >= *l.MaybePrevRemainingCount) {
 
 			regressions = append(regressions, "remaining_count_up")
-			extra["prev_remaining_count"] = *l.PrevRemainingCount
+			extra["prev_remaining_count"] = *l.MaybePrevRemainingCount
 			if remainingCount == nil {
 				extra["new_remaining_count"] = remainingCount
 			} else {
 				extra["new_remaining_count"] = *remainingCount
 			}
 		}
-		l.PrevRemainingCount = remainingCount
+		l.MaybePrevRemainingCount = remainingCount
 	}
 
 	if trackFetchedCount {
-		if l.PrevFetchedCount != nil &&
-			(fetchedCount == nil || *fetchedCount < *l.PrevFetchedCount) {
+		if l.MaybePrevFetchedCount != nil &&
+			(fetchedCount == nil || *fetchedCount < *l.MaybePrevFetchedCount) {
 
 			regressions = append(regressions, "fetched_count_down")
-			extra["prev_fetched_count"] = *l.PrevFetchedCount
+			extra["prev_fetched_count"] = *l.MaybePrevFetchedCount
 			if fetchedCount == nil {
 				extra["new_fetched_count"] = fetchedCount
 			} else {
 				extra["new_fetched_count"] = *fetchedCount
 			}
 		}
-		l.PrevFetchedCount = fetchedCount
+		l.MaybePrevFetchedCount = fetchedCount
 	}
 
 	if len(regressions) > 0 {
