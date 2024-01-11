@@ -459,36 +459,6 @@
                     >
                       {{$customCategory.Name}}&nbsp;({{$customCategory.PostsCount}})
                     </label>
-
-                    <script>
-                        {
-                            document
-                                .getElementById("category_{{$categoryIndex}}_right")
-                                .addEventListener("click", () => {
-                                    toggleCategory({{$categoryIndex}});
-                                });
-                            document
-                                .getElementById("category_{{$categoryIndex}}_down")
-                                .addEventListener("click", () => {
-                                    toggleCategory({{$categoryIndex}});
-                                });
-                            document
-                                .getElementById("category_{{$categoryIndex}}_label")
-                                .addEventListener("click", (event) => {
-                                    toggleCategory({{$categoryIndex}});
-                                    event.preventDefault(); // Expanding the category is less "destructive" than toggling the checkbox
-                                });
-
-                            let categoryCheckbox = document.getElementById("category_{{$categoryIndex}}");
-                            {{if $customCategory.IsIndeterminate}}
-                            categoryCheckbox.indeterminate = true;
-                            {{end}}
-                            categoryCheckbox.addEventListener("change", handleCategoryChange);
-
-                            allCategoryCheckboxes.push(categoryCheckbox);
-                            postCheckboxesByCategoryIndex[{{$categoryIndex}}] = [];
-                        }
-                    </script>
                   </div>
 
                   {{range $customCategory.Posts}}
@@ -509,22 +479,55 @@
                       <label for="post_{{$categoryIndex}}_{{.Id}}">
                         <a href="{{.Url}}" class="link text-black" target="_blank">{{.Title}}</a>
                       </label>
-                      <script>
-                          {
-                              let postCheckbox = document
-                                  .getElementById("post_{{$categoryIndex}}_{{.Id}}");
-                              postCheckbox.addEventListener("change", handlePostChange);
-                              allPostCheckboxes.push(postCheckbox);
-                              postCheckboxesByCategoryIndex[{{$categoryIndex}}].push(postCheckbox);
-                              if (!postCheckboxesByPostId.has({{.Id}})) {
-                                  postCheckboxesByPostId.set({{.Id}}, []);
-                              }
-                              postCheckboxesByPostId.get({{.Id}}).push(postCheckbox);
-                          }
-                      </script>
                     </div>
                   {{end}}
                 {{end}}
+
+                <script>
+                    {{range $categoryIndex, $customCategory := .CustomCategories}}
+                        {
+                            document
+                                .getElementById("category_{{$categoryIndex}}_right")
+                                .addEventListener("click", () => {
+                                    toggleCategory({{$categoryIndex}});
+                                });
+                            document
+                                .getElementById("category_{{$categoryIndex}}_down")
+                                .addEventListener("click", () => {
+                                    toggleCategory({{$categoryIndex}});
+                                });
+                            document
+                                .getElementById("category_{{$categoryIndex}}_label")
+                                .addEventListener("click", (event) => {
+                                    toggleCategory({{$categoryIndex}});
+                                    // Expanding the category is less "destructive" than toggling the checkbox
+                                    event.preventDefault();
+                                });
+
+                            let categoryCheckbox = document.getElementById("category_{{$categoryIndex}}");
+                            {{if $customCategory.IsIndeterminate}}
+                            categoryCheckbox.indeterminate = true;
+                            {{end}}
+                            categoryCheckbox.addEventListener("change", handleCategoryChange);
+
+                            allCategoryCheckboxes.push(categoryCheckbox);
+                            postCheckboxesByCategoryIndex[{{$categoryIndex}}] = [];
+                        }
+                        {{range $customCategory.Posts}}
+                            {
+                                let postCheckbox = document
+                                    .getElementById("post_{{$categoryIndex}}_{{.Id}}");
+                                postCheckbox.addEventListener("change", handlePostChange);
+                                allPostCheckboxes.push(postCheckbox);
+                                postCheckboxesByCategoryIndex[{{$categoryIndex}}].push(postCheckbox);
+                                if (!postCheckboxesByPostId.has({{.Id}})) {
+                                    postCheckboxesByPostId.set({{.Id}}, []);
+                                }
+                                postCheckboxesByPostId.get({{.Id}}).push(postCheckbox);
+                            }
+                        {{end}}
+                    {{end}}
+                </script>
               </div>
 
               <form id="custom_form"
@@ -541,14 +544,16 @@
                          value="{{if .IsChecked}}1{{else}}0{{end}}"
                          data-post-id="{{.Id}}"
                   >
-                  <script>
-                      {
-                          let postHiddenField = document.getElementById("post_{{.Id}}");
-                          allPostFormInputs.push(postHiddenField);
-                          postHiddenFieldsByPostId.set({{.Id}}, postHiddenField);
-                      }
-                  </script>
                 {{end}}
+                <script>
+                    {{range .AllPosts}}
+                        {
+                            let postHiddenField = document.getElementById("post_{{.Id}}");
+                            allPostFormInputs.push(postHiddenField);
+                            postHiddenFieldsByPostId.set({{.Id}}, postHiddenField);
+                        }
+                    {{end}}
+                </script>
 
                 <input type="hidden" name="top_category_id" id="top_category_custom">
                 <input type="hidden" name="looks_wrong" value="0" id="looks_wrong_custom">
