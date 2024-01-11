@@ -28,6 +28,8 @@ func EmitVisit(next http.Handler) http.Handler {
 					middlewares ...func(http.Handler) http.Handler,
 				) error {
 					route = strings.Replace(route, "/*/", "/", -1)
+					route = strings.TrimSuffix(route, "//")
+					route = strings.TrimSuffix(route, "/")
 					key := method + " " + route
 					fullName := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
 					nameStart := strings.Index(fullName, ".") + 1
@@ -45,6 +47,7 @@ func EmitVisit(next http.Handler) http.Handler {
 		var ok bool
 		if handlerName, ok = handlerNames[key]; !ok {
 			handlerName = "N/A"
+			logger.Warn().Msgf("Couldn't find handler name for key %q", key)
 		}
 		models.ProductEvent_DummyEmitOrLog(conn, r, true, "visit", map[string]any{
 			"action":  handlerName,
