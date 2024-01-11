@@ -847,6 +847,63 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func Subscriptions_Progress(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
+	logger := rutil.Logger(r)
+	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
+	if !ok {
+		return
+	}
+	subscriptionId := models.SubscriptionId(subscriptionIdInt)
+
+	var maybeUserId *models.UserId
+	var blogId models.BlogId
+	var blogStatus models.BlogStatus
+	row := conn.QueryRow(`
+		select user_id, blog_id, (
+			select status from blogs where blogs.id = subscriptions_without_discarded.blog_id
+		)
+		from subscriptions_without_discarded
+		where id = $1
+	`, subscriptionId)
+	err := row.Scan(&maybeUserId, &blogId, &blogStatus)
+	if err != nil {
+		panic(err)
+	}
+	var userId models.UserId
+	if maybeUserId != nil {
+		userId = *maybeUserId
+	}
+
+	currentUserId := rutil.CurrentUserId(r)
+	if currentUserId != userId {
+		return
+	}
+
+	var progressMap map[string]any
+	switch blogStatus {
+	case models.BlogStatusCrawlInProgress:
+		blogCrawlProgress, err := models.BlogCrawlProgress_Get(conn, blogId)
+		if err != nil {
+			panic(err)
+		}
+
+		logger.Info().Msgf("Blog %d crawl in progress (epoch %d)", blogId, blogCrawlProgress.Epoch)
+		progressMap = map[string]any{
+			"epoch":  blogCrawlProgress.Epoch,
+			"status": blogCrawlProgress.Progress,
+			"count":  blogCrawlProgress.Count,
+		}
+	default:
+		logger.Info().Msgf("Blog %d crawl done", blogId)
+		progressMap = map[string]any{
+			"done": true,
+		}
+	}
+
+	rutil.MustWriteJson(w, http.StatusOK, progressMap)
+}
+
 func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
 	conn := rutil.DBConn(r)
@@ -1210,63 +1267,6 @@ func Subscriptions_MarkWrong(w http.ResponseWriter, r *http.Request) {
 	}, nil)
 
 	logger.Warn().Msgf("Blog %d (%s) marked as wrong", blogId, blogName)
-}
-
-func Subscriptions_Progress(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
-	logger := rutil.Logger(r)
-	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
-	if !ok {
-		return
-	}
-	subscriptionId := models.SubscriptionId(subscriptionIdInt)
-
-	var maybeUserId *models.UserId
-	var blogId models.BlogId
-	var blogStatus models.BlogStatus
-	row := conn.QueryRow(`
-		select user_id, blog_id, (
-			select status from blogs where blogs.id = subscriptions_without_discarded.blog_id
-		)
-		from subscriptions_without_discarded
-		where id = $1
-	`, subscriptionId)
-	err := row.Scan(&maybeUserId, &blogId, &blogStatus)
-	if err != nil {
-		panic(err)
-	}
-	var userId models.UserId
-	if maybeUserId != nil {
-		userId = *maybeUserId
-	}
-
-	currentUserId := rutil.CurrentUserId(r)
-	if currentUserId != userId {
-		return
-	}
-
-	var progressMap map[string]any
-	switch blogStatus {
-	case models.BlogStatusCrawlInProgress:
-		blogCrawlProgress, err := models.BlogCrawlProgress_Get(conn, blogId)
-		if err != nil {
-			panic(err)
-		}
-
-		logger.Info().Msgf("Blog %d crawl in progress (epoch %d)", blogId, blogCrawlProgress.Epoch)
-		progressMap = map[string]any{
-			"epoch":  blogCrawlProgress.Epoch,
-			"status": blogCrawlProgress.Progress,
-			"count":  blogCrawlProgress.Count,
-		}
-	default:
-		logger.Info().Msgf("Blog %d crawl done", blogId)
-		progressMap = map[string]any{
-			"done": true,
-		}
-	}
-
-	rutil.MustWriteJson(w, http.StatusOK, progressMap)
 }
 
 func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {

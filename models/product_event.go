@@ -2,9 +2,11 @@ package models
 
 import (
 	"feedrewind/db/pgw"
+	"feedrewind/log"
+	"feedrewind/oops"
 	"feedrewind/util"
+	"fmt"
 	"net/http"
-	"net/url"
 	"regexp"
 	"time"
 
@@ -50,6 +52,36 @@ func ProductEvent_Emit(
 		values ($1, $2, $3, $4)
 	`, eventType, eventProperties, userProperties, productUserId)
 	return err
+}
+
+func ProductEvent_DummyEmitOrLog(
+	tx pgw.Queryable, request *http.Request, allowBots bool, eventType string,
+	eventProperties map[string]any, errorLogger log.Logger,
+) {
+	uuid, err := uuid.NewRandom()
+	if err != nil {
+		err := oops.Wrap(err)
+		errorLogger.Error().Err(err).Msg("Product event emit error")
+	}
+	productUserId := fmt.Sprintf("dummy-%s", uuid.String())
+	userProperties := map[string]any{
+		"is_dummy":       true,
+		"bot_is_allowed": allowBots,
+	}
+	platform := resolveUserAgent(request.UserAgent())
+	anonIp := anonymizeUserIp(util.UserIp(request))
+	_, err = tx.Exec(`
+		insert into product_events (
+			product_user_id, event_type, event_properties, user_properties, user_ip, browser, os_name,
+			os_version, bot_name
+		)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, productUserId, eventType, eventProperties, userProperties, anonIp, platform.Browser, platform.OsName,
+		platform.OsVersion, platform.BotName,
+	)
+	if err != nil {
+		errorLogger.Error().Err(err).Msg("Product event emit error")
+	}
 }
 
 func ProductEvent_EmitToBatch(
@@ -110,7 +142,7 @@ func ProductEvent_MustEmitSchedule(
 func ProductEvent_MustEmitVisitAddPage(
 	pc ProductEventContext, path string, userIsAnonymous bool, extra map[string]any,
 ) {
-	referer := collapseReferer(pc.Request.Referer())
+	referer := util.CollapseReferer(pc.Request)
 	eventProperties := map[string]any{
 		"path":              path,
 		"referer":           referer,
@@ -232,25 +264,4 @@ func resolveUserAgent(userAgentStr string) userPlatform {
 			BotName:   nil,
 		}
 	}
-}
-
-func collapseReferer(referer string) *string {
-	if referer == "" {
-		return nil
-	}
-
-	refererUrl, err := url.Parse(referer)
-	if err != nil {
-		return &referer
-	}
-
-	if refererUrl.Host == "feedrewind.com" ||
-		refererUrl.Host == "www.feedrewind.com" ||
-		refererUrl.Host == "feedrewind.herokuapp.com" {
-
-		result := "FeedRewind"
-		return &result
-	}
-
-	return &referer
 }
