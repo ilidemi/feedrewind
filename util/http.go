@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -103,6 +104,28 @@ func URLParamInt64(r *http.Request, name string) (int64, bool) {
 
 func URLParamStr(r *http.Request, name string) string {
 	return chi.URLParam(r, name)
+}
+
+func CollapseReferer(r *http.Request) *string {
+	referer := r.Referer()
+	if referer == "" {
+		return nil
+	}
+
+	refererUrl, err := url.Parse(referer)
+	if err != nil {
+		return &referer
+	}
+
+	if refererUrl.Host == "feedrewind.com" ||
+		refererUrl.Host == "www.feedrewind.com" ||
+		refererUrl.Host == "feedrewind.herokuapp.com" {
+
+		result := "FeedRewind"
+		return &result
+	}
+
+	return &referer
 }
 
 func FindCookie(r *http.Request, name string) (string, bool) {

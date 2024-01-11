@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"feedrewind/models"
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
 	"feedrewind/util"
@@ -34,6 +35,13 @@ func Misc_About(w http.ResponseWriter, r *http.Request) {
 }
 
 func Misc_NotFound(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
+	conn := rutil.DBConn(r)
+	models.ProductEvent_DummyEmitOrLog(conn, r, false, "404", map[string]any{
+		"path":    r.URL.Path,
+		"method":  r.Method,
+		"referer": util.CollapseReferer(r),
+	}, logger)
 	type Result struct {
 		Title string
 	}

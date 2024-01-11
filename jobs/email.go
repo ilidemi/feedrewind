@@ -34,6 +34,10 @@ func GetPostmarkClientAndMaybeMetadata(tx pgw.Queryable) (*postmark.Client, *str
 	return client, maybeTestMetadata
 }
 
+const from = "FeedRewind feedrewind@feedrewind.com"
+const replyTo = "support@feedrewind.com"
+const messageStream = "outbound"
+
 func newInitialEmail(
 	userId models.UserId, userEmail string, subscriptionId models.SubscriptionId, subscriptionName string,
 	maybeTestMetadata *string, scheduledFor string,
@@ -58,15 +62,15 @@ func newInitialEmail(
 	}
 
 	return postmark.Email{ //nolint:exhaustruct
-		From:          "feedrewind@feedrewind.com",
+		From:          from,
 		To:            userEmail,
-		ReplyTo:       "support@feedrewind.com",
+		ReplyTo:       replyTo,
 		Subject:       fmt.Sprintf("%s added to FeedRewind", subscriptionName),
 		Tag:           "subscription_initial",
 		HTMLBody:      htmlBody,
 		TextBody:      textBody,
 		Metadata:      metadata,
-		MessageStream: "outbound",
+		MessageStream: messageStream,
 	}
 }
 
@@ -93,15 +97,15 @@ func newFinalEmail(
 		metadata["server_timestamp"] = scheduledFor
 	}
 	return postmark.Email{ //nolint:exhaustruct
-		From:          "feedrewind@feedrewind.com",
+		From:          from,
 		To:            userEmail,
-		ReplyTo:       "support@feedrewind.com",
+		ReplyTo:       replyTo,
 		Subject:       fmt.Sprintf("You're all caught up with %s", subscriptionName),
 		Tag:           "subscription_final",
 		HTMLBody:      htmlBody,
 		TextBody:      textBody,
 		Metadata:      metadata,
-		MessageStream: "outbound",
+		MessageStream: messageStream,
 	}
 }
 
@@ -135,14 +139,14 @@ func newPostEmail(
 		metadata["server_timestamp"] = scheduledFor
 	}
 	return postmark.Email{ //nolint:exhaustruct
-		From:          "feedrewind@feedrewind.com",
+		From:          from,
 		To:            userEmail,
-		ReplyTo:       "support@feedrewind.com",
+		ReplyTo:       replyTo,
 		Subject:       postTitle,
 		Tag:           "subscription_post",
 		HTMLBody:      htmlBody,
 		TextBody:      textBody,
 		Metadata:      metadata,
-		MessageStream: "outbound",
+		MessageStream: messageStream,
 	}
 }

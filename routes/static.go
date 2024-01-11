@@ -1,11 +1,19 @@
 package routes
 
 import (
+	"feedrewind/models"
+	"feedrewind/routes/rutil"
 	"feedrewind/util"
 	"net/http"
 )
 
 func Static_File(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
+	conn := rutil.DBConn(r)
+	models.ProductEvent_DummyEmitOrLog(conn, r, false, "static asset", map[string]any{
+		"path": r.URL.Path,
+	}, logger)
+
 	staticFile, err := util.GetStaticFile(r.URL.Path)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)

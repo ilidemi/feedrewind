@@ -102,12 +102,13 @@ func runServer(port int) {
 	staticR.Use(frmiddleware.Recoverer)
 	staticR.Use(frmiddleware.DefaultHeaders)
 	staticR.Use(middleware.GetHead)
+	staticR.Use(frmiddleware.DB)
 
 	staticR.Group(func(r chi.Router) {
-		r.Use(frmiddleware.DB)
 		r.Use(frmiddleware.Session)
 		r.Use(frmiddleware.CurrentUser)
 		r.Use(frmiddleware.CSRF)
+		r.Use(frmiddleware.EmitVisit)
 
 		r.Get("/", routes.Landing_Index)
 
