@@ -219,7 +219,7 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	feedUrl := ""
-	if *userSettings.DeliveryChannel != models.DeliveryChannelEmail {
+	if *userSettings.MaybeDeliveryChannel != models.DeliveryChannelEmail {
 		feedUrl = rutil.SubscriptionFeedUrl(r, subscriptionId)
 	}
 	countByDay, err := models.Schedule_GetCountsByDay(conn, subscriptionId)
@@ -752,7 +752,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				ValidateCallback:      template.JS("onValidateSchedule"),
 				SetNameChangeCallback: template.JS("setNameChangeScheduleCallback"),
 			},
-			IsDeliveryChannelSet:     userSettings.DeliveryChannel != nil,
+			IsDeliveryChannelSet:     userSettings.MaybeDeliveryChannel != nil,
 			DeliveryChannel:          newDeliverySettings(userSettings),
 			SubscriptionSchedulePath: rutil.SubscriptionSchedulePath(subscriptionId),
 		})
@@ -833,13 +833,13 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			WillArriveDate:   willArriveDate,
 			SubscriptionPath: rutil.SubscriptionPath(subscriptionId),
 		}
-		switch *userSettings.DeliveryChannel {
+		switch *userSettings.MaybeDeliveryChannel {
 		case models.DeliveryChannelSingleFeed, models.DeliveryChannelMultipleFeeds:
 			templates.MustWrite(w, "subscriptions/setup_subscription_heres_feed", result)
 		case models.DeliveryChannelEmail:
 			templates.MustWrite(w, "subscriptions/setup_subscription_heres_email", result)
 		default:
-			panic(fmt.Errorf("Unknown delivery channel: %s", *userSettings.DeliveryChannel))
+			panic(fmt.Errorf("Unknown delivery channel: %s", *userSettings.MaybeDeliveryChannel))
 		}
 
 	default:
@@ -1382,14 +1382,14 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 			models.ProductEvent_MustEmitFromRequest(pc, "pick delivery channel", map[string]any{
-				"channel": newUserSettings.DeliveryChannel,
+				"channel": newUserSettings.MaybeDeliveryChannel,
 			}, map[string]any{
-				"delivery_channel": newUserSettings.DeliveryChannel,
+				"delivery_channel": newUserSettings.MaybeDeliveryChannel,
 			})
-		} else if oldUserSettings.DeliveryChannel == nil {
+		} else if oldUserSettings.MaybeDeliveryChannel == nil {
 			panic("Delivery channel is not set for the user and is not passed in the params")
 		} else {
-			deliveryChannel = *oldUserSettings.DeliveryChannel
+			deliveryChannel = *oldUserSettings.MaybeDeliveryChannel
 		}
 
 		err = models.Schedule_Create(tx, subscriptionId, countsByDay)

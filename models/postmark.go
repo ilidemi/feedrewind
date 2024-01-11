@@ -22,9 +22,9 @@ func PostmarkBounce_Exists(tx pgw.Queryable, bounceId int64) (bool, error) {
 }
 
 type PostmarkBounce struct {
-	Id         int64
-	BounceType string
-	MessageId  PostmarkMessageId
+	Id             int64
+	BounceType     string
+	MaybeMessageId *PostmarkMessageId
 }
 
 func PostmarkBounce_GetById(tx pgw.Queryable, bounceId int64) (*PostmarkBounce, error) {
@@ -34,7 +34,7 @@ func PostmarkBounce_GetById(tx pgw.Queryable, bounceId int64) (*PostmarkBounce, 
 		where id = $1
 	`, bounceId)
 	var bounce PostmarkBounce
-	err := row.Scan(&bounce.Id, &bounce.BounceType, &bounce.MessageId)
+	err := row.Scan(&bounce.Id, &bounce.BounceType, &bounce.MaybeMessageId)
 	if err != nil {
 		return nil, err
 	}

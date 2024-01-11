@@ -30,9 +30,9 @@ type deliverySettings struct {
 func newDeliverySettings(userSettings *models.UserSettings) deliverySettings {
 	isRSSSelected := false
 	isEmailSelected := false
-	if userSettings.DeliveryChannel != nil {
-		isRSSSelected = *userSettings.DeliveryChannel == models.DeliveryChannelMultipleFeeds
-		isEmailSelected = *userSettings.DeliveryChannel == models.DeliveryChannelEmail
+	if userSettings.MaybeDeliveryChannel != nil {
+		isRSSSelected = *userSettings.MaybeDeliveryChannel == models.DeliveryChannelMultipleFeeds
+		isEmailSelected = *userSettings.MaybeDeliveryChannel == models.DeliveryChannelEmail
 	}
 	return deliverySettings{
 		IsRSSSelected:   isRSSSelected,
@@ -136,8 +136,8 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		if !((oldUserSettings.DeliveryChannel != nil && len(lockedJobs) == 1) ||
-			(oldUserSettings.DeliveryChannel == nil && len(lockedJobs) == 0)) {
+		if !((oldUserSettings.MaybeDeliveryChannel != nil && len(lockedJobs) == 1) ||
+			(oldUserSettings.MaybeDeliveryChannel == nil && len(lockedJobs) == 0)) {
 			logger.Warn().Msgf("Unexpected amount of job rows for the user: %d", len(lockedJobs))
 			return false
 		}
@@ -165,7 +165,7 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			newHour := jobs.PublishPostsJob_GetHourOfDay(*oldUserSettings.DeliveryChannel)
+			newHour := jobs.PublishPostsJob_GetHourOfDay(*oldUserSettings.MaybeDeliveryChannel)
 			newRunAt := jobTime.Add(time.Duration(newHour) * time.Hour).UTC()
 			err = jobs.PublishPostsJob_UpdateRunAt(tx, job.Id, newRunAt)
 			if err != nil {
@@ -247,8 +247,8 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		if !((oldUserSettings.DeliveryChannel != nil && len(lockedJobs) == 1) ||
-			(oldUserSettings.DeliveryChannel == nil && len(lockedJobs) == 0)) {
+		if !((oldUserSettings.MaybeDeliveryChannel != nil && len(lockedJobs) == 1) ||
+			(oldUserSettings.MaybeDeliveryChannel == nil && len(lockedJobs) == 0)) {
 			logger.Warn().Msgf("Unexpected amount of job rows for the user: %d", len(lockedJobs))
 			return false
 		}
@@ -260,7 +260,7 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 
-		oldDeliveryChannel := oldUserSettings.DeliveryChannel
+		oldDeliveryChannel := oldUserSettings.MaybeDeliveryChannel
 		err = models.UserSettings_SaveDeliveryChannelVersion(
 			tx, currentUser.Id, newDeliveryChannel, newVersion,
 		)

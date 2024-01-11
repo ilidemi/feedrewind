@@ -23,7 +23,7 @@ func Rss_SubscriptionFeed(w http.ResponseWriter, r *http.Request) {
 
 	row := conn.QueryRow(`
 		select
-			(is_paused or final_item_published_at is not null),
+			(is_paused or (final_item_published_at is not null)),
 			(select body from subscription_rsses where subscription_id = $1),
 			(select coalesce(url, feed_url) from blogs where blogs.id = blog_id),
 			(select product_user_id from users where users.id = user_id)

@@ -72,7 +72,7 @@ func initSubscriptionImpl(
 	switch deliveryChannel {
 	case models.DeliveryChannelSingleFeed, models.DeliveryChannelMultipleFeeds:
 		publishStatus = models.PostPublishStatusRssPublished
-		var newPosts []models.SubscriptionBlogPost
+		var newPosts []models.PublishedSubscriptionBlogPost
 		if shouldPublishRssPosts {
 			dayOfWeek := localTime.DayOfWeek()
 			dayCount, err := models.Schedule_GetCount(tx, subscriptionId, dayOfWeek)
@@ -80,12 +80,19 @@ func initSubscriptionImpl(
 				return err
 			}
 
-			newPosts, err = models.SubscriptionPost_GetNextUnpublished(tx, subscriptionId, dayCount)
+			unpublishedNewPosts, err :=
+				models.SubscriptionPost_GetNextUnpublished(tx, subscriptionId, dayCount)
 			if err != nil {
 				return err
 			}
-			for i := range newPosts {
-				newPosts[i].PublishedAt = &utcNow
+			newPosts = make([]models.PublishedSubscriptionBlogPost, len(unpublishedNewPosts))
+			for i, post := range unpublishedNewPosts {
+				newPosts[i] = models.PublishedSubscriptionBlogPost{
+					Id:          post.Id,
+					Title:       post.Title,
+					RandomId:    post.RandomId,
+					PublishedAt: utcNow,
+				}
 			}
 			logger.Info().Msgf("Subscription %d: will publish %d new posts", subscriptionId, len(newPosts))
 
@@ -93,9 +100,9 @@ func initSubscriptionImpl(
 			if err != nil {
 				return err
 			}
-			if subscription.FinalItemPublishedAt == nil && unpublishedCount == len(newPosts) {
+			if subscription.MaybeFinalItemPublishedAt == nil && unpublishedCount == len(newPosts) {
 				// So that publishRssFeeds() knows about the update too
-				subscription.FinalItemPublishedAt = &utcNow
+				subscription.MaybeFinalItemPublishedAt = &utcNow
 
 				_, err := tx.Exec(`
 					update subscriptions_without_discarded
@@ -114,7 +121,7 @@ func initSubscriptionImpl(
 			}
 		}
 
-		newPostsBySubscriptionId := map[models.SubscriptionId][]models.SubscriptionBlogPost{
+		newPostsBySubscriptionId := map[models.SubscriptionId][]models.PublishedSubscriptionBlogPost{
 			subscriptionId: newPosts,
 		}
 
@@ -164,12 +171,12 @@ func publishForUserImpl(
 	}
 	logger.Info().Msgf("%d subscriptions", len(subscriptions))
 
-	newPostsBySubscriptionId := make(map[models.SubscriptionId][]models.SubscriptionBlogPost)
+	newPostsBySubscriptionId := make(map[models.SubscriptionId][]models.PublishedSubscriptionBlogPost)
 	var finalItemSubscriptionIds []models.SubscriptionId
 	for i := range subscriptions {
 		subscription := &subscriptions[i]
 
-		var newPosts []models.SubscriptionBlogPost
+		var newPosts []models.PublishedSubscriptionBlogPost
 		if !(subscription.IsPaused != nil && *subscription.IsPaused) {
 			dayOfWeek := localTime.DayOfWeek()
 			dayCount, err := models.Schedule_GetCount(tx, subscription.Id, dayOfWeek)
@@ -177,12 +184,19 @@ func publishForUserImpl(
 				return err
 			}
 
-			newPosts, err = models.SubscriptionPost_GetNextUnpublished(tx, subscription.Id, dayCount)
+			unpublishedNewPosts, err :=
+				models.SubscriptionPost_GetNextUnpublished(tx, subscription.Id, dayCount)
 			if err != nil {
 				return err
 			}
-			for i := range newPosts {
-				newPosts[i].PublishedAt = &utcNow
+			newPosts = make([]models.PublishedSubscriptionBlogPost, len(unpublishedNewPosts))
+			for i, post := range unpublishedNewPosts {
+				newPosts[i] = models.PublishedSubscriptionBlogPost{
+					Id:          post.Id,
+					Title:       post.Title,
+					RandomId:    post.RandomId,
+					PublishedAt: utcNow,
+				}
 			}
 			logger.Info().Msgf("Subscription %d: will publish %d new posts", subscription.Id, len(newPosts))
 		} else {
@@ -194,9 +208,9 @@ func publishForUserImpl(
 		if err != nil {
 			return err
 		}
-		if subscription.FinalItemPublishedAt == nil && unpublishedCount == len(newPosts) {
+		if subscription.MaybeFinalItemPublishedAt == nil && unpublishedCount == len(newPosts) {
 			// So that publishRssFeeds() knows about the update too
-			subscription.FinalItemPublishedAt = &utcNow
+			subscription.MaybeFinalItemPublishedAt = &utcNow
 			finalItemSubscriptionIds = append(finalItemSubscriptionIds, subscription.Id)
 			logger.Info().Msgf("Will publish the final item for subscription %d", subscription.Id)
 
@@ -254,7 +268,7 @@ func publishForUserImpl(
 
 func publishRssFeeds(
 	tx *pgw.Tx, userId models.UserId, subscriptions []models.SubscriptionToPublish,
-	newPostsBySubscriptionId map[models.SubscriptionId][]models.SubscriptionBlogPost, postsInRss int,
+	newPostsBySubscriptionId map[models.SubscriptionId][]models.PublishedSubscriptionBlogPost, postsInRss int,
 ) error {
 	logger := tx.Logger()
 	type UserDateItem struct {
@@ -266,7 +280,7 @@ func publishRssFeeds(
 		logger.Info().Msgf("Generating RSS for subscription %d", subscription.Id)
 		newPosts := newPostsBySubscriptionId[subscription.Id]
 		remainingPostsCount := postsInRss - len(newPosts)
-		if subscription.FinalItemPublishedAt != nil {
+		if subscription.MaybeFinalItemPublishedAt != nil {
 			remainingPostsCount--
 		}
 		remainingPosts, err := models.SubscriptionPost_GetLastPublishedDesc(
@@ -279,7 +293,7 @@ func publishRssFeeds(
 
 		subscriptionUrl := rutil.SubscriptionUrl(subscription.Id)
 		var subscriptionItems []item
-		if subscription.FinalItemPublishedAt != nil {
+		if subscription.MaybeFinalItemPublishedAt != nil {
 			logger.Info().Msgf("Generating final item for subscription %d", subscription.Id)
 			finalItem := item{
 				Title: fmt.Sprintf("You're all caught up with %s", subscription.Name),
@@ -289,16 +303,17 @@ func publishRssFeeds(
 					IsPermalink: false,
 				},
 				Description: `<a href="https://feedrewind.com/subscriptions/add">Want to read something else?</a>`,
-				PubDate:     subscription.FinalItemPublishedAt.Format(time.RFC1123Z),
+				PubDate:     subscription.MaybeFinalItemPublishedAt.Format(time.RFC1123Z),
 			}
 			subscriptionItems = append(subscriptionItems, finalItem)
 			userDatesItems = append(userDatesItems, UserDateItem{
-				PublishedAt: *subscription.FinalItemPublishedAt,
+				PublishedAt: *subscription.MaybeFinalItemPublishedAt,
 				Item:        finalItem,
 			})
 		}
 
-		subscriptionPosts := make([]models.SubscriptionBlogPost, 0, len(newPosts)+len(remainingPosts))
+		subscriptionPosts :=
+			make([]models.PublishedSubscriptionBlogPost, 0, len(newPosts)+len(remainingPosts))
 		subscriptionPosts = append(subscriptionPosts, remainingPosts...)
 		subscriptionPosts = append(subscriptionPosts, newPosts...)
 		reversePosts(subscriptionPosts)
@@ -334,7 +349,7 @@ func publishRssFeeds(
 				PubDate:     pubDate,
 			}
 			userDatesItems = append(userDatesItems, UserDateItem{
-				PublishedAt: *post.PublishedAt,
+				PublishedAt: post.PublishedAt,
 				Item:        userItem,
 			})
 		}
@@ -404,7 +419,7 @@ func publishRssFeeds(
 	return nil
 }
 
-func reversePosts(posts []models.SubscriptionBlogPost) {
+func reversePosts(posts []models.PublishedSubscriptionBlogPost) {
 	for i, j := 0, len(posts)-1; i < j; i, j = i+1, j-1 {
 		posts[i], posts[j] = posts[j], posts[i]
 	}
