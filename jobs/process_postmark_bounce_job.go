@@ -46,17 +46,18 @@ func ProcessPostmarkBounceJob_Perform(ctx context.Context, conn *pgw.Conn, bounc
 		return err
 	}
 
-	if bounce.MessageId == "" {
+	if bounce.MaybeMessageId == nil {
 		logger.Error().Msgf("Bounce %d came without message id", bounce.Id)
 		return nil
 	}
+	messageId := *bounce.MaybeMessageId
 
 	// If a bounce came before the message is saved, query will fail, the job will retry later and it's ok
 	row := conn.QueryRow(`
 		select message_type, subscription_id, subscription_post_id
 		from postmark_messages
 		where message_id = $1
-	`, bounce.MessageId)
+	`, messageId)
 	var messageType models.PostmarkMessageType
 	var subscriptionId models.SubscriptionId
 	var maybeSubscriptionPostId *models.SubscriptionPostId
@@ -125,7 +126,7 @@ func ProcessPostmarkBounceJob_Perform(ctx context.Context, conn *pgw.Conn, bounc
 		}
 
 		runAt := schedule.UTCNow().Add(waitTime)
-		err = RetryBouncedEmailJob_PerformAt(conn, runAt, bounce.MessageId)
+		err = RetryBouncedEmailJob_PerformAt(conn, runAt, messageId)
 		if err != nil {
 			return err
 		}

@@ -173,10 +173,10 @@ func Subscription_GetSchedulePreview(
 	var publishedCount, totalCount int
 	for rows.Next() {
 		var tag string
-		var url, title *string
-		var publishDate *schedule.Date
-		var count *int
-		err := rows.Scan(&tag, &url, &title, &publishDate, &count)
+		var maybeUrl, maybeTitle *string
+		var maybePublishDate *schedule.Date
+		var maybeCount *int
+		err := rows.Scan(&tag, &maybeUrl, &maybeTitle, &maybePublishDate, &maybeCount)
 		if err != nil {
 			return nil, err
 		}
@@ -184,19 +184,19 @@ func Subscription_GetSchedulePreview(
 		switch tag {
 		case "prev_post":
 			result.PrevPosts = append(result.PrevPosts, SchedulePreviewPrevPost{
-				Url:         *url,
-				Title:       *title,
-				PublishDate: *publishDate,
+				Url:         *maybeUrl,
+				Title:       *maybeTitle,
+				PublishDate: *maybePublishDate,
 			})
 		case "next_post":
 			result.NextPosts = append(result.NextPosts, SchedulePreviewNextPost{
-				Url:   *url,
-				Title: *title,
+				Url:   *maybeUrl,
+				Title: *maybeTitle,
 			})
 		case "published_count":
-			publishedCount = *count
+			publishedCount = *maybeCount
 		case "total_count":
-			totalCount = *count
+			totalCount = *maybeCount
 		default:
 			panic(fmt.Errorf("Unknown tag: %s", tag))
 		}
@@ -277,9 +277,7 @@ func Subscription_Create(
 	_, err = tx.Exec(`
 		insert into subscriptions_without_discarded(
 			id, user_id, anon_product_user_id, blog_id, name, status, is_paused, schedule_version
-		) values (
-			$1, $2, $3, $4, $5, $6, $7, $8
-		)
+		) values ($1, $2, $3, $4, $5, $6, $7, $8)
 	`, id, userId, anonProductUserId, blog.Id, blog.Name, status, isPaused, scheduleVersion)
 	if err != nil {
 		return nil, err
@@ -349,12 +347,12 @@ func Subscription_FinishSetup(
 }
 
 type SubscriptionToPublish struct {
-	Id                   SubscriptionId
-	Name                 string
-	IsPaused             *bool
-	FinishedSetupAt      schedule.Time
-	FinalItemPublishedAt *schedule.Time
-	BlogId               BlogId
+	Id                        SubscriptionId
+	Name                      string
+	IsPaused                  *bool
+	FinishedSetupAt           schedule.Time
+	MaybeFinalItemPublishedAt *schedule.Time
+	BlogId                    BlogId
 }
 
 func Subscription_ListSortedToPublish(tx pgw.Queryable, userId UserId) ([]SubscriptionToPublish, error) {
@@ -371,7 +369,9 @@ func Subscription_ListSortedToPublish(tx pgw.Queryable, userId UserId) ([]Subscr
 	var result []SubscriptionToPublish
 	for rows.Next() {
 		var s SubscriptionToPublish
-		err := rows.Scan(&s.Id, &s.Name, &s.IsPaused, &s.FinishedSetupAt, &s.FinalItemPublishedAt, &s.BlogId)
+		err := rows.Scan(
+			&s.Id, &s.Name, &s.IsPaused, &s.FinishedSetupAt, &s.MaybeFinalItemPublishedAt, &s.BlogId,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -390,10 +390,10 @@ type SubscriptionPostId int64
 type SubscriptionPostRandomId string
 
 type SubscriptionBlogPost struct {
-	Id          SubscriptionPostId
-	Title       string
-	RandomId    SubscriptionPostRandomId
-	PublishedAt *schedule.Time
+	Id               SubscriptionPostId
+	Title            string
+	RandomId         SubscriptionPostRandomId
+	MaybePublishedAt *schedule.Time
 }
 
 type PostPublishStatus string
@@ -422,7 +422,7 @@ func SubscriptionPost_GetNextUnpublished(
 	var result []SubscriptionBlogPost
 	for rows.Next() {
 		var p SubscriptionBlogPost
-		err := rows.Scan(&p.Id, &p.Title, &p.RandomId, &p.PublishedAt)
+		err := rows.Scan(&p.Id, &p.Title, &p.RandomId, &p.MaybePublishedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -435,9 +435,16 @@ func SubscriptionPost_GetNextUnpublished(
 	return result, nil
 }
 
+type PublishedSubscriptionBlogPost struct {
+	Id          SubscriptionPostId
+	Title       string
+	RandomId    SubscriptionPostRandomId
+	PublishedAt schedule.Time
+}
+
 func SubscriptionPost_GetLastPublishedDesc(
 	tx pgw.Queryable, subscriptionId SubscriptionId, count int,
-) ([]SubscriptionBlogPost, error) {
+) ([]PublishedSubscriptionBlogPost, error) {
 	rows, err := tx.Query(`
 		select subscription_posts.id, title, random_id, published_at from subscription_posts
 		join blog_posts on subscription_posts.blog_post_id = blog_posts.id
@@ -449,9 +456,9 @@ func SubscriptionPost_GetLastPublishedDesc(
 		return nil, err
 	}
 
-	var result []SubscriptionBlogPost
+	var result []PublishedSubscriptionBlogPost
 	for rows.Next() {
-		var p SubscriptionBlogPost
+		var p PublishedSubscriptionBlogPost
 		err := rows.Scan(&p.Id, &p.Title, &p.RandomId, &p.PublishedAt)
 		if err != nil {
 			return nil, err

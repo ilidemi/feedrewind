@@ -13,10 +13,10 @@ const (
 )
 
 type UserSettings struct {
-	UserId          UserId
-	Timezone        string
-	Version         int
-	DeliveryChannel *DeliveryChannel
+	UserId               UserId
+	Timezone             string
+	Version              int
+	MaybeDeliveryChannel *DeliveryChannel
 }
 
 func UserSettings_Create(tx pgw.Queryable, userId UserId, timezone string) error {
@@ -33,7 +33,7 @@ func UserSettings_Get(tx pgw.Queryable, userId UserId) (*UserSettings, error) {
 	`, userId)
 	var us UserSettings
 	us.UserId = userId
-	err := row.Scan(&us.Timezone, &us.Version, &us.DeliveryChannel)
+	err := row.Scan(&us.Timezone, &us.Version, &us.MaybeDeliveryChannel)
 	if err != nil {
 		return nil, err
 	}

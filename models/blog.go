@@ -180,10 +180,7 @@ func Blog_CreateOrUpdate(
 		ExpectTumblrPaths: expectTumblrPaths,
 	}
 
-	rows, err = tx.Query(`
-		select url from blog_discarded_feed_entries
-		where blog_id = $1
-	`, blog.Id)
+	rows, err = tx.Query(`select url from blog_discarded_feed_entries where blog_id = $1`, blog.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -200,10 +197,7 @@ func Blog_CreateOrUpdate(
 		return nil, err
 	}
 
-	rows, err = tx.Query(`
-		select url from blog_missing_from_feed_entries
-		where blog_id = $1
-	`, blog.Id)
+	rows, err = tx.Query(`select url from blog_missing_from_feed_entries where blog_id = $1`, blog.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -595,9 +589,7 @@ func Blog_GetBestUrl(tx pgw.Queryable, blogId BlogId) (string, error) {
 // BlogPostLock
 
 func BlogPostLock_Create(tx pgw.Queryable, blogId BlogId) error {
-	_, err := tx.Exec(`
-		insert into blog_post_locks (blog_id) values ($1)
-	`, blogId)
+	_, err := tx.Exec(`insert into blog_post_locks (blog_id) values ($1)`, blogId)
 	return err
 }
 
@@ -613,20 +605,20 @@ func BlogCrawlProgress_Get(tx pgw.Queryable, blogId BlogId) (*BlogCrawlProgress,
 	row := tx.QueryRow(`
 		select count, progress, epoch from blog_crawl_progresses where blog_id = $1
 	`, blogId)
-	var countPtr *int32
-	var progressPtr *string
+	var maybeCount *int32
+	var maybeProgress *string
 	var epoch int32
-	err := row.Scan(&countPtr, &progressPtr, &epoch)
+	err := row.Scan(&maybeCount, &maybeProgress, &epoch)
 	if err != nil {
 		return nil, err
 	}
 	var count int32
-	if countPtr != nil {
-		count = *countPtr
+	if maybeCount != nil {
+		count = *maybeCount
 	}
 	var progress string
-	if progressPtr != nil {
-		progress = *progressPtr
+	if maybeProgress != nil {
+		progress = *maybeProgress
 	}
 
 	return &BlogCrawlProgress{
@@ -643,7 +635,7 @@ type BlogCrawlClientToken string
 var ErrBlogCrawlClientTokenNotFound = errors.New("blog crawl client token not found")
 
 func BlogCrawlClientToken_GetById(tx pgw.Queryable, blogId BlogId) (BlogCrawlClientToken, error) {
-	row := tx.QueryRow("select value from blog_crawl_client_tokens where blog_id = $1", blogId)
+	row := tx.QueryRow(`select value from blog_crawl_client_tokens where blog_id = $1`, blogId)
 	var result BlogCrawlClientToken
 	err := row.Scan(&result)
 	if errors.Is(err, pgx.ErrNoRows) {

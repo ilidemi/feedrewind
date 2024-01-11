@@ -559,8 +559,8 @@ func (s *ProgressSaver) updateEpochTimes(tx *pgw.Tx, maybeEpochTimes *string) er
 		newEpochTimes = newEpochTimeStr
 	}
 	_, err := s.Conn.Exec(`
-			update blog_crawl_progresses set epoch_times = $1 where blog_id = $2
-		`, newEpochTimes, s.BlogId)
+		update blog_crawl_progresses set epoch_times = $1 where blog_id = $2
+	`, newEpochTimes, s.BlogId)
 	if err != nil {
 		return err
 	}

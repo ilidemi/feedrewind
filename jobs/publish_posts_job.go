@@ -115,7 +115,7 @@ func PublishPostsJob_Perform(
 			}
 
 			err = publish.PublishForUser(
-				tx, userId, productUserId, *userSettings.DeliveryChannel, utcNow, localTime, localDate,
+				tx, userId, productUserId, *userSettings.MaybeDeliveryChannel, utcNow, localTime, localDate,
 				scheduledForStr,
 			)
 			if err != nil {
@@ -129,7 +129,7 @@ func PublishPostsJob_Perform(
 		}
 
 		if !isManual {
-			hourOfDay := PublishPostsJob_GetHourOfDay(*userSettings.DeliveryChannel)
+			hourOfDay := PublishPostsJob_GetHourOfDay(*userSettings.MaybeDeliveryChannel)
 			nextDate := date.NextDay()
 			jobTime, err := nextDate.TimeIn(location)
 			if err != nil {
@@ -169,7 +169,7 @@ func PublishPostsJob_ScheduleInitial(
 	utcNow := schedule.UTCNow()
 	location := tzdata.LocationByName[userSettings.Timezone]
 	date := utcNow.BeginningOfDayIn(location).AddDate(0, 0, -1)
-	hourOfDay := PublishPostsJob_GetHourOfDay(*userSettings.DeliveryChannel)
+	hourOfDay := PublishPostsJob_GetHourOfDay(*userSettings.MaybeDeliveryChannel)
 	nextRun := date.Add(time.Duration(hourOfDay) * time.Hour).UTC()
 	for nextRun.Before(utcNow) {
 		date = date.AddDate(0, 0, 1)
