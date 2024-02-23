@@ -1,0 +1,273 @@
+Google DeepMind Blog
+https://deepmind.google/blog/rss.xml
+https://deepmind.google/discover/blog/
+
+https://deepmind.google/discover/blog/gemma-introducing-new-state-of-the-art-open-models/ Gemma: Introducing new state-of-the-art open models
+https://deepmind.google/discover/blog/our-next-generation-model-gemini-15/ Our next-generation model: Gemini 1.5
+https://deepmind.google/discover/blog/google-gemini-update-sundar-pichai-2024/ The next chapter of our Gemini era
+https://deepmind.google/discover/blog/alphageometry-an-olympiad-level-ai-system-for-geometry/ AlphaGeometry: An Olympiad-level AI system for geometry
+https://deepmind.google/discover/blog/shaping-the-future-of-advanced-robotics/ Shaping the future of advanced robotics
+https://deepmind.google/discover/blog/images-altered-to-trick-machine-vision-can-influence-humans-too/ Images altered to trick machine vision can influence humans too
+https://deepmind.google/discover/blog/2023-a-year-of-groundbreaking-advances-in-ai-and-computing/ 2023: A Year of Groundbreaking Advances in AI and Computing
+https://deepmind.google/discover/blog/funsearch-making-new-discoveries-in-mathematical-sciences-using-large-language-models/ FunSearch: Making new discoveries in mathematical sciences using Large Language Models
+https://deepmind.google/discover/blog/google-deepmind-at-neurips-2023/ Google DeepMind at NeurIPS 2023
+https://deepmind.google/discover/blog/introducing-gemini-our-largest-and-most-capable-ai-model/ Introducing Gemini: our largest and most capable AI model
+https://deepmind.google/discover/blog/millions-of-new-materials-discovered-with-deep-learning/ Millions of new materials discovered with deep learning
+https://deepmind.google/discover/blog/transforming-the-future-of-music-creation/ Transforming the future of music creation
+https://deepmind.google/discover/blog/empowering-the-next-generation-for-an-ai-enabled-world/ Empowering the next generation for an AI-enabled world
+https://deepmind.google/discover/blog/graphcast-ai-model-for-faster-and-more-accurate-global-weather-forecasting/ GraphCast: AI model for faster and more accurate global weather forecasting
+https://deepmind.google/discover/blog/a-glimpse-of-the-next-generation-of-alphafold/ A glimpse of the next generation of AlphaFold
+https://deepmind.google/discover/blog/evaluating-social-and-ethical-risks-from-generative-ai/ Evaluating social and ethical risks from generative AI
+https://deepmind.google/discover/blog/scaling-up-learning-across-many-different-robot-types/ Scaling up learning across many different robot types
+https://deepmind.google/discover/blog/a-catalogue-of-genetic-mutations-to-help-pinpoint-the-cause-of-diseases/ A catalogue of genetic mutations to help pinpoint the cause of diseases
+https://deepmind.google/discover/blog/identifying-ai-generated-images-with-synthid/ Identifying AI-generated images with SynthID
+https://deepmind.google/discover/blog/rt-2-new-model-translates-vision-and-language-into-action/ RT-2: New model translates vision and language into action
+https://deepmind.google/discover/blog/using-ai-to-fight-climate-change/ Using AI to fight climate change
+https://deepmind.google/discover/blog/google-deepmind-research-at-icml-2023/ Google DeepMind’s latest research at ICML 2023
+https://deepmind.google/discover/blog/codoc-developing-reliable-ai-tools-for-healthcare/ Developing reliable AI tools for healthcare
+https://deepmind.google/discover/blog/exploring-institutions-for-global-ai-governance/ Exploring institutions for global AI governance
+https://deepmind.google/discover/blog/robocat-a-self-improving-robotic-agent/ RoboCat: A self-improving robotic agent
+https://deepmind.google/discover/blog/alphadev-discovers-faster-sorting-algorithms/ AlphaDev discovers faster sorting algorithms
+https://deepmind.google/discover/blog/an-early-warning-system-for-novel-ai-risks/ An early warning system for novel AI risks
+https://deepmind.google/discover/blog/deepminds-latest-research-at-iclr-2023/ DeepMind’s latest research at ICLR 2023
+https://deepmind.google/discover/blog/how-can-we-build-human-values-into-ai/ How can we build human values into AI?
+https://deepmind.google/discover/blog/announcing-google-deepmind/ Announcing Google DeepMind
+https://deepmind.google/discover/blog/competitive-programming-with-alphacode/ Competitive programming with AlphaCode
+https://deepmind.google/discover/blog/ai-for-the-board-game-diplomacy/ AI for the board game Diplomacy
+https://deepmind.google/discover/blog/mastering-stratego-the-classic-game-of-imperfect-information/ Mastering Stratego, the classic game of imperfect information
+https://deepmind.google/discover/blog/deepminds-latest-research-at-neurips-2022/ DeepMind’s latest research at NeurIPS 2022
+https://deepmind.google/discover/blog/building-interactive-agents-in-video-game-worlds/ Building interactive agents in video game worlds
+https://deepmind.google/discover/blog/benchmarking-the-next-generation-of-never-ending-learners/ Benchmarking the next generation of never-ending learners
+https://deepmind.google/discover/blog/best-practices-for-data-enrichment/ Best practices for data enrichment
+https://deepmind.google/discover/blog/the-pursuit-of-ai-educationpast-present-and-future/ The pursuit of AI education—past, present, and future
+https://deepmind.google/discover/blog/stopping-malaria-in-its-tracks/ Stopping malaria in its tracks
+https://deepmind.google/discover/blog/measuring-perception-in-ai-models/ Measuring perception in AI models
+https://deepmind.google/discover/blog/how-undesired-goals-can-arise-with-correct-rewards/ How undesired goals can arise with correct rewards
+https://deepmind.google/discover/blog/discovering-novel-algorithms-with-alphatensor/ Discovering novel algorithms with AlphaTensor
+https://deepmind.google/discover/blog/fighting-osteoporosis-before-it-starts/ Fighting osteoporosis before it starts
+https://deepmind.google/discover/blog/understanding-the-faulty-proteins-linked-to-cancer-and-autism/ Understanding the faulty proteins linked to cancer and autism
+https://deepmind.google/discover/blog/supporting-the-next-generation-of-ai-leaders/ Supporting the next generation of AI leaders
+https://deepmind.google/discover/blog/solving-the-mystery-of-how-an-ancient-bird-went-extinct/ Solving the mystery of how an ancient bird went extinct
+https://deepmind.google/discover/blog/building-safer-dialogue-agents/ Building safer dialogue agents
+https://deepmind.google/discover/blog/targeting-early-onset-parkinsons-with-ai/ Targeting early-onset Parkinson’s with AI
+https://deepmind.google/discover/blog/how-our-principles-helped-define-alphafolds-release/ How our principles helped define AlphaFold’s release
+https://deepmind.google/discover/blog/maximising-the-impact-of-our-breakthroughs/ Maximising the impact of our breakthroughs
+https://deepmind.google/discover/blog/my-journey-from-deepmind-intern-to-mentor/ My journey from DeepMind intern to mentor
+https://deepmind.google/discover/blog/in-conversation-with-ai-building-better-language-models/ In conversation with AI: building better language models
+https://deepmind.google/discover/blog/from-motor-control-to-embodied-intelligence/ From motor control to embodied intelligence
+https://deepmind.google/discover/blog/advancing-conservation-with-ai-based-facial-recognition-of-turtles/ Advancing conservation with AI-based facial recognition of turtles
+https://deepmind.google/discover/blog/discovering-when-an-agent-is-present-in-a-system/ Discovering when an agent is present in a system
+https://deepmind.google/discover/blog/realising-scientists-are-the-real-superheroes/ Realising scientists are the real superheroes
+https://deepmind.google/discover/blog/the-race-to-cure-a-billion-people-from-a-deadly-parasitic-disease/ The race to cure a billion people from a deadly parasitic disease
+https://deepmind.google/discover/blog/tracing-the-evolution-of-proteins-back-to-the-origin-of-life/ Tracing the evolution of proteins back to the origin of life
+https://deepmind.google/discover/blog/how-the-honeybee-could-help-protect-species-around-the-world/ How the honeybee could help protect species around the world
+https://deepmind.google/discover/blog/alphafold-transforms-biology-for-millions-around-the-world/ AlphaFold transforms biology for millions around the world
+https://deepmind.google/discover/blog/advancing-discovery-of-better-drugs-and-medicine/ Advancing discovery of better drugs and medicine
+https://deepmind.google/discover/blog/creating-plastic-eating-enzymes-that-could-save-us-from-pollution/ Creating plastic-eating enzymes that could save us from pollution
+https://deepmind.google/discover/blog/alphafold-unlocks-one-of-the-greatest-puzzles-in-biology/ AlphaFold unlocks one of the greatest puzzles in biology
+https://deepmind.google/discover/blog/accelerating-the-race-against-antibiotic-resistance/ Accelerating the race against antibiotic resistance
+https://deepmind.google/discover/blog/alphafold-reveals-the-structure-of-the-protein-universe/ AlphaFold reveals the structure of the protein universe
+https://deepmind.google/discover/blog/putting-the-power-of-alphafold-into-the-worlds-hands/ Putting the power of AlphaFold into the world’s hands
+https://deepmind.google/discover/blog/the-virtuous-cycle-of-ai-research/ The virtuous cycle of AI research
+https://deepmind.google/discover/blog/perceiver-ar-general-purpose-long-context-autoregressive-generation/ Perceiver AR: general-purpose, long-context autoregressive generation
+https://deepmind.google/discover/blog/deepminds-latest-research-at-icml-2022/ DeepMind’s latest research at ICML 2022
+https://deepmind.google/discover/blog/intuitive-physics-learning-in-a-deep-learning-model-inspired-by-developmental-psychology/ Intuitive physics learning in a deep-learning model inspired by developmental psychology
+https://deepmind.google/discover/blog/human-centred-mechanism-design-with-democratic-ai/ Human-centred mechanism design with Democratic AI
+https://deepmind.google/discover/blog/leading-a-movement-to-strengthen-machine-learning-in-africa/ Leading a movement to strengthen machine learning in Africa
+https://deepmind.google/discover/blog/byol-explore-exploration-with-bootstrapped-prediction/ BYOL-Explore: Exploration with Bootstrapped Prediction
+https://deepmind.google/discover/blog/unlocking-high-accuracy-differentially-private-image-classification-through-scale/ Unlocking High-Accuracy Differentially Private Image Classification through Scale
+https://deepmind.google/discover/blog/bridging-deepmind-research-with-alphabet-products/ Bridging DeepMind research with Alphabet products
+https://deepmind.google/discover/blog/advocating-for-the-lgbtq-community-in-ai-research/ Advocating for the LGBTQ+ community in AI research
+https://deepmind.google/discover/blog/evaluating-multimodal-interactive-agents/ Evaluating Multimodal Interactive Agents
+https://deepmind.google/discover/blog/kyrgyzstan-to-kings-cross-the-star-baker-cooking-up-code/ Kyrgyzstan to King’s Cross: the star baker cooking up code
+https://deepmind.google/discover/blog/dynamic-language-understanding-adaptation-to-new-knowledge-in-parametric-and-semi-parametric-models/ Dynamic language understanding: adaptation to new knowledge in parametric and semi-parametric models
+https://deepmind.google/discover/blog/building-a-culture-of-pioneering-responsibly/ Building a culture of pioneering responsibly
+https://deepmind.google/discover/blog/open-sourcing-mujoco/ Open-sourcing MuJoCo
+https://deepmind.google/discover/blog/from-lego-competitions-to-deepminds-robotics-lab/ From LEGO competitions to DeepMind's robotics lab
+https://deepmind.google/discover/blog/emergent-bartering-behaviour-in-multi-agent-reinforcement-learning/ Emergent Bartering Behaviour in Multi-Agent Reinforcement Learning
+https://deepmind.google/discover/blog/a-generalist-agent/ A Generalist Agent
+https://deepmind.google/discover/blog/active-offline-policy-selection/ Active offline policy selection
+https://deepmind.google/discover/blog/tackling-multiple-tasks-with-a-single-visual-language-model/ Tackling multiple tasks with a single visual language model
+https://deepmind.google/discover/blog/when-a-passion-for-bass-and-brass-help-build-better-tools/ When a passion for bass and brass help build better tools
+https://deepmind.google/discover/blog/deepminds-latest-research-at-iclr-2022/ DeepMind’s latest research at ICLR 2022
+https://deepmind.google/discover/blog/an-empirical-analysis-of-compute-optimal-large-language-model-training/ An empirical analysis of compute-optimal large language model training
+https://deepmind.google/discover/blog/gophercite-teaching-language-models-to-support-answers-with-verified-quotes/ GopherCite: Teaching language models to support answers with verified quotes
+https://deepmind.google/discover/blog/predicting-the-past-with-ithaca/ Predicting the past with Ithaca
+https://deepmind.google/discover/blog/learning-robust-real-time-cultural-transmission-without-human-data/ Learning Robust Real-Time Cultural Transmission without Human Data
+https://deepmind.google/discover/blog/probing-image-language-transformers-for-verb-understanding/ Probing Image-Language Transformers for Verb Understanding
+https://deepmind.google/discover/blog/accelerating-fusion-science-through-learned-plasma-control/ Accelerating fusion science through learned plasma control
+https://deepmind.google/discover/blog/muzeros-first-step-from-research-into-the-real-world/ MuZero’s first step from research into the real world
+https://deepmind.google/discover/blog/red-teaming-language-models-with-language-models/ Red Teaming Language Models with Language Models
+https://deepmind.google/discover/blog/deepmind-the-podcast-returns-for-season-2/ DeepMind: The Podcast returns for Season 2
+https://deepmind.google/discover/blog/spurious-normativity-enhances-learning-of-compliance-and-enforcement-behavior-in-artificial-agents/ Spurious normativity enhances learning of compliance and enforcement behavior in artificial agents
+https://deepmind.google/discover/blog/alphafold-using-ai-for-scientific-discovery/ AlphaFold: Using AI for scientific discovery
+https://deepmind.google/discover/blog/simulating-matter-on-the-quantum-scale-with-ai/ Simulating matter on the quantum scale with AI
+https://deepmind.google/discover/blog/language-modelling-at-scale-gopher-ethical-considerations-and-retrieval/ Language modelling at scale: Gopher, ethical considerations, and retrieval
+https://deepmind.google/discover/blog/improving-language-models-by-retrieving-from-trillions-of-tokens/ Improving language models by retrieving from trillions of tokens
+https://deepmind.google/discover/blog/creating-interactive-agents-with-imitation-learning/ Creating Interactive Agents with Imitation Learning
+https://deepmind.google/discover/blog/exploring-the-beauty-of-pure-mathematics-in-novel-ways/ Exploring the beauty of pure mathematics in novel ways
+https://deepmind.google/discover/blog/on-the-expressivity-of-markov-reward/ On the Expressivity of Markov Reward
+https://deepmind.google/discover/blog/unsupervised-deep-learning-identifies-semantic-disentanglement-in-single-inferotemporal-face-patch-neurons/ Unsupervised deep learning identifies semantic disentanglement in single inferotemporal face patch neurons
+https://deepmind.google/discover/blog/real-world-challenges-for-agi/ Real-world challenges for AGI
+https://deepmind.google/discover/blog/opening-up-a-physics-simulator-for-robotics/ Opening up a physics simulator for robotics
+https://deepmind.google/discover/blog/stacking-our-way-to-more-general-robots/ Stacking our way to more general robots
+https://deepmind.google/discover/blog/predicting-gene-expression-with-ai/ Predicting gene expression with AI
+https://deepmind.google/discover/blog/nowcasting-the-next-hour-of-rain/ Nowcasting the next hour of rain
+https://deepmind.google/discover/blog/is-curiosity-all-you-need-on-the-utility-of-emergent-behaviours-from-curious-exploration/ Is Curiosity All You Need? On the Utility of Emergent Behaviours from Curious Exploration
+https://deepmind.google/discover/blog/challenges-in-detoxifying-language-models/ Challenges in Detoxifying Language Models
+https://deepmind.google/discover/blog/building-architectures-that-can-handle-the-worlds-data/ Building architectures that can handle the world’s data
+https://deepmind.google/discover/blog/generally-capable-agents-emerge-from-open-ended-play/ Generally capable agents emerge from open-ended play
+https://deepmind.google/discover/blog/enabling-high-accuracy-protein-structure-prediction-at-the-proteome-scale/ Enabling high-accuracy protein structure prediction at the proteome scale
+https://deepmind.google/discover/blog/melting-pot-an-evaluation-suite-for-multi-agent-reinforcement-learning/ Melting Pot: an evaluation suite for multi-agent reinforcement learning
+https://deepmind.google/discover/blog/an-update-on-our-racial-justice-efforts/ An update on our racial justice efforts
+https://deepmind.google/discover/blog/advancing-sports-analytics-through-ai-research/ Advancing sports analytics through AI research
+https://deepmind.google/discover/blog/game-theory-as-an-engine-for-large-scale-data-analysis/ Game theory as an engine for large-scale data analysis
+https://deepmind.google/discover/blog/data-architecture-or-losses-what-contributes-most-to-multimodal-transformer-success/ Data, Architecture, or Losses: What Contributes Most to Multimodal Transformer Success?
+https://deepmind.google/discover/blog/muzero-mastering-go-chess-shogi-and-atari-without-rules/ MuZero: Mastering Go, chess, shogi and Atari without rules
+https://deepmind.google/discover/blog/imitating-interactive-intelligence/ Imitating Interactive Intelligence
+https://deepmind.google/discover/blog/using-jax-to-accelerate-our-research/ Using JAX to accelerate our research
+https://deepmind.google/discover/blog/alphafold-a-solution-to-a-50-year-old-grand-challenge-in-biology/ AlphaFold: a solution to a 50-year-old grand challenge in biology
+https://deepmind.google/discover/blog/using-unity-to-help-solve-intelligence/ Using Unity to Help Solve Intelligence
+https://deepmind.google/discover/blog/breaking-down-global-barriers-to-access/ Breaking down global barriers to access
+https://deepmind.google/discover/blog/ferminet-quantum-physics-and-chemistry-from-first-principles/ FermiNet: Quantum Physics and Chemistry from First Principles
+https://deepmind.google/discover/blog/fast-reinforcement-learning-through-the-composition-of-behaviours/ Fast reinforcement learning through the composition of behaviours
+https://deepmind.google/discover/blog/traffic-prediction-with-advanced-graph-neural-networks/ Traffic prediction with advanced Graph Neural Networks
+https://deepmind.google/discover/blog/computational-predictions-of-protein-structures-associated-with-covid-19/ Computational predictions of protein structures associated with COVID-19
+https://deepmind.google/discover/blog/rl-unplugged-benchmarks-for-offline-reinforcement-learning/ RL Unplugged: Benchmarks for Offline Reinforcement Learning
+https://deepmind.google/discover/blog/applying-for-technical-roles/ Applying for technical roles
+https://deepmind.google/discover/blog/dm-control-software-and-tasks-for-continuous-control/ dm_control: Software and Tasks for Continuous Control
+https://deepmind.google/discover/blog/acme-a-new-framework-for-distributed-reinforcement-learning/ Acme: A new framework for distributed reinforcement learning
+https://deepmind.google/discover/blog/using-ai-to-predict-retinal-disease-progression/ Using AI to predict retinal disease progression
+https://deepmind.google/discover/blog/simple-sensor-intentions-for-exploration/ Simple Sensor Intentions for Exploration
+https://deepmind.google/discover/blog/learning-to-segment-actions-from-observation-and-narration/ Learning to Segment Actions from Observation and Narration
+https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/ Specification gaming: the flip side of AI ingenuity
+https://deepmind.google/discover/blog/towards-understanding-glasses-with-graph-neural-networks/ Towards understanding glasses with graph neural networks
+https://deepmind.google/discover/blog/agent57-outperforming-the-human-atari-benchmark/ Agent57: Outperforming the human Atari benchmark
+https://deepmind.google/discover/blog/visual-grounding-in-video-for-unsupervised-word-translation/ Visual Grounding in Video for Unsupervised Word Translation
+https://deepmind.google/discover/blog/a-new-model-and-dataset-for-long-range-memory/ A new model and dataset for long-range memory
+https://deepmind.google/discover/blog/dopamine-and-temporal-difference-learning-a-fruitful-relationship-between-neuroscience-and-ai/ Dopamine and temporal difference learning: A fruitful relationship between neuroscience and AI
+https://deepmind.google/discover/blog/alphafold-using-ai-for-scientific-discovery-2020/ AlphaFold: Using AI for scientific discovery
+https://deepmind.google/discover/blog/artificial-intelligence-values-and-alignment/ Artificial Intelligence, Values and Alignment
+https://deepmind.google/discover/blog/international-evaluation-of-an-ai-system-for-breast-cancer-screening/ International evaluation of an AI system for breast cancer screening
+https://deepmind.google/discover/blog/using-wavenet-technology-to-reunite-speech-impaired-users-with-their-original-voices/ Using WaveNet technology to reunite speech-impaired users with their original voices
+https://deepmind.google/discover/blog/learning-human-objectives-by-evaluating-hypothetical-behaviours/ Learning human objectives by evaluating hypothetical behaviours
+https://deepmind.google/discover/blog/from-unlikely-start-up-to-major-scientific-organisation-entering-our-tenth-year-at-deepmind/ From unlikely start-up to major scientific organisation: Entering our tenth year at DeepMind
+https://deepmind.google/discover/blog/strengthening-the-ai-community/ Strengthening the AI community
+https://deepmind.google/discover/blog/advanced-machine-learning-helps-play-store-users-discover-personalised-apps/ Advanced machine learning helps Play Store users discover personalised apps
+https://deepmind.google/discover/blog/alphastar-grandmaster-level-in-starcraft-ii-using-multi-agent-reinforcement-learning/ AlphaStar: Grandmaster level in StarCraft II using multi-agent reinforcement learning
+https://deepmind.google/discover/blog/restoring-ancient-text-using-deep-learning-a-case-study-on-greek-epigraphy/ Restoring ancient text using deep learning: a case study on Greek epigraphy
+https://deepmind.google/discover/blog/causal-bayesian-networks-a-flexible-tool-to-enable-fairer-machine-learning/ Causal Bayesian Networks: A flexible tool to enable fairer machine learning
+https://deepmind.google/discover/blog/deepminds-health-team-joins-google-health/ DeepMind’s health team joins Google Health
+https://deepmind.google/discover/blog/the-podcast-episode-8-demis-hassabis-the-interview/ The Podcast: Episode 8: Demis Hassabis - The interview
+https://deepmind.google/discover/blog/the-podcast-episode-7-towards-the-future/ The Podcast: Episode 7: Towards the future
+https://deepmind.google/discover/blog/replay-in-biological-and-artificial-neural-networks/ Replay in biological and artificial neural networks
+https://deepmind.google/discover/blog/making-efficient-use-of-demonstrations-to-solve-hard-exploration-problems/ Making Efficient Use of Demonstrations to Solve Hard Exploration Problems
+https://deepmind.google/discover/blog/the-podcast-episode-6-ai-for-everyone/ The Podcast: Episode 6: AI for everyone
+https://deepmind.google/discover/blog/the-podcast-episode-5-out-of-the-lab/ The Podcast: Episode 5: Out of the lab
+https://deepmind.google/discover/blog/the-podcast-episode-4-ai-robot/ The Podcast: Episode 4: AI, Robot
+https://deepmind.google/discover/blog/the-podcast-episode-3-life-is-like-a-game/ The Podcast: Episode 3: Life is like a game
+https://deepmind.google/discover/blog/the-podcast-episode-2-go-to-zero/ The Podcast: Episode 2: Go to Zero
+https://deepmind.google/discover/blog/the-podcast-episode-1-ai-and-neuroscience-the-virtuous-circle/ The Podcast: Episode 1: AI and neuroscience - The virtuous circle
+https://deepmind.google/discover/blog/welcome-to-the-deepmind-podcast/ Welcome to the DeepMind podcast
+https://deepmind.google/discover/blog/using-machine-learning-to-accelerate-ecological-research/ Using machine learning to accelerate ecological research
+https://deepmind.google/discover/blog/using-ai-to-give-doctors-a-48-hour-head-start-on-life-threatening-illness/ Using AI to give doctors a 48-hour head start on life-threatening illness
+https://deepmind.google/discover/blog/how-evolutionary-selection-can-train-more-capable-self-driving-cars/ How evolutionary selection can train more capable self-driving cars
+https://deepmind.google/discover/blog/unsupervised-learning-the-curious-pupil/ Unsupervised learning: The curious pupil
+https://deepmind.google/discover/blog/capture-the-flag-the-emergence-of-complex-cooperative-agents/ Capture the Flag: the emergence of complex cooperative agents
+https://deepmind.google/discover/blog/identifying-and-eliminating-bugs-in-learned-predictive-models/ Identifying and eliminating bugs in learned predictive models
+https://deepmind.google/discover/blog/tf-replicator-distributed-machine-learning-for-researchers/ TF-Replicator: Distributed Machine Learning for Researchers
+https://deepmind.google/discover/blog/machine-learning-can-boost-the-value-of-wind-energy/ Machine learning can boost the value of wind energy
+https://deepmind.google/discover/blog/alphastar-mastering-the-real-time-strategy-game-starcraft-ii/ AlphaStar: Mastering the real-time strategy game StarCraft II
+https://deepmind.google/discover/blog/alphazero-shedding-new-light-on-chess-shogi-and-go/ AlphaZero: Shedding new light on chess, shogi, and Go
+https://deepmind.google/discover/blog/scaling-streams-with-google/ Scaling Streams with Google
+https://deepmind.google/discover/blog/predicting-eye-disease-with-moorfields-eye-hospital/ Predicting eye disease with Moorfields Eye Hospital
+https://deepmind.google/discover/blog/open-sourcing-trfl-a-library-of-reinforcement-learning-building-blocks/ Open sourcing TRFL: a library of reinforcement learning building blocks
+https://deepmind.google/discover/blog/expanding-our-research-on-breast-cancer-screening-to-japan/ Expanding our research on breast cancer screening to Japan
+https://deepmind.google/discover/blog/preserving-outputs-precisely-while-adaptively-rescaling-targets/ Preserving Outputs Precisely while Adaptively Rescaling Targets
+https://deepmind.google/discover/blog/using-ai-to-plan-head-and-neck-cancer-treatments/ Using AI to plan head and neck cancer treatments
+https://deepmind.google/discover/blog/safety-first-ai-for-autonomous-data-centre-cooling-and-industrial-control/ Safety-first AI for autonomous data centre cooling and industrial control
+https://deepmind.google/discover/blog/a-major-milestone-for-the-treatment-of-eye-disease/ A major milestone for the treatment of eye disease
+https://deepmind.google/discover/blog/objects-that-sound/ Objects that Sound
+https://deepmind.google/discover/blog/measuring-abstract-reasoning-in-neural-networks/ Measuring abstract reasoning in neural networks
+https://deepmind.google/discover/blog/deepmind-papers-at-icml-2018/ DeepMind papers at ICML 2018
+https://deepmind.google/discover/blog/deepmind-health-response-to-independent-reviewers-report-2018/ DeepMind Health Response to Independent Reviewers' Report 2018
+https://deepmind.google/discover/blog/neural-scene-representation-and-rendering/ Neural scene representation and rendering
+https://deepmind.google/discover/blog/royal-free-london-publishes-findings-of-legal-audit-in-use-of-streams/ Royal Free London publishes findings of legal audit in use of Streams
+https://deepmind.google/discover/blog/prefrontal-cortex-as-a-meta-reinforcement-learning-system/ Prefrontal cortex as a meta-reinforcement learning system
+https://deepmind.google/discover/blog/navigating-with-grid-like-representations-in-artificial-agents/ Navigating with grid-like representations in artificial agents
+https://deepmind.google/discover/blog/deepmind-meet-android/ DeepMind, meet Android
+https://deepmind.google/discover/blog/deepmind-papers-at-iclr-2018/ DeepMind papers at ICLR 2018
+https://deepmind.google/discover/blog/our-first-coo-lila-ibrahim-takes-deepmind-to-the-next-level/ Our first COO Lila Ibrahim takes DeepMind to the next level
+https://deepmind.google/discover/blog/a-return-to-paris/ Retour à Paris / A return to Paris
+https://deepmind.google/discover/blog/learning-to-navigate-in-cities-without-a-map/ Learning to navigate in cities without a map
+https://deepmind.google/discover/blog/learning-to-write-programs-that-generate-images/ Learning to write programs that generate images
+https://deepmind.google/discover/blog/understanding-deep-learning-through-neuron-deletion/ Understanding deep learning through neuron deletion
+https://deepmind.google/discover/blog/stop-look-and-listen-to-the-people-you-want-to-help/ Stop, look and listen to the people you want to help
+https://deepmind.google/discover/blog/learning-by-playing/ Learning by playing
+https://deepmind.google/discover/blog/researching-patient-deterioration-with-the-us-department-of-veterans-affairs/ Researching patient deterioration with the US Department of Veterans Affairs
+https://deepmind.google/discover/blog/scalable-agent-architecture-for-distributed-training/ Scalable agent architecture for distributed training
+https://deepmind.google/discover/blog/learning-explanatory-rules-from-noisy-data/ Learning explanatory rules from noisy data
+https://deepmind.google/discover/blog/open-sourcing-psychlab/ Open-sourcing Psychlab
+https://deepmind.google/discover/blog/game-theory-insights-into-asymmetric-multi-agent-games/ Game-theory insights into asymmetric multi-agent games
+https://deepmind.google/discover/blog/2017-deepminds-year-in-review/ 2017: DeepMind's year in review
+https://deepmind.google/discover/blog/collaborating-with-patients-for-better-outcomes/ Collaborating with patients for better outcomes
+https://deepmind.google/discover/blog/deepmind-papers-at-nips-2017/ DeepMind papers at NIPS 2017
+https://deepmind.google/discover/blog/why-doesnt-streams-use-ai/ Why doesn't Streams use AI?
+https://deepmind.google/discover/blog/specifying-ai-safety-problems-in-simple-environments/ Specifying AI safety problems in simple environments
+https://deepmind.google/discover/blog/population-based-training-of-neural-networks/ Population based training of neural networks
+https://deepmind.google/discover/blog/applying-machine-learning-to-mammography-screening-for-breast-cancer/ Applying machine learning to mammography screening for breast cancer
+https://deepmind.google/discover/blog/high-fidelity-speech-synthesis-with-wavenet/ High-fidelity speech synthesis with WaveNet
+https://deepmind.google/discover/blog/sharing-our-insights-from-designing-with-clinicians/ Sharing our insights from designing with clinicians
+https://deepmind.google/discover/blog/bringing-streams-to-yeovil-district-hospital-nhs-foundation-trust/ Bringing Streams to Yeovil District Hospital NHS Foundation Trust
+https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/ AlphaGo Zero: Starting from scratch
+https://deepmind.google/discover/blog/strengthening-our-commitment-to-canadian-research/ Strengthening our commitment to Canadian research
+https://deepmind.google/discover/blog/wavenet-launches-in-the-google-assistant/ WaveNet launches in the Google Assistant
+https://deepmind.google/discover/blog/why-we-launched-deepmind-ethics-society/ Why we launched DeepMind Ethics & Society
+https://deepmind.google/discover/blog/the-hippocampus-as-a-predictive-map/ The hippocampus as a predictive map
+https://deepmind.google/discover/blog/deepmind-and-blizzard-open-starcraft-ii-as-an-ai-research-environment/ DeepMind and Blizzard open StarCraft II as an AI research environment
+https://deepmind.google/discover/blog/deepmind-papers-at-icml-2017-part-three/ DeepMind papers at ICML 2017 (part three)
+https://deepmind.google/discover/blog/deepmind-papers-at-icml-2017-part-one/ DeepMind papers at ICML 2017 (part one)
+https://deepmind.google/discover/blog/deepmind-papers-at-icml-2017-part-two/ DeepMind papers at ICML 2017 (part two)
+https://deepmind.google/discover/blog/ai-and-neuroscience-a-virtuous-circle/ AI and Neuroscience: A virtuous circle
+https://deepmind.google/discover/blog/going-beyond-average-for-reinforcement-learning/ Going beyond average for reinforcement learning
+https://deepmind.google/discover/blog/agents-that-imagine-and-plan/ Agents that imagine and plan
+https://deepmind.google/discover/blog/imagine-this-creating-new-visual-concepts-by-recombining-familiar-ones/ Imagine this: Creating new visual concepts by recombining familiar ones
+https://deepmind.google/discover/blog/producing-flexible-behaviours-in-simulated-environments/ Producing flexible behaviours in simulated environments
+https://deepmind.google/discover/blog/independent-reviewers-release-first-annual-report-on-deepmind-health/ Independent Reviewers release first annual report on DeepMind Health
+https://deepmind.google/discover/blog/deepmind-expands-to-canada-with-new-research-office-in-edmonton-alberta/ DeepMind expands to Canada with new research office in Edmonton, Alberta
+https://deepmind.google/discover/blog/the-information-commissioner-the-royal-free-and-what-weve-learned/ The Information Commissioner, the Royal Free, and what we’ve learned
+https://deepmind.google/discover/blog/interpreting-deep-neural-networks-using-cognitive-psychology/ Interpreting Deep Neural Networks using Cognitive Psychology
+https://deepmind.google/discover/blog/enhancing-patient-safety-at-taunton-and-somerset-nhs-foundation-trust/ Enhancing patient safety at Taunton and Somerset NHS Foundation Trust
+https://deepmind.google/discover/blog/learning-through-human-feedback/ Learning through human feedback
+https://deepmind.google/discover/blog/a-neural-approach-to-relational-reasoning/ A neural approach to relational reasoning
+https://deepmind.google/discover/blog/alphagos-next-move/ AlphaGo's next move
+https://deepmind.google/discover/blog/innovations-of-alphago/ Innovations of AlphaGo
+https://deepmind.google/discover/blog/exploring-the-mysteries-of-go-with-alphago-and-chinas-top-players/ Exploring the mysteries of Go with AlphaGo and China's top players
+https://deepmind.google/discover/blog/open-sourcing-sonnet-a-new-library-for-constructing-neural-networks/ Open sourcing Sonnet - a new library for constructing neural networks
+https://deepmind.google/discover/blog/distill-communicating-the-science-of-machine-learning/ Distill: Communicating the science of machine learning
+https://deepmind.google/discover/blog/enabling-continual-learning-in-neural-networks/ Enabling Continual Learning in Neural Networks
+https://deepmind.google/discover/blog/trust-confidence-and-verifiable-data-audit/ Trust, confidence and Verifiable Data Audit
+https://deepmind.google/discover/blog/a-milestone-for-deepmind-health-and-streams/ A milestone for DeepMind Health and Streams
+https://deepmind.google/discover/blog/understanding-agent-cooperation/ Understanding Agent Cooperation
+https://deepmind.google/discover/blog/our-collaborations-with-academia-to-advance-the-field-of-ai/ Our collaborations with academia to advance the field of AI
+https://deepmind.google/discover/blog/deepminds-work-in-2016-a-round-up/ DeepMind’s work in 2016: a round-up
+https://deepmind.google/discover/blog/bringing-the-best-of-mobile-technology-to-imperial-college-healthcare-nhs-trust/ Bringing the best of mobile technology to Imperial College Healthcare NHS Trust
+https://deepmind.google/discover/blog/deepmind-papers-nips-part-3/ DeepMind Papers @ NIPS (Part 3)
+https://deepmind.google/discover/blog/deepmind-papers-nips-part-2/ DeepMind Papers @ NIPS (Part 2)
+https://deepmind.google/discover/blog/open-sourcing-deepmind-lab/ Open-sourcing DeepMind Lab
+https://deepmind.google/discover/blog/deepmind-papers-nips-part-1/ DeepMind Papers @ NIPS (Part 1)
+https://deepmind.google/discover/blog/working-with-the-nhs-to-build-lifesaving-technology/ Working with the NHS to build lifesaving technology
+https://deepmind.google/discover/blog/reinforcement-learning-with-unsupervised-auxiliary-tasks/ Reinforcement learning with unsupervised auxiliary tasks
+https://deepmind.google/discover/blog/deepmind-and-blizzard-to-release-starcraft-ii-as-an-ai-research-environment/ DeepMind and Blizzard to release StarCraft II as an AI research environment
+https://deepmind.google/discover/blog/differentiable-neural-computers/ Differentiable neural computers
+https://deepmind.google/discover/blog/announcing-the-partnership-on-ai-to-benefit-people-society/ Announcing the Partnership on AI to Benefit People & Society
+https://deepmind.google/discover/blog/putting-patients-at-the-heart-of-deepmind-health/ Putting patients at the heart of DeepMind Health
+https://deepmind.google/discover/blog/wavenet-a-generative-model-for-raw-audio/ WaveNet: A generative model for raw audio
+https://deepmind.google/discover/blog/applying-machine-learning-to-radiotherapy-planning-for-head-neck-cancer/ Applying machine learning to radiotherapy planning for head & neck cancer
+https://deepmind.google/discover/blog/decoupled-neural-interfaces-using-synthetic-gradients/ Decoupled Neural Interfaces Using Synthetic Gradients
+https://deepmind.google/discover/blog/deepmind-ai-reduces-google-data-centre-cooling-bill-by-40/ DeepMind AI Reduces Google Data Centre Cooling Bill by 40%
+https://deepmind.google/discover/blog/deep-reinforcement-learning/ Deep Reinforcement Learning
+https://deepmind.google/discover/blog/announcing-deepmind-health-research-partnership-with-moorfields-eye-hospital/ Announcing DeepMind Health research partnership with Moorfields Eye Hospital
+https://deepmind.google/discover/blog/we-are-very-excited-to-announce-the-launch-of-deepmind-health/ We are very excited to announce the launch of DeepMind Health
+
+update_from_feed_or_fail

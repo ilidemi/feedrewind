@@ -194,18 +194,18 @@ var SuggestedCategories = []SuggestedCategory{
 			},
 			{
 				Url:     "https://openai.com/blog/",
-				FeedUrl: "https://openai.com/blog/rss/",
+				FeedUrl: "https://openai.com/blog/rss.xml",
 				Name:    "OpenAI",
+			},
+			{
+				Url:     "https://deepmind.google/discover/blog/",
+				FeedUrl: "https://deepmind.google/blog/rss.xml",
+				Name:    "Google DeepMind",
 			},
 			{
 				Url:     "https://bair.berkeley.edu/blog/",
 				FeedUrl: "https://bair.berkeley.edu/blog/feed.xml",
 				Name:    "BAIR",
-			},
-			{
-				Url:     "https://www.deepmind.com/blog",
-				FeedUrl: "https://www.deepmind.com/blog/rss.xml",
-				Name:    "DeepMind",
 			},
 		},
 	},
