@@ -1,0 +1,422 @@
+## What do I need
+
+Framing. Title (that will probably set framing). Some sort of narrative so it isn't just facts.
+On the other hand, all (or almost all) facts will need to be included, so I might as well start from a well-written compressed set of facts in a same dry style. Then do a pass of narrativizing.
+https://www.scattered-thoughts.net/writing/reflections-on-a-decade-of-coding/ is pretty technical but reads as a narrative that a person is telling. I could look at that and do similar in my style.
+Plan:
+	Gather facts about rewrite itself, have it all in one doc
+	Look at the whole and see if a narrative emerges
+	Read Jamie for the style
+	Try to turn it into prose in one pass
+
+
+## Outline
+
+What is FR (put somewhere)
+
+Why tho
+	One computer per user is backwards
+	Memory quota exceeded
+	Don't want to do custom solutions on top of a dying ecosystem that promised all batteries included
+	Educational - what is everything my app is doing (but less pompous as I'm not rewriting http here)
+
+Plan
+	Tried to be thorough, list the angles for the next adventurer
+	Failure mode would be to get stuck on some piece and not knowing what to do and how deep the rabbithole goes
+	Needed full data compatibility with Rails, will keep rails-ujs
+	Stages of execution where infra is spread out as much as possible but what is implemented is solid and something is working at every point
+
+Reality
+	Planning was good, no regrets. Hours planning vs executing
+	Test suite is a must. List what kinds of tests did I have
+	Discipline on //TODOs is a must
+	Some stories like ruby date parse?
+	Dependencies - vendored Postmark to add metadata field, brought in Go's zipped timezones (both excluded from line counts)
+	Slogs hit (redoing errors, semi-redoing logging, inlining db, worker, deployment luxury)
+	Post-rewrite scan through the code caught stuff
+	Thoughts on language differences
+
+Results
+	Code metrics
+	RAM is good now
+	Actual concurrency
+	Latencies are a lil bit better
+	DB connections continue to be a pain (unclear if I should've been using pool and transactions, if yes then I don't have the authority to give advice)
+
+Dreaming
+	I'd want to get rid of a web-worker distinction and do one process, separating out puppeteer instances instead (does this belong in the rewrite post though?)
+
+
+## Misc
+
+Deployment went with unpredictable errors. I had a luxury of downtime, in actual prod yolo is not good unless you can go down for hours
+Planning is good (count hours and %), be disciplined about //TODO, give a sweep at the end on missed functionality and SQL null safety
+Missed:
+	before_action :log_visit (except admintest)
+	postmark message id can be null
+
+
+## Hours
+Planning 11:19
+	Upfront 9:33
+	Before crawler 1:19
+	Before deployment 0:27
+
+Coding 248:57
+	Infra 50:58
+	Date parse 12:38
+	App 185:21
+
+Deployment 7:03
+
+
+
+## Runtime measurements
+
+Ruby Web after crawling: 335 MB
+Ruby Worker after crawling: 160 MB
+Ruby Landing LCP (no cache)
+	0.38
+	0.36
+	0.45
+	0.35
+	0.33
+	0.34
+	0.41
+	0.36
+	0.34
+	0.35
+	0.34
+	0.38
+	0.54
+	0.42
+	0.35
+	0.39
+	0.35
+	0.41
+	0.42
+	0.41
+Ruby Dashboard LCP (cache)
+	0.16
+	0.18
+	0.15
+	0.18
+	0.16
+	0.17
+	0.19
+	0.19
+	0.19
+	0.25
+	0.15
+	0.15
+	0.15
+	0.23
+	0.14
+	0.15
+	0.15
+	0.15
+	0.15
+	0.15
+Ruby SSC select posts (cache)
+	LCP		DCL
+	0.48	1.17
+	0.81 	1.41
+	0.60	1.22
+	0.71 	1.29
+	0.70	1.30
+	0.48	1.12
+	0.56	1.07
+	0.46	1.03
+	0.51 	1.06
+	0.46	1.00
+	0.85	1.30
+	0.48	0.92
+	0.53 	0.93
+	0.62	1.01
+	0.43	0.92
+	0.49 	0.96
+	0.56	0.92
+	0.79	1.05
+	0.50	0.92
+	0.50	0.87
+Ruby web memory shot up to 582 MB, not going down
+Ruby worker memory: 308 MB
+Go Web during crawling: 38 MB
+Go Worker during crawling: 94 MB
+Go Web after crawling: 25 MB
+Go Worker after crawling: 29 MB
+Go Landing LCP (no cache)
+	0.33
+	0.33
+	0.44
+	0.32
+	0.32
+	0.33
+	0.34
+	0.34
+	0.32
+	0.35
+	0.32
+	0.32
+	0.31
+	0.32
+	0.32
+	0.35
+	0.33
+	0.34
+	0.34
+	0.54
+Go Dashboard LCP (cache)
+	0.20
+	0.20
+	0.24
+	0.20
+	0.19
+	0.20
+	0.21
+	0.20
+	0.36
+	0.19
+	0.22
+	0.19
+	0.21
+	0.21
+	0.25
+	0.20
+	0.25
+	0.20
+	0.25
+	0.19
+Go SSC select posts (cache)
+	LCP		DCL
+	0.38	1.31
+	0.66	1.17
+	0.36 	1.06
+	0.54	1.17
+	0.38	0.97
+	0.37 	0.94
+	0.56	1.11
+	0.32	0.89
+	0.33	0.83
+	0.34	0.77
+	0.39 	0.82
+	0.34	0.76
+	0.35	0.74
+	0.37	0.77
+	0.39 	0.80
+	0.32	0.71
+	0.63	0.86
+	0.34	0.76
+	0.35 	0.76
+	0.50 	0.89
+Go web memory up to 56 MB
+Go worker memory up to 145 MB
+Go web memory: 30 MB
+Go worker memory: 37 MB
+
+
+## Code metrics (redo most of it)
+
+scc app tools analysis\crawling\db.rb analysis\crawling\logger.rb analysis\crawling\mock_http_client.rb analysis\crawling\mock_logger.rb analysis\crawling\mock_puppeteer_client.rb analysis\crawling\mp_common.rb analysis\crawling\mp_guided_crawling.rb analysis\crawling\mp_guided_crawling_no_js.rb analysis\crawling\report.rb analysis\crawling\run_common.rb analysis\crawling\run_guided_crawling.rb analysis\crawling\st_common.rb analysis\crawling\st_guided_crawling.rb analysis\crawling\st_guided_crawling_no_js.rb --no-cocomo --no-complexity --exclude-dir admin_added -M out_timezone_helper.rb -M raw-time-zones.json -M ^tailwind.css -i rb,css,erb,js -s code
+
+───────────────────────────────────────────────────────────────────────────────
+Language                     Files       Lines     Blanks    Comments      Code
+───────────────────────────────────────────────────────────────────────────────
+Ruby                           119       13193       1202         146     11845
+Ruby HTML                       49        4513        382          61      4070
+CSS                              2         378         54          18       306
+JavaScript                       6         132         11          13       108
+───────────────────────────────────────────────────────────────────────────────
+Total                          176       18216       1649         238     16329
+───────────────────────────────────────────────────────────────────────────────
+
+↓↓↓
+
+───────────────────────────────────────────────────────────────────────────────
+Language                     Files       Lines     Blanks    Comments      Code
+───────────────────────────────────────────────────────────────────────────────
+Go                             127       32871       3473         340     29058
+Go Template                     45        4457        374           0      4083
+CSS                              1         363         54           3       306
+JavaScript                       1          79          0           0        79
+───────────────────────────────────────────────────────────────────────────────
+Total                          174       37770       3901         343     33526
+───────────────────────────────────────────────────────────────────────────────
+
+
+### TODO redo Code layers
+
+App code (equivalent between Ruby and Go), how many lines are if err != nil { return err }
+Templates (about equal anyways)
+Infra code (handrolled in Go, libs in Ruby)
+Dependencies code (include third_party in Go)
+Stdlib
+
+
+### TODO redo Error handling patterns
+
+if err != nil {
+	panic(err)
+}
+224 * 3 = 672
+
+if err != nil {
+	return nil, err
+}
+101 * 3 = 303
+
+if err != nil {
+	return "", err
+}
+9 * 3 = 27
+
+if err != nil {
+	return
+}
+1 * 3 = 3
+
+if err != nil {
+	return false
+}
+9 * 3 = 27
+
+if err != nil {
+	return err
+}
+123 * 3 = 369
+
+if err != nil {
+	return false, err
+}
+1 * 3 = 3
+
+if err != nil {
+	return 0, err
+}
+3 * 3 = 9
+
+if err != nil {
+	return &result, newError(err, result)
+}
+6 * 3 = 18
+
+if err != nil {
+	return &DiscoverFeedsErrorBadFeed{}
+}
+1 * 3 = 3
+
+if err != nil {
+	return jobStatusFatal, err
+}
+3 * 3 = 9
+
+if err != nil {
+	return updatedAt, err
+}
+8 * 3 = 24
+
+if err != nil {
+	return oops.Wrap(err)
+}
+18 * 3 = 54
+
+if err != nil {
+	return nil, oops.Wrap(err)
+}
+12 * 3 = 36
+
+if err != nil {
+	return "", oops.Wrap(err)
+}
+11 * 3 = 33
+
+if err != nil {
+	return 0, oops.Wrap(err)
+}
+1 * 3 = 3
+
+if err != nil {
+	return nil, oops.Newf(...)
+}
+1 * 3 = 3
+
+if err != nil {
+	return nil, oops.Wrapf(...) // Could be multiline
+}
+1 * 3 = 3
+
+if err != nil {
+	return oops.Wrapf(...) // Could be multiline
+}
+2 * 3 = 6
+
+if -> else if (but one fewer line removed)
+54 * 2 = 108
+
+---
+Trivial error handling: 1713
+Closing braces: 2575 (excluding trivial error handling)
+
+
+### Code layers v2
+
+									Ruby		Go
+App code							11845		24426
+Templates/JS/CSS					4484		4468
+Infra/Dependencies handrolled					4632 (2288 infra, 2344 rubydate)
+Infra/Dependencies				
+Stdlib
+
+Go - what is infra/dependencies?
+cmd/db.go crawler/rubydate db/pgw/pgw.go db/db.go jobs/jobs.go jobs/worker.go log/log.go middleware/csrf.go middleware/db.go middleware/default_headers.go middleware/logger.go middleware/recoverer.go middleware/session.go oops/ routes/rutil/middleware.go routes/static.go templates/templates.go util/static_files.go
+
+Ruby infra/dependencies
+C:\Users\ilia\AppData\Local\JetBrains\RubyMine2022.1\ruby_stubs\371787118\home\ilia\.rbenv\versions\2.7.4\lib\ruby\gems\2.7.0\gems>scc --no-cocomo --no-complexity zeitwerk-2.5.1 actioncable-6.1.4.1 actionmailbox-6.1.4.1 actionmailer-6.1.4.1 actionpack-6.1.4.1 actiontext-6.1.4.1 actionview-6.1.4.1 activejob-6.1.4.1 activemodel-6.1.4.1 activerecord-6.1.4.1 activestorage-6.1.4.1 activesupport-6.1.4.1 addressable-2.8.0 barnes-0.0.9 bcrypt-3.1.16 benchmark-ips-2.10.0 bindex-0.8.1 bootsnap-1.9.1 browser-5.3.1 builder-3.2.4 bundler-2.2.28 byebug-11.1.3 capybara-3.37.1 childprocess-4.1.0 concurrent-ruby-1.1.9 crass-1.0.6 daemons-1.4.1 dead_end-4.0.0 delayed_job_active_record-4.1.6 delayed_job-4.1.9 derailed_benchmarks-2.1.2 diff-lcs-1.4.4 erubi-1.10.0 ffi-1.15.4 get_process_mem-0.2.7 globalid-0.5.2 heapy-0.2.0 htmlentities-4.3.4 i18n-1.8.10 jbuilder-2.11.2 json-2.6.2 loofah-2.12.0 mail-2.7.1 marcel-1.0.2 matrix-0.4.2 memory_profiler-1.0.1 method_source-1.0.0 mime-types-3.5.1 mime-types-data-3.2023.0808 mini_histogram-0.3.1 mini_mime-1.1.2 minitest-5.14.4 msgpack-1.4.2 multi_json-1.15.0 nio4r-2.5.8 nokogiri-1.12.5-x86_64-linux ox-2.14.5 pg-1.2.3 postmark-1.22.0 postmark-rails-0.22.0 public_suffix-4.0.6 puma-5.5.2 puppeteer-ruby-0.45.3 racc-1.6.0 rack-2.2.3 rack-proxy-0.7.0 rack-test-1.1.0 rails-dom-testing-2.0.3 rails-html-sanitizer-1.4.2 railties-6.1.4.1 rake-13.0.6 rb-fsevent-0.11.0 rb-inotify-0.10.1 regexp_parser-2.5.0 rexml-3.2.6 rspec-3.10.0 rspec-core-3.10.1 rspec-expectations-3.10.1 rspec-mocks-3.10.2 rspec-rails-5.0.2 rspec-support-3.10.2 ruby-statistics-3.0.1 rubyzip-2.3.2 sassc-2.4.0 sass-rails-6.0.0 selenium-webdriver-4.4.0 semantic_range-3.0.0 sprockets-4.0.2 sprockets-rails-3.2.2 statsd-ruby-1.5.0 tailwindcss-rails-2.0.8-x86_64-linux thor-1.1.0 tilt-2.0.10 tzinfo-2.0.4 webdrivers-5.3.0 webpacker-5.4.3 websocket-driver-0.7.5 websocket-extensions-0.1.5 xpath-3.2.0 --exclude-dir test,spec,tests -i rb,c,h,js,hpp,cpp,cc,S,erb,css,html,in,y -s code
+
+C:\Users\ilia\go\pkg\mod>scc github.com/antchfx/htmlquery@v1.3.0 github.com/antchfx/xmlquery@v1.3.18 github.com/antchfx/xpath@v1.2.5 github.com/bahlo/generic-list-go@v0.2.0 github.com/buger/jsonparser@v1.1.1 github.com/davecgh/go-spew@v1.1.1 github.com/dlclark/regexp2@v1.10.0 github.com/go-chi/chi/v5@v5.0.10 github.com/go-rod/rod@v0.114.5 github.com/goccy/go-json@v0.10.2 github.com/golang/groupcache@v0.0.0-20210331224755-41bb18bfe9da github.com/google/gofuzz@v1.2.0 github.com/google/uuid@v1.4.0 github.com/gorilla/securecookie@v1.1.2 github.com/gorilla/websocket@v1.5.1 github.com/heroku/x@v0.1.0 github.com/inconshreveable/mousetrap@v1.1.0 github.com/jackc/pgerrcode@v0.0.0-20220416144525-469b46aa5efa github.com/jackc/pgpassfile@v1.0.0 github.com/jackc/pgservicefile@v0.0.0-20221227161230-091c0ba34f0a github.com/jackc/pgx/v5@v5.5.0 github.com/jackc/puddle/v2@v2.2.1 github.com/kr/pretty@v0.3.0 github.com/kr/text@v0.2.0 github.com/mailru/easyjson@v0.7.7 github.com/mattn/go-colorable@v0.1.13 github.com/mattn/go-isatty@v0.0.20 github.com/mileusna/useragent@v1.3.4 github.com/pkg/errors@v0.9.1 github.com/pmezard/go-difflib@v1.0.0 github.com/quasilyte/go-ruleguard/dsl@v0.3.22 github.com/rogpeppe/go-internal@v1.10.0 github.com/rs/zerolog@v1.31.0 github.com/spf13/cobra@v1.8.0 github.com/spf13/pflag@v1.0.5 github.com/stretchr/testify@v1.8.4 github.com/wk8/go-ordered-map/v2@v2.1.8 github.com/ysmood/fetchup@v0.2.3 github.com/ysmood/goob@v0.4.0 github.com/ysmood/gop@v0.2.0 github.com/ysmood/got@v0.38.1 github.com/ysmood/gotrace@v0.6.0 github.com/ysmood/gson@v0.7.3 github.com/ysmood/leakless@v0.8.0 goji.io@v2.0.2+incompatible golang.org/x/crypto@v0.14.0 golang.org/x/exp@v0.0.0-20231006140011-7918f672742d golang.org/x/net@v0.17.0 golang.org/x/sync@v0.5.0 golang.org/x/sys@v0.14.0 golang.org/x/text@v0.14.0 gopkg.in/check.v1@v1.0.0-20201130134442-10cb98267c6c gopkg.in/yaml.v3@v3.0.1 --no-cocomo --no-complexity -s code --by-file -f json > C:\Users\ilia\Downloads\go-byfile.json
+
+The Go one says a million lines - is that true? Maybe stdlib is included? Maybe generated files? Shake the files actually imported like the observability jam thing does? Is that fair to Ruby? Can I ask Ruby to print every file actually read?
+
+Printed ruby files with strace, ruby_files.txt
+───────────────────────────────────────────────────────────────────────────────
+Language                     Files       Lines     Blanks    Comments      Code
+───────────────────────────────────────────────────────────────────────────────
+Ruby                          1999      327765      32143       79605    216017
+───────────────────────────────────────────────────────────────────────────────
+Total                         1999      327765      32143       79605    216017
+───────────────────────────────────────────────────────────────────────────────
+
+ruby stdlib
+───────────────────────────────────────────────────────────────────────────────
+Language                     Files       Lines     Blanks    Comments      Code
+───────────────────────────────────────────────────────────────────────────────
+Ruby                           167       42721       4595       15738     22388
+───────────────────────────────────────────────────────────────────────────────
+Total                          167       42721       4595       15738     22388
+───────────────────────────────────────────────────────────────────────────────
+This doesn't account for .so built from native code (strace.txt)
+Also Puppeteer brings in Chromium so kind of a moot point to compare the total counts
+
+Go depenency counts
+───────────────────────────────────────────────────────────────────────────────
+Language                     Files       Lines     Blanks    Comments      Code
+───────────────────────────────────────────────────────────────────────────────
+Go                             644      366860      24105       30631    312124
+───────────────────────────────────────────────────────────────────────────────
+Total                          644      366860      24105       30631    312124
+───────────────────────────────────────────────────────────────────────────────
+
+Go stdlib counts
+───────────────────────────────────────────────────────────────────────────────
+Language                     Files       Lines     Blanks    Comments      Code
+───────────────────────────────────────────────────────────────────────────────
+Go                             864      328873      27958       76807    224108
+───────────────────────────────────────────────────────────────────────────────
+Total                          864      328873      27958       76807    224108
+───────────────────────────────────────────────────────────────────────────────
+
+Is ruby stdlib in ruby or c? I excluded it above
+Looks like a bunch is in c, and I'd need to piece it together from separate repos or find a tarball, and there's no file-level exclusion that way
+Ruby interpreter has 350K lines of C code
+
+I'll stick to a partial grey "dependencies" rectangle with a wave at the bottom/right. This is too much of a rabbit hole compared to its contribution to the blogpost.
