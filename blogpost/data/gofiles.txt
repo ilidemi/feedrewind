@@ -1,0 +1,1645 @@
+C:\Program Files\Go\src\archive\tar\common.go
+C:\Program Files\Go\src\archive\tar\format.go
+C:\Program Files\Go\src\archive\tar\reader.go
+C:\Program Files\Go\src\archive\tar\strconv.go
+C:\Program Files\Go\src\archive\tar\writer.go
+C:\Program Files\Go\src\archive\zip\reader.go
+C:\Program Files\Go\src\archive\zip\register.go
+C:\Program Files\Go\src\archive\zip\struct.go
+C:\Program Files\Go\src\archive\zip\writer.go
+C:\Program Files\Go\src\bufio\bufio.go
+C:\Program Files\Go\src\bufio\scan.go
+C:\Program Files\Go\src\bytes\buffer.go
+C:\Program Files\Go\src\bytes\bytes.go
+C:\Program Files\Go\src\bytes\reader.go
+C:\Program Files\Go\src\compress\flate\deflate.go
+C:\Program Files\Go\src\compress\flate\deflatefast.go
+C:\Program Files\Go\src\compress\flate\dict_decoder.go
+C:\Program Files\Go\src\compress\flate\huffman_bit_writer.go
+C:\Program Files\Go\src\compress\flate\huffman_code.go
+C:\Program Files\Go\src\compress\flate\inflate.go
+C:\Program Files\Go\src\compress\flate\token.go
+C:\Program Files\Go\src\compress\gzip\gunzip.go
+C:\Program Files\Go\src\compress\gzip\gzip.go
+C:\Program Files\Go\src\compress\zlib\reader.go
+C:\Program Files\Go\src\compress\zlib\writer.go
+C:\Program Files\Go\src\container\list\list.go
+C:\Program Files\Go\src\context\context.go
+C:\Program Files\Go\src\crypto\aes\aes_gcm.go
+C:\Program Files\Go\src\crypto\aes\block.go
+C:\Program Files\Go\src\crypto\aes\cipher.go
+C:\Program Files\Go\src\crypto\aes\cipher_asm.go
+C:\Program Files\Go\src\crypto\aes\const.go
+C:\Program Files\Go\src\crypto\aes\modes.go
+C:\Program Files\Go\src\crypto\cipher\cbc.go
+C:\Program Files\Go\src\crypto\cipher\cfb.go
+C:\Program Files\Go\src\crypto\cipher\cipher.go
+C:\Program Files\Go\src\crypto\cipher\ctr.go
+C:\Program Files\Go\src\crypto\cipher\gcm.go
+C:\Program Files\Go\src\crypto\cipher\io.go
+C:\Program Files\Go\src\crypto\cipher\ofb.go
+C:\Program Files\Go\src\crypto\cipher\xor_amd64.go
+C:\Program Files\Go\src\crypto\crypto.go
+C:\Program Files\Go\src\crypto\des\block.go
+C:\Program Files\Go\src\crypto\des\cipher.go
+C:\Program Files\Go\src\crypto\des\const.go
+C:\Program Files\Go\src\crypto\dsa\dsa.go
+C:\Program Files\Go\src\crypto\ecdsa\ecdsa.go
+C:\Program Files\Go\src\crypto\ecdsa\ecdsa_noasm.go
+C:\Program Files\Go\src\crypto\ecdsa\notboring.go
+C:\Program Files\Go\src\crypto\ed25519\ed25519.go
+C:\Program Files\Go\src\crypto\elliptic\elliptic.go
+C:\Program Files\Go\src\crypto\elliptic\nistec.go
+C:\Program Files\Go\src\crypto\elliptic\nistec_p256.go
+C:\Program Files\Go\src\crypto\elliptic\params.go
+C:\Program Files\Go\src\crypto\hmac\hmac.go
+C:\Program Files\Go\src\crypto\internal\boring\bbig\big.go
+C:\Program Files\Go\src\crypto\internal\boring\doc.go
+C:\Program Files\Go\src\crypto\internal\boring\notboring.go
+C:\Program Files\Go\src\crypto\internal\boring\sig\sig.go
+C:\Program Files\Go\src\crypto\internal\edwards25519\doc.go
+C:\Program Files\Go\src\crypto\internal\edwards25519\edwards25519.go
+C:\Program Files\Go\src\crypto\internal\edwards25519\field\fe.go
+C:\Program Files\Go\src\crypto\internal\edwards25519\field\fe_amd64.go
+C:\Program Files\Go\src\crypto\internal\edwards25519\field\fe_arm64_noasm.go
+C:\Program Files\Go\src\crypto\internal\edwards25519\field\fe_generic.go
+C:\Program Files\Go\src\crypto\internal\edwards25519\scalar.go
+C:\Program Files\Go\src\crypto\internal\edwards25519\scalarmult.go
+C:\Program Files\Go\src\crypto\internal\edwards25519\tables.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p224.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p224_fiat64.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p224_invert.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p256.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p256_fiat64.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p256_invert.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p384.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p384_fiat64.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p384_invert.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p521.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p521_fiat64.go
+C:\Program Files\Go\src\crypto\internal\nistec\fiat\p521_invert.go
+C:\Program Files\Go\src\crypto\internal\nistec\nistec.go
+C:\Program Files\Go\src\crypto\internal\nistec\p224.go
+C:\Program Files\Go\src\crypto\internal\nistec\p224_sqrt.go
+C:\Program Files\Go\src\crypto\internal\nistec\p256_asm.go
+C:\Program Files\Go\src\crypto\internal\nistec\p256_asm_ordinv.go
+C:\Program Files\Go\src\crypto\internal\nistec\p384.go
+C:\Program Files\Go\src\crypto\internal\nistec\p521.go
+C:\Program Files\Go\src\crypto\internal\randutil\randutil.go
+C:\Program Files\Go\src\crypto\internal\subtle\aliasing.go
+C:\Program Files\Go\src\crypto\md5\md5.go
+C:\Program Files\Go\src\crypto\md5\md5block.go
+C:\Program Files\Go\src\crypto\md5\md5block_decl.go
+C:\Program Files\Go\src\crypto\rand\rand.go
+C:\Program Files\Go\src\crypto\rand\rand_windows.go
+C:\Program Files\Go\src\crypto\rand\util.go
+C:\Program Files\Go\src\crypto\rc4\rc4.go
+C:\Program Files\Go\src\crypto\rsa\notboring.go
+C:\Program Files\Go\src\crypto\rsa\pkcs1v15.go
+C:\Program Files\Go\src\crypto\rsa\pss.go
+C:\Program Files\Go\src\crypto\rsa\rsa.go
+C:\Program Files\Go\src\crypto\sha1\boring.go
+C:\Program Files\Go\src\crypto\sha1\sha1.go
+C:\Program Files\Go\src\crypto\sha1\sha1block.go
+C:\Program Files\Go\src\crypto\sha1\sha1block_amd64.go
+C:\Program Files\Go\src\crypto\sha256\sha256.go
+C:\Program Files\Go\src\crypto\sha256\sha256block.go
+C:\Program Files\Go\src\crypto\sha256\sha256block_amd64.go
+C:\Program Files\Go\src\crypto\sha256\sha256block_decl.go
+C:\Program Files\Go\src\crypto\sha512\sha512.go
+C:\Program Files\Go\src\crypto\sha512\sha512block.go
+C:\Program Files\Go\src\crypto\sha512\sha512block_amd64.go
+C:\Program Files\Go\src\crypto\subtle\constant_time.go
+C:\Program Files\Go\src\crypto\tls\alert.go
+C:\Program Files\Go\src\crypto\tls\auth.go
+C:\Program Files\Go\src\crypto\tls\cipher_suites.go
+C:\Program Files\Go\src\crypto\tls\common.go
+C:\Program Files\Go\src\crypto\tls\common_string.go
+C:\Program Files\Go\src\crypto\tls\conn.go
+C:\Program Files\Go\src\crypto\tls\handshake_client.go
+C:\Program Files\Go\src\crypto\tls\handshake_client_tls13.go
+C:\Program Files\Go\src\crypto\tls\handshake_messages.go
+C:\Program Files\Go\src\crypto\tls\handshake_server.go
+C:\Program Files\Go\src\crypto\tls\handshake_server_tls13.go
+C:\Program Files\Go\src\crypto\tls\key_agreement.go
+C:\Program Files\Go\src\crypto\tls\key_schedule.go
+C:\Program Files\Go\src\crypto\tls\notboring.go
+C:\Program Files\Go\src\crypto\tls\prf.go
+C:\Program Files\Go\src\crypto\tls\ticket.go
+C:\Program Files\Go\src\crypto\tls\tls.go
+C:\Program Files\Go\src\crypto\x509\cert_pool.go
+C:\Program Files\Go\src\crypto\x509\notboring.go
+C:\Program Files\Go\src\crypto\x509\parser.go
+C:\Program Files\Go\src\crypto\x509\pem_decrypt.go
+C:\Program Files\Go\src\crypto\x509\pkcs1.go
+C:\Program Files\Go\src\crypto\x509\pkcs8.go
+C:\Program Files\Go\src\crypto\x509\pkix\pkix.go
+C:\Program Files\Go\src\crypto\x509\root.go
+C:\Program Files\Go\src\crypto\x509\root_windows.go
+C:\Program Files\Go\src\crypto\x509\sec1.go
+C:\Program Files\Go\src\crypto\x509\verify.go
+C:\Program Files\Go\src\crypto\x509\x509.go
+C:\Program Files\Go\src\database\sql\convert.go
+C:\Program Files\Go\src\database\sql\ctxutil.go
+C:\Program Files\Go\src\database\sql\driver\driver.go
+C:\Program Files\Go\src\database\sql\driver\types.go
+C:\Program Files\Go\src\database\sql\sql.go
+C:\Program Files\Go\src\embed\embed.go
+C:\Program Files\Go\src\encoding\asn1\asn1.go
+C:\Program Files\Go\src\encoding\asn1\common.go
+C:\Program Files\Go\src\encoding\asn1\marshal.go
+C:\Program Files\Go\src\encoding\base64\base64.go
+C:\Program Files\Go\src\encoding\binary\binary.go
+C:\Program Files\Go\src\encoding\binary\varint.go
+C:\Program Files\Go\src\encoding\csv\reader.go
+C:\Program Files\Go\src\encoding\csv\writer.go
+C:\Program Files\Go\src\encoding\encoding.go
+C:\Program Files\Go\src\encoding\gob\dec_helpers.go
+C:\Program Files\Go\src\encoding\gob\decode.go
+C:\Program Files\Go\src\encoding\gob\decoder.go
+C:\Program Files\Go\src\encoding\gob\doc.go
+C:\Program Files\Go\src\encoding\gob\enc_helpers.go
+C:\Program Files\Go\src\encoding\gob\encode.go
+C:\Program Files\Go\src\encoding\gob\encoder.go
+C:\Program Files\Go\src\encoding\gob\error.go
+C:\Program Files\Go\src\encoding\gob\type.go
+C:\Program Files\Go\src\encoding\hex\hex.go
+C:\Program Files\Go\src\encoding\json\decode.go
+C:\Program Files\Go\src\encoding\json\encode.go
+C:\Program Files\Go\src\encoding\json\fold.go
+C:\Program Files\Go\src\encoding\json\indent.go
+C:\Program Files\Go\src\encoding\json\scanner.go
+C:\Program Files\Go\src\encoding\json\stream.go
+C:\Program Files\Go\src\encoding\json\tables.go
+C:\Program Files\Go\src\encoding\json\tags.go
+C:\Program Files\Go\src\encoding\pem\pem.go
+C:\Program Files\Go\src\encoding\xml\marshal.go
+C:\Program Files\Go\src\encoding\xml\read.go
+C:\Program Files\Go\src\encoding\xml\typeinfo.go
+C:\Program Files\Go\src\encoding\xml\xml.go
+C:\Program Files\Go\src\errors\errors.go
+C:\Program Files\Go\src\errors\wrap.go
+C:\Program Files\Go\src\expvar\expvar.go
+C:\Program Files\Go\src\flag\flag.go
+C:\Program Files\Go\src\fmt\doc.go
+C:\Program Files\Go\src\fmt\errors.go
+C:\Program Files\Go\src\fmt\format.go
+C:\Program Files\Go\src\fmt\print.go
+C:\Program Files\Go\src\fmt\scan.go
+C:\Program Files\Go\src\go\token\position.go
+C:\Program Files\Go\src\go\token\serialize.go
+C:\Program Files\Go\src\go\token\token.go
+C:\Program Files\Go\src\hash\adler32\adler32.go
+C:\Program Files\Go\src\hash\crc32\crc32.go
+C:\Program Files\Go\src\hash\crc32\crc32_amd64.go
+C:\Program Files\Go\src\hash\crc32\crc32_generic.go
+C:\Program Files\Go\src\hash\fnv\fnv.go
+C:\Program Files\Go\src\hash\hash.go
+C:\Program Files\Go\src\html\entity.go
+C:\Program Files\Go\src\html\escape.go
+C:\Program Files\Go\src\html\template\attr.go
+C:\Program Files\Go\src\html\template\attr_string.go
+C:\Program Files\Go\src\html\template\content.go
+C:\Program Files\Go\src\html\template\context.go
+C:\Program Files\Go\src\html\template\css.go
+C:\Program Files\Go\src\html\template\delim_string.go
+C:\Program Files\Go\src\html\template\doc.go
+C:\Program Files\Go\src\html\template\element_string.go
+C:\Program Files\Go\src\html\template\error.go
+C:\Program Files\Go\src\html\template\escape.go
+C:\Program Files\Go\src\html\template\html.go
+C:\Program Files\Go\src\html\template\js.go
+C:\Program Files\Go\src\html\template\jsctx_string.go
+C:\Program Files\Go\src\html\template\state_string.go
+C:\Program Files\Go\src\html\template\template.go
+C:\Program Files\Go\src\html\template\transition.go
+C:\Program Files\Go\src\html\template\url.go
+C:\Program Files\Go\src\html\template\urlpart_string.go
+C:\Program Files\Go\src\image\color\color.go
+C:\Program Files\Go\src\image\color\ycbcr.go
+C:\Program Files\Go\src\image\format.go
+C:\Program Files\Go\src\image\geom.go
+C:\Program Files\Go\src\image\image.go
+C:\Program Files\Go\src\image\internal\imageutil\imageutil.go
+C:\Program Files\Go\src\image\internal\imageutil\impl.go
+C:\Program Files\Go\src\image\jpeg\fdct.go
+C:\Program Files\Go\src\image\jpeg\huffman.go
+C:\Program Files\Go\src\image\jpeg\idct.go
+C:\Program Files\Go\src\image\jpeg\reader.go
+C:\Program Files\Go\src\image\jpeg\scan.go
+C:\Program Files\Go\src\image\jpeg\writer.go
+C:\Program Files\Go\src\image\names.go
+C:\Program Files\Go\src\image\png\paeth.go
+C:\Program Files\Go\src\image\png\reader.go
+C:\Program Files\Go\src\image\png\writer.go
+C:\Program Files\Go\src\image\ycbcr.go
+C:\Program Files\Go\src\internal\abi\abi.go
+C:\Program Files\Go\src\internal\abi\abi_amd64.go
+C:\Program Files\Go\src\internal\bytealg\bytealg.go
+C:\Program Files\Go\src\internal\bytealg\compare_native.go
+C:\Program Files\Go\src\internal\bytealg\count_native.go
+C:\Program Files\Go\src\internal\bytealg\equal_generic.go
+C:\Program Files\Go\src\internal\bytealg\equal_native.go
+C:\Program Files\Go\src\internal\bytealg\index_amd64.go
+C:\Program Files\Go\src\internal\bytealg\index_native.go
+C:\Program Files\Go\src\internal\bytealg\indexbyte_native.go
+C:\Program Files\Go\src\internal\cpu\cpu.go
+C:\Program Files\Go\src\internal\cpu\cpu_x86.go
+C:\Program Files\Go\src\internal\fmtsort\sort.go
+C:\Program Files\Go\src\internal\goarch\goarch.go
+C:\Program Files\Go\src\internal\goarch\goarch_amd64.go
+C:\Program Files\Go\src\internal\goarch\zgoarch_amd64.go
+C:\Program Files\Go\src\internal\godebug\godebug.go
+C:\Program Files\Go\src\internal\goexperiment\exp_boringcrypto_off.go
+C:\Program Files\Go\src\internal\goexperiment\exp_fieldtrack_off.go
+C:\Program Files\Go\src\internal\goexperiment\exp_heapminimum512kib_off.go
+C:\Program Files\Go\src\internal\goexperiment\exp_preemptibleloops_off.go
+C:\Program Files\Go\src\internal\goexperiment\exp_regabiargs_on.go
+C:\Program Files\Go\src\internal\goexperiment\exp_regabiwrappers_on.go
+C:\Program Files\Go\src\internal\goexperiment\exp_staticlockranking_off.go
+C:\Program Files\Go\src\internal\goexperiment\exp_unified_off.go
+C:\Program Files\Go\src\internal\goexperiment\flags.go
+C:\Program Files\Go\src\internal\goos\goos.go
+C:\Program Files\Go\src\internal\goos\zgoos_windows.go
+C:\Program Files\Go\src\internal\intern\intern.go
+C:\Program Files\Go\src\internal\itoa\itoa.go
+C:\Program Files\Go\src\internal\nettrace\nettrace.go
+C:\Program Files\Go\src\internal\oserror\errors.go
+C:\Program Files\Go\src\internal\poll\errno_windows.go
+C:\Program Files\Go\src\internal\poll\fd.go
+C:\Program Files\Go\src\internal\poll\fd_fsync_windows.go
+C:\Program Files\Go\src\internal\poll\fd_mutex.go
+C:\Program Files\Go\src\internal\poll\fd_poll_runtime.go
+C:\Program Files\Go\src\internal\poll\fd_posix.go
+C:\Program Files\Go\src\internal\poll\fd_windows.go
+C:\Program Files\Go\src\internal\poll\hook_windows.go
+C:\Program Files\Go\src\internal\poll\sendfile_windows.go
+C:\Program Files\Go\src\internal\poll\sockopt.go
+C:\Program Files\Go\src\internal\poll\sockopt_windows.go
+C:\Program Files\Go\src\internal\poll\sockoptip.go
+C:\Program Files\Go\src\internal\profile\encode.go
+C:\Program Files\Go\src\internal\profile\filter.go
+C:\Program Files\Go\src\internal\profile\legacy_profile.go
+C:\Program Files\Go\src\internal\profile\merge.go
+C:\Program Files\Go\src\internal\profile\profile.go
+C:\Program Files\Go\src\internal\profile\proto.go
+C:\Program Files\Go\src\internal\profile\prune.go
+C:\Program Files\Go\src\internal\race\doc.go
+C:\Program Files\Go\src\internal\race\norace.go
+C:\Program Files\Go\src\internal\reflectlite\swapper.go
+C:\Program Files\Go\src\internal\reflectlite\type.go
+C:\Program Files\Go\src\internal\reflectlite\value.go
+C:\Program Files\Go\src\internal\safefilepath\path.go
+C:\Program Files\Go\src\internal\safefilepath\path_windows.go
+C:\Program Files\Go\src\internal\singleflight\singleflight.go
+C:\Program Files\Go\src\internal\syscall\execenv\execenv_windows.go
+C:\Program Files\Go\src\internal\syscall\windows\memory_windows.go
+C:\Program Files\Go\src\internal\syscall\windows\net_windows.go
+C:\Program Files\Go\src\internal\syscall\windows\psapi_windows.go
+C:\Program Files\Go\src\internal\syscall\windows\registry\key.go
+C:\Program Files\Go\src\internal\syscall\windows\registry\syscall.go
+C:\Program Files\Go\src\internal\syscall\windows\registry\value.go
+C:\Program Files\Go\src\internal\syscall\windows\registry\zsyscall_windows.go
+C:\Program Files\Go\src\internal\syscall\windows\reparse_windows.go
+C:\Program Files\Go\src\internal\syscall\windows\security_windows.go
+C:\Program Files\Go\src\internal\syscall\windows\symlink_windows.go
+C:\Program Files\Go\src\internal\syscall\windows\syscall_windows.go
+C:\Program Files\Go\src\internal\syscall\windows\sysdll\sysdll.go
+C:\Program Files\Go\src\internal\syscall\windows\zsyscall_windows.go
+C:\Program Files\Go\src\internal\testlog\exit.go
+C:\Program Files\Go\src\internal\testlog\log.go
+C:\Program Files\Go\src\internal\unsafeheader\unsafeheader.go
+C:\Program Files\Go\src\io\fs\fs.go
+C:\Program Files\Go\src\io\fs\glob.go
+C:\Program Files\Go\src\io\fs\readdir.go
+C:\Program Files\Go\src\io\fs\readfile.go
+C:\Program Files\Go\src\io\fs\stat.go
+C:\Program Files\Go\src\io\fs\sub.go
+C:\Program Files\Go\src\io\fs\walk.go
+C:\Program Files\Go\src\io\io.go
+C:\Program Files\Go\src\io\ioutil\ioutil.go
+C:\Program Files\Go\src\io\ioutil\tempfile.go
+C:\Program Files\Go\src\io\multi.go
+C:\Program Files\Go\src\io\pipe.go
+C:\Program Files\Go\src\log\log.go
+C:\Program Files\Go\src\math\abs.go
+C:\Program Files\Go\src\math\acosh.go
+C:\Program Files\Go\src\math\asin.go
+C:\Program Files\Go\src\math\asinh.go
+C:\Program Files\Go\src\math\atan.go
+C:\Program Files\Go\src\math\atan2.go
+C:\Program Files\Go\src\math\atanh.go
+C:\Program Files\Go\src\math\big\accuracy_string.go
+C:\Program Files\Go\src\math\big\arith.go
+C:\Program Files\Go\src\math\big\arith_amd64.go
+C:\Program Files\Go\src\math\big\arith_decl.go
+C:\Program Files\Go\src\math\big\decimal.go
+C:\Program Files\Go\src\math\big\doc.go
+C:\Program Files\Go\src\math\big\float.go
+C:\Program Files\Go\src\math\big\floatconv.go
+C:\Program Files\Go\src\math\big\floatmarsh.go
+C:\Program Files\Go\src\math\big\ftoa.go
+C:\Program Files\Go\src\math\big\int.go
+C:\Program Files\Go\src\math\big\intconv.go
+C:\Program Files\Go\src\math\big\intmarsh.go
+C:\Program Files\Go\src\math\big\nat.go
+C:\Program Files\Go\src\math\big\natconv.go
+C:\Program Files\Go\src\math\big\natdiv.go
+C:\Program Files\Go\src\math\big\prime.go
+C:\Program Files\Go\src\math\big\rat.go
+C:\Program Files\Go\src\math\big\ratconv.go
+C:\Program Files\Go\src\math\big\ratmarsh.go
+C:\Program Files\Go\src\math\big\roundingmode_string.go
+C:\Program Files\Go\src\math\big\sqrt.go
+C:\Program Files\Go\src\math\bits.go
+C:\Program Files\Go\src\math\bits\bits.go
+C:\Program Files\Go\src\math\bits\bits_errors.go
+C:\Program Files\Go\src\math\bits\bits_tables.go
+C:\Program Files\Go\src\math\cbrt.go
+C:\Program Files\Go\src\math\const.go
+C:\Program Files\Go\src\math\copysign.go
+C:\Program Files\Go\src\math\dim.go
+C:\Program Files\Go\src\math\dim_asm.go
+C:\Program Files\Go\src\math\erf.go
+C:\Program Files\Go\src\math\erfinv.go
+C:\Program Files\Go\src\math\exp.go
+C:\Program Files\Go\src\math\exp2_noasm.go
+C:\Program Files\Go\src\math\exp_amd64.go
+C:\Program Files\Go\src\math\exp_asm.go
+C:\Program Files\Go\src\math\expm1.go
+C:\Program Files\Go\src\math\floor.go
+C:\Program Files\Go\src\math\floor_asm.go
+C:\Program Files\Go\src\math\fma.go
+C:\Program Files\Go\src\math\frexp.go
+C:\Program Files\Go\src\math\gamma.go
+C:\Program Files\Go\src\math\hypot.go
+C:\Program Files\Go\src\math\hypot_asm.go
+C:\Program Files\Go\src\math\j0.go
+C:\Program Files\Go\src\math\j1.go
+C:\Program Files\Go\src\math\jn.go
+C:\Program Files\Go\src\math\ldexp.go
+C:\Program Files\Go\src\math\lgamma.go
+C:\Program Files\Go\src\math\log.go
+C:\Program Files\Go\src\math\log10.go
+C:\Program Files\Go\src\math\log1p.go
+C:\Program Files\Go\src\math\log_asm.go
+C:\Program Files\Go\src\math\logb.go
+C:\Program Files\Go\src\math\mod.go
+C:\Program Files\Go\src\math\modf.go
+C:\Program Files\Go\src\math\modf_noasm.go
+C:\Program Files\Go\src\math\nextafter.go
+C:\Program Files\Go\src\math\pow.go
+C:\Program Files\Go\src\math\pow10.go
+C:\Program Files\Go\src\math\rand\exp.go
+C:\Program Files\Go\src\math\rand\normal.go
+C:\Program Files\Go\src\math\rand\rand.go
+C:\Program Files\Go\src\math\rand\rng.go
+C:\Program Files\Go\src\math\rand\zipf.go
+C:\Program Files\Go\src\math\remainder.go
+C:\Program Files\Go\src\math\signbit.go
+C:\Program Files\Go\src\math\sin.go
+C:\Program Files\Go\src\math\sincos.go
+C:\Program Files\Go\src\math\sinh.go
+C:\Program Files\Go\src\math\sqrt.go
+C:\Program Files\Go\src\math\sqrt_asm.go
+C:\Program Files\Go\src\math\stubs.go
+C:\Program Files\Go\src\math\tan.go
+C:\Program Files\Go\src\math\tanh.go
+C:\Program Files\Go\src\math\trig_reduce.go
+C:\Program Files\Go\src\math\unsafe.go
+C:\Program Files\Go\src\mime\encodedword.go
+C:\Program Files\Go\src\mime\grammar.go
+C:\Program Files\Go\src\mime\mediatype.go
+C:\Program Files\Go\src\mime\multipart\formdata.go
+C:\Program Files\Go\src\mime\multipart\multipart.go
+C:\Program Files\Go\src\mime\multipart\readmimeheader.go
+C:\Program Files\Go\src\mime\multipart\writer.go
+C:\Program Files\Go\src\mime\quotedprintable\reader.go
+C:\Program Files\Go\src\mime\quotedprintable\writer.go
+C:\Program Files\Go\src\mime\type.go
+C:\Program Files\Go\src\mime\type_windows.go
+C:\Program Files\Go\src\net\addrselect.go
+C:\Program Files\Go\src\net\cgo_windows.go
+C:\Program Files\Go\src\net\conf.go
+C:\Program Files\Go\src\net\dial.go
+C:\Program Files\Go\src\net\dnsclient.go
+C:\Program Files\Go\src\net\dnsclient_unix.go
+C:\Program Files\Go\src\net\dnsconfig.go
+C:\Program Files\Go\src\net\dnsconfig_windows.go
+C:\Program Files\Go\src\net\error_posix.go
+C:\Program Files\Go\src\net\error_windows.go
+C:\Program Files\Go\src\net\fd_posix.go
+C:\Program Files\Go\src\net\fd_windows.go
+C:\Program Files\Go\src\net\file.go
+C:\Program Files\Go\src\net\file_windows.go
+C:\Program Files\Go\src\net\hook.go
+C:\Program Files\Go\src\net\hook_windows.go
+C:\Program Files\Go\src\net\hosts.go
+C:\Program Files\Go\src\net\http\client.go
+C:\Program Files\Go\src\net\http\clone.go
+C:\Program Files\Go\src\net\http\cookie.go
+C:\Program Files\Go\src\net\http\doc.go
+C:\Program Files\Go\src\net\http\filetransport.go
+C:\Program Files\Go\src\net\http\fs.go
+C:\Program Files\Go\src\net\http\h2_bundle.go
+C:\Program Files\Go\src\net\http\header.go
+C:\Program Files\Go\src\net\http\http.go
+C:\Program Files\Go\src\net\http\httptrace\trace.go
+C:\Program Files\Go\src\net\http\httputil\dump.go
+C:\Program Files\Go\src\net\http\httputil\httputil.go
+C:\Program Files\Go\src\net\http\httputil\persist.go
+C:\Program Files\Go\src\net\http\httputil\reverseproxy.go
+C:\Program Files\Go\src\net\http\internal\ascii\print.go
+C:\Program Files\Go\src\net\http\internal\chunked.go
+C:\Program Files\Go\src\net\http\jar.go
+C:\Program Files\Go\src\net\http\method.go
+C:\Program Files\Go\src\net\http\pprof\pprof.go
+C:\Program Files\Go\src\net\http\request.go
+C:\Program Files\Go\src\net\http\response.go
+C:\Program Files\Go\src\net\http\roundtrip.go
+C:\Program Files\Go\src\net\http\server.go
+C:\Program Files\Go\src\net\http\sniff.go
+C:\Program Files\Go\src\net\http\socks_bundle.go
+C:\Program Files\Go\src\net\http\status.go
+C:\Program Files\Go\src\net\http\transfer.go
+C:\Program Files\Go\src\net\http\transport.go
+C:\Program Files\Go\src\net\http\transport_default_other.go
+C:\Program Files\Go\src\net\interface.go
+C:\Program Files\Go\src\net\interface_windows.go
+C:\Program Files\Go\src\net\ip.go
+C:\Program Files\Go\src\net\iprawsock.go
+C:\Program Files\Go\src\net\iprawsock_posix.go
+C:\Program Files\Go\src\net\ipsock.go
+C:\Program Files\Go\src\net\ipsock_posix.go
+C:\Program Files\Go\src\net\lookup.go
+C:\Program Files\Go\src\net\lookup_windows.go
+C:\Program Files\Go\src\net\mac.go
+C:\Program Files\Go\src\net\net.go
+C:\Program Files\Go\src\net\netip\leaf_alts.go
+C:\Program Files\Go\src\net\netip\netip.go
+C:\Program Files\Go\src\net\netip\uint128.go
+C:\Program Files\Go\src\net\nss.go
+C:\Program Files\Go\src\net\parse.go
+C:\Program Files\Go\src\net\pipe.go
+C:\Program Files\Go\src\net\port.go
+C:\Program Files\Go\src\net\rawconn.go
+C:\Program Files\Go\src\net\sendfile_windows.go
+C:\Program Files\Go\src\net\sock_posix.go
+C:\Program Files\Go\src\net\sock_windows.go
+C:\Program Files\Go\src\net\sockaddr_posix.go
+C:\Program Files\Go\src\net\sockopt_posix.go
+C:\Program Files\Go\src\net\sockopt_windows.go
+C:\Program Files\Go\src\net\sockoptip_posix.go
+C:\Program Files\Go\src\net\sockoptip_windows.go
+C:\Program Files\Go\src\net\splice_stub.go
+C:\Program Files\Go\src\net\tcpsock.go
+C:\Program Files\Go\src\net\tcpsock_posix.go
+C:\Program Files\Go\src\net\tcpsockopt_posix.go
+C:\Program Files\Go\src\net\tcpsockopt_windows.go
+C:\Program Files\Go\src\net\textproto\header.go
+C:\Program Files\Go\src\net\textproto\pipeline.go
+C:\Program Files\Go\src\net\textproto\reader.go
+C:\Program Files\Go\src\net\textproto\textproto.go
+C:\Program Files\Go\src\net\textproto\writer.go
+C:\Program Files\Go\src\net\udpsock.go
+C:\Program Files\Go\src\net\udpsock_posix.go
+C:\Program Files\Go\src\net\unixsock.go
+C:\Program Files\Go\src\net\unixsock_posix.go
+C:\Program Files\Go\src\net\unixsock_readmsg_other.go
+C:\Program Files\Go\src\net\url\url.go
+C:\Program Files\Go\src\os\dir.go
+C:\Program Files\Go\src\os\dir_windows.go
+C:\Program Files\Go\src\os\endian_little.go
+C:\Program Files\Go\src\os\env.go
+C:\Program Files\Go\src\os\error.go
+C:\Program Files\Go\src\os\error_errno.go
+C:\Program Files\Go\src\os\error_posix.go
+C:\Program Files\Go\src\os\exec.go
+C:\Program Files\Go\src\os\exec\exec.go
+C:\Program Files\Go\src\os\exec\exec_windows.go
+C:\Program Files\Go\src\os\exec\lp_windows.go
+C:\Program Files\Go\src\os\exec_posix.go
+C:\Program Files\Go\src\os\exec_windows.go
+C:\Program Files\Go\src\os\executable.go
+C:\Program Files\Go\src\os\executable_windows.go
+C:\Program Files\Go\src\os\file.go
+C:\Program Files\Go\src\os\file_posix.go
+C:\Program Files\Go\src\os\file_windows.go
+C:\Program Files\Go\src\os\getwd.go
+C:\Program Files\Go\src\os\path.go
+C:\Program Files\Go\src\os\path_windows.go
+C:\Program Files\Go\src\os\proc.go
+C:\Program Files\Go\src\os\rawconn.go
+C:\Program Files\Go\src\os\readfrom_stub.go
+C:\Program Files\Go\src\os\removeall_noat.go
+C:\Program Files\Go\src\os\signal\doc.go
+C:\Program Files\Go\src\os\signal\signal.go
+C:\Program Files\Go\src\os\signal\signal_unix.go
+C:\Program Files\Go\src\os\stat.go
+C:\Program Files\Go\src\os\stat_windows.go
+C:\Program Files\Go\src\os\sticky_notbsd.go
+C:\Program Files\Go\src\os\str.go
+C:\Program Files\Go\src\os\sys.go
+C:\Program Files\Go\src\os\sys_windows.go
+C:\Program Files\Go\src\os\tempfile.go
+C:\Program Files\Go\src\os\types.go
+C:\Program Files\Go\src\os\types_windows.go
+C:\Program Files\Go\src\os\user\lookup.go
+C:\Program Files\Go\src\os\user\lookup_windows.go
+C:\Program Files\Go\src\os\user\user.go
+C:\Program Files\Go\src\path\filepath\match.go
+C:\Program Files\Go\src\path\filepath\path.go
+C:\Program Files\Go\src\path\filepath\path_windows.go
+C:\Program Files\Go\src\path\filepath\symlink.go
+C:\Program Files\Go\src\path\filepath\symlink_windows.go
+C:\Program Files\Go\src\path\match.go
+C:\Program Files\Go\src\path\path.go
+C:\Program Files\Go\src\reflect\abi.go
+C:\Program Files\Go\src\reflect\deepequal.go
+C:\Program Files\Go\src\reflect\float32reg_generic.go
+C:\Program Files\Go\src\reflect\makefunc.go
+C:\Program Files\Go\src\reflect\swapper.go
+C:\Program Files\Go\src\reflect\type.go
+C:\Program Files\Go\src\reflect\value.go
+C:\Program Files\Go\src\reflect\visiblefields.go
+C:\Program Files\Go\src\regexp\backtrack.go
+C:\Program Files\Go\src\regexp\exec.go
+C:\Program Files\Go\src\regexp\onepass.go
+C:\Program Files\Go\src\regexp\regexp.go
+C:\Program Files\Go\src\regexp\syntax\compile.go
+C:\Program Files\Go\src\regexp\syntax\doc.go
+C:\Program Files\Go\src\regexp\syntax\op_string.go
+C:\Program Files\Go\src\regexp\syntax\parse.go
+C:\Program Files\Go\src\regexp\syntax\perl_groups.go
+C:\Program Files\Go\src\regexp\syntax\prog.go
+C:\Program Files\Go\src\regexp\syntax\regexp.go
+C:\Program Files\Go\src\regexp\syntax\simplify.go
+C:\Program Files\Go\src\runtime\alg.go
+C:\Program Files\Go\src\runtime\asan0.go
+C:\Program Files\Go\src\runtime\atomic_pointer.go
+C:\Program Files\Go\src\runtime\auxv_none.go
+C:\Program Files\Go\src\runtime\cgo.go
+C:\Program Files\Go\src\runtime\cgocall.go
+C:\Program Files\Go\src\runtime\cgocallback.go
+C:\Program Files\Go\src\runtime\cgocheck.go
+C:\Program Files\Go\src\runtime\chan.go
+C:\Program Files\Go\src\runtime\checkptr.go
+C:\Program Files\Go\src\runtime\compiler.go
+C:\Program Files\Go\src\runtime\complex.go
+C:\Program Files\Go\src\runtime\cpuflags.go
+C:\Program Files\Go\src\runtime\cpuflags_amd64.go
+C:\Program Files\Go\src\runtime\cpuprof.go
+C:\Program Files\Go\src\runtime\cputicks.go
+C:\Program Files\Go\src\runtime\debug.go
+C:\Program Files\Go\src\runtime\debug\garbage.go
+C:\Program Files\Go\src\runtime\debug\mod.go
+C:\Program Files\Go\src\runtime\debug\stack.go
+C:\Program Files\Go\src\runtime\debug\stubs.go
+C:\Program Files\Go\src\runtime\debugcall.go
+C:\Program Files\Go\src\runtime\debuglog.go
+C:\Program Files\Go\src\runtime\debuglog_off.go
+C:\Program Files\Go\src\runtime\defs_windows.go
+C:\Program Files\Go\src\runtime\defs_windows_amd64.go
+C:\Program Files\Go\src\runtime\env_posix.go
+C:\Program Files\Go\src\runtime\error.go
+C:\Program Files\Go\src\runtime\extern.go
+C:\Program Files\Go\src\runtime\fastlog2.go
+C:\Program Files\Go\src\runtime\fastlog2table.go
+C:\Program Files\Go\src\runtime\float.go
+C:\Program Files\Go\src\runtime\hash64.go
+C:\Program Files\Go\src\runtime\heapdump.go
+C:\Program Files\Go\src\runtime\histogram.go
+C:\Program Files\Go\src\runtime\iface.go
+C:\Program Files\Go\src\runtime\internal\atomic\atomic_amd64.go
+C:\Program Files\Go\src\runtime\internal\atomic\doc.go
+C:\Program Files\Go\src\runtime\internal\atomic\stubs.go
+C:\Program Files\Go\src\runtime\internal\atomic\types.go
+C:\Program Files\Go\src\runtime\internal\atomic\types_64bit.go
+C:\Program Files\Go\src\runtime\internal\atomic\unaligned.go
+C:\Program Files\Go\src\runtime\internal\math\math.go
+C:\Program Files\Go\src\runtime\internal\sys\consts.go
+C:\Program Files\Go\src\runtime\internal\sys\intrinsics.go
+C:\Program Files\Go\src\runtime\internal\sys\intrinsics_common.go
+C:\Program Files\Go\src\runtime\internal\sys\sys.go
+C:\Program Files\Go\src\runtime\internal\sys\zversion.go
+C:\Program Files\Go\src\runtime\lfstack.go
+C:\Program Files\Go\src\runtime\lfstack_64bit.go
+C:\Program Files\Go\src\runtime\lock_sema.go
+C:\Program Files\Go\src\runtime\lockrank.go
+C:\Program Files\Go\src\runtime\lockrank_off.go
+C:\Program Files\Go\src\runtime\malloc.go
+C:\Program Files\Go\src\runtime\map.go
+C:\Program Files\Go\src\runtime\map_fast32.go
+C:\Program Files\Go\src\runtime\map_fast64.go
+C:\Program Files\Go\src\runtime\map_faststr.go
+C:\Program Files\Go\src\runtime\mbarrier.go
+C:\Program Files\Go\src\runtime\mbitmap.go
+C:\Program Files\Go\src\runtime\mcache.go
+C:\Program Files\Go\src\runtime\mcentral.go
+C:\Program Files\Go\src\runtime\mcheckmark.go
+C:\Program Files\Go\src\runtime\mem.go
+C:\Program Files\Go\src\runtime\mem_windows.go
+C:\Program Files\Go\src\runtime\metrics.go
+C:\Program Files\Go\src\runtime\mfinal.go
+C:\Program Files\Go\src\runtime\mfixalloc.go
+C:\Program Files\Go\src\runtime\mgc.go
+C:\Program Files\Go\src\runtime\mgclimit.go
+C:\Program Files\Go\src\runtime\mgcmark.go
+C:\Program Files\Go\src\runtime\mgcpacer.go
+C:\Program Files\Go\src\runtime\mgcscavenge.go
+C:\Program Files\Go\src\runtime\mgcstack.go
+C:\Program Files\Go\src\runtime\mgcsweep.go
+C:\Program Files\Go\src\runtime\mgcwork.go
+C:\Program Files\Go\src\runtime\mheap.go
+C:\Program Files\Go\src\runtime\mpagealloc.go
+C:\Program Files\Go\src\runtime\mpagealloc_64bit.go
+C:\Program Files\Go\src\runtime\mpagecache.go
+C:\Program Files\Go\src\runtime\mpallocbits.go
+C:\Program Files\Go\src\runtime\mprof.go
+C:\Program Files\Go\src\runtime\mranges.go
+C:\Program Files\Go\src\runtime\msan0.go
+C:\Program Files\Go\src\runtime\msize.go
+C:\Program Files\Go\src\runtime\mspanset.go
+C:\Program Files\Go\src\runtime\mstats.go
+C:\Program Files\Go\src\runtime\mwbbuf.go
+C:\Program Files\Go\src\runtime\netpoll.go
+C:\Program Files\Go\src\runtime\netpoll_windows.go
+C:\Program Files\Go\src\runtime\os_nonopenbsd.go
+C:\Program Files\Go\src\runtime\os_windows.go
+C:\Program Files\Go\src\runtime\panic.go
+C:\Program Files\Go\src\runtime\plugin.go
+C:\Program Files\Go\src\runtime\pprof\elf.go
+C:\Program Files\Go\src\runtime\pprof\label.go
+C:\Program Files\Go\src\runtime\pprof\map.go
+C:\Program Files\Go\src\runtime\pprof\pprof.go
+C:\Program Files\Go\src\runtime\pprof\pprof_norusage.go
+C:\Program Files\Go\src\runtime\pprof\proto.go
+C:\Program Files\Go\src\runtime\pprof\protobuf.go
+C:\Program Files\Go\src\runtime\pprof\protomem.go
+C:\Program Files\Go\src\runtime\pprof\runtime.go
+C:\Program Files\Go\src\runtime\preempt.go
+C:\Program Files\Go\src\runtime\print.go
+C:\Program Files\Go\src\runtime\proc.go
+C:\Program Files\Go\src\runtime\profbuf.go
+C:\Program Files\Go\src\runtime\proflabel.go
+C:\Program Files\Go\src\runtime\race0.go
+C:\Program Files\Go\src\runtime\rdebug.go
+C:\Program Files\Go\src\runtime\runtime.go
+C:\Program Files\Go\src\runtime\runtime1.go
+C:\Program Files\Go\src\runtime\runtime2.go
+C:\Program Files\Go\src\runtime\runtime_boring.go
+C:\Program Files\Go\src\runtime\rwmutex.go
+C:\Program Files\Go\src\runtime\select.go
+C:\Program Files\Go\src\runtime\sema.go
+C:\Program Files\Go\src\runtime\signal_windows.go
+C:\Program Files\Go\src\runtime\sigqueue.go
+C:\Program Files\Go\src\runtime\sigqueue_note.go
+C:\Program Files\Go\src\runtime\sizeclasses.go
+C:\Program Files\Go\src\runtime\slice.go
+C:\Program Files\Go\src\runtime\softfloat64.go
+C:\Program Files\Go\src\runtime\stack.go
+C:\Program Files\Go\src\runtime\string.go
+C:\Program Files\Go\src\runtime\stubs.go
+C:\Program Files\Go\src\runtime\stubs3.go
+C:\Program Files\Go\src\runtime\stubs_amd64.go
+C:\Program Files\Go\src\runtime\stubs_nonlinux.go
+C:\Program Files\Go\src\runtime\symtab.go
+C:\Program Files\Go\src\runtime\sys_nonppc64x.go
+C:\Program Files\Go\src\runtime\sys_x86.go
+C:\Program Files\Go\src\runtime\syscall_windows.go
+C:\Program Files\Go\src\runtime\time.go
+C:\Program Files\Go\src\runtime\time_nofake.go
+C:\Program Files\Go\src\runtime\timeasm.go
+C:\Program Files\Go\src\runtime\tls_windows_amd64.go
+C:\Program Files\Go\src\runtime\trace.go
+C:\Program Files\Go\src\runtime\trace\annotation.go
+C:\Program Files\Go\src\runtime\trace\trace.go
+C:\Program Files\Go\src\runtime\traceback.go
+C:\Program Files\Go\src\runtime\type.go
+C:\Program Files\Go\src\runtime\typekind.go
+C:\Program Files\Go\src\runtime\utf8.go
+C:\Program Files\Go\src\runtime\vdso_in_none.go
+C:\Program Files\Go\src\runtime\write_err.go
+C:\Program Files\Go\src\runtime\zcallback_windows.go
+C:\Program Files\Go\src\sort\search.go
+C:\Program Files\Go\src\sort\slice.go
+C:\Program Files\Go\src\sort\slice_go113.go
+C:\Program Files\Go\src\sort\sort.go
+C:\Program Files\Go\src\sort\zsortfunc.go
+C:\Program Files\Go\src\sort\zsortinterface.go
+C:\Program Files\Go\src\strconv\atob.go
+C:\Program Files\Go\src\strconv\atoc.go
+C:\Program Files\Go\src\strconv\atof.go
+C:\Program Files\Go\src\strconv\atoi.go
+C:\Program Files\Go\src\strconv\bytealg.go
+C:\Program Files\Go\src\strconv\ctoa.go
+C:\Program Files\Go\src\strconv\decimal.go
+C:\Program Files\Go\src\strconv\doc.go
+C:\Program Files\Go\src\strconv\eisel_lemire.go
+C:\Program Files\Go\src\strconv\ftoa.go
+C:\Program Files\Go\src\strconv\ftoaryu.go
+C:\Program Files\Go\src\strconv\isprint.go
+C:\Program Files\Go\src\strconv\itoa.go
+C:\Program Files\Go\src\strconv\quote.go
+C:\Program Files\Go\src\strings\builder.go
+C:\Program Files\Go\src\strings\clone.go
+C:\Program Files\Go\src\strings\compare.go
+C:\Program Files\Go\src\strings\reader.go
+C:\Program Files\Go\src\strings\replace.go
+C:\Program Files\Go\src\strings\search.go
+C:\Program Files\Go\src\strings\strings.go
+C:\Program Files\Go\src\sync\atomic\doc.go
+C:\Program Files\Go\src\sync\atomic\type.go
+C:\Program Files\Go\src\sync\atomic\value.go
+C:\Program Files\Go\src\sync\cond.go
+C:\Program Files\Go\src\sync\map.go
+C:\Program Files\Go\src\sync\mutex.go
+C:\Program Files\Go\src\sync\once.go
+C:\Program Files\Go\src\sync\pool.go
+C:\Program Files\Go\src\sync\poolqueue.go
+C:\Program Files\Go\src\sync\runtime.go
+C:\Program Files\Go\src\sync\runtime2.go
+C:\Program Files\Go\src\sync\rwmutex.go
+C:\Program Files\Go\src\sync\waitgroup.go
+C:\Program Files\Go\src\syscall\asan0.go
+C:\Program Files\Go\src\syscall\dll_windows.go
+C:\Program Files\Go\src\syscall\endian_little.go
+C:\Program Files\Go\src\syscall\env_windows.go
+C:\Program Files\Go\src\syscall\exec_windows.go
+C:\Program Files\Go\src\syscall\msan0.go
+C:\Program Files\Go\src\syscall\net.go
+C:\Program Files\Go\src\syscall\security_windows.go
+C:\Program Files\Go\src\syscall\syscall.go
+C:\Program Files\Go\src\syscall\syscall_windows.go
+C:\Program Files\Go\src\syscall\time_nofake.go
+C:\Program Files\Go\src\syscall\types_windows.go
+C:\Program Files\Go\src\syscall\types_windows_amd64.go
+C:\Program Files\Go\src\syscall\zerrors_windows.go
+C:\Program Files\Go\src\syscall\zsyscall_windows.go
+C:\Program Files\Go\src\text\tabwriter\tabwriter.go
+C:\Program Files\Go\src\text\template\doc.go
+C:\Program Files\Go\src\text\template\exec.go
+C:\Program Files\Go\src\text\template\funcs.go
+C:\Program Files\Go\src\text\template\helper.go
+C:\Program Files\Go\src\text\template\option.go
+C:\Program Files\Go\src\text\template\parse\lex.go
+C:\Program Files\Go\src\text\template\parse\node.go
+C:\Program Files\Go\src\text\template\parse\parse.go
+C:\Program Files\Go\src\text\template\template.go
+C:\Program Files\Go\src\time\format.go
+C:\Program Files\Go\src\time\sleep.go
+C:\Program Files\Go\src\time\sys_windows.go
+C:\Program Files\Go\src\time\tick.go
+C:\Program Files\Go\src\time\time.go
+C:\Program Files\Go\src\time\zoneinfo.go
+C:\Program Files\Go\src\time\zoneinfo_abbrs_windows.go
+C:\Program Files\Go\src\time\zoneinfo_goroot.go
+C:\Program Files\Go\src\time\zoneinfo_read.go
+C:\Program Files\Go\src\time\zoneinfo_windows.go
+C:\Program Files\Go\src\unicode\casetables.go
+C:\Program Files\Go\src\unicode\digit.go
+C:\Program Files\Go\src\unicode\graphic.go
+C:\Program Files\Go\src\unicode\letter.go
+C:\Program Files\Go\src\unicode\tables.go
+C:\Program Files\Go\src\unicode\utf16\utf16.go
+C:\Program Files\Go\src\unicode\utf8\utf8.go
+C:\Program Files\Go\src\unsafe\unsafe.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\chacha20\chacha_generic.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\chacha20\chacha_noasm.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\chacha20\xor.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\chacha20poly1305\chacha20poly1305.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\chacha20poly1305\chacha20poly1305_amd64.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\chacha20poly1305\chacha20poly1305_generic.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\chacha20poly1305\xchacha20poly1305.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\cryptobyte\asn1.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\cryptobyte\asn1\asn1.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\cryptobyte\builder.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\cryptobyte\string.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\curve25519\curve25519.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\curve25519\internal\field\fe.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\curve25519\internal\field\fe_amd64.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\curve25519\internal\field\fe_arm64_noasm.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\curve25519\internal\field\fe_generic.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\hkdf\hkdf.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\internal\poly1305\bits_go1.13.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\internal\poly1305\poly1305.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\internal\poly1305\sum_amd64.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\internal\poly1305\sum_generic.go
+C:\Program Files\Go\src\vendor\golang.org\x\crypto\internal\subtle\aliasing.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\dns\dnsmessage\message.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\http2\hpack\encode.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\http2\hpack\hpack.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\http2\hpack\huffman.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\http2\hpack\tables.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\http\httpguts\guts.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\http\httpguts\httplex.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\http\httpproxy\proxy.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\idna\go118.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\idna\idna10.0.0.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\idna\punycode.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\idna\tables13.0.0.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\idna\trie.go
+C:\Program Files\Go\src\vendor\golang.org\x\net\idna\trieval.go
+C:\Program Files\Go\src\vendor\golang.org\x\sys\cpu\byteorder.go
+C:\Program Files\Go\src\vendor\golang.org\x\sys\cpu\cpu.go
+C:\Program Files\Go\src\vendor\golang.org\x\sys\cpu\cpu_gc_x86.go
+C:\Program Files\Go\src\vendor\golang.org\x\sys\cpu\cpu_x86.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\secure\bidirule\bidirule.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\secure\bidirule\bidirule10.0.0.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\transform\transform.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\bidi\bidi.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\bidi\bracket.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\bidi\core.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\bidi\prop.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\bidi\tables13.0.0.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\bidi\trieval.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\norm\composition.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\norm\forminfo.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\norm\input.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\norm\iter.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\norm\normalize.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\norm\readwriter.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\norm\tables13.0.0.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\norm\transform.go
+C:\Program Files\Go\src\vendor\golang.org\x\text\unicode\norm\trie.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\htmlquery@v1.3.0\cache.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\htmlquery@v1.3.0\query.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xmlquery@v1.3.18\cache.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xmlquery@v1.3.18\cached_reader.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xmlquery@v1.3.18\node.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xmlquery@v1.3.18\options.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xmlquery@v1.3.18\parse.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xmlquery@v1.3.18\query.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xpath@v1.2.5\build.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xpath@v1.2.5\cache.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xpath@v1.2.5\func.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xpath@v1.2.5\func_go110.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xpath@v1.2.5\operator.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xpath@v1.2.5\parse.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xpath@v1.2.5\query.go
+C:\Users\ilia\go\pkg\mod\github.com\antchfx\xpath@v1.2.5\xpath.go
+C:\Users\ilia\go\pkg\mod\github.com\bahlo\generic-list-go@v0.2.0\list.go
+C:\Users\ilia\go\pkg\mod\github.com\buger\jsonparser@v1.1.1\bytes.go
+C:\Users\ilia\go\pkg\mod\github.com\buger\jsonparser@v1.1.1\bytes_unsafe.go
+C:\Users\ilia\go\pkg\mod\github.com\buger\jsonparser@v1.1.1\escape.go
+C:\Users\ilia\go\pkg\mod\github.com\buger\jsonparser@v1.1.1\fuzz.go
+C:\Users\ilia\go\pkg\mod\github.com\buger\jsonparser@v1.1.1\parser.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\fastclock.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\match.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\regexp.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\replace.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\runner.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\syntax\charclass.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\syntax\code.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\syntax\escape.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\syntax\parser.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\syntax\prefix.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\syntax\replacerdata.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\syntax\tree.go
+C:\Users\ilia\go\pkg\mod\github.com\dlclark\regexp2@v1.10.0\syntax\writer.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\chain.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\chi.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\context.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\basic_auth.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\clean_path.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\compress.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\content_charset.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\content_encoding.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\content_type.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\get_head.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\heartbeat.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\logger.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\maybe.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\middleware.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\nocache.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\page_route.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\path_rewrite.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\profiler.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\realip.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\recoverer.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\request_id.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\request_size.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\route_headers.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\strip.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\terminal.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\throttle.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\timeout.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\url_format.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\value.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\middleware\wrap_writer.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\mux.go
+C:\Users\ilia\go\pkg\mod\github.com\go-chi\chi\v5@v5.0.10\tree.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\browser.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\context.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\dev_helpers.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\element.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\error.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\hijack.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\input.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\assets\assets.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\cdp\client.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\cdp\error.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\cdp\format.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\cdp\utils.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\cdp\websocket.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\defaults\defaults.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\devices\device.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\devices\list.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\devices\utils.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\input\keyboard.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\input\keymap.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\input\mac_comands.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\input\mouse.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\js\helper.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\js\js.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\launcher\browser.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\launcher\error.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\launcher\flags\flags.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\launcher\launcher.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\launcher\manager.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\launcher\os_windows.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\launcher\revision.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\launcher\url_parser.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\launcher\utils.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\a_interface.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\a_patch.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\a_utils.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\accessibility.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\animation.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\audits.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\background_service.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\browser.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\cache_storage.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\cast.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\console.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\css.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\database.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\debugger.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\definitions.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\device_access.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\device_orientation.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\dom.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\dom_debugger.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\dom_snapshot.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\dom_storage.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\emulation.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\event_breakpoints.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\fed_cm.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\fetch.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\headless_experimental.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\heap_profiler.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\indexed_db.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\input.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\inspector.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\io.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\layer_tree.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\log.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\media.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\memory.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\network.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\overlay.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\page.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\performance.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\performance_timeline.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\preload.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\profiler.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\runtime.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\schema.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\security.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\service_worker.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\storage.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\system_info.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\target.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\tethering.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\tracing.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\web_audio.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\proto\web_authn.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\utils\sleeper.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\lib\utils\utils.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\must.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\page.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\page_eval.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\query.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\states.go
+C:\Users\ilia\go\pkg\mod\github.com\go-rod\rod@v0.114.5\utils.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\color.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\decode.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\encode.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\error.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\anonymous_field.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\array.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\assign.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\bool.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\bytes.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\compile.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\compile_norace.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\context.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\float.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\func.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\int.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\interface.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\invalid.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\map.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\number.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\option.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\path.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\ptr.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\slice.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\stream.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\string.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\struct.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\type.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\uint.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\unmarshal_json.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\unmarshal_text.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\decoder\wrapped_string.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\code.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\compact.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\compiler.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\compiler_norace.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\context.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\decode_rune.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\encoder.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\indent.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\int.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\map113.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\opcode.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\option.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\optype.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\query.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\string.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\string_table.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm\debug_vm.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm\hack.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm\util.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm\vm.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm_color\debug_vm.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm_color\hack.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm_color\util.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm_color\vm.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm_color_indent\debug_vm.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm_color_indent\util.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm_color_indent\vm.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm_indent\debug_vm.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm_indent\hack.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm_indent\util.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\encoder\vm_indent\vm.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\errors\error.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\runtime\rtype.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\runtime\struct_field.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\internal\runtime\type.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\json.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\option.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\path.go
+C:\Users\ilia\go\pkg\mod\github.com\goccy\go-json@v0.10.2\query.go
+C:\Users\ilia\go\pkg\mod\github.com\golang\groupcache@v0.0.0-20210331224755-41bb18bfe9da\lru\lru.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\dce.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\doc.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\hash.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\marshal.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\node.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\node_net.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\null.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\sql.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\time.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\util.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\uuid.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\version1.go
+C:\Users\ilia\go\pkg\mod\github.com\google\uuid@v1.4.0\version4.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\securecookie@v1.1.2\doc.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\securecookie@v1.1.2\securecookie.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\client.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\compression.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\conn.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\doc.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\join.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\json.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\mask.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\prepared.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\proxy.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\server.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\tls_handshake.go
+C:\Users\ilia\go\pkg\mod\github.com\gorilla\websocket@v1.5.1\util.go
+C:\Users\ilia\go\pkg\mod\github.com\heroku\x@v0.1.0\hmetrics\hmetrics.go
+C:\Users\ilia\go\pkg\mod\github.com\inconshreveable\mousetrap@v1.1.0\trap_windows.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgerrcode@v0.0.0-20220416144525-469b46aa5efa\errcode.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgpassfile@v1.0.0\pgpass.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgservicefile@v0.0.0-20221227161230-091c0ba34f0a\pgservicefile.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\batch.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\conn.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\copy_from.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\doc.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\extended_query_builder.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\internal\anynil\anynil.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\internal\iobufpool\iobufpool.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\internal\pgio\doc.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\internal\pgio\write.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\internal\sanitize\sanitize.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\internal\stmtcache\lru_cache.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\internal\stmtcache\stmtcache.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\internal\stmtcache\unlimited_cache.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\large_objects.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\named_args.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgconn\auth_scram.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgconn\config.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgconn\defaults_windows.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgconn\doc.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgconn\errors.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgconn\internal\bgreader\bgreader.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgconn\internal\ctxwatch\context_watcher.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgconn\krb5.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgconn\pgconn.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\authentication_cleartext_password.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\authentication_gss.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\authentication_gss_continue.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\authentication_md5_password.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\authentication_ok.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\authentication_sasl.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\authentication_sasl_continue.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\authentication_sasl_final.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\backend.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\backend_key_data.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\big_endian.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\bind.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\bind_complete.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\cancel_request.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\chunkreader.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\close.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\close_complete.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\command_complete.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\copy_both_response.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\copy_data.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\copy_done.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\copy_fail.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\copy_in_response.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\copy_out_response.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\data_row.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\describe.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\doc.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\empty_query_response.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\error_response.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\execute.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\flush.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\frontend.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\function_call.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\function_call_response.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\gss_enc_request.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\gss_response.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\no_data.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\notice_response.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\notification_response.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\parameter_description.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\parameter_status.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\parse.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\parse_complete.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\password_message.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\pgproto3.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\portal_suspended.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\query.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\ready_for_query.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\row_description.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\sasl_initial_response.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\sasl_response.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\ssl_request.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\startup_message.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\sync.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\terminate.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgproto3\trace.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\array.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\array_codec.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\bits.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\bool.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\box.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\builtin_wrappers.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\bytea.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\circle.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\composite.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\convert.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\date.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\doc.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\enum_codec.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\float4.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\float8.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\hstore.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\inet.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\int.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\interval.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\json.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\jsonb.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\line.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\lseg.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\macaddr.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\multirange.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\numeric.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\path.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\pgtype.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\pgtype_default.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\point.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\polygon.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\qchar.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\range.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\range_codec.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\record_codec.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\register_default_pg_types.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\text.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\text_format_only_codec.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\tid.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\time.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\timestamp.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\timestamptz.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\uint32.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgtype\uuid.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgxpool\batch_results.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgxpool\conn.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgxpool\doc.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgxpool\pool.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgxpool\rows.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgxpool\stat.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\pgxpool\tx.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\rows.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\tracer.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\tx.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\pgx\v5@v5.5.0\values.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\puddle\v2@v2.2.1\context.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\puddle\v2@v2.2.1\doc.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\puddle\v2@v2.2.1\internal\genstack\gen_stack.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\puddle\v2@v2.2.1\internal\genstack\stack.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\puddle\v2@v2.2.1\log.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\puddle\v2@v2.2.1\nanotime_unsafe.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\puddle\v2@v2.2.1\pool.go
+C:\Users\ilia\go\pkg\mod\github.com\jackc\puddle\v2@v2.2.1\resource_list.go
+C:\Users\ilia\go\pkg\mod\github.com\mailru\easyjson@v0.7.7\buffer\pool.go
+C:\Users\ilia\go\pkg\mod\github.com\mailru\easyjson@v0.7.7\jwriter\writer.go
+C:\Users\ilia\go\pkg\mod\github.com\mattn\go-colorable@v0.1.13\colorable_windows.go
+C:\Users\ilia\go\pkg\mod\github.com\mattn\go-colorable@v0.1.13\noncolorable.go
+C:\Users\ilia\go\pkg\mod\github.com\mattn\go-isatty@v0.0.20\doc.go
+C:\Users\ilia\go\pkg\mod\github.com\mattn\go-isatty@v0.0.20\isatty_windows.go
+C:\Users\ilia\go\pkg\mod\github.com\mileusna\useragent@v1.3.4\is.go
+C:\Users\ilia\go\pkg\mod\github.com\mileusna\useragent@v1.3.4\ua.go
+C:\Users\ilia\go\pkg\mod\github.com\mileusna\useragent@v1.3.4\version.go
+C:\Users\ilia\go\pkg\mod\github.com\pkg\errors@v0.9.1\errors.go
+C:\Users\ilia\go\pkg\mod\github.com\pkg\errors@v0.9.1\go113.go
+C:\Users\ilia\go\pkg\mod\github.com\pkg\errors@v0.9.1\stack.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\array.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\console.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\context.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\ctx.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\encoder.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\encoder_json.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\event.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\fields.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\globals.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\go112.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\hook.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\internal\json\base.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\internal\json\bytes.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\internal\json\string.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\internal\json\time.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\internal\json\types.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\log.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\sampler.go
+C:\Users\ilia\go\pkg\mod\github.com\rs\zerolog@v1.31.0\writer.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\active_help.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\args.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\bash_completions.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\bash_completionsV2.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\cobra.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\command.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\command_win.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\completions.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\fish_completions.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\flag_groups.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\powershell_completions.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\shell_completions.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\cobra@v1.8.0\zsh_completions.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\bool.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\bool_slice.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\bytes.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\count.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\duration.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\duration_slice.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\flag.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\float32.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\float32_slice.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\float64.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\float64_slice.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\golangflag.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\int.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\int16.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\int32.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\int32_slice.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\int64.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\int64_slice.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\int8.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\int_slice.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\ip.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\ip_slice.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\ipmask.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\ipnet.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\string.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\string_array.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\string_slice.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\string_to_int.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\string_to_int64.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\string_to_string.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\uint.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\uint16.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\uint32.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\uint64.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\uint8.go
+C:\Users\ilia\go\pkg\mod\github.com\spf13\pflag@v1.0.5\uint_slice.go
+C:\Users\ilia\go\pkg\mod\github.com\wk8\go-ordered-map\v2@v2.1.8\json.go
+C:\Users\ilia\go\pkg\mod\github.com\wk8\go-ordered-map\v2@v2.1.8\orderedmap.go
+C:\Users\ilia\go\pkg\mod\github.com\wk8\go-ordered-map\v2@v2.1.8\yaml.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\fetchup@v0.2.3\download.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\fetchup@v0.2.3\events.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\fetchup@v0.2.3\fetchup.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\fetchup@v0.2.3\utils.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\goob@v0.4.0\goob.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\goob@v0.4.0\pipe.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\got@v0.38.1\lib\lcs\lcs.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\got@v0.38.1\lib\lcs\sequence.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\got@v0.38.1\lib\lcs\utils.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\gson@v0.7.3\read.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\gson@v0.7.3\write.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\leakless@v0.8.0\bin_amd64_windows.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\leakless@v0.8.0\leakless.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\leakless@v0.8.0\pkg\shared\message.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\leakless@v0.8.0\pkg\shared\version.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\leakless@v0.8.0\pkg\utils\target.go
+C:\Users\ilia\go\pkg\mod\github.com\ysmood\leakless@v0.8.0\pkg\utils\utils.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\crypto@v0.14.0\bcrypt\base64.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\crypto@v0.14.0\bcrypt\bcrypt.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\crypto@v0.14.0\blowfish\block.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\crypto@v0.14.0\blowfish\cipher.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\crypto@v0.14.0\blowfish\const.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\crypto@v0.14.0\pbkdf2\pbkdf2.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\exp@v0.0.0-20231006140011-7918f672742d\constraints\constraints.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\exp@v0.0.0-20231006140011-7918f672742d\slices\cmp.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\exp@v0.0.0-20231006140011-7918f672742d\slices\slices.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\exp@v0.0.0-20231006140011-7918f672742d\slices\sort.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\exp@v0.0.0-20231006140011-7918f672742d\slices\zsortanyfunc.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\exp@v0.0.0-20231006140011-7918f672742d\slices\zsortordered.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\atom\atom.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\atom\table.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\charset\charset.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\const.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\doc.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\doctype.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\entity.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\escape.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\foreign.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\node.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\parse.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\render.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\html\token.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\internal\socks\client.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\internal\socks\socks.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\proxy\dial.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\proxy\direct.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\proxy\per_host.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\proxy\proxy.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\net@v0.17.0\proxy\socks5.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\sync@v0.5.0\semaphore\semaphore.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\cases\cases.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\cases\context.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\cases\fold.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\cases\info.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\cases\map.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\cases\tables13.0.0.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\cases\trieval.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\charmap\charmap.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\charmap\tables.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\encoding.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\htmlindex\htmlindex.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\htmlindex\map.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\htmlindex\tables.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\internal\identifier\identifier.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\internal\identifier\mib.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\internal\internal.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\japanese\all.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\japanese\eucjp.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\japanese\iso2022jp.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\japanese\shiftjis.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\japanese\tables.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\korean\euckr.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\korean\tables.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\simplifiedchinese\all.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\simplifiedchinese\gbk.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\simplifiedchinese\hzgb2312.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\simplifiedchinese\tables.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\traditionalchinese\big5.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\traditionalchinese\tables.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\unicode\override.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\encoding\unicode\unicode.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\internal.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\common.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\compact.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\compact\compact.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\compact\language.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\compact\parents.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\compact\tables.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\compact\tags.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\compose.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\coverage.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\language.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\lookup.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\match.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\parse.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\tables.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\language\tags.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\match.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\tag\tag.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\internal\utf8internal\utf8internal.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\language\coverage.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\language\doc.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\language\language.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\language\match.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\language\parse.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\language\tables.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\language\tags.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\runes\cond.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\runes\runes.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\bidirule\bidirule.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\bidirule\bidirule10.0.0.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\precis\class.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\precis\context.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\precis\doc.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\precis\nickname.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\precis\options.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\precis\profile.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\precis\profiles.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\precis\tables13.0.0.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\precis\transformer.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\secure\precis\trieval.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\transform\transform.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\bidi\bidi.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\bidi\bracket.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\bidi\core.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\bidi\prop.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\bidi\tables13.0.0.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\bidi\trieval.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\norm\composition.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\norm\forminfo.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\norm\input.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\norm\iter.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\norm\normalize.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\norm\readwriter.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\norm\tables13.0.0.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\norm\transform.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\unicode\norm\trie.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\width\kind_string.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\width\tables13.0.0.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\width\transform.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\width\trieval.go
+C:\Users\ilia\go\pkg\mod\golang.org\x\text@v0.14.0\width\width.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\apic.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\decode.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\emitterc.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\encode.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\parserc.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\readerc.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\resolve.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\scannerc.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\sorter.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\writerc.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\yaml.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\yamlh.go
+C:\Users\ilia\go\pkg\mod\gopkg.in\yaml.v3@v3.0.1\yamlprivateh.go
+C:\Users\ilia\Projects\feedrewind\cmd\crawl\clients.go
+C:\Users\ilia\Projects\feedrewind\cmd\crawl\crawl.go
+C:\Users\ilia\Projects\feedrewind\cmd\crawl\logger.go
+C:\Users\ilia\Projects\feedrewind\cmd\crawl\report.go
+C:\Users\ilia\Projects\feedrewind\cmd\crawl\run_guided_crawling.go
+C:\Users\ilia\Projects\feedrewind\cmd\db.go
+C:\Users\ilia\Projects\feedrewind\cmd\tailwind.go
+C:\Users\ilia\Projects\feedrewind\cmd\wsl_startup.go
+C:\Users\ilia\Projects\feedrewind\config\config.go
+C:\Users\ilia\Projects\feedrewind\config\config_notesting.go
+C:\Users\ilia\Projects\feedrewind\config\development.go
+C:\Users\ilia\Projects\feedrewind\config\production.go
+C:\Users\ilia\Projects\feedrewind\crawler\canonical_link.go
+C:\Users\ilia\Projects\feedrewind\crawler\crawling.go
+C:\Users\ilia\Projects\feedrewind\crawler\date_extraction.go
+C:\Users\ilia\Projects\feedrewind\crawler\extract_new_posts_from_feed.go
+C:\Users\ilia\Projects\feedrewind\crawler\feed_discovery.go
+C:\Users\ilia\Projects\feedrewind\crawler\feed_entry_links.go
+C:\Users\ilia\Projects\feedrewind\crawler\feed_parsing.go
+C:\Users\ilia\Projects\feedrewind\crawler\guided_crawling.go
+C:\Users\ilia\Projects\feedrewind\crawler\hardcoded_blogs.go
+C:\Users\ilia\Projects\feedrewind\crawler\historical_archives.go
+C:\Users\ilia\Projects\feedrewind\crawler\historical_archives_categories.go
+C:\Users\ilia\Projects\feedrewind\crawler\historical_archives_sort.go
+C:\Users\ilia\Projects\feedrewind\crawler\historical_common.go
+C:\Users\ilia\Projects\feedrewind\crawler\historical_paged.go
+C:\Users\ilia\Projects\feedrewind\crawler\historical_tumblr_api.go
+C:\Users\ilia\Projects\feedrewind\crawler\http_client.go
+C:\Users\ilia\Projects\feedrewind\crawler\logger.go
+C:\Users\ilia\Projects\feedrewind\crawler\page_parsing.go
+C:\Users\ilia\Projects\feedrewind\crawler\progress.go
+C:\Users\ilia\Projects\feedrewind\crawler\puppeteer_client.go
+C:\Users\ilia\Projects\feedrewind\crawler\rubydate\date_parse.go
+C:\Users\ilia\Projects\feedrewind\crawler\rubydate\zonetab.go
+C:\Users\ilia\Projects\feedrewind\crawler\title.go
+C:\Users\ilia\Projects\feedrewind\db\db.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20230614044411_DBTimestamps.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20230614051555_ForeignKeysDeleteCascade.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20230623031513_AddUniqueEmailConstraint.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20230704085733_FixDBTimezone.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20230712025233_UtcNow.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20230712025648_TimestampsUtcNow.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20230817035655_MakeSubscriptionRssesUnique.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20230920040801_DiscardedSubscriptionViews.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20231006024221_SubscriptionUserConstraint.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20240105034032_CheckDoubleScheduleJob.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20240108100234_SubscriptionPausedNotNull.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20240110082145_CreateIndicesOnBlogId.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\20240110082440_CreateIndicesOnBlogId2.go
+C:\Users\ilia\Projects\feedrewind\db\migrations\migrations.go
+C:\Users\ilia\Projects\feedrewind\db\pgw\pgw.go
+C:\Users\ilia\Projects\feedrewind\jobs\check_double_schedule_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\dispatch_amplitude_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\email.go
+C:\Users\ilia\Projects\feedrewind\jobs\email_final_item_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\email_initial_item_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\email_posts_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\guided_crawling_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\jobs.go
+C:\Users\ilia\Projects\feedrewind\jobs\log_postgres_row_count_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\notify_slack_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\poll_postmark_bounces_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\process_postmark_bounce_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\publish_posts_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\reset_failed_blogs_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\retry_bounced_email_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\time_travel_job.go
+C:\Users\ilia\Projects\feedrewind\jobs\worker.go
+C:\Users\ilia\Projects\feedrewind\log\log.go
+C:\Users\ilia\Projects\feedrewind\log\log_notesting.go
+C:\Users\ilia\Projects\feedrewind\main.go
+C:\Users\ilia\Projects\feedrewind\middleware\authorize.go
+C:\Users\ilia\Projects\feedrewind\middleware\authorize_admin.go
+C:\Users\ilia\Projects\feedrewind\middleware\csrf.go
+C:\Users\ilia\Projects\feedrewind\middleware\current_user.go
+C:\Users\ilia\Projects\feedrewind\middleware\db.go
+C:\Users\ilia\Projects\feedrewind\middleware\default_headers.go
+C:\Users\ilia\Projects\feedrewind\middleware\emit_visit.go
+C:\Users\ilia\Projects\feedrewind\middleware\logger.go
+C:\Users\ilia\Projects\feedrewind\middleware\recoverer.go
+C:\Users\ilia\Projects\feedrewind\middleware\session.go
+C:\Users\ilia\Projects\feedrewind\models\admin_telemetry.go
+C:\Users\ilia\Projects\feedrewind\models\blog.go
+C:\Users\ilia\Projects\feedrewind\models\init.go
+C:\Users\ilia\Projects\feedrewind\models\mutil\random_id.go
+C:\Users\ilia\Projects\feedrewind\models\postmark.go
+C:\Users\ilia\Projects\feedrewind\models\product_event.go
+C:\Users\ilia\Projects\feedrewind\models\rss.go
+C:\Users\ilia\Projects\feedrewind\models\schedule.go
+C:\Users\ilia\Projects\feedrewind\models\start_feed.go
+C:\Users\ilia\Projects\feedrewind\models\start_page.go
+C:\Users\ilia\Projects\feedrewind\models\subscription.go
+C:\Users\ilia\Projects\feedrewind\models\test_singleton.go
+C:\Users\ilia\Projects\feedrewind\models\typed_blog_url.go
+C:\Users\ilia\Projects\feedrewind\models\user.go
+C:\Users\ilia\Projects\feedrewind\models\user_settings.go
+C:\Users\ilia\Projects\feedrewind\oops\oops.go
+C:\Users\ilia\Projects\feedrewind\oops\oops_notesting.go
+C:\Users\ilia\Projects\feedrewind\publish\publish.go
+C:\Users\ilia\Projects\feedrewind\routes\admin.go
+C:\Users\ilia\Projects\feedrewind\routes\admintest.go
+C:\Users\ilia\Projects\feedrewind\routes\blogs.go
+C:\Users\ilia\Projects\feedrewind\routes\landing.go
+C:\Users\ilia\Projects\feedrewind\routes\login_signup.go
+C:\Users\ilia\Projects\feedrewind\routes\misc.go
+C:\Users\ilia\Projects\feedrewind\routes\onboarding.go
+C:\Users\ilia\Projects\feedrewind\routes\postmark.go
+C:\Users\ilia\Projects\feedrewind\routes\posts.go
+C:\Users\ilia\Projects\feedrewind\routes\rss.go
+C:\Users\ilia\Projects\feedrewind\routes\rutil\middleware.go
+C:\Users\ilia\Projects\feedrewind\routes\rutil\onboarding.go
+C:\Users\ilia\Projects\feedrewind\routes\rutil\path.go
+C:\Users\ilia\Projects\feedrewind\routes\rutil\rutil.go
+C:\Users\ilia\Projects\feedrewind\routes\static.go
+C:\Users\ilia\Projects\feedrewind\routes\subscriptions.go
+C:\Users\ilia\Projects\feedrewind\routes\user_settings.go
+C:\Users\ilia\Projects\feedrewind\templates\templates.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\bounce.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\email.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\message_streams.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\messages_inbound.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\messages_outbound.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\postmark.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\sender_signatures.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\server.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\servers.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\stats.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\suppressions.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\templates.go
+C:\Users\ilia\Projects\feedrewind\third_party\postmark\webhooks.go
+C:\Users\ilia\Projects\feedrewind\third_party\tzdata\tzdata.go
+C:\Users\ilia\Projects\feedrewind\third_party\tzdata\zipdata.go
+C:\Users\ilia\Projects\feedrewind\util\http.go
+C:\Users\ilia\Projects\feedrewind\util\schedule\schedule.go
+C:\Users\ilia\Projects\feedrewind\util\static_files.go
+C:\Users\ilia\Projects\feedrewind\util\timezones.go
+C:\Users\ilia\Projects\feedrewind\util\util.go
