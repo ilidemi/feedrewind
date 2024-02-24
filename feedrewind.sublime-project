@@ -2,8 +2,8 @@
     "folders":
     [
         {
-            "path": "."
-        }
+            "path": ".",
+        },
     ],
     "build_systems":
     [
@@ -14,47 +14,47 @@
             [
                 {
                     "name": "test",
-                    "shell_cmd": "go test ./... -tags testing"
+                    "shell_cmd": "go test ./... -tags testing",
                 },
                 {
                     "name": "migrate test db",
-                    "shell_cmd": "go run -tags testing . db migrate"
+                    "shell_cmd": "go run -tags testing . db migrate",
                 },
                 {
                     "name": "test e2e",
-                    "shell_cmd": "go test ./e2e_test -tags e2etesting,testing -timeout 60m -v"
+                    "shell_cmd": "go test ./e2e_test -tags e2etesting,testing -timeout 60m -v",
                 },
                 {
                     "name": "test e2e with email",
-                    "shell_cmd": "go test ./e2e_test -tags emailtesting,e2etesting,testing -timeout 60m -v"
+                    "shell_cmd": "go test ./e2e_test -tags emailtesting,e2etesting,testing -timeout 60m -v",
                 },
                 {
                     "name": "crawl all",
-                    "shell_cmd": "go run . crawl all"
+                    "shell_cmd": "go run . crawl all",
                 },
                 {
                     "name": "crawl one",
-                    "shell_cmd": "go run . crawl"
+                    "shell_cmd": "go run . crawl",
                 },
                 {
                     "name": "golangci-lint",
-                    "shell_cmd": "golangci-lint cache clean && golangci-lint run --build-tags testing,e2etesting,emailtesting"
+                    "shell_cmd": "golangci-lint cache clean && golangci-lint run --build-tags testing,e2etesting,emailtesting",
                 },
                 {
                     "name": "golangci-lint (with cache)",
-                    "shell_cmd": "golangci-lint run --build-tags testing,e2etesting,emailtesting"
+                    "shell_cmd": "golangci-lint run --build-tags testing,e2etesting,emailtesting",
                 },
                 {
                     "name": "tailwind",
-                    "shell_cmd": "go run . tailwind"
+                    "shell_cmd": "go run . tailwind",
                 },
                 {
                     "name": "wsl startup",
-                    "shell_cmd": "go run . wsl-startup"
+                    "shell_cmd": "go run . wsl-startup",
                 },
                 {
                     "name": "generate timezones",
-                    "shell_cmd": "go run cmd/timezones/main.go"
+                    "shell_cmd": "go run cmd/timezones/main.go",
                 },
                 {
                     "name": "scc",
@@ -64,7 +64,7 @@
                         "--no-cocomo",
                         "--no-complexity",
                         "--exclude-dir",
-                        "assets,static,third_party,admin_added",
+                        "assets,static,third_party,admin_added,migrations",
                         "-M",
                         "structure\\.sql",
                         "-M",
@@ -74,15 +74,17 @@
                         "-M",
                         "partial_wicg_inert\\.gohtml",
                         "-M",
-                        "raw-time-zomes\\.json",
-                        "-M",
                         "rewrite-notes\\.txt",
                         "-M",
-                        "zonetab\\.go"
+                        "zonetab\\.go",
+                        "-M",
+                        "timezones\\.go",
+                        "-i",
+                        "go,gohtml,css,js"
                     ],
-                    "shell": true
+                    "shell": true,
                 }
-            ]
+            ],
         }
-    ]
+    ],
 }
