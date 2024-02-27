@@ -24,7 +24,7 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 		IsSelected bool
 	}
 	type Screenshot struct {
-		Links           []rutil.ScreenshotLink
+		Links           []util.ScreenshotLink
 		LinksCount      int
 		DaysOfWeek      []schedule.DayOfWeek
 		ScheduleColumns [][]ScheduleCell
@@ -32,13 +32,13 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 	type LandingResult struct {
 		Session     *util.Session
 		Screenshot  Screenshot
-		Suggestions rutil.Suggestions
+		Suggestions util.Suggestions
 	}
 	templates.MustWrite(w, "landing/index", LandingResult{
 		Session: rutil.Session(r),
 		Screenshot: Screenshot{
-			Links:      rutil.ScreenshotLinks,
-			LinksCount: len(rutil.ScreenshotLinks),
+			Links:      util.ScreenshotLinks,
+			LinksCount: len(util.ScreenshotLinks),
 			DaysOfWeek: schedule.DaysOfWeek,
 			ScheduleColumns: [][]ScheduleCell{
 				{
@@ -67,9 +67,9 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 				},
 			},
 		},
-		Suggestions: rutil.Suggestions{
-			SuggestedCategories: rutil.SuggestedCategories,
-			MiscellaneousBlogs:  rutil.MiscellaneousBlogs,
+		Suggestions: util.Suggestions{
+			SuggestedCategories: util.SuggestedCategories,
+			MiscellaneousBlogs:  util.MiscellaneousBlogs,
 			WidthClass:          "max-w-[531px]",
 		},
 	})

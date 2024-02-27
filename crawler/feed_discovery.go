@@ -108,6 +108,7 @@ func DiscoverFeedsAtUrl(
 		return &DiscoverFeedsErrorCouldNotReach{}
 	}
 
+	curiEqCfg := NewCanonicalEqualityConfig()
 	switch p := startPage.(type) {
 	case *feedPage:
 		parsedFeed, err := ParseFeed(p.Content, startLink.Uri, logger)
@@ -116,8 +117,13 @@ func DiscoverFeedsAtUrl(
 			return &DiscoverFeedsErrorBadFeed{}
 		}
 
+		title := parsedFeed.Title
+		if CanonicalUriEqual(p.Curi, HardcodedDanLuuFeed, &curiEqCfg) {
+			title = HardcodedDanLuuFeedName
+		}
+
 		feed := DiscoveredFetchedFeed{
-			Title:      parsedFeed.Title,
+			Title:      title,
 			Url:        startLink.Url,
 			FinalUrl:   p.FetchUri.String(),
 			Content:    p.Content,
@@ -224,8 +230,14 @@ func DiscoverFeedsAtUrl(
 				if err != nil {
 					return &DiscoverFeedsErrorBadFeed{}
 				}
+
+				title := parsedFeed.Title
+				if CanonicalUriEqual(r.Page.Curi, HardcodedDanLuuFeed, &curiEqCfg) {
+					title = HardcodedDanLuuFeedName
+				}
+
 				fetchedFeed := DiscoveredFetchedFeed{
-					Title:      parsedFeed.Title,
+					Title:      title,
 					Url:        dedupFeeds[0].Url,
 					FinalUrl:   r.Page.FetchUri.String(),
 					Content:    r.Page.Content,

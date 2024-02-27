@@ -479,7 +479,8 @@ CREATE TABLE public.blogs (
     created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     update_action public.blog_update_action NOT NULL,
-    url character varying
+    url character varying,
+    start_feed_id bigint
 );
 
 
@@ -1568,6 +1569,14 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUT
 
 
 --
+-- Name: blogs fk_blogs_start_feeds; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.blogs
+    ADD CONSTRAINT fk_blogs_start_feeds FOREIGN KEY (start_feed_id) REFERENCES public.start_feeds(id);
+
+
+--
 -- Name: user_rsses fk_rails_17396fc3a7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1917,4 +1926,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20240105034032'),
 ('20240108100234'),
 ('20240110082145'),
-('20240110082440');
+('20240110082440'),
+('20240226094124');
