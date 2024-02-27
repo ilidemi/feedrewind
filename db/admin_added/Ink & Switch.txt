@@ -1,0 +1,30 @@
+Ink & Switch
+https://www.inkandswitch.com/index.xml
+https://www.inkandswitch.com/
+
+https://www.inkandswitch.com/patchwork/notebook/04/ 04 · Diff visualizations
+https://www.inkandswitch.com/patchwork/notebook/03/ 03 · Dynamic history
+https://www.inkandswitch.com/patchwork/notebook/02/ 02 · Writing prose
+https://www.inkandswitch.com/patchwork/notebook/01/ 01 · Universal version control
+https://www.inkandswitch.com/newsletter/dispatch-002/ Making a new medium and other recaps
+https://www.inkandswitch.com/newsletter/dispatch-001/ On Embark and Lude
+https://www.inkandswitch.com/embark/ Embark: Dynamic documents for making plans
+https://www.inkandswitch.com/upwelling/ Upwelling: Combining real-time collaboration with version control for writers.
+https://www.inkandswitch.com/untangle/ Untangle: Solving problems with fuzzy constraints
+https://www.inkandswitch.com/inkbase/ Inkbase: Programmable Ink
+https://www.inkandswitch.com/potluck/ Potluck: Dynamic documents as personal software
+https://www.inkandswitch.com/summit-010-berlin/ Summit 010 Berlin
+https://www.inkandswitch.com/crosscut/ Crosscut: Drawing Dynamic Models
+https://www.inkandswitch.com/peritext/ Peritext: A CRDT for Rich-Text Collaboration
+https://www.inkandswitch.com/backchannel/ Backchannel: A relationship-based digital identity system
+https://www.inkandswitch.com/cambria/ Project Cambria: Translate your data with lenses
+https://www.inkandswitch.com/pushpin/ Pushpin: Towards Production-Quality Peer-to-Peer Collaboration
+https://www.inkandswitch.com/muse/ Muse: Designing a studio for ideas
+https://www.inkandswitch.com/local-first/ Local-first software: You own your data, in spite of the cloud
+https://www.inkandswitch.com/end-user-programming/ End-user Programming
+https://www.inkandswitch.com/capstone/ Capstone: A tablet for thinking
+https://www.inkandswitch.com/slow-software/ Slow Software
+https://www.inkandswitch.com/tablet-platform-showdown/ Tablet Platform Showdown
+https://www.inkandswitch.com/pixelpusher/ Pixelpusher: Real-time peer-to-peer collaboration with React
+
+update_from_feed_or_fail
