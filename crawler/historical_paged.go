@@ -177,7 +177,12 @@ func tryExtractPage1(
 		links := extraction.UnfilteredLinks
 
 		if CanonicalUriEqual(page1Link.Curi, hardcodedCaseyHandmer, curiEqCfg) {
-			links = links[1:]
+			for i, link := range links {
+				if CanonicalUriEqual(link.Link.Curi, feedEntryLinks.LinkBuckets[0][0].Curi, curiEqCfg) {
+					links = links[i:]
+					break
+				}
+			}
 		}
 
 		curis := ToCanonicalUris(links)

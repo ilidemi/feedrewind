@@ -1299,23 +1299,13 @@ func postprocessPartialPagedResult(
 	}
 
 	if CanonicalUriEqual(fullResult.MainLnk.Curi, hardcodedCaseyHandmer, guidedCtx.CuriEqCfg) {
-		logger.Info("Extra request for Casey Handmer categories")
-		titleCount := countLinkTitles(fullResult.Lnks)
-		progressLogger.LogAndSaveFetchedCount(&titleCount)
-		page, err := crawlHtmlPage(hardcodedCaseyHandmerSpaceMisconceptions, crawlCtx, logger)
-		progressLogger.LogAndSavePostprocessing()
+		postCategories, err := crawlCaseyHandmerCategories(fullResult, guidedCtx, crawlCtx, logger)
 		if err != nil {
 			logger.Info("Couldn't fetch Casey Handmer categories: %v", err)
 			guidedCtx.HardcodedError = err
 		} else {
-			postCategories, err := extractCaseyHandmerCategories(page, logger)
-			if err != nil {
-				logger.Info("Couldn't extract Casey Handmer categories: %v", err)
-				guidedCtx.HardcodedError = err
-			} else {
-				logger.Info("Categories: %s", categoryCountsString(postCategories))
-				fullResult.PostCategories = postCategories
-			}
+			logger.Info("Categories: %s", categoryCountsString(postCategories))
+			fullResult.PostCategories = postCategories
 		}
 	}
 
@@ -1331,6 +1321,42 @@ func postprocessPartialPagedResult(
 		Extra:                   fullResult.Extra,
 		MaybePartialPagedResult: nil,
 	}, true
+}
+
+func crawlCaseyHandmerCategories(
+	pagedResult *fullPagedResult, guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext, logger Logger,
+) ([]HistoricalBlogPostCategory, error) {
+	progressLogger := crawlCtx.ProgressLogger
+	logger.Info("Extra requests for Casey Handmer categories")
+	titleCount := countLinkTitles(pagedResult.Lnks)
+	progressLogger.LogAndSaveFetchedCount(&titleCount)
+
+	spaceMisconceptions, err := crawlHtmlPage(hardcodedCaseyHandmerSpaceMisconceptions, crawlCtx, logger)
+	progressLogger.LogAndSavePostprocessing()
+	if err != nil {
+		return nil, err
+	}
+
+	marsTrilogy, err := crawlHtmlPage(hardcodedCaseyHandmerMarsTrilogy, crawlCtx, logger)
+	progressLogger.LogAndSavePostprocessing()
+	if err != nil {
+		return nil, err
+	}
+
+	futureOfEnergy, err := crawlHtmlPage(hardcodedCaseyHandmerFutureOfEnergy, crawlCtx, logger)
+	progressLogger.LogAndSavePostprocessing()
+	if err != nil {
+		return nil, err
+	}
+
+	postCategories, err := extractCaseyHandmerCategories(
+		spaceMisconceptions, marsTrilogy, futureOfEnergy, pagedResult.Lnks, guidedCtx.CuriEqCfg, logger,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return postCategories, nil
 }
 
 type sortedLinks struct {
