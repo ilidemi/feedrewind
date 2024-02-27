@@ -23,6 +23,10 @@ var hardcodedBenKuhn *Link
 var hardcodedBenKuhnArchives CanonicalUri
 var hardcodedCaseyHandmer CanonicalUri
 var hardcodedCaseyHandmerSpaceMisconceptions *Link
+var hardcodedCaseyHandmerMarsTrilogy *Link
+var hardcodedCaseyHandmerMarsTrilogyFirstLink *Link
+var hardcodedCaseyHandmerFutureOfEnergy *Link
+var hardcodedCaseyHandmerBookReviews *Link
 var hardcodedCryptographyEngineering CanonicalUri
 var hardcodedCryptographyEngineeringAll CanonicalUri
 var hardcodedDanLuu CanonicalUri
@@ -44,6 +48,22 @@ func init() {
 	hardcodedCaseyHandmer = hardcodedMustParse(caseyHandmer)
 	hardcodedCaseyHandmerSpaceMisconceptions, _ = ToCanonicalLink(
 		caseyHandmer+"2019/08/17/blog-series-countering-misconceptions-in-space-journalism/",
+		logger, nil,
+	)
+	hardcodedCaseyHandmerMarsTrilogy, _ = ToCanonicalLink(
+		caseyHandmer+"2022/12/13/mars-trilogy-technical-commentary/",
+		logger, nil,
+	)
+	hardcodedCaseyHandmerMarsTrilogyFirstLink, _ = ToCanonicalLink(
+		caseyHandmer+"2022/12/13/mars-trilogy-festival-night/",
+		logger, nil,
+	)
+	hardcodedCaseyHandmerFutureOfEnergy, _ = ToCanonicalLink(
+		caseyHandmer+"2023/10/19/future-of-energy-reading-list/",
+		logger, nil,
+	)
+	hardcodedCaseyHandmerBookReviews, _ = ToCanonicalLink(
+		caseyHandmer+"2020/07/26/book-reviews/",
 		logger, nil,
 	)
 	danLuu := "https://danluu.com"
@@ -260,32 +280,113 @@ func extractBenKuhnCategories(mainPage *htmlPage, logger Logger) ([]HistoricalBl
 }
 
 func extractCaseyHandmerCategories(
-	spaceMisconceptionsPage *htmlPage, logger Logger,
+	spaceMisconceptionsPage, marsTrilogyPage, futureOfEnergyPage *htmlPage, links []*maybeTitledLink,
+	curiEqCfg *CanonicalEqualityConfig, logger Logger,
 ) ([]HistoricalBlogPostCategory, error) {
 	logger.Info("Extracting Casey Handmer categories")
-	topElements := htmlquery.Find(
+
+	spaceMisconceptionsElements := htmlquery.Find(
 		spaceMisconceptionsPage.Document,
 		"/html/body/div[1]/div/div/div[1]/main/article/div[1]/ul[*]/li[*]/a",
 	)
-	topLinks := make([]Link, len(topElements))
-	for i, element := range topElements {
+	var spaceMisconceptionsLinks []Link
+	for _, element := range spaceMisconceptionsElements {
 		href := findAttr(element, "href")
 		link, ok := ToCanonicalLink(href, logger, spaceMisconceptionsPage.FetchUri)
 		if !ok {
 			return nil, oops.Newf("Casey Handmer categories bad link: %q", href)
 		}
-		topLinks[i] = *link
+		spaceMisconceptionsLinks = append(spaceMisconceptionsLinks, *link)
+	}
+	if len(spaceMisconceptionsLinks) == 0 {
+		return nil, oops.Newf("Casey Handmer space misconceptions category not found")
 	}
 
-	if len(topLinks) == 0 {
-		return nil, oops.Newf("Casey Handmer categories not found")
+	marsTrilogyElements := htmlquery.Find(
+		marsTrilogyPage.Document,
+		"/html/body/div[1]/div/div/div[1]/main/article/div[1]/p[*]/a",
+	)
+	var marsTrilogyLinks []Link
+	seenFirstLink := false
+	for _, element := range marsTrilogyElements {
+		href := findAttr(element, "href")
+		link, ok := ToCanonicalLink(href, logger, marsTrilogyPage.FetchUri)
+		if !ok {
+			return nil, oops.Newf("Casey Handmer categories bad link: %q", href)
+		}
+		if CanonicalUriEqual(link.Curi, hardcodedCaseyHandmerMarsTrilogyFirstLink.Curi, curiEqCfg) {
+			seenFirstLink = true
+		}
+		if seenFirstLink {
+			marsTrilogyLinks = append(marsTrilogyLinks, *link)
+		}
+	}
+	if len(marsTrilogyLinks) == 0 {
+		return nil, oops.Newf("Casey Handmer mars trilogy category not found")
 	}
 
-	return []HistoricalBlogPostCategory{{
-		Name:      "Top",
-		IsTop:     true,
-		PostLinks: topLinks,
-	}}, nil
+	futureOfEnergyElements := htmlquery.Find(
+		futureOfEnergyPage.Document,
+		"/html/body/div[1]/div/div/div[1]/main/article/div[1]//a",
+	)
+	var futureOfEnergyLinks []Link
+	for _, element := range futureOfEnergyElements {
+		href := findAttr(element, "href")
+		link, ok := ToCanonicalLink(href, logger, futureOfEnergyPage.FetchUri)
+		if !ok {
+			return nil, oops.Newf("Casey Handmer categories bad link: %q", href)
+		}
+		if link.Curi.Host == hardcodedCaseyHandmer.Host &&
+			!CanonicalUriEqual(link.Curi, hardcodedCaseyHandmerBookReviews.Curi, curiEqCfg) {
+
+			futureOfEnergyLinks = append(futureOfEnergyLinks, *link)
+		}
+	}
+	if len(futureOfEnergyLinks) == 0 {
+		return nil, oops.Newf("Casey Handmer future of energy category not found")
+	}
+
+	categorizedLinksLists := [][]Link{spaceMisconceptionsLinks, marsTrilogyLinks, futureOfEnergyLinks}
+	categorizedLinksSet := NewCanonicalUriSet(nil, curiEqCfg)
+	for _, categorizedLinks := range categorizedLinksLists {
+		for _, link := range categorizedLinks {
+			categorizedLinksSet.add(link.Curi)
+		}
+	}
+	var uncategorizedLinks []Link
+	for _, link := range links {
+		if !categorizedLinksSet.Contains(link.Curi) {
+			uncategorizedLinks = append(uncategorizedLinks, link.Link)
+		}
+	}
+
+	return []HistoricalBlogPostCategory{
+		{
+			Name:      "Top",
+			IsTop:     true,
+			PostLinks: spaceMisconceptionsLinks,
+		},
+		{
+			Name:      "Countering misconceptions in space journalism",
+			IsTop:     false,
+			PostLinks: spaceMisconceptionsLinks,
+		},
+		{
+			Name:      "Mars Trilogy Technical Commentary",
+			IsTop:     false,
+			PostLinks: marsTrilogyLinks,
+		},
+		{
+			Name:      "Future of Energy Reading List",
+			IsTop:     false,
+			PostLinks: futureOfEnergyLinks,
+		},
+		{
+			Name:      "Uncategorized",
+			IsTop:     false,
+			PostLinks: uncategorizedLinks,
+		},
+	}, nil
 }
 
 func extractFactorioCategories(postLinks []*maybeTitledLink) ([]HistoricalBlogPostCategory, error) {
