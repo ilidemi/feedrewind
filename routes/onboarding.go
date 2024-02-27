@@ -66,7 +66,7 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 		Title            string
 		Session          *util.Session
 		MaybeFeedsData   *feedsData
-		MaybeSuggestions *rutil.Suggestions
+		MaybeSuggestions *util.Suggestions
 	}
 	var result OnboardingResult
 	title := util.DecorateTitle("Add blog")
@@ -129,9 +129,9 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 			Title:          title,
 			Session:        rutil.Session(r),
 			MaybeFeedsData: nil,
-			MaybeSuggestions: &rutil.Suggestions{
-				SuggestedCategories: rutil.SuggestedCategories,
-				MiscellaneousBlogs:  rutil.MiscellaneousBlogs,
+			MaybeSuggestions: &util.Suggestions{
+				SuggestedCategories: util.SuggestedCategories,
+				MiscellaneousBlogs:  util.MiscellaneousBlogs,
 				WidthClass:          "max-w-full",
 			},
 		}
@@ -151,7 +151,7 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 		Title            string
 		Session          *util.Session
 		MaybeFeedsData   *feedsData
-		MaybeSuggestions *rutil.Suggestions
+		MaybeSuggestions *util.Suggestions
 	}
 	var result OnboardingResult
 	title := util.DecorateTitle("Add blog")
@@ -254,7 +254,7 @@ func Onboarding_DiscoverFeeds(w http.ResponseWriter, r *http.Request) {
 
 func Onboarding_Preview(w http.ResponseWriter, r *http.Request) {
 	slug := util.URLParamStr(r, "slug")
-	link, ok := rutil.ScreenshotLinksBySlug[slug]
+	link, ok := util.ScreenshotLinksBySlug[slug]
 	if !ok {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
@@ -335,11 +335,6 @@ func onboarding_MustDiscoverFeeds(
 				panic(err)
 			}
 			maybeStartPageId = &startPageId
-		}
-		feedLink, _ := crawler.ToCanonicalLink(result.Feed.FinalUrl, &zlogger, nil)
-		curiEqCfg := crawler.NewCanonicalEqualityConfig()
-		if crawler.CanonicalUriEqual(feedLink.Curi, crawler.HardcodedDanLuuFeed, &curiEqCfg) {
-			result.Feed.Title = crawler.HardcodedDanLuuFeedName
 		}
 		startFeed, err := models.StartFeed_CreateFetched(tx, maybeStartPageId, result.Feed)
 		if err != nil {

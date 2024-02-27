@@ -52,11 +52,12 @@ const (
 )
 
 type Blog struct {
-	Id           BlogId
-	Name         string
-	Status       BlogStatus
-	UpdateAction BlogUpdateAction
-	BestUrl      string
+	Id               BlogId
+	Name             string
+	Status           BlogStatus
+	UpdateAction     BlogUpdateAction
+	MaybeStartFeedId *StartFeedId
+	BestUrl          string
 }
 
 const BlogLatestVersion = 1000000
@@ -74,12 +75,12 @@ var ErrBlogNotFound = errors.New("blog not found")
 
 func Blog_GetLatestByFeedUrl(tx pgw.Queryable, feedUrl string) (*Blog, error) {
 	row := tx.QueryRow(`
-		select id, name, status, update_action, coalesce(url, feed_url) from blogs
+		select id, name, status, update_action, start_feed_id, coalesce(url, feed_url) from blogs
 		where feed_url = $1 and version = $2
 	`, feedUrl, BlogLatestVersion)
 
 	var b Blog
-	err := row.Scan(&b.Id, &b.Name, &b.Status, &b.UpdateAction, &b.BestUrl)
+	err := row.Scan(&b.Id, &b.Name, &b.Status, &b.UpdateAction, &b.MaybeStartFeedId, &b.BestUrl)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrBlogNotFound
 	} else if err != nil {
@@ -247,6 +248,9 @@ func Blog_CreateOrUpdate(
 			_, err = Blog_Downgrade(nestedTx, blog.Id)
 			if err == nil {
 				newBlog, err = blog_CreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobScheduleFunc)
+				if err != nil {
+					return nil, err
+				}
 			} else if errors.Is(err, ErrNoLatestVersion) || errors.Is(err, errBlogAlreadyExists) {
 				// Another writer deprecated this blog at the same time
 				newBlog, err = Blog_GetLatestByFeedUrl(nestedTx, startFeed.Url)
@@ -341,16 +345,22 @@ func Blog_CreateOrUpdate(
 						title = link.Url
 					}
 					batch.Queue(`
-					with blog_post_ids as (
-						insert into blog_posts (blog_id, index, url, title)
-						values ($1, $2, $3, $4)
-						returning id
-					)
-					insert into blog_post_category_assignments (blog_post_id, category_id)
-					select id, $5 from blog_post_ids
-				`, blog.Id, index, link.Url, title, everythingId)
+						with blog_post_ids as (
+							insert into blog_posts (blog_id, index, url, title)
+							values ($1, $2, $3, $4)
+							returning id
+						)
+						insert into blog_post_category_assignments (blog_post_id, category_id)
+						select id, $5 from blog_post_ids
+					`, blog.Id, index, link.Url, title, everythingId)
 				}
 				err = nestedTx.SendBatch(batch).Close()
+				if err != nil {
+					return nil, err
+				}
+				_, err = nestedTx.Exec(`
+					update blogs set start_feed_id = $1 where id = $2
+				`, startFeed.Id, blog.Id)
 				if err != nil {
 					return nil, err
 				}
@@ -399,9 +409,11 @@ func blog_CreateWithCrawling(
 	status := BlogStatusCrawlInProgress
 	updateAction := BlogUpdateActionRecrawl
 	_, err = tx.Exec(`
-		insert into blogs (id, name, feed_url, url, status, status_updated_at, version, update_action)
-		values ($1, $2, $3, null, $4, utc_now(), $5, $6)
-	`, blogId, startFeed.Title, startFeed.Url, status, BlogLatestVersion, updateAction)
+		insert into blogs (
+			id, name, feed_url, url, status, status_updated_at, version, update_action, start_feed_id
+		)
+		values ($1, $2, $3, null, $4, utc_now(), $5, $6, $7)
+	`, blogId, startFeed.Title, startFeed.Url, status, BlogLatestVersion, updateAction, startFeed.Id)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
 		pgErr.ConstraintName == "index_blogs_on_feed_url_and_version" {
@@ -423,12 +435,14 @@ func blog_CreateWithCrawling(
 		return nil, err
 	}
 
+	startFeedId := startFeed.Id
 	return &Blog{
-		Id:           blogId,
-		Name:         startFeed.Title,
-		Status:       status,
-		UpdateAction: updateAction,
-		BestUrl:      startFeed.Url,
+		Id:               blogId,
+		Name:             startFeed.Title,
+		Status:           status,
+		UpdateAction:     updateAction,
+		MaybeStartFeedId: &startFeedId,
+		BestUrl:          startFeed.Url,
 	}, nil
 }
 

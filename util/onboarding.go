@@ -1,10 +1,14 @@
-package rutil
+package util
 
 import (
 	"fmt"
 	"html/template"
+	"net/url"
 	"strings"
 )
+
+// When adding more lists besides ScreenshotLinks, SuggestedCategories and MiscellaneousBlogs,
+// also add them to RefreshSuggestionsJob
 
 type ScreenshotLink struct {
 	Url         string
@@ -244,6 +248,10 @@ func init() {
 			blog.AddFeedPath = SubscriptionAddFeedPath(blog.FeedUrl)
 		}
 	}
+}
+
+func SubscriptionAddFeedPath(feedUrl string) string {
+	return fmt.Sprintf("/subscriptions/add/%s", url.PathEscape(feedUrl))
 }
 
 var MiscellaneousBlogs = []MiscellaneousBlog{

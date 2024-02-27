@@ -3,9 +3,9 @@ package rutil
 import (
 	"feedrewind/config"
 	"feedrewind/models"
+	"feedrewind/util"
 	"fmt"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strings"
 )
@@ -41,7 +41,7 @@ func SubscriptionDeletePath(subscriptionId models.SubscriptionId) string {
 }
 
 func SubscriptionAddFeedPath(feedUrl string) string {
-	return fmt.Sprintf("/subscriptions/add/%s", url.PathEscape(feedUrl))
+	return util.SubscriptionAddFeedPath(feedUrl)
 }
 
 func SubscriptionShowPath(subscriptionId models.SubscriptionId) string {
