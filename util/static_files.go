@@ -94,7 +94,8 @@ findRoot:
 		hash := hasher.Sum32()
 		ext := path.Ext(filePath)
 
-		urlPath := fmt.Sprintf("%s/%s", StaticUrlPrefix, dirEntry.Name())
+		name := dirEntry.Name()
+		urlPath := fmt.Sprintf("%s/%s", StaticUrlPrefix, name)
 		hashedPath := fmt.Sprintf("%s.%08x%s", urlPath[:len(urlPath)-len(ext)], hash, ext)
 
 		mimeType, ok := contentTypesByExt[ext]
@@ -102,7 +103,7 @@ findRoot:
 			panic(fmt.Errorf("extension doesn't have mime type: %s", ext))
 		}
 
-		hashedPathsByFilename[dirEntry.Name()] = hashedPath
+		hashedPathsByFilename[name] = hashedPath
 		files[hashedPath] = &StaticFile{
 			ContentType:  mimeType,
 			LastModified: lastModified,
@@ -119,9 +120,20 @@ func StaticHashedPath(filename string) (string, error) {
 	return "", fmt.Errorf("static file not found: %q", filename)
 }
 
+const BypassHashSuffix = ".bypasshash"
+
 func GetStaticFile(hashedPath string) (*StaticFile, error) {
 	if containsDotDot(hashedPath) {
 		return nil, fmt.Errorf("path contains '..': %q", hashedPath)
+	}
+
+	if strings.HasSuffix(hashedPath, BypassHashSuffix) {
+		filename := hashedPath[len(StaticUrlPrefix)+1 : len(hashedPath)-len(BypassHashSuffix)]
+		var ok bool
+		hashedPath, ok = hashedPathsByFilename[filename]
+		if !ok {
+			return nil, fmt.Errorf("static path with bypassed hash not found: %q", filename)
+		}
 	}
 
 	if file, ok := files[hashedPath]; ok {
