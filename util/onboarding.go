@@ -53,7 +53,7 @@ var ScreenshotLinks = []ScreenshotLink{
 		FeedUrl:  "https://www.inkandswitch.com/index.xml",
 	},
 	{
-		Url:      "http://www.paulgraham.com/kids.html",
+		Url:      "https://feedrewind.com/static/PG-Having-Kids-https.html" + BypassHashSuffix,
 		TitleStr: "Having Kids",
 		Slug:     "pg-having-kids",
 		BlogName: "Paul Graham: Essays",
