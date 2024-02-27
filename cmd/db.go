@@ -266,7 +266,7 @@ func rollback() {
 	lockId := migrationLock(conn)
 	defer migrationUnlock(conn, lockId)()
 
-	maxVersionRow := conn.QueryRow("select max(version) from schema_s")
+	maxVersionRow := conn.QueryRow("select max(version) from schema_migrations")
 	var maxVersion string
 	if err := maxVersionRow.Scan(&maxVersion); err != nil {
 		panic(err)
