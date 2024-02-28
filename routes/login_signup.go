@@ -228,12 +228,24 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		if _, ok := util.GroupIdByTimezoneId[timezone]; ok {
 			timezoneOut = timezone
 		} else {
-			logger.Warn().Msgf("Unknown timezone: %s", timezone)
-			timeOffset, err := strconv.ParseInt(timeOffsetStr, 10, 32)
-			if err != nil {
-				logger.Warn().Msgf("Couldn't parse time offset: %s", timeOffsetStr)
-				timeOffset = 0
+			if timezone == "1" || timezone == "" { // Dummy timezone bots use
+				logger.Info().Msgf("Unknown timezone: %s", timezone)
+			} else {
+				logger.Warn().Msgf("Unknown timezone: %s", timezone)
 			}
+
+			timeOffset := int64(0)
+			if timeOffsetStr == "" {
+				logger.Info().Msg("Empty time offset")
+			} else {
+				var err error
+				timeOffset, err = strconv.ParseInt(timeOffsetStr, 10, 32)
+				if err != nil {
+					logger.Warn().Msgf("Couldn't parse time offset: %s", timeOffsetStr)
+					timeOffset = 0
+				}
+			}
+
 			offsetHoursInverted := int(timeOffset) / 60
 			var ok bool
 			timezoneOut, ok = util.UnfriendlyGroupIdByOffset[offsetHoursInverted]
