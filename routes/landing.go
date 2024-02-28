@@ -68,6 +68,7 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		Suggestions: util.Suggestions{
+			Session:             rutil.Session(r),
 			SuggestedCategories: util.SuggestedCategories,
 			MiscellaneousBlogs:  util.MiscellaneousBlogs,
 			WidthClass:          "max-w-[531px]",

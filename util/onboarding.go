@@ -113,6 +113,7 @@ func init() {
 }
 
 type Suggestions struct {
+	Session             *Session
 	SuggestedCategories []SuggestedCategory
 	MiscellaneousBlogs  []MiscellaneousBlog
 	WidthClass          string

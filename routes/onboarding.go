@@ -130,6 +130,7 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 			Session:        rutil.Session(r),
 			MaybeFeedsData: nil,
 			MaybeSuggestions: &util.Suggestions{
+				Session:             rutil.Session(r),
 				SuggestedCategories: util.SuggestedCategories,
 				MiscellaneousBlogs:  util.MiscellaneousBlogs,
 				WidthClass:          "max-w-full",

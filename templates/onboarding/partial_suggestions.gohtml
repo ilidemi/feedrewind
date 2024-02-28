@@ -1,5 +1,6 @@
 <div class="flex flex-col gap-y-8 md:gap-y-3">
   {{$widthClass := .WidthClass}}
+  {{$session := .Session}}
   {{range .SuggestedCategories}}
     <div class="flex flex-row {{$widthClass}}">
       {{if .IsRightAligned}}
@@ -13,12 +14,15 @@
               <a href="{{.Url}}" target="_blank" class="external-link"><span class="link text-black">{{.Name}}</span></a>
             </span>
 
-            <a class="text-white bg-primary-700 hover:bg-primary-900 rounded-md px-1 py-1 hover:cursor-pointer self-start" href="{{.AddFeedPath}}">
-              <!-- plus-sm icon -->
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-              </svg>
-            </a>
+            <form action="{{.AddFeedPath}}" class="self-center" method="post">
+              {{$session.CSRFField}}
+              <button type="submit" name="submit" class="block text-white bg-primary-700 hover:bg-primary-900 rounded-md px-1 py-1 hover:cursor-pointer">
+                <!-- plus-sm icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+              </button>
+            </form>
           </div>
         {{ end }}
       </div>
@@ -37,12 +41,15 @@
 
           <div class="rounded-full bg-primary-100 text-sm px-2">{{.NonBreakingTag}}</div>
 
-          <a class="text-white bg-primary-700 hover:bg-primary-900 rounded-md px-1 py-1 hover:cursor-pointer self-start" href="{{.AddFeedPath}}">
-            <!-- plus-sm icon -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-            </svg>
-          </a>
+          <form action="{{.AddFeedPath}}" class="self-center" method="post">
+            {{$session.CSRFField}}
+            <button type="submit" name="submit" class="block text-white bg-primary-700 hover:bg-primary-900 rounded-md px-1 py-1 hover:cursor-pointer">
+              <!-- plus-sm icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+              </svg>
+            </button>
+          </form>
         </div>
       {{end}}
     </div>
