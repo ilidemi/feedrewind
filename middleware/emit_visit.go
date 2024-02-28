@@ -24,17 +24,25 @@ func EmitVisit(next http.Handler) http.Handler {
 			_ = chi.Walk(
 				rCtx.Routes,
 				func(
-					method, route string, handler http.Handler,
+					rawMethod, route string, handler http.Handler,
 					middlewares ...func(http.Handler) http.Handler,
 				) error {
 					route = strings.Replace(route, "/*/", "/", -1)
 					route = strings.TrimSuffix(route, "//")
 					route = strings.TrimSuffix(route, "/")
-					key := method + " " + route
-					fullName := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
-					nameStart := strings.Index(fullName, ".") + 1
-					name := fullName[nameStart:]
-					handlerNames[key] = name
+					var methods []string
+					if rawMethod == "GET" {
+						methods = []string{"GET", "HEAD"}
+					} else {
+						methods = []string{rawMethod}
+					}
+					for _, method := range methods {
+						key := method + " " + route
+						fullName := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
+						nameStart := strings.Index(fullName, ".") + 1
+						name := fullName[nameStart:]
+						handlerNames[key] = name
+					}
 					return nil
 				},
 			)
