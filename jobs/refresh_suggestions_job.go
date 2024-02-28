@@ -10,6 +10,7 @@ import (
 	"feedrewind/oops"
 	"feedrewind/util"
 	"feedrewind/util/schedule"
+	neturl "net/url"
 	"sort"
 	"time"
 
@@ -77,26 +78,56 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		}
 
 		row := conn.QueryRow(`
-			select start_feed_id from blogs where feed_url = $1 and version = $2
+			select id, start_feed_id from blogs where feed_url = $1 and version = $2
 		`, feedUrl, models.BlogLatestVersion)
+		var maybeBlogId *models.BlogId
 		var maybeStartFeedId *models.StartFeedId
-		err := row.Scan(&maybeStartFeedId)
+		err := row.Scan(&maybeBlogId, &maybeStartFeedId)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			logger.Error().Err(err).Msgf("Error when checking if the feed already exists: %s", feedUrl)
 			continue
 		}
 
 		if maybeStartFeedId != nil {
-			row = conn.QueryRow(`select content from start_feeds where id = $1`, *maybeStartFeedId)
+			row = conn.QueryRow(`select content, url from start_feeds where id = $1`, *maybeStartFeedId)
 			var content []byte
-			err := row.Scan(&content)
+			var url string
+			err := row.Scan(&content, &url)
 			if err != nil {
 				logger.Error().Err(err).Msgf("Error when checking feed contents: %s", feedUrl)
 				continue
 			}
-			if discoveredSingleFeed.Feed.Content == string(content) {
-				// Exact match, definitely no need to crawl
+
+			fetchUri, err := neturl.Parse(url)
+			if err != nil {
+				logger.Error().Err(err).Msgf("Error when parsing feed url: %s", feedUrl)
 				continue
+			}
+
+			parsedFeed, err := crawler.ParseFeed(string(content), fetchUri, &dlogger)
+			if err != nil {
+				logger.Error().Err(err).Msgf("Error when parsing feed: %s", feedUrl)
+				continue
+			}
+
+			existingLinks := parsedFeed.EntryLinks.ToSlice()
+			newLinks := discoveredSingleFeed.Feed.ParsedFeed.EntryLinks.ToSlice()
+			if len(newLinks) == len(existingLinks) {
+				exactMatch := true
+				curiEqCfg, err := models.BlogCanonicalEqualityConfig_Get(conn, *maybeBlogId)
+				if err != nil {
+					return err
+				}
+				for i, existingLink := range existingLinks {
+					if !crawler.CanonicalUriEqual(newLinks[i].Curi, existingLink.Curi, curiEqCfg) {
+						exactMatch = false
+						break
+					}
+				}
+				if exactMatch {
+					// No need to crawl
+					continue
+				}
 			}
 		}
 
