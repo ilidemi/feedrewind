@@ -151,15 +151,35 @@ func startWorker(
 		if err != nil {
 			return err
 		}
+
+		row = conn.QueryRow(`
+			select virtualtransaction, pid
+			from pg_locks
+			where locktype = 'advisory' and objid = $1
+		`, dynoId)
+		var virtualTransaction string
+		var pid int
+		err = row.Scan(&virtualTransaction, &pid)
+		if err != nil {
+			return err
+		}
+
 		if succeeded {
+			logger.Info().Msgf("Acquired advisory lock (vt=%s pid=%d)", virtualTransaction, pid)
 			break
 		}
 
 		lockFailures++
 		if lockFailures >= 60 {
-			return oops.Newf("Couldn't acquire advisory lock after %d attempts", lockFailures)
+			return oops.Newf(
+				"Couldn't acquire advisory lock after %d attempts (conflict vt=%s pid=%d)",
+				lockFailures, virtualTransaction, pid,
+			)
 		}
-		logger.Info().Msgf("Acquiring advisory lock - attempt %d", lockFailures)
+		logger.Info().Msgf(
+			"Acquiring advisory lock - attempt %d (conflict vt=%s pid=%d)",
+			lockFailures, virtualTransaction, pid,
+		)
 		time.Sleep(time.Second)
 	}
 
