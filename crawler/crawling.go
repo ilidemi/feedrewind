@@ -351,14 +351,14 @@ func followCachedRedirects(
 var loadMoreXPathStr string
 var loadMoreXPath *xpath.Expr
 var mediumFeedLinkXPath *xpath.Expr
-var substackFooterXPath *xpath.Expr
+var substackCdnXPath *xpath.Expr
 var buttondownTwitterXPath *xpath.Expr
 
 func init() {
 	loadMoreXPathStr = `//*[(self::a or self::button)][contains(@class, "load-more")]`
 	loadMoreXPath = xpath.MustCompile(loadMoreXPathStr)
 	mediumFeedLinkXPath = xpath.MustCompile(`//link[@rel="alternate"][@type="application/rss+xml"][starts-with(@href, "https://medium.")]`)
-	substackFooterXPath = xpath.MustCompile(`//*[contains(@class, "footer-substack")]`)
+	substackCdnXPath = xpath.MustCompile(`//link[@rel="preconnect"][@href="https://substackcdn.com"]`)
 	buttondownTwitterXPath = xpath.MustCompile(`/html/head/meta[@name="twitter:site"][@content="@buttondown"]`)
 }
 
@@ -384,7 +384,7 @@ func crawlWithPuppeteerIfMatch(
 		logger.Info("Spotted Medium page, rerunning with puppeteer")
 		puppeteerMatch = true
 	} else if strings.HasSuffix(page.Curi.TrimmedPath, "/archive") &&
-		htmlquery.QuerySelector(page.Document, substackFooterXPath) != nil {
+		htmlquery.QuerySelector(page.Document, substackCdnXPath) != nil {
 
 		logger.Info("Spotted Substack archives, rerunning with puppeteer")
 		puppeteerMatch = true

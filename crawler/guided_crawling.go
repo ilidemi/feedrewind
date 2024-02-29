@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/antchfx/htmlquery"
 	"golang.org/x/exp/slices"
 )
 
@@ -472,6 +473,14 @@ func guidedCrawlHistorical(
 			logger.Info("Enqueued main page: %s", link.Url)
 		} else {
 			startPageOtherLinks = append(startPageOtherLinks, link)
+		}
+	}
+
+	if htmlquery.QuerySelector(startPage.Document, substackCdnXPath) != nil {
+		archiveLink, _ := ToCanonicalLink("/archive", logger, startPage.FetchUri)
+		if !seenCurisSet.contains(archiveLink.Curi) {
+			logger.Info("Adding missing substack archives: %s", archiveLink.Url)
+			archivesQueue = append(archivesQueue, archiveLink)
 		}
 	}
 
