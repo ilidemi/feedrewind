@@ -923,7 +923,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	var blogFeedUrl string
 	var blogCrawlClientToken models.BlogCrawlClientToken
 	var blogCrawlEpoch int32
-	var blogCrawlEpochTimes string
+	var maybeBlogCrawlEpochTimes *string
 	row := conn.QueryRow(`
 		select user_id, blogs.feed_url, blog_crawl_client_tokens.value, blog_crawl_progresses.epoch,
 			blog_crawl_progresses.epoch_times
@@ -936,11 +936,17 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		where subscriptions_without_discarded.id = $1
 	`, subscriptionId)
 	err := row.Scan(
-		&maybeSubscriptionUserId, &blogFeedUrl, &blogCrawlClientToken, &blogCrawlEpoch, &blogCrawlEpochTimes,
+		&maybeSubscriptionUserId, &blogFeedUrl, &blogCrawlClientToken, &blogCrawlEpoch,
+		&maybeBlogCrawlEpochTimes,
 	)
 	if err != nil {
 		panic(err)
 	}
+	if maybeBlogCrawlEpochTimes == nil {
+		logger.Info().Msg("Server epoch times are null")
+		return
+	}
+
 	var subscriptionUserId models.UserId
 	if maybeSubscriptionUserId != nil {
 		subscriptionUserId = *maybeSubscriptionUserId
@@ -957,7 +963,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Info().Msgf("Server: %s", blogCrawlEpochTimes)
+	logger.Info().Msgf("Server: %s", *maybeBlogCrawlEpochTimes)
 	logger.Info().Msgf("Client: %s", epochDurations)
 	adminTelemetryExtra := map[string]any{
 		"feed_url":        blogFeedUrl,
@@ -975,7 +981,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var serverDurations []float64
-	for _, token := range strings.Split(blogCrawlEpochTimes, ";") {
+	for _, token := range strings.Split(*maybeBlogCrawlEpochTimes, ";") {
 		duration, err := strconv.ParseFloat(token, 64)
 		if err != nil {
 			panic(err)
