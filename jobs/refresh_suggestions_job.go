@@ -116,7 +116,8 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 				exactMatch := true
 				curiEqCfg, err := models.BlogCanonicalEqualityConfig_Get(conn, *maybeBlogId)
 				if err != nil {
-					return err
+					logger.Error().Err(err).Msgf("Error when getting curiEqCfg: %s", feedUrl)
+					continue
 				}
 				for i, existingLink := range existingLinks {
 					if !crawler.CanonicalUriEqual(newLinks[i].Curi, existingLink.Curi, curiEqCfg) {
