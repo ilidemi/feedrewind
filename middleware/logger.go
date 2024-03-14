@@ -123,7 +123,7 @@ func Logger(next http.Handler) http.Handler {
 
 		defer func() {
 			status := ww.Status()
-			if status/100 == 4 || status/100 == 5 {
+			if (status/100 == 4 || status/100 == 5) && status != http.StatusMethodNotAllowed {
 				event := logger.
 					Error().
 					Func(commonFields)
