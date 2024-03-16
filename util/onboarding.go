@@ -229,6 +229,11 @@ var SuggestedCategories = []SuggestedCategory{
 				Name:    "Slate Star Codex",
 			},
 			{
+				Url:     "https://www.lesswrong.com/rationality",
+				FeedUrl: "https://www.lesswrong.com/rationality",
+				Name:    "Sequences",
+			},
+			{
 				Url:     "https://dynomight.net/",
 				FeedUrl: "https://dynomight.net/feed.xml",
 				Name:    "DYNOMIGHT",

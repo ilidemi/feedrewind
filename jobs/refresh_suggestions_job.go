@@ -52,7 +52,7 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	}
 	var feedUrls []string
 	for feedUrl := range feedUrlsSet {
-		if feedUrl == crawler.HardcodedOurMachinery {
+		if feedUrl == crawler.HardcodedOurMachinery || feedUrl == crawler.HardcodedSequences {
 			continue
 		}
 		feedUrls = append(feedUrls, feedUrl)
