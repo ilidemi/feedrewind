@@ -17,7 +17,7 @@ type PuppeteerFindLoadMoreButton func(*rod.Page) (*rod.Element, error)
 type PuppeteerClient interface {
 	Fetch(
 		uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[*LinkTitle], crawlCtx *CrawlContext,
-		logger Logger, findLoadMoreButton PuppeteerFindLoadMoreButton,
+		logger Logger, findLoadMoreButton PuppeteerFindLoadMoreButton, extendedScrollTime bool,
 	) (string, error)
 }
 
@@ -35,9 +35,12 @@ func NewPuppeteerClientImpl() *PuppeteerClientImpl {
 	}
 }
 
+const defaultMaxScrollTime = 30 * time.Second
+const extendedMaxScrollTime = 10 * time.Minute
+
 func (c *PuppeteerClientImpl) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[*LinkTitle], crawlCtx *CrawlContext,
-	logger Logger, findLoadMoreButton PuppeteerFindLoadMoreButton,
+	logger Logger, findLoadMoreButton PuppeteerFindLoadMoreButton, extendedScrollTime bool,
 ) (string, error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Puppeteer start: %s", uri)
@@ -59,6 +62,10 @@ func (c *PuppeteerClientImpl) Fetch(
 			logger.Error("Browser close error: %v", err)
 		}
 	}()
+	maxScrollTime := defaultMaxScrollTime
+	if extendedScrollTime {
+		maxScrollTime = extendedMaxScrollTime
+	}
 
 	errorsCount := 0
 	for {
@@ -67,7 +74,7 @@ func (c *PuppeteerClientImpl) Fetch(
 			if err != nil {
 				return "", oops.Wrap(err)
 			}
-			page = page.Timeout(30 * time.Second)
+			page = page.Timeout(maxScrollTime + 30*time.Second)
 
 			hijackRouter := page.HijackRequests()
 			err = hijackRouter.Add("*", proto.NetworkResourceTypeImage, func(h *rod.Hijack) {
@@ -133,7 +140,7 @@ func (c *PuppeteerClientImpl) Fetch(
 					for loadMoreButton != nil {
 						logger.Info("Clicking load more button")
 						progressLogger.LogAndSavePuppeteerStart()
-						err := scrollablePage.waitAndScroll(logger, loadMoreButton)
+						err := scrollablePage.waitAndScroll(logger, loadMoreButton, maxScrollTime)
 						progressLogger.LogAndSavePuppeteer()
 						if err != nil {
 							return "", err
@@ -146,7 +153,7 @@ func (c *PuppeteerClientImpl) Fetch(
 				} else {
 					logger.Info("Scrolling")
 					progressLogger.LogAndSavePuppeteerStart()
-					err := scrollablePage.waitAndScroll(logger, nil)
+					err := scrollablePage.waitAndScroll(logger, nil, maxScrollTime)
 					progressLogger.LogAndSavePuppeteer()
 					if err != nil {
 						return "", err
@@ -223,7 +230,9 @@ func newScrollablePage(page *rod.Page) *scrollablePage {
 	return result
 }
 
-func (p *scrollablePage) waitAndScroll(logger Logger, maybeFindMoreButton *rod.Element) error {
+func (p *scrollablePage) waitAndScroll(
+	logger Logger, maybeFindMoreButton *rod.Element, maxScrollTime time.Duration,
+) error {
 	startTime := time.Now()
 
 	if maybeFindMoreButton != nil {
@@ -243,7 +252,8 @@ func (p *scrollablePage) waitAndScroll(logger Logger, maybeFindMoreButton *rod.E
 
 	for {
 		now := time.Now()
-		if now.Sub(startTime) >= 30*time.Second {
+		if now.Sub(startTime) >= maxScrollTime {
+			logger.Warn("Stopping the scroll early after %v", maxScrollTime)
 			break
 		}
 

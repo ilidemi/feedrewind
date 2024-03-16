@@ -90,9 +90,11 @@ func NewCachingPuppeteerClient(conn *pgw.Conn, startLinkId int) *CachingPuppetee
 func (c *CachingPuppeteerClient) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap crawler.CanonicalUriMap[*crawler.LinkTitle],
 	crawlCtx *crawler.CrawlContext, logger crawler.Logger,
-	findLoadMoreButton crawler.PuppeteerFindLoadMoreButton,
+	findLoadMoreButton crawler.PuppeteerFindLoadMoreButton, extendedScrollTime bool,
 ) (string, error) {
-	content, err := c.Impl.Fetch(uri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton)
+	content, err := c.Impl.Fetch(
+		uri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton, extendedScrollTime,
+	)
 	if err != nil {
 		return "", err
 	}
@@ -124,7 +126,7 @@ func NewMockPuppeteerClient(conn *pgw.Conn, startLinkId int) *MockPuppeteerClien
 func (c *MockPuppeteerClient) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap crawler.CanonicalUriMap[*crawler.LinkTitle],
 	crawlCtx *crawler.CrawlContext, logger crawler.Logger,
-	findLoadMoreButton crawler.PuppeteerFindLoadMoreButton,
+	findLoadMoreButton crawler.PuppeteerFindLoadMoreButton, extendedScrollTime bool,
 ) (string, error) {
 	fetchUrl := uri.String()
 	row := c.Conn.QueryRow(`
@@ -135,7 +137,9 @@ func (c *MockPuppeteerClient) Fetch(
 	var body []byte
 	err := row.Scan(&body)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return c.Impl.Fetch(uri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton)
+		return c.Impl.Fetch(
+			uri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton, extendedScrollTime,
+		)
 	} else if err != nil {
 		return "", err
 	}

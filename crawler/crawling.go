@@ -372,6 +372,7 @@ func crawlWithPuppeteerIfMatch(
 
 	var findLoadMoreButton PuppeteerFindLoadMoreButton
 	puppeteerMatch := false
+	extendedScrollTime := false
 	if htmlquery.QuerySelector(page.Document, loadMoreXPath) != nil {
 		logger.Info("Found load more button, rerunning with puppeteer")
 		puppeteerMatch = true
@@ -388,6 +389,7 @@ func crawlWithPuppeteerIfMatch(
 
 		logger.Info("Spotted Substack archives, rerunning with puppeteer")
 		puppeteerMatch = true
+		extendedScrollTime = true
 	} else if htmlquery.QuerySelector(page.Document, buttondownTwitterXPath) != nil {
 
 		logger.Info("Spotted Buttondown page, rerunning with puppeteer")
@@ -399,7 +401,7 @@ func crawlWithPuppeteerIfMatch(
 	}
 
 	content, err := crawlCtx.MaybePuppeteerClient.Fetch(
-		page.FetchUri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton,
+		page.FetchUri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton, extendedScrollTime,
 	)
 	if err != nil {
 		return nil, err
