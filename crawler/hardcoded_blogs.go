@@ -41,7 +41,7 @@ var hardcodedMrMoneyMustache CanonicalUri
 var hardcodedPaulGraham CanonicalUri
 
 func init() {
-	logger := &DummyLogger{}
+	logger := NewDummyLogger()
 
 	hardcodedACOUP = hardcodedMustParse("https://acoup.blog/")
 	HardcodedAstralCodexTenFeed = hardcodedMustParse("https://www.astralcodexten.com/feed")
@@ -97,7 +97,7 @@ var hardcodedMrMoneyMustacheCategories []HistoricalBlogPostCategory
 var hardcodedPaulGrahamCategories []HistoricalBlogPostCategory
 
 func init() {
-	logger := &DummyLogger{}
+	logger := NewDummyLogger()
 
 	makeTopCategory := func(name string, topUrls []string) []HistoricalBlogPostCategory {
 		topLinks := make([]Link, len(topUrls))

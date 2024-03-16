@@ -274,7 +274,7 @@ func TestExtractNewPostsFromFeed(t *testing.T) {
 	}
 
 	feedUri, _ := neturl.Parse("https://blog/feed")
-	logger := &DummyLogger{}
+	logger := NewDummyLogger()
 	curiEqCfg := &CanonicalEqualityConfig{
 		SameHosts:         nil,
 		ExpectTumblrPaths: false,

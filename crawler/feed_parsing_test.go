@@ -163,7 +163,7 @@ func TestParseFeedRootUrl(t *testing.T) {
 		},
 	}
 
-	logger := &DummyLogger{}
+	logger := NewDummyLogger()
 	fetchUri, err := neturl.Parse("https://root/feed")
 	oops.RequireNoError(t, err)
 	for _, tc := range tests {
@@ -315,7 +315,7 @@ func TestParseFeedTitle(t *testing.T) {
 		},
 	}
 
-	logger := &DummyLogger{}
+	logger := NewDummyLogger()
 	fetchUri, err := neturl.Parse("https://root/feed")
 	oops.RequireNoError(t, err)
 	for _, tc := range tests {
@@ -914,7 +914,7 @@ func TestParseFeedEntryUrls(t *testing.T) {
 		},
 	}
 
-	logger := &DummyLogger{}
+	logger := NewDummyLogger()
 	fetchUri, err := neturl.Parse("https://root/feed")
 	oops.RequireNoError(t, err)
 	for _, tc := range tests {
@@ -1057,7 +1057,7 @@ func TestParseFeedGenerator(t *testing.T) {
 		},
 	}
 
-	logger := &DummyLogger{}
+	logger := NewDummyLogger()
 	fetchUri, err := neturl.Parse("https://root/feed")
 	oops.RequireNoError(t, err)
 	for _, tc := range tests {

@@ -62,18 +62,19 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	})
 
 	httpClient := crawler.NewHttpClientImpl(ctx, false)
-	dlogger := crawler.DummyLogger{}
-	progressLogger := crawler.NewMockProgressLogger(&dlogger)
-	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
 	for _, feedUrl := range feedUrls {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 
-		discoverFeedsResult := crawler.DiscoverFeedsAtUrl(feedUrl, true, &crawlCtx, &dlogger)
+		discoverLogger := crawler.NewDummyLogger()
+		progressLogger := crawler.NewMockProgressLogger(discoverLogger)
+		crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
+		discoverFeedsResult := crawler.DiscoverFeedsAtUrl(feedUrl, true, &crawlCtx, discoverLogger)
 		discoveredSingleFeed, ok := discoverFeedsResult.(*crawler.DiscoveredSingleFeed)
 		if !ok {
 			logger.Error().Msgf("Expected DiscoveredSingleFeed, got: %#v", discoveredSingleFeed)
+			discoverLogger.Replay(logger)
 			continue
 		}
 
@@ -104,9 +105,11 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 				continue
 			}
 
-			parsedFeed, err := crawler.ParseFeed(string(content), fetchUri, &dlogger)
+			parseLogger := crawler.NewDummyLogger()
+			parsedFeed, err := crawler.ParseFeed(string(content), fetchUri, parseLogger)
 			if err != nil {
 				logger.Error().Err(err).Msgf("Error when parsing feed: %s", feedUrl)
+				parseLogger.Replay(logger)
 				continue
 			}
 
