@@ -353,7 +353,7 @@ func TestToCanonicalLink(t *testing.T) {
 		},
 	}
 
-	logger := &DummyLogger{}
+	logger := NewDummyLogger()
 	curiEqCfg := &CanonicalEqualityConfig{
 		SameHosts:         nil,
 		ExpectTumblrPaths: false,

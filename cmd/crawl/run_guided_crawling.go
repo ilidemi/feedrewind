@@ -204,7 +204,7 @@ func runGuidedCrawl(
 		puppeteerClient = NewMockPuppeteerClient(conn, startLinkId)
 	}
 
-	tempProgressLogger := crawler.NewMockProgressLogger(&crawler.DummyLogger{})
+	tempProgressLogger := crawler.NewMockProgressLogger(crawler.NewDummyLogger())
 	crawlCtx := crawler.NewCrawlContext(&mockHttpClient, puppeteerClient, &tempProgressLogger)
 	startTime := time.Now()
 
