@@ -302,21 +302,21 @@ func onboarding_MustDiscoverFeeds(
 	tx pgw.Queryable, startUrl string, currentUser *models.User, productUserId models.ProductUserId,
 ) (discoverResult, models.TypedBlogUrlResult) {
 	logger := tx.Logger()
-	if startUrl == crawler.HardcodedOurMachinery {
-		blog, err := models.Blog_GetLatestByFeedUrl(tx, crawler.HardcodedOurMachinery)
+	if startUrl == crawler.HardcodedOurMachinery || startUrl == crawler.HardcodedSequences {
+		blog, err := models.Blog_GetLatestByFeedUrl(tx, startUrl)
 		if errors.Is(err, models.ErrBlogNotFound) {
-			panic("Our Machinery not found")
+			panic(fmt.Errorf("Blog not found for %s", startUrl))
 		} else if err != nil {
 			panic(err)
 		}
 		subscription, err := models.Subscription_CreateForBlog(tx, blog, currentUser, productUserId)
 		if errors.Is(err, models.ErrBlogFailed) {
-			logger.Info().Msg("Discover feeds for Our Machinery - unsupported blog")
+			logger.Info().Msgf("Discover feeds for %s - unsupported blog", startUrl)
 			return &discoveredUnsupportedBlog{blog: blog}, models.TypedBlogUrlResultHardcoded
 		} else if err != nil {
 			panic(err)
 		} else {
-			logger.Info().Msg("Discover feeds for Our Machinery - created subscription")
+			logger.Info().Msgf("Discover feeds for %s - created subscription", startUrl)
 			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultHardcoded
 		}
 	}

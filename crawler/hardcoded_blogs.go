@@ -16,6 +16,8 @@ import (
 
 // Hardcoded as a fake feed, actual post links are stored in the db
 const HardcodedOurMachinery = "https://ourmachinery.com"
+const HardcodedSequences = "https://www.lesswrong.com/rationality"
+
 const HardcodedDanLuuFeedName = "Dan Luu"
 
 var hardcodedACOUP CanonicalUri
