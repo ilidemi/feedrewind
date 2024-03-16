@@ -79,23 +79,34 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 		if topCategoriesStr != "" {
 			topCategories = strings.Split(topCategoriesStr, ";")
 		}
+		topAndCustomCategoriesStr := util.EnsureParamStr(r, "top_and_custom_categories")
+		var topAndCustomCategories []string
+		if topAndCustomCategoriesStr != "" {
+			topAndCustomCategories = strings.Split(topAndCustomCategoriesStr, ";")
+		}
 		postCategories := make([]string, len(topCategories))
 		copy(postCategories, topCategories)
-		topCategoriesSet := make(map[string]bool)
+		copy(postCategories, topAndCustomCategories)
+		topStatusByCategoryName := map[string]models.BlogPostCategoryTopStatus{}
 		postCategoriesSet := make(map[string]bool)
 		for _, topCategory := range topCategories {
-			topCategoriesSet[topCategory] = true
+			topStatusByCategoryName[topCategory] = models.BlogPostCategoryTopOnly
 			postCategoriesSet[topCategory] = true
+		}
+		for _, topAndCustomCategory := range topAndCustomCategories {
+			topStatusByCategoryName[topAndCustomCategory] = models.BlogPostCategoryTopAndCustom
+			postCategoriesSet[topAndCustomCategory] = true
 		}
 		for _, urlCategory := range postUrlsCategories {
 			if postCategoriesSet[urlCategory.Label] {
 				continue
 			}
+			topStatusByCategoryName[urlCategory.Label] = models.BlogPostCategoryCustomOnly
 			postCategories = append(postCategories, urlCategory.Label)
 			postCategoriesSet[urlCategory.Label] = true
 		}
 
-		topCategoriesSet["Everything"] = true
+		topStatusByCategoryName["Everything"] = models.BlogPostCategoryTopOnly
 		postCategories = append(postCategories, "Everything")
 		postCategoriesSet["Everything"] = true
 		for postUrl := range postUrlsSet {
@@ -248,9 +259,9 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 		var newCategories []models.NewBlogPostCategory
 		for i, name := range postCategories {
 			newCategories = append(newCategories, models.NewBlogPostCategory{
-				Name:  name,
-				Index: int32(i),
-				IsTop: topCategoriesSet[name],
+				Name:      name,
+				Index:     int32(i),
+				TopStatus: topStatusByCategoryName[name],
 			})
 		}
 		batch = tx.NewBatch()
@@ -258,10 +269,10 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 		for _, category := range newCategories {
 			batch.
 				Queue(`
-					insert into blog_post_categories(blog_id, name, index, is_top)
+					insert into blog_post_categories(blog_id, name, index, top_status)
 					values ($1, $2, $3, $4)
 					returning id, name
-				`, blogId, category.Name, category.Index, category.IsTop).
+				`, blogId, category.Name, category.Index, category.TopStatus).
 				QueryRow(func(row pgw.Row) error {
 					var id models.BlogPostCategoryId
 					var name string

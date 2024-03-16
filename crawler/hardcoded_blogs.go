@@ -19,6 +19,7 @@ const HardcodedOurMachinery = "https://ourmachinery.com"
 const HardcodedDanLuuFeedName = "Dan Luu"
 
 var hardcodedACOUP CanonicalUri
+var HardcodedAstralCodexTenFeed CanonicalUri
 var hardcodedBenKuhn *Link
 var hardcodedBenKuhnArchives CanonicalUri
 var hardcodedCaseyHandmer CanonicalUri
@@ -41,6 +42,7 @@ func init() {
 	logger := &DummyLogger{}
 
 	hardcodedACOUP = hardcodedMustParse("https://acoup.blog/")
+	HardcodedAstralCodexTenFeed = hardcodedMustParse("https://www.astralcodexten.com/feed")
 	benKuhn := "https://www.benkuhn.net/"
 	hardcodedBenKuhn, _ = ToCanonicalLink(benKuhn, logger, nil)
 	hardcodedBenKuhnArchives = hardcodedMustParse(benKuhn + "all/")
@@ -258,6 +260,30 @@ func extractACOUPCategories(postLinks []*maybeTitledLink) ([]HistoricalBlogPostC
 		IsTop:     true,
 		PostLinks: articlesLinks,
 	}}, nil
+}
+
+func ExtractACXCategories(postLink *maybeTitledLink) []string {
+	path := postLink.Curi.Path
+	var categories []string
+	if strings.Contains(path, "open-thread") {
+		categories = append(categories, "Open Threads")
+	}
+	if strings.Contains(path, "book-review") {
+		categories = append(categories, "Book Reviews")
+	}
+	if strings.Contains(path, "mantic-monday") {
+		categories = append(categories, "Mantic Mondays")
+	}
+	if strings.Contains(path, "links-for-") {
+		categories = append(categories, "Links")
+	}
+	if strings.Contains(path, "meetup") {
+		categories = append(categories, "Meetups")
+	}
+	if len(categories) == 0 {
+		categories = append(categories, "Articles")
+	}
+	return categories
 }
 
 func extractBenKuhnCategories(mainPage *htmlPage, logger Logger) ([]HistoricalBlogPostCategory, error) {

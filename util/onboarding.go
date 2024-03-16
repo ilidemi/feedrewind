@@ -219,6 +219,11 @@ var SuggestedCategories = []SuggestedCategory{
 		IsRightAligned: false,
 		Blogs: []SuggestedBlog{
 			{
+				Url:     "https://www.astralcodexten.com/",
+				FeedUrl: "https://www.astralcodexten.com/feed",
+				Name:    "Astral Codex Ten",
+			},
+			{
 				Url:     "https://slatestarcodex.com/",
 				FeedUrl: "https://slatestarcodex.com/feed/",
 				Name:    "Slate Star Codex",

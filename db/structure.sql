@@ -41,6 +41,17 @@ CREATE TYPE public.blog_crawl_vote_value AS ENUM (
 
 
 --
+-- Name: blog_post_category_top_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.blog_post_category_top_status AS ENUM (
+    'top_only',
+    'top_and_custom',
+    'custom_only'
+);
+
+
+--
 -- Name: blog_status; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -365,7 +376,7 @@ CREATE TABLE public.blog_post_categories (
     index integer NOT NULL,
     created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    is_top boolean NOT NULL
+    top_status public.blog_post_category_top_status NOT NULL
 );
 
 
@@ -1927,4 +1938,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20240108100234'),
 ('20240110082145'),
 ('20240110082440'),
-('20240226094124');
+('20240226094124'),
+('20240315060348'),
+('20240315105550');
