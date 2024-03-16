@@ -184,18 +184,22 @@ func GuidedCrawlingJob_Perform(
 					}
 
 					if addedCount > 0 {
+						topStatus := models.BlogPostCategoryCustomOnly
+						if category.IsTop {
+							topStatus = models.BlogPostCategoryTopOnly
+						}
 						categories = append(categories, models.NewBlogPostCategory{
-							Name:  category.Name,
-							Index: int32(len(categories)),
-							IsTop: category.IsTop,
+							Name:      category.Name,
+							Index:     int32(len(categories)),
+							TopStatus: topStatus,
 						})
 					}
 				}
 			}
 			categories = append(categories, models.NewBlogPostCategory{
-				Name:  "Everything",
-				Index: int32(len(categories)),
-				IsTop: true,
+				Name:      "Everything",
+				Index:     int32(len(categories)),
+				TopStatus: models.BlogPostCategoryTopOnly,
 			})
 			crawledBlogPosts := make([]models.CrawledBlogPost, len(historicalResult.Links))
 			for i, link := range historicalResult.Links {

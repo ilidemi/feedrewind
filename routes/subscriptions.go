@@ -554,7 +554,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 
 			checkedBlogPostIds := make(map[models.BlogPostId]bool)
 			for _, category := range allCategories {
-				if category.IsTop {
+				if category.TopStatus != models.BlogPostCategoryCustomOnly {
 					for blogPostId := range category.BlogPostIds {
 						checkedBlogPostIds[blogPostId] = true
 					}
@@ -571,7 +571,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 						categoryBlogPosts = append(categoryBlogPosts, &allBlogPosts[i])
 					}
 				}
-				if category.IsTop {
+				if category.TopStatus.IsTop() {
 					posts := make([]TopPost, 0, len(categoryBlogPosts))
 					for _, blogPost := range categoryBlogPosts {
 						posts = append(posts, TopPost{
@@ -629,7 +629,8 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 							MarkWrongFuncJS:           markWrongFuncJS,
 						},
 					})
-				} else {
+				}
+				if category.TopStatus.IsList() {
 					posts := make([]CustomPost, 0, len(categoryBlogPosts))
 					checkedCount := 0
 					for _, blogPost := range categoryBlogPosts {

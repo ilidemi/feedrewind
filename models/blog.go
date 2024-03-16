@@ -9,6 +9,7 @@ import (
 	"feedrewind/util"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgerrcode"
@@ -257,15 +258,24 @@ func Blog_CreateOrUpdate(
 	case BlogUpdateActionUpdateFromFeedOrFail:
 		if newLinksOk {
 			logger.Info().Msgf("Updating blog %s from feed with %d new links", startFeed.Url, len(newLinks))
-			row := tx.QueryRow(`
-				select id from blog_post_categories
-				where blog_id = $1 and name = 'Everything'
-			`, blog.Id)
-			var everythingId BlogPostCategoryId
-			err := row.Scan(&everythingId)
+			rows, err := tx.Query(`select id, name from blog_post_categories where blog_id = $1`, blog.Id)
 			if err != nil {
 				return nil, err
 			}
+			categoryIdByName := map[string]BlogPostCategoryId{}
+			for rows.Next() {
+				var categoryId BlogPostCategoryId
+				var name string
+				err := rows.Scan(&categoryId, &name)
+				if err != nil {
+					return nil, err
+				}
+				categoryIdByName[name] = categoryId
+			}
+			if err := rows.Err(); err != nil {
+				return nil, err
+			}
+			everythingId := categoryIdByName["Everything"]
 
 			return func() (newBlog *Blog, err error) {
 				nestedTx, err := tx.Begin()
@@ -314,7 +324,12 @@ func Blog_CreateOrUpdate(
 				}
 				rows.Close()
 
-				row = nestedTx.QueryRow("select max(index) from blog_posts where blog_id = $1", blog.Id)
+				feedLink, _ := crawler.ToCanonicalLink(startFeed.Url, &zlogger, nil)
+				isACX := crawler.CanonicalUriEqual(
+					feedLink.Curi, crawler.HardcodedAstralCodexTenFeed, curiEqCfg,
+				)
+
+				row := nestedTx.QueryRow("select max(index) from blog_posts where blog_id = $1", blog.Id)
 				var maxIndex int
 				err = row.Scan(&maxIndex)
 				if err != nil {
@@ -330,15 +345,30 @@ func Blog_CreateOrUpdate(
 					} else {
 						title = link.Url
 					}
+					categoryIds := []BlogPostCategoryId{everythingId}
+					if isACX {
+						categoryNames := crawler.ExtractACXCategories(link)
+						for _, categoryName := range categoryNames {
+							categoryIds = append(categoryIds, categoryIdByName[categoryName])
+						}
+					}
+					var sb strings.Builder
+					for i, categoryId := range categoryIds {
+						if i > 0 {
+							fmt.Fprint(&sb, "), (")
+						}
+						fmt.Fprint(&sb, categoryId)
+					}
 					batch.Queue(`
 						with blog_post_ids as (
 							insert into blog_posts (blog_id, index, url, title)
 							values ($1, $2, $3, $4)
 							returning id
-						)
+						),
+						category_ids(id) as (values(`+sb.String()+`))
 						insert into blog_post_category_assignments (blog_post_id, category_id)
-						select id, $5 from blog_post_ids
-					`, blog.Id, index, link.Url, title, everythingId)
+						select (select id from blog_post_ids), id from category_ids
+					`, blog.Id, index, link.Url, title)
 				}
 				err = nestedTx.SendBatch(batch).Close()
 				if err != nil {
@@ -483,10 +513,10 @@ func Blog_InitCrawled(
 	for i, crawledBlogPost := range crawledBlogPosts {
 		i := i
 		batch.Queue(`
-				insert into blog_posts (blog_id, index, url, title)
-				values ($1, $2, $3, $4)
-				returning id
-			`, blogId, len(crawledBlogPosts)-i-1, crawledBlogPost.Url, crawledBlogPost.Title,
+			insert into blog_posts (blog_id, index, url, title)
+			values ($1, $2, $3, $4)
+			returning id
+		`, blogId, len(crawledBlogPosts)-i-1, crawledBlogPost.Url, crawledBlogPost.Title,
 		).QueryRow(func(row pgw.Row) error {
 			return row.Scan(&blogPostIds[i])
 		})
@@ -502,10 +532,10 @@ func Blog_InitCrawled(
 		for i, category := range categories {
 			i := i
 			batch.Queue(`
-					insert into blog_post_categories (blog_id, name, index, is_top)
-					values ($1, $2, $3, $4)
-					returning id
-				`, blogId, category.Name, category.Index, category.IsTop,
+				insert into blog_post_categories (blog_id, name, index, top_status)
+				values ($1, $2, $3, $4)
+				returning id
+			`, blogId, category.Name, category.Index, category.TopStatus,
 			).QueryRow(func(row pgw.Row) error {
 				return row.Scan(&categoryIds[i])
 			})
@@ -730,22 +760,38 @@ func BlogPost_List(tx pgw.Queryable, blogId BlogId) ([]BlogPost, error) {
 
 type BlogPostCategoryId int64
 
+type BlogPostCategoryTopStatus string
+
+const (
+	BlogPostCategoryTopOnly      BlogPostCategoryTopStatus = "top_only"
+	BlogPostCategoryTopAndCustom BlogPostCategoryTopStatus = "top_and_custom"
+	BlogPostCategoryCustomOnly   BlogPostCategoryTopStatus = "custom_only"
+)
+
+func (s BlogPostCategoryTopStatus) IsTop() bool {
+	return s == BlogPostCategoryTopOnly || s == BlogPostCategoryTopAndCustom
+}
+
+func (s BlogPostCategoryTopStatus) IsList() bool {
+	return s == BlogPostCategoryTopAndCustom || s == BlogPostCategoryCustomOnly
+}
+
 type NewBlogPostCategory struct {
-	Name  string
-	Index int32
-	IsTop bool
+	Name      string
+	Index     int32
+	TopStatus BlogPostCategoryTopStatus
 }
 
 type BlogPostCategory struct {
 	Id          BlogPostCategoryId
 	Name        string
-	IsTop       bool
+	TopStatus   BlogPostCategoryTopStatus
 	BlogPostIds map[BlogPostId]bool
 }
 
 func BlogPostCategory_ListOrdered(tx pgw.Queryable, blogId BlogId) ([]BlogPostCategory, error) {
 	rows, err := tx.Query(`
-		select id, name, is_top from blog_post_categories where blog_id = $1 order by index asc
+		select id, name, top_status from blog_post_categories where blog_id = $1 order by index asc
 	`, blogId)
 	if err != nil {
 		return nil, err
@@ -754,7 +800,7 @@ func BlogPostCategory_ListOrdered(tx pgw.Queryable, blogId BlogId) ([]BlogPostCa
 	var categories []BlogPostCategory
 	for rows.Next() {
 		var category BlogPostCategory
-		err := rows.Scan(&category.Id, &category.Name, &category.IsTop)
+		err := rows.Scan(&category.Id, &category.Name, &category.TopStatus)
 		if err != nil {
 			return nil, err
 		}
