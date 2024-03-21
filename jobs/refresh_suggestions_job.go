@@ -73,7 +73,7 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		discoverFeedsResult := crawler.DiscoverFeedsAtUrl(feedUrl, true, &crawlCtx, discoverLogger)
 		discoveredSingleFeed, ok := discoverFeedsResult.(*crawler.DiscoveredSingleFeed)
 		if !ok {
-			logger.Error().Msgf("Expected DiscoveredSingleFeed, got: %#v", discoveredSingleFeed)
+			logger.Error().Msgf("Expected DiscoveredSingleFeed, got: %#v (%s)", discoveredSingleFeed, feedUrl)
 			discoverLogger.Replay(logger)
 			continue
 		}
