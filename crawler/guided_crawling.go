@@ -275,7 +275,7 @@ func GuidedCrawl(
 			PostCategories:         postCategories,
 			Extra:                  postCategoriesExtra,
 		}
-		historicalMaybeTitledLinks = parsedFeed.EntryLinks.ToSlice()
+		historicalMaybeTitledLinks = parsedFeed.EntryLinks.ToMaybeTitledSlice()
 	}
 
 	if historicalResult != nil {
@@ -644,7 +644,7 @@ func guidedCrawlHistorical(
 		}
 	}
 	areAnyFeedEntriesTopLevel := slices.ContainsFunc(
-		feedEntryLinks.ToSlice(), func(entryLink *maybeTitledLink) bool {
+		feedEntryLinks.ToSlice(), func(entryLink *FeedEntryLink) bool {
 			return strings.Count(entryLink.Curi.TrimmedPath, "/") <= 1
 		},
 	)

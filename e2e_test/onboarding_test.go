@@ -36,7 +36,9 @@ func TestOnboardingSuggestion(t *testing.T) {
 
 	// Landing
 	page = visitDev(browser, "")
-	page.MustElement(`a[href="/subscriptions/add/https:%2F%2Fwww.brendangregg.com%2Fblog%2Frss.xml"]`).MustClick()
+	page.MustElement(
+		`form[action="/subscriptions/add/https:%2F%2Fwww.brendangregg.com%2Fblog%2Frss.xml"] > button`,
+	).MustClick()
 
 	page.MustElementR("input", "Continue").MustClick()
 

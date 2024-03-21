@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"feedrewind/log"
 	"feedrewind/oops"
 	"fmt"
 	neturl "net/url"
@@ -14,7 +15,7 @@ import (
 	Blogs here have explicit branches for them in code, there are more in the database
 */
 
-// Hardcoded as a fake feed, actual post links are stored in the db
+// Hardcoded as fake feeds that point to the DB
 const HardcodedOurMachinery = "https://ourmachinery.com"
 const HardcodedSequences = "https://www.lesswrong.com/rationality"
 
@@ -34,6 +35,7 @@ var hardcodedCryptographyEngineering CanonicalUri
 var hardcodedCryptographyEngineeringAll CanonicalUri
 var hardcodedDanLuu CanonicalUri
 var HardcodedDanLuuFeed CanonicalUri
+var HardcodedDontWorryAboutTheVaseFeed CanonicalUri
 var hardcodedFactorio CanonicalUri
 var hardcodedJuliaEvans CanonicalUri
 var hardcodedKalzumeus CanonicalUri
@@ -73,6 +75,7 @@ func init() {
 	danLuu := "https://danluu.com"
 	hardcodedDanLuu = hardcodedMustParse(danLuu)
 	HardcodedDanLuuFeed = hardcodedMustParse(danLuu + "/atom.xml")
+	HardcodedDontWorryAboutTheVaseFeed = hardcodedMustParse("https://thezvi.substack.com/feed")
 	cryptographyEngineering := "https://blog.cryptographyengineering.com"
 	hardcodedCryptographyEngineering = hardcodedMustParse(cryptographyEngineering)
 	hardcodedCryptographyEngineeringAll = hardcodedMustParse(cryptographyEngineering + "/all-posts/")
@@ -264,7 +267,7 @@ func extractACOUPCategories(postLinks []*maybeTitledLink) ([]HistoricalBlogPostC
 	}}, nil
 }
 
-func ExtractACXCategories(postLink *maybeTitledLink) []string {
+func ExtractACXCategories(postLink *FeedEntryLink) []string {
 	path := postLink.Curi.Path
 	var categories []string
 	if strings.Contains(path, "open-thread") {
@@ -415,6 +418,24 @@ func extractCaseyHandmerCategories(
 			PostLinks: uncategorizedLinks,
 		},
 	}, nil
+}
+
+func ExtractDontWorryAboutTheVaseCategories(postLink *FeedEntryLink, logger log.Logger) []string {
+	path := postLink.Curi.Path
+	// Everything that can show up in the feed from now on is 2023+
+	// Also assuming covid is over
+	categories := []string{"2023+", "Non-Covid"}
+	dontWorryAboutTheVaseAIRegex := regexp.MustCompile("^/p/ai-[0-9]")
+	if dontWorryAboutTheVaseAIRegex.MatchString(path) {
+		categories = append(categories, "AI Series")
+	}
+	if postLink.MaybeDate == nil {
+		logger.Error().Msgf("Don't Worry About The Vase feed entry doesn't have date: %s", postLink.Url)
+		return categories
+	}
+	yearStr := fmt.Sprint(postLink.MaybeDate.Year())
+	categories = append(categories, yearStr)
+	return categories
 }
 
 func extractFactorioCategories(postLinks []*maybeTitledLink) ([]HistoricalBlogPostCategory, error) {
