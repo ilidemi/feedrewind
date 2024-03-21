@@ -136,16 +136,19 @@ func TestSequenceSuffixLength(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		var linkBuckets [][]maybeTitledLink
+		var linkBuckets [][]FeedEntryLink
 		length := 0
 		for _, bucket := range tc.buckets {
-			var linkBucket []maybeTitledLink
+			var linkBucket []FeedEntryLink
 			for _, url := range bucket {
 				link, ok := ToCanonicalLink(url, logger, nil)
 				require.True(t, ok, tc.description)
-				linkBucket = append(linkBucket, maybeTitledLink{
-					Link:       *link,
-					MaybeTitle: nil,
+				linkBucket = append(linkBucket, FeedEntryLink{
+					maybeTitledLink: maybeTitledLink{
+						Link:       *link,
+						MaybeTitle: nil,
+					},
+					MaybeDate: nil,
 				})
 			}
 			linkBuckets = append(linkBuckets, linkBucket)
@@ -164,7 +167,7 @@ func TestSequenceSuffixLength(t *testing.T) {
 			seqCuris = append(seqCuris, seqLink.Curi)
 		}
 
-		var suffixLinks []maybeTitledLink
+		var suffixLinks []FeedEntryLink
 		require.NotPanics(t, func() {
 			suffixLinks, _ = feedEntryLinks.sequenceSuffixMatch(seqCuris, curiEqCfg)
 		}, tc.description)

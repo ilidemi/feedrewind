@@ -256,7 +256,7 @@ func checkCombination(
 				}
 			}
 			if !found {
-				missingLinks = append(missingLinks, link)
+				missingLinks = append(missingLinks, &link.maybeTitledLink)
 			}
 		}
 		almostSuffix = "_almost"

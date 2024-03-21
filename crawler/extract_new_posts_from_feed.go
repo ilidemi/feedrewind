@@ -14,7 +14,7 @@ func ExtractNewPostsFromFeed(
 	curiEqCfg *CanonicalEqualityConfig, logger Logger,
 	parseFeedLogger Logger,
 ) (
-	newLinks []*maybeTitledLink, err error,
+	newLinks []*FeedEntryLink, err error,
 ) {
 	missingFromFeedEntryCurisSet := NewCanonicalUriSet(nil, curiEqCfg)
 	for url := range missingFromFeedEntryUrls {

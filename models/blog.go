@@ -328,6 +328,9 @@ func Blog_CreateOrUpdate(
 				isACX := crawler.CanonicalUriEqual(
 					feedLink.Curi, crawler.HardcodedAstralCodexTenFeed, curiEqCfg,
 				)
+				isDontWorryAboutTheVase := crawler.CanonicalUriEqual(
+					feedLink.Curi, crawler.HardcodedDontWorryAboutTheVaseFeed, curiEqCfg,
+				)
 
 				row := nestedTx.QueryRow("select max(index) from blog_posts where blog_id = $1", blog.Id)
 				var maxIndex int
@@ -345,12 +348,33 @@ func Blog_CreateOrUpdate(
 					} else {
 						title = link.Url
 					}
-					categoryIds := []BlogPostCategoryId{everythingId}
+					var categoryNames []string
 					if isACX {
-						categoryNames := crawler.ExtractACXCategories(link)
-						for _, categoryName := range categoryNames {
-							categoryIds = append(categoryIds, categoryIdByName[categoryName])
+						categoryNames = crawler.ExtractACXCategories(link)
+					} else if isDontWorryAboutTheVase {
+						categoryNames = crawler.ExtractDontWorryAboutTheVaseCategories(link, logger)
+					}
+					categoryIds := []BlogPostCategoryId{everythingId}
+					for _, categoryName := range categoryNames {
+						categoryId, ok := categoryIdByName[categoryName]
+						if !ok {
+							row := nestedTx.QueryRow(`
+								insert into blog_post_categories (blog_id, name, index, top_status)
+								values (
+									$1,
+									$2,
+									(select max(index) from blog_post_categories where blog_id = $1) + 1,
+									'custom_only'
+								)
+								returning id
+							`, blog.Id, categoryName)
+							err := row.Scan(&categoryId)
+							if err != nil {
+								return nil, err
+							}
+							categoryIdByName[categoryName] = categoryId
 						}
+						categoryIds = append(categoryIds, categoryIdByName[categoryName])
 					}
 					var sb strings.Builder
 					for i, categoryId := range categoryIds {

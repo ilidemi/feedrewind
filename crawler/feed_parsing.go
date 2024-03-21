@@ -362,7 +362,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 	sortedEntries, areDatesCertain := trySortReverseChronological(entries, logger)
 	entryTitleCount := 0
 	entryTitleNeedsDecodingCount := 0
-	var entryLinks []maybeTitledLink
+	var entryLinks []FeedEntryLink
 	for _, entry := range sortedEntries {
 		link, ok := ToCanonicalLink(entry.url, logger, fetchUri)
 		if !ok {
@@ -379,19 +379,21 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 			linkTitle := NewLinkTitle(linkTitleValue, LinkTitleSourceFeed, nil)
 			maybeLinkTitle = &linkTitle
 		}
-		entryLinks = append(entryLinks, maybeTitledLink{
-			Link:       *link,
-			MaybeTitle: maybeLinkTitle,
+		var maybeDate *time.Time
+		if areDatesCertain {
+			date := entry.pubDate
+			maybeDate = &date
+		}
+		entryLinks = append(entryLinks, FeedEntryLink{
+			maybeTitledLink: maybeTitledLink{
+				Link:       *link,
+				MaybeTitle: maybeLinkTitle,
+			},
+			MaybeDate: maybeDate,
 		})
 	}
 
-	var entryDates []time.Time
-	if areDatesCertain {
-		for _, entry := range sortedEntries {
-			entryDates = append(entryDates, entry.pubDate)
-		}
-	}
-	feedEntryLinks := feedEntryLinksFromLinksDates(entryLinks, entryDates)
+	feedEntryLinks := newFeedEntryLinks(entryLinks)
 	logger.Info("Feed entries: %d", feedEntryLinks.Length)
 	logger.Info("Feed entry titles present: %d", entryTitleCount)
 	logger.Info("Feed entry titles needed HTML decoding: %d", entryTitleNeedsDecodingCount)

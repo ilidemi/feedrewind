@@ -690,7 +690,7 @@ func tryExtractMediumPinnedEntry(
 			continue
 		}
 
-		var feedLinksNotMatching []*maybeTitledLink
+		var feedLinksNotMatching []*FeedEntryLink
 		for _, link := range feedEntryLinks.ToSlice() {
 			if !curisSet.Contains(link.Curi) {
 				feedLinksNotMatching = append(feedLinksNotMatching, link)
@@ -971,7 +971,7 @@ func tryExtractAlmostMatchingFeed(
 		return &archivesSortedResult{
 			MainLnk:        *mainLink,
 			Pattern:        "archives_feed_almost",
-			Links:          feedEntryLinks.ToSlice(),
+			Links:          feedEntryLinks.ToMaybeTitledSlice(),
 			HasDates:       false,
 			PostCategories: nil,
 			Extra: []string{
@@ -1131,7 +1131,7 @@ func tryExtractLongFeed(
 		return &archivesLongFeedResult{
 			MainLnk: *mainLink,
 			Pattern: "archives_long_feed",
-			Links:   feedEntryLinks.ToSlice(),
+			Links:   feedEntryLinks.ToMaybeTitledSlice(),
 			Extra:   nil,
 		}, true
 	} else {

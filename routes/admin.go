@@ -84,9 +84,9 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 		if topAndCustomCategoriesStr != "" {
 			topAndCustomCategories = strings.Split(topAndCustomCategoriesStr, ";")
 		}
-		postCategories := make([]string, len(topCategories))
-		copy(postCategories, topCategories)
-		copy(postCategories, topAndCustomCategories)
+		postCategories := make([]string, 0, len(topCategories)+len(topAndCustomCategories))
+		postCategories = append(postCategories, topCategories...)
+		postCategories = append(postCategories, topAndCustomCategories...)
 		topStatusByCategoryName := map[string]models.BlogPostCategoryTopStatus{}
 		postCategoriesSet := make(map[string]bool)
 		for _, topCategory := range topCategories {
@@ -371,7 +371,11 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 	var title string
 	blog, err := postBlogImpl()
 	if err != nil {
-		message = err.Error()
+		if oopsErr, ok := err.(*oops.Error); ok {
+			message = oopsErr.FullString()
+		} else {
+			message = err.Error()
+		}
 		title = "Blog not added"
 	} else {
 		message = fmt.Sprintf(

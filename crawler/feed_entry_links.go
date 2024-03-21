@@ -7,33 +7,43 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+type FeedEntryLink struct {
+	maybeTitledLink
+	MaybeDate *time.Time
+}
+
 type FeedEntryLinks struct {
-	LinkBuckets    [][]maybeTitledLink
+	LinkBuckets    [][]FeedEntryLink
 	Length         int
 	IsOrderCertain bool
 }
 
-func feedEntryLinksFromLinksDates(links []maybeTitledLink, dates []time.Time) FeedEntryLinks {
+func newFeedEntryLinks(links []FeedEntryLink) FeedEntryLinks {
 	var isOrderCertain bool
-	var linkBuckets [][]maybeTitledLink
-	if len(dates) > 0 {
+	var linkBuckets [][]FeedEntryLink
+	allDates := true
+	for _, link := range links {
+		if link.MaybeDate == nil {
+			allDates = false
+			break
+		}
+	}
+	if allDates {
 		isOrderCertain = true
 		var lastDate time.Time
-		for i := 0; i < len(links); i++ {
-			link := links[i]
-			date := dates[i]
-			if i != 0 && date.Equal(lastDate) {
+		for i, link := range links {
+			if i != 0 && link.MaybeDate.Equal(lastDate) {
 				lastBucket := &linkBuckets[len(linkBuckets)-1]
 				*lastBucket = append(*lastBucket, link)
 			} else {
-				linkBuckets = append(linkBuckets, []maybeTitledLink{link})
+				linkBuckets = append(linkBuckets, []FeedEntryLink{link})
 			}
-			lastDate = date
+			lastDate = *link.MaybeDate
 		}
 	} else {
 		isOrderCertain = false
 		for _, link := range links {
-			linkBuckets = append(linkBuckets, []maybeTitledLink{link})
+			linkBuckets = append(linkBuckets, []FeedEntryLink{link})
 		}
 	}
 
@@ -45,10 +55,10 @@ func feedEntryLinksFromLinksDates(links []maybeTitledLink, dates []time.Time) Fe
 }
 
 func (l *FeedEntryLinks) filterIncluded(curisSet *CanonicalUriSet) *FeedEntryLinks {
-	var newBuckets [][]maybeTitledLink
+	var newBuckets [][]FeedEntryLink
 	newLength := 0
 	for _, bucket := range l.LinkBuckets {
-		var newBucket []maybeTitledLink
+		var newBucket []FeedEntryLink
 		for _, link := range bucket {
 			if curisSet.Contains(link.Curi) {
 				newBucket = append(newBucket, link)
@@ -108,13 +118,13 @@ func (l *FeedEntryLinks) includedPrefixLength(curisSet *CanonicalUriSet) int {
 
 func (l *FeedEntryLinks) sequenceMatch(
 	seqCuris []CanonicalUri, curiEqCfg *CanonicalEqualityConfig,
-) ([]maybeTitledLink, bool) {
+) ([]FeedEntryLink, bool) {
 	return l.subsequenceMatch(seqCuris, 0, curiEqCfg)
 }
 
 func (l *FeedEntryLinks) subsequenceMatch(
 	seqCuris []CanonicalUri, offset int, curiEqCfg *CanonicalEqualityConfig,
-) ([]maybeTitledLink, bool) {
+) ([]FeedEntryLink, bool) {
 	if offset >= l.Length {
 		return nil, true
 	}
@@ -126,16 +136,16 @@ func (l *FeedEntryLinks) subsequenceMatch(
 	}
 
 	remainingInBucket := len(l.LinkBuckets[currentBucketIndex]) - offset
-	var subsequenceLinks []maybeTitledLink
+	var subsequenceLinks []FeedEntryLink
 	for _, seqCuri := range seqCuris {
-		var matchingLink maybeTitledLink
+		var matchingLink FeedEntryLink
 		for _, bucketLink := range l.LinkBuckets[currentBucketIndex] {
 			if CanonicalUriEqual(seqCuri, bucketLink.Curi, curiEqCfg) {
 				matchingLink = bucketLink
 				break
 			}
 		}
-		if matchingLink == (maybeTitledLink{}) { //nolint:exhaustruct
+		if matchingLink == (FeedEntryLink{}) { //nolint:exhaustruct
 			return nil, false
 		}
 
@@ -159,14 +169,14 @@ func (l *FeedEntryLinks) sequenceMatchExceptFirst(
 	if l.Length == 0 {
 		return false, nil
 	} else if l.Length == 1 {
-		return true, &l.LinkBuckets[0][0]
+		return true, &l.LinkBuckets[0][0].maybeTitledLink
 	}
 
 	firstBucket := l.LinkBuckets[0]
 	if len(firstBucket) == 1 {
 		_, isMatch := l.subsequenceMatch(seqCuris, 1, curiEqCfg)
 		if isMatch {
-			return true, &firstBucket[0]
+			return true, &firstBucket[0].maybeTitledLink
 		} else {
 			return false, nil
 		}
@@ -179,7 +189,7 @@ func (l *FeedEntryLinks) sequenceMatchExceptFirst(
 		// Compare first bucket separately to see which link is not matching
 		firstBucketRemaining := slices.Clone(firstBucket)
 		for _, seqCuri := range seqCuris[:len(firstBucket)-1] {
-			matchIndex := slices.IndexFunc(firstBucketRemaining, func(bucketLink maybeTitledLink) bool {
+			matchIndex := slices.IndexFunc(firstBucketRemaining, func(bucketLink FeedEntryLink) bool {
 				return CanonicalUriEqual(seqCuri, bucketLink.Curi, curiEqCfg)
 			})
 			if matchIndex == -1 {
@@ -191,7 +201,7 @@ func (l *FeedEntryLinks) sequenceMatchExceptFirst(
 
 		_, isMatch := l.subsequenceMatch(seqCuris[len(firstBucket)-1:], len(firstBucket), curiEqCfg)
 		if isMatch {
-			return true, &firstBucketRemaining[0]
+			return true, &firstBucketRemaining[0].maybeTitledLink
 		} else {
 			return false, nil
 		}
@@ -200,13 +210,13 @@ func (l *FeedEntryLinks) sequenceMatchExceptFirst(
 
 func (l *FeedEntryLinks) sequenceSuffixMatch(
 	seqCuris []CanonicalUri, curiEqCfg *CanonicalEqualityConfig,
-) (suffixLinks []maybeTitledLink, prefixLength int) {
+) (suffixLinks []FeedEntryLink, prefixLength int) {
 	if len(seqCuris) == 0 {
 		return nil, -1
 	}
 
-	startBucketIndex := slices.IndexFunc(l.LinkBuckets, func(bucket []maybeTitledLink) bool {
-		return slices.IndexFunc(bucket, func(link maybeTitledLink) bool {
+	startBucketIndex := slices.IndexFunc(l.LinkBuckets, func(bucket []FeedEntryLink) bool {
+		return slices.IndexFunc(bucket, func(link FeedEntryLink) bool {
 			return CanonicalUriEqual(link.Curi, seqCuris[0], curiEqCfg)
 		}) != -1
 	})
@@ -215,13 +225,13 @@ func (l *FeedEntryLinks) sequenceSuffixMatch(
 	}
 
 	startBucket := l.LinkBuckets[startBucketIndex]
-	var startBucketMatchingLinks []maybeTitledLink
+	var startBucketMatchingLinks []FeedEntryLink
 	seqOffset := 0
 	for {
 		if seqOffset >= len(seqCuris) {
 			break
 		}
-		matchingLinkIndex := slices.IndexFunc(startBucket, func(link maybeTitledLink) bool {
+		matchingLinkIndex := slices.IndexFunc(startBucket, func(link FeedEntryLink) bool {
 			return CanonicalUriEqual(link.Curi, seqCuris[seqOffset], curiEqCfg)
 		})
 		if matchingLinkIndex == -1 {
@@ -254,10 +264,10 @@ func (l *FeedEntryLinks) sequenceSuffixMatch(
 }
 
 func (l *FeedEntryLinks) Except(curisSet CanonicalUriSet) FeedEntryLinks {
-	var newLinkBuckets [][]maybeTitledLink
+	var newLinkBuckets [][]FeedEntryLink
 	length := l.Length
 	for _, linkBucket := range l.LinkBuckets {
-		var newLinkBucket []maybeTitledLink
+		var newLinkBucket []FeedEntryLink
 		for _, link := range linkBucket {
 			if curisSet.Contains(link.Curi) {
 				length--
@@ -277,12 +287,23 @@ func (l *FeedEntryLinks) Except(curisSet CanonicalUriSet) FeedEntryLinks {
 	}
 }
 
-func (l *FeedEntryLinks) ToSlice() []*maybeTitledLink {
-	result := make([]*maybeTitledLink, 0, l.Length)
+func (l *FeedEntryLinks) ToSlice() []*FeedEntryLink {
+	result := make([]*FeedEntryLink, 0, l.Length)
 	for _, linkBucket := range l.LinkBuckets {
 		for i := range linkBucket {
 			link := linkBucket[i]
 			result = append(result, &link)
+		}
+	}
+	return result
+}
+
+func (l *FeedEntryLinks) ToMaybeTitledSlice() []*maybeTitledLink {
+	result := make([]*maybeTitledLink, 0, l.Length)
+	for _, linkBucket := range l.LinkBuckets {
+		for i := range linkBucket {
+			link := linkBucket[i]
+			result = append(result, &link.maybeTitledLink)
 		}
 	}
 	return result
