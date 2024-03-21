@@ -2,6 +2,7 @@ Don't Worry About the Vase
 https://thezvi.substack.com/feed
 https://thezvi.substack.com/
 
+https://thezvi.substack.com/p/ai-56-blackwell-that-ends-well AI #56: Blackwell That Ends Well
 https://thezvi.substack.com/p/on-the-gladstone-report On the Gladstone Report
 https://thezvi.substack.com/p/monthly-roundup-16-march-2024 Monthly Roundup #16: March 2024
 https://thezvi.substack.com/p/on-devin On Devin
@@ -861,6 +862,7 @@ https://thezvi.substack.com/p/omicron-post-4 Covid
 https://thezvi.substack.com/p/omicron-post-3 Covid
 https://thezvi.substack.com/p/omicron-variant-post-2 Covid
 https://thezvi.substack.com/p/omicron-variant-post-1-were-fed-its Covid
+https://thezvi.substack.com/p/ai-56-blackwell-that-ends-well Non-Covid
 https://thezvi.substack.com/p/on-the-gladstone-report Non-Covid
 https://thezvi.substack.com/p/monthly-roundup-16-march-2024 Non-Covid
 https://thezvi.substack.com/p/on-devin Non-Covid
@@ -1351,6 +1353,7 @@ https://thezvi.substack.com/p/private-firm-vs-public-firm-earnings Non-Covid
 https://thezvi.substack.com/p/carpe-diem-the-problem-of-scarcity-and-abundance Non-Covid
 https://thezvi.substack.com/p/carpe-diem-the-optimization-game-level-1 Non-Covid
 https://thezvi.substack.com/p/hawkward Non-Covid
+https://thezvi.substack.com/p/ai-56-blackwell-that-ends-well AI Series
 https://thezvi.substack.com/p/ai-55-keep-clauding-along AI Series
 https://thezvi.substack.com/p/ai-54-clauding-along AI Series
 https://thezvi.substack.com/p/ai-53-one-more-leap AI Series
@@ -1405,6 +1408,7 @@ https://thezvi.substack.com/p/ai-4-introducing-gpt-4 AI Series
 https://thezvi.substack.com/p/ai-3 AI Series
 https://thezvi.substack.com/p/ai-2 AI Series
 https://thezvi.substack.com/p/ai-1-sydney-and-bing AI Series
+https://thezvi.substack.com/p/ai-56-blackwell-that-ends-well 2023+
 https://thezvi.substack.com/p/on-the-gladstone-report 2023+
 https://thezvi.substack.com/p/monthly-roundup-16-march-2024 2023+
 https://thezvi.substack.com/p/on-devin 2023+
@@ -2204,6 +2208,7 @@ https://thezvi.substack.com/p/how-to-bounded-distrust 2023
 https://thezvi.substack.com/p/childhood-roundup-1 2023
 https://thezvi.substack.com/p/covid-1523-various-xbb-takes 2023
 https://thezvi.substack.com/p/monthly-roundup-2 2023
+https://thezvi.substack.com/p/ai-56-blackwell-that-ends-well 2024
 https://thezvi.substack.com/p/on-the-gladstone-report 2024
 https://thezvi.substack.com/p/monthly-roundup-16-march-2024 2024
 https://thezvi.substack.com/p/on-devin 2024
