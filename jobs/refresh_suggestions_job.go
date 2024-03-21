@@ -90,7 +90,14 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 			continue
 		}
 
-		if maybeBlogStatus != nil && !models.BlogFailedStatuses[*maybeBlogStatus] && maybeStartFeedId != nil {
+		if maybeBlogId != nil && maybeBlogStatus != nil && models.BlogFailedStatuses[*maybeBlogStatus] {
+			logger.Info().Msgf("Downgrading blog %d (%s)", *maybeBlogId, feedUrl)
+			_, err := models.Blog_Downgrade(conn, *maybeBlogId)
+			if err != nil {
+				logger.Error().Err(err).Msgf("Error when downgrading blog: %s", feedUrl)
+				continue
+			}
+		} else if maybeStartFeedId != nil {
 			row = conn.QueryRow(`select content, url from start_feeds where id = $1`, *maybeStartFeedId)
 			var content []byte
 			var url string
