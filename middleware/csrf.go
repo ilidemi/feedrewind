@@ -15,6 +15,8 @@ import (
 
 const CSRFFormKey = "authenticity_token"
 
+var csrfValidationFailed = errors.New("CSRF validation failed")
+
 func CSRF(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		authToken := GetSessionAuthToken(r)
@@ -51,7 +53,7 @@ func CSRF(next http.Handler) http.Handler {
 
 				panic(util.HttpError{
 					Status: http.StatusForbidden,
-					Inner:  errors.New("CSRF validation failed"),
+					Inner:  csrfValidationFailed,
 				})
 			}
 		}

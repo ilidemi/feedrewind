@@ -42,6 +42,7 @@ func Misc_NotFound(w http.ResponseWriter, r *http.Request) {
 		"method":  r.Method,
 		"referer": util.CollapseReferer(r),
 	}, logger)
+	w.WriteHeader(http.StatusNotFound)
 	type Result struct {
 		Title string
 	}
