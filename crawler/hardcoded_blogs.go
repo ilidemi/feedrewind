@@ -267,7 +267,7 @@ func extractACOUPCategories(postLinks []*maybeTitledLink) ([]HistoricalBlogPostC
 	}}, nil
 }
 
-func ExtractACXCategories(postLink *FeedEntryLink) []string {
+func ExtractACXCategories(postLink *FeedEntryLink, logger log.Logger) []string {
 	path := postLink.Curi.Path
 	var categories []string
 	if strings.Contains(path, "open-thread") {
@@ -286,8 +286,17 @@ func ExtractACXCategories(postLink *FeedEntryLink) []string {
 		categories = append(categories, "Meetups")
 	}
 	if len(categories) == 0 {
+		// Everything that can show up in the feed from now on is 2023+
+		categories = append(categories, "Articles 2023+")
+
 		categories = append(categories, "Articles")
 	}
+	if postLink.MaybeDate == nil {
+		logger.Error().Msgf("ACX feed entry doesn't have date: %s", postLink.Url)
+		return categories
+	}
+	yearStr := fmt.Sprint(postLink.MaybeDate.Year())
+	categories = append(categories, yearStr)
 	return categories
 }
 

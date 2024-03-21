@@ -83,6 +83,20 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 		var topAndCustomCategories []string
 		if topAndCustomCategoriesStr != "" {
 			topAndCustomCategories = strings.Split(topAndCustomCategoriesStr, ";")
+			topCategoriesSet := map[string]bool{}
+			for _, categoryName := range topCategories {
+				if topCategoriesSet[categoryName] {
+					return nil, oops.Newf("Duplicate category name: %s", categoryName)
+				}
+				topCategoriesSet[categoryName] = true
+			}
+			topAndCustomCategoriesSet := map[string]bool{}
+			for _, categoryName := range topAndCustomCategories {
+				if topCategoriesSet[categoryName] || topAndCustomCategoriesSet[categoryName] {
+					return nil, oops.Newf("Duplicate category name: %s", categoryName)
+				}
+				topAndCustomCategoriesSet[categoryName] = true
+			}
 		}
 		postCategories := make([]string, 0, len(topCategories)+len(topAndCustomCategories))
 		postCategories = append(postCategories, topCategories...)

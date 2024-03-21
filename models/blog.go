@@ -350,7 +350,7 @@ func Blog_CreateOrUpdate(
 					}
 					var categoryNames []string
 					if isACX {
-						categoryNames = crawler.ExtractACXCategories(link)
+						categoryNames = crawler.ExtractACXCategories(link, logger)
 					} else if isDontWorryAboutTheVase {
 						categoryNames = crawler.ExtractDontWorryAboutTheVaseCategories(link, logger)
 					}
