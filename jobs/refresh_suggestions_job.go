@@ -118,7 +118,11 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 			if len(newLinks) == len(existingLinks) {
 				exactMatch := true
 				curiEqCfg, err := models.BlogCanonicalEqualityConfig_Get(conn, *maybeBlogId)
-				if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					logger.Warn().Msgf("CuriEqCfg not found, using an empty one: %s", feedUrl)
+					curiEqCfgVal := crawler.NewCanonicalEqualityConfig()
+					curiEqCfg = &curiEqCfgVal
+				} else if err != nil {
 					logger.Error().Err(err).Msgf("Error when getting curiEqCfg: %s", feedUrl)
 					continue
 				}
