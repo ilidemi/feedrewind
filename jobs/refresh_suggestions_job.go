@@ -79,17 +79,18 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		}
 
 		row := conn.QueryRow(`
-			select id, start_feed_id from blogs where feed_url = $1 and version = $2
+			select id, status, start_feed_id from blogs where feed_url = $1 and version = $2
 		`, feedUrl, models.BlogLatestVersion)
 		var maybeBlogId *models.BlogId
+		var maybeBlogStatus *models.BlogStatus
 		var maybeStartFeedId *models.StartFeedId
-		err := row.Scan(&maybeBlogId, &maybeStartFeedId)
+		err := row.Scan(&maybeBlogId, &maybeBlogStatus, &maybeStartFeedId)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			logger.Error().Err(err).Msgf("Error when checking if the feed already exists: %s", feedUrl)
 			continue
 		}
 
-		if maybeStartFeedId != nil {
+		if maybeBlogStatus != nil && !models.BlogFailedStatuses[*maybeBlogStatus] && maybeStartFeedId != nil {
 			row = conn.QueryRow(`select content, url from start_feeds where id = $1`, *maybeStartFeedId)
 			var content []byte
 			var url string
