@@ -124,9 +124,7 @@ func Logger(next http.Handler) http.Handler {
 
 		defer func() {
 			status := ww.Status()
-			if status == http.StatusNotFound ||
-				(errorWrapper.err != nil && errors.Is(errorWrapper.err, csrfValidationFailed)) {
-
+			if errorWrapper.err != nil && errors.Is(errorWrapper.err, csrfValidationFailed) {
 				event := logger.
 					Warn().
 					Func(commonFields)
@@ -138,7 +136,10 @@ func Logger(next http.Handler) http.Handler {
 					TimeDiff("duration", time.Now(), t1).
 					Dur("db_duration", pgw.DbDuration(r.Context())).
 					Msg("failed")
-			} else if (status/100 == 4 || status/100 == 5) && status != http.StatusMethodNotAllowed {
+			} else if (status/100 == 4 || status/100 == 5) &&
+				status != http.StatusMethodNotAllowed &&
+				status != http.StatusNotFound {
+
 				event := logger.
 					Error().
 					Func(commonFields)
