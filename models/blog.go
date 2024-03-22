@@ -331,6 +331,9 @@ func Blog_CreateOrUpdate(
 				isDontWorryAboutTheVase := crawler.CanonicalUriEqual(
 					feedLink.Curi, crawler.HardcodedDontWorryAboutTheVaseFeed, curiEqCfg,
 				)
+				isOvercomingBias := crawler.CanonicalUriEqual(
+					feedLink.Curi, crawler.HardcodedOvercomingBiasFeed, curiEqCfg,
+				)
 
 				row := nestedTx.QueryRow("select max(index) from blog_posts where blog_id = $1", blog.Id)
 				var maxIndex int
@@ -353,6 +356,8 @@ func Blog_CreateOrUpdate(
 						categoryNames = crawler.ExtractACXCategories(link, logger)
 					} else if isDontWorryAboutTheVase {
 						categoryNames = crawler.ExtractDontWorryAboutTheVaseCategories(link, logger)
+					} else if isOvercomingBias {
+						categoryNames = crawler.ExtractOvercomingBiasCategories(link, logger)
 					}
 					categoryIds := []BlogPostCategoryId{everythingId}
 					for _, categoryName := range categoryNames {
