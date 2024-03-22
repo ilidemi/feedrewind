@@ -233,11 +233,11 @@ var SuggestedCategories = []SuggestedCategory{
 				FeedUrl: "https://www.lesswrong.com/rationality",
 				Name:    "Sequences",
 			},
-			// {
-			// 	Url:     "https://www.overcomingbias.com/",
-			// 	FeedUrl: "https://www.overcomingbias.com/feed",
-			// 	Name:    "Overcoming Bias",
-			// },
+			{
+				Url:     "https://www.overcomingbias.com/",
+				FeedUrl: "https://www.overcomingbias.com/feed",
+				Name:    "Overcoming Bias",
+			},
 			{
 				Url:     "https://thezvi.substack.com/",
 				FeedUrl: "https://thezvi.substack.com/feed",

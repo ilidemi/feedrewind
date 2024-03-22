@@ -40,6 +40,7 @@ var hardcodedFactorio CanonicalUri
 var hardcodedJuliaEvans CanonicalUri
 var hardcodedKalzumeus CanonicalUri
 var hardcodedMrMoneyMustache CanonicalUri
+var HardcodedOvercomingBiasFeed CanonicalUri
 var hardcodedPaulGraham CanonicalUri
 
 func init() {
@@ -83,6 +84,7 @@ func init() {
 	hardcodedJuliaEvans = hardcodedMustParse("https://jvns.ca")
 	hardcodedKalzumeus = hardcodedMustParse("https://www.kalzumeus.com/archive/")
 	hardcodedMrMoneyMustache = hardcodedMustParse("https://www.mrmoneymustache.com/blog")
+	HardcodedOvercomingBiasFeed = hardcodedMustParse("https://www.overcomingbias.com/feed")
 	hardcodedPaulGraham = hardcodedMustParse("http://www.aaronsw.com/2002/feeds/pgessays.rss")
 }
 
@@ -507,4 +509,16 @@ func extractJuliaEvansCategories(page *htmlPage, logger Logger) ([]HistoricalBlo
 	}
 
 	return categories, nil
+}
+
+func ExtractOvercomingBiasCategories(postLink *FeedEntryLink, logger log.Logger) []string {
+	// Everything that can show up in the feed from now on is 2023+
+	categories := []string{"2023+"}
+	if postLink.MaybeDate == nil {
+		logger.Error().Msgf("Don't Worry About The Vase feed entry doesn't have date: %s", postLink.Url)
+		return categories
+	}
+	yearStr := fmt.Sprint(postLink.MaybeDate.Year())
+	categories = append(categories, yearStr)
+	return categories
 }
