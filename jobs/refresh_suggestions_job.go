@@ -10,6 +10,7 @@ import (
 	"feedrewind/oops"
 	"feedrewind/util"
 	"feedrewind/util/schedule"
+	"math"
 	neturl "net/url"
 	"sort"
 	"time"
@@ -62,6 +63,7 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	})
 
 	httpClient := crawler.NewHttpClientImpl(ctx, false)
+feeds:
 	for _, feedUrl := range feedUrls {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -70,10 +72,24 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		discoverLogger := crawler.NewDummyLogger()
 		progressLogger := crawler.NewMockProgressLogger(discoverLogger)
 		crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
-		discoverFeedsResult := crawler.DiscoverFeedsAtUrl(feedUrl, true, &crawlCtx, discoverLogger)
+		var discoverFeedsResult crawler.DiscoverFeedsResult
+		for attempt := 0; ; attempt++ {
+			discoverFeedsResult = crawler.DiscoverFeedsAtUrl(feedUrl, true, &crawlCtx, discoverLogger)
+			if _, ok := discoverFeedsResult.(*crawler.DiscoverFeedsErrorCouldNotReach); !ok {
+				break
+			}
+			if attempt >= 5 {
+				logger.Error().Msgf("Couldn't reach feed: %s, attempts exhausted", feedUrl)
+				continue feeds
+			} else {
+				delay := time.Duration(math.Pow(5, float64(attempt))) * time.Second
+				logger.Info().Msgf("Couldn't reach feed: %s, sleeping for %v", feedUrl, delay)
+				time.Sleep(delay)
+			}
+		}
 		discoveredSingleFeed, ok := discoverFeedsResult.(*crawler.DiscoveredSingleFeed)
 		if !ok {
-			logger.Error().Msgf("Expected DiscoveredSingleFeed, got: %#v (%s)", discoveredSingleFeed, feedUrl)
+			logger.Error().Msgf("Expected DiscoveredSingleFeed, got: %#v (%s)", discoverFeedsResult, feedUrl)
 			discoverLogger.Replay(logger)
 			continue
 		}
