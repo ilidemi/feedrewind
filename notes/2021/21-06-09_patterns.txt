@@ -1,0 +1,24 @@
+id  pattern total   url oldest_url
+3   archives    21	https://staffeng.com/stories/   https://staffeng.com/stories/keavy-mcminn
+20  archives    146    https://acko.net/archive/    https://acko.net/blog/css-fun/
+48  archives    143 https://reactjs.org/blog/all.html/  https://reactjs.org/blog/2013/06/02/jsfiddle-integration.html
+62  paged   128 https://devblogs.microsoft.com/commandline/ https://devblogs.microsoft.com/commandline/hello-world-2/
+97  archives    9   https://medium.com/internet-creators-guild/latest   https://medium.com/internet-creators-guild/introducing-the-internet-creators-guild-e0db6867e0c3
+119 archives    22  https://nickcraver.com/blog/archive/  https://nickcraver.com/blog/2012/01/04/growing-pains/
+148 archives    5   http://dev.jdherg.com/archives.html http://dev.jdherg.com/posts/2014/11/20/hello-world/
+166 paged   79  http://rememberyourlines.com/   http://rememberyourlines.com/invocation-for-new-beginnings/
+201 archives    52  https://nickdrozd.github.io/    https://nickdrozd.github.io/2018/08/04/y.html
+219 archives    59  https://www.moderndescartes.com/essays/ https://www.moderndescartes.com/essays/helloworld/
+241 archives    5   http://ant6n.ca/    http://ant6n.ca/2013-04-13-extract-pdf/
+260 paged   36  https://fineshambles.com/   https://fineshambles.com/2010/08/28/android-and-clojure/
+276 archives    14  https://www.vrk.dev/    https://www.vrk.dev/2019/03/16/okokokok-new-blog/
+303 archives    29  http://www.nbertagnolli.com/    http://www.nbertagnolli.com/jekyll/update/2015/01/21/Covariance.html
+327 archives    5   https://kwj2104.github.io/articles/ https://kwj2104.github.io/2018/vaenotes/
+345 archives    9   https://ponyta.github.io/   https://ponyta.github.io/2018/07/14/hello-world.html
+358 archives    2   https://jeffro.xyz/ https://jeffro.xyz/2019/04/interactive-chart-with-tooltip-using-react-and-d3-js/
+379 archives    1   https://programmingmetaphors.code.blog/ https://programmingmetaphors.code.blog/2019/08/05/programming-metaphors-and-me/
+
+Duplicates => wrong - done
+Check how 241 gets those urls from that masked xpath - done
+276 has one item in RSS so anything matches
+379 has one item in RSS and actually one entry

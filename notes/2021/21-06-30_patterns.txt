@@ -1,0 +1,61 @@
+Issues
+
+178
+neutral
+archives caught non-post link, posts have dates near them
+
+150
+neutral
+non-post link at the end of RSS
+
+278
+neutral
+non-post link at the end of RSS
+
+431
+neutral
+non-post link at the end of RSS
+
+71
+neutral
+archives shuffled and scoped by path
+
+136
+neutral
+one RSS post is hidden from the archives
+
+157
+neutral
+RSS dates are bogus
+
+302
+neutral
+half not dated, but RSS is complete with 31+, all found on the same page
+
+346
+fail
+RSS skips most posts but order is correct
+
+428
+fail
+posts are paged oldest to newest
+
+440
+neutral
+two non-post links in the middle of RSS and two at the end, pages are uneven
+
+454
+discard
+rss_two_real_posts
+
+456
+neutral
+needs categories, shuffling and extracting date from post text
+
+470
+fail
+big, paged by year, 5 clicks to get to freshmost page
+
+341
+neutral
+big

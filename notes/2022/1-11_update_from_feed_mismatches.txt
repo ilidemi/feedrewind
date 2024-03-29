@@ -1,0 +1,12 @@
+Same timestamp, ok to reorder: 161 219 235 237 302 408 430 489 515
+Same timestamp, not ok to reorder but feed is good: 503 646
+Same timestamp bogus link: 140 338
+Same timestamp bogus timestamp: 160
+Bogus feed titles: 128
+Bogus feed dates: 183 367 371
+Fine after redirect: 244
+Existing link missing from feed: 381
+
+Conclusions:
+Any post can get renamed but the title will stay the same in the feed. There is no way to detect that unless at full crawl I extract the instructions to get the real title. So I need a partial or full recrawl, and partial recrawl would need much more code.
+On the other hand, the blogs added manually (Dan Luu) can't be auto-updated, so I need to only update those from the feed. No way to massively test it on real data, so unit tests I have are good, plus shall add a warning to the admin page.

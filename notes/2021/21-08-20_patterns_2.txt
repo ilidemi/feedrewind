@@ -1,0 +1,7 @@
+Good
+559, 560, 563, 564, 566
+
+Understandably bad
+556 - archives2level
+561 - not all posts from RSS are linked
+567 - page 2 is /page/1

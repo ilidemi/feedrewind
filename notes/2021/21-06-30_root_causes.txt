@@ -1,0 +1,30 @@
+VIP Recurse
+ Interesting
+  Small but general
+   Embarrassing
+    vip mine
+VISEGv
+      1 Archives parse post date: 337
+    v 1 Archives scoped by path: 101
+
+ I    1 Xpath is not the best after page 2: 227
+      2 Paged scoped by path: 499 99
+      1 First post decorated on every page: 86
+ I    2 Custom next page link: 2 534
+      3 Paged from feed if almost match: 324 410 440
+      1 Paged with 1 post overlap: 40
+
+ I  v 4 Archives 2 level: 465 495 6 155
+
+      3 Chained: 127 244 122
+
+      4 Post not in RSS: 198 355 381 486
+      6 RSS dates are bogus: 157 371 393 114 314 516
+
+      2 Xpath needs [last()]: 263 318
+      1 Feed links need comparison by unique prefix: 469
+
+      2 YouTube: 438 441
+    v 2 Medium RSS post has redirect: 81 306
+
+      18 Fail for now: 192 346 428 470 504 394 295 535 329 509 501 247 131 180 71 176 210 33
