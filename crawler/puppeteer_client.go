@@ -36,7 +36,7 @@ func NewPuppeteerClientImpl() *PuppeteerClientImpl {
 }
 
 const defaultMaxScrollTime = 30 * time.Second
-const extendedMaxScrollTime = 10 * time.Minute
+const extendedMaxScrollTime = 2 * time.Minute
 
 func (c *PuppeteerClientImpl) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[*LinkTitle], crawlCtx *CrawlContext,
@@ -74,7 +74,7 @@ func (c *PuppeteerClientImpl) Fetch(
 			if err != nil {
 				return "", oops.Wrap(err)
 			}
-			page = page.Timeout(maxScrollTime + 30*time.Second)
+			page = page.Timeout(maxScrollTime + 1*time.Minute)
 
 			hijackRouter := page.HijackRequests()
 			err = hijackRouter.Add("*", proto.NetworkResourceTypeImage, func(h *rod.Hijack) {
