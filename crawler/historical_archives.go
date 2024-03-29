@@ -323,6 +323,8 @@ func tryExtractSorted(
 
 	var bestXPath string
 	var bestLinks []*maybeTitledLink
+	var bestHtmlLinks []*maybeTitledHtmlLink
+	var bestDistanceToTopParent int
 	var bestHasDates bool
 	var bestPattern string
 	var bestLogStr string
@@ -400,6 +402,8 @@ func tryExtractSorted(
 
 			bestXPath = extraction.MaskedXPath
 			bestLinks = dropHtml(links)
+			bestHtmlLinks = links
+			bestDistanceToTopParent = extraction.DistanceToTopParent
 			bestHasDates = maybeDates != nil
 			bestPattern = fmt.Sprintf("archives%s", almostSuffix)
 			bestLogStr = joinLogLines(logLines)
@@ -441,6 +445,8 @@ func tryExtractSorted(
 
 			bestXPath = extraction.MaskedXPath
 			bestLinks = dropHtml(reversedLinks)
+			bestHtmlLinks = reversedLinks
+			bestDistanceToTopParent = extraction.DistanceToTopParent
 			bestHasDates = maybeDates != nil
 			bestPattern = fmt.Sprintf("archives%s", almostSuffix)
 			bestLogStr = joinLogLines(logLines)
@@ -514,6 +520,8 @@ func tryExtractSorted(
 
 			bestXPath = extraction.MaskedXPath
 			bestLinks = sortedLinks
+			bestHtmlLinks = nil
+			bestDistanceToTopParent = extraction.DistanceToTopParent
 			bestHasDates = true
 			bestPattern = fmt.Sprintf("archives_shuffled%s", almostSuffix)
 
@@ -535,6 +543,10 @@ func tryExtractSorted(
 		var postCategories []HistoricalBlogPostCategory
 		if CanonicalUriEqual(mainLink.Curi, hardcodedKalzumeus, curiEqCfg) {
 			postCategories = hardcodedKalzumeusCategories
+		} else if guidedCtx.FeedGenerator == FeedGeneratorSubstack && bestHtmlLinks != nil {
+			postCategories = extractSubstackCategories(bestHtmlLinks, bestDistanceToTopParent)
+		}
+		if len(postCategories) > 0 {
 			postCategoriesStr := categoryCountsString(postCategories)
 			logger.Info("Categories: %s", postCategoriesStr)
 			appendLogLinef(&extra, "categories: %s", postCategoriesStr)

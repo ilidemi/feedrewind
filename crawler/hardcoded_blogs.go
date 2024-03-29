@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/antchfx/htmlquery"
+	"github.com/antchfx/xpath"
 )
 
 /*
@@ -521,4 +522,32 @@ func ExtractOvercomingBiasCategories(postLink *FeedEntryLink, logger log.Logger)
 	yearStr := fmt.Sprint(postLink.MaybeDate.Year())
 	categories = append(categories, yearStr)
 	return categories
+}
+
+var lockXPath *xpath.Expr
+
+func init() {
+	// Will also match parts of a word, but should be good enough and otherwise the test will catch it
+	lockXPath = xpath.MustCompile(`//*[contains(@class, "lock")]`)
+}
+
+func extractSubstackCategories(
+	htmlLinks []*maybeTitledHtmlLink, distanceToTopParent int,
+) []HistoricalBlogPostCategory {
+	publicCategory := HistoricalBlogPostCategory{
+		Name:      "Public",
+		IsTop:     true,
+		PostLinks: []Link{},
+	}
+	for _, htmlLink := range htmlLinks {
+		topParent := htmlLink.Element
+		for i := 0; i < distanceToTopParent; i++ {
+			topParent = topParent.Parent
+		}
+		lockNode := htmlquery.QuerySelector(topParent, lockXPath)
+		if lockNode == nil {
+			publicCategory.PostLinks = append(publicCategory.PostLinks, htmlLink.Link)
+		}
+	}
+	return []HistoricalBlogPostCategory{publicCategory}
 }

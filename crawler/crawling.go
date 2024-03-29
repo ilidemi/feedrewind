@@ -351,20 +351,18 @@ func followCachedRedirects(
 var loadMoreXPathStr string
 var loadMoreXPath *xpath.Expr
 var mediumFeedLinkXPath *xpath.Expr
-var substackCdnXPath *xpath.Expr
 var buttondownTwitterXPath *xpath.Expr
 
 func init() {
 	loadMoreXPathStr = `//*[(self::a or self::button)][contains(@class, "load-more")]`
 	loadMoreXPath = xpath.MustCompile(loadMoreXPathStr)
 	mediumFeedLinkXPath = xpath.MustCompile(`//link[@rel="alternate"][@type="application/rss+xml"][starts-with(@href, "https://medium.")]`)
-	substackCdnXPath = xpath.MustCompile(`//link[@rel="preconnect"][@href="https://substackcdn.com"]`)
 	buttondownTwitterXPath = xpath.MustCompile(`/html/head/meta[@name="twitter:site"][@content="@buttondown"]`)
 }
 
 func crawlWithPuppeteerIfMatch(
-	page *htmlPage, feedEntryCurisTitlesMap CanonicalUriMap[*LinkTitle], crawlCtx *CrawlContext,
-	logger Logger,
+	page *htmlPage, feedGenerator FeedGenerator, feedEntryCurisTitlesMap CanonicalUriMap[*LinkTitle],
+	crawlCtx *CrawlContext, logger Logger,
 ) (*htmlPage, error) {
 	if crawlCtx.MaybePuppeteerClient == nil {
 		return page, nil
@@ -384,9 +382,7 @@ func crawlWithPuppeteerIfMatch(
 
 		logger.Info("Spotted Medium page, rerunning with puppeteer")
 		puppeteerMatch = true
-	} else if strings.HasSuffix(page.Curi.TrimmedPath, "/archive") &&
-		htmlquery.QuerySelector(page.Document, substackCdnXPath) != nil {
-
+	} else if strings.HasSuffix(page.Curi.TrimmedPath, "/archive") && feedGenerator == FeedGeneratorSubstack {
 		logger.Info("Spotted Substack archives, rerunning with puppeteer")
 		puppeteerMatch = true
 		extendedScrollTime = true

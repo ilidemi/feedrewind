@@ -1005,6 +1005,17 @@ func TestParseFeedGenerator(t *testing.T) {
 			expectedGenerator: FeedGeneratorMedium,
 		},
 		{
+			description: "recognize Substack RSS generator",
+			content: `
+				<rss>
+					<channel>
+						<generator>Substack</generator>
+					</channel>
+				</rss>
+			`,
+			expectedGenerator: FeedGeneratorSubstack,
+		},
+		{
 			description: "handle random RSS generator",
 			content: `
 				<rss>
