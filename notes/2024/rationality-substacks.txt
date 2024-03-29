@@ -1,0 +1,29 @@
+crawl succeeded
+	links from ACX discord
+		  subscribers
+		        has categories
+v   161       ? x https://thezvi.wordpress.com/
+x    12       ? h https://www.astralcodexten.com/
+v    17   11000 h https://thezvi.substack.com/
+v     7    5000 x https://sarahconstantin.substack.com/
+v    21    1000 x https://thingofthings.substack.com/
+v   265   16000 x https://www.overcomingbias.com/
+v     1    3000 x https://goodscience.substack.com/
+v     2   10000 x https://www.strangeloopcanon.com/
+v     2     400 v https://www.narrativeark.xyz/
+v     1    2000 x https://drmaciver.substack.com/
+v     1     100 x https://bayesshammai.substack.com/
+v     3       ? x https://asteriskmag.com/
+v     3       ? v https://www.scientificdiscovery.dev/
+v     1       ? ~ https://www.residentcontrarian.com/
+
+
+
+https://substack.com/@psychotechnology/reads have categories: 5/51
+
+
+
+substack			seconds		posts	MB RAM
+thingofthings		26			216		265
+computerenhance		13			133		205
+pragmaticengineer	34			257		594
