@@ -167,7 +167,7 @@ func GuidedCrawlingJob_Perform(
 			postCurisSet := crawler.NewCanonicalUriSet(postCuris, guidedCrawlResult.CuriEqCfg)
 			if len(historicalResult.PostCategories) > 0 {
 				for _, category := range historicalResult.PostCategories {
-					addedCount := 0
+					categoryFilteredLinks := make([]crawler.Link, 0, len(category.PostLinks))
 					for _, link := range category.PostLinks {
 						if !postCurisSet.Contains(link.Curi) {
 							logger.Warn().Msgf(
@@ -175,15 +175,20 @@ func GuidedCrawlingJob_Perform(
 							)
 							continue
 						}
-						if linkCategories, ok := categoriesListByLink.Get(link.Curi); ok {
-							*linkCategories = append(*linkCategories, category.Name)
-						} else {
-							categoriesListByLink.Add(link, &[]string{category.Name})
-						}
-						addedCount++
+						categoryFilteredLinks = append(categoryFilteredLinks, link)
 					}
 
-					if addedCount > 0 && !(category.IsTop && addedCount == len(historicalResult.Links)) {
+					if len(categoryFilteredLinks) > 0 &&
+						!(category.IsTop && len(categoryFilteredLinks) == len(historicalResult.Links)) {
+
+						for _, link := range categoryFilteredLinks {
+							if linkCategories, ok := categoriesListByLink.Get(link.Curi); ok {
+								*linkCategories = append(*linkCategories, category.Name)
+							} else {
+								categoriesListByLink.Add(link, &[]string{category.Name})
+							}
+						}
+
 						topStatus := models.BlogPostCategoryCustomOnly
 						if category.IsTop {
 							topStatus = models.BlogPostCategoryTopOnly
