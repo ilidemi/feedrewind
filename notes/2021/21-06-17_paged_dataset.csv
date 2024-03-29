@@ -1,0 +1,26 @@
+﻿id,generator,pattern,rss_posts,posts,per_page,pages,buttons,url
+457,custom,paged_next,10,10,3,4,prev-next,/posts/page2/
+416,custom,paged_next,12,12,10,2,older-newer,/page/2/
+138,wp,paged_last,10,27,10,3,(1) 2 3 (<) >,/page/2/
+165,custom,paged_next,10,30,20,2,newer-older,/page2/
+21,custom,paged_last,20,37,10,4,(<) 1 2 3 4 >,/index-2.html
+238,custom,paged_next,15,41,5,9,(<) >,/page/2/
+103,wp,paged_next,10,58,10,6,older-newer,/page/2/
+154,wp,paged_next,10,66,10,7,older-newer,/page/2/
+100,wowchemy,paged_next,10,67,10,7,< >,/page/2/
+110,blogspot,paged_next,25,68,20,4,newer-home-older,/search?updated-max=2010-10-28T18:54:00-07:00&max-results=50&start=44&by-date=false
+483,ghost,paged_next,15,71,5,15,newer-older,/page/2/
+166,wp-custom,paged_last,10,79,10,8,(1) 2 … last >,/page/2/
+74,custom,paged_last,84,84,40,3,(1) 2 3 >,/page/2/
+158,wp-custom,paged_last,10,84,10,9,(1) 2 3 4 5 6 7 8 9 >,/page/2/
+106,custom,paged_last,10,97,50,2,1 2 >,/page/2
+153,wp-custom,paged_next,10,99,10,10,newer-older,/page/2/
+225,hugo,paged_next,116,115,10,12,newer-older,/page/2/
+62,ms,paged_last,10,128,10,13,[<] (1) 2 3 … last >,/page/2/
+47,custom,paged_last,10,174,12,15,[<] (1) 2 3 … last >,/page/2/
+60,wp,paged_next,10,227,10,23,older-newer,/page/2/
+288,custom,paged_last,20,273,10,28,(1) 2 … last,/page/2
+58,custom,paged_last,10,397,10,40,(<) 1 2 3 … last >,/2
+19,wp,paged_next,5,934,5,187,older-newer,/page/2/
+109,custom,paged_next,15,1427,5,286,newer-older,/page/2/
+2,custom,paged_month,7,1490,varied,~193,older-newer,/?m=202011

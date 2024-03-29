@@ -1,0 +1,72 @@
+# Crawling
+Some blogs require 3 requests per page: http://.../a -> https://.../a -> https://.../a/
+Url follows redirects and terminates either at a page with content or in a permanent error
+Some parts of url like fragment and tracking query params introduce unnecessary duplication, it's good to discard them with canonicalization
+Some redirects require query params (dev.to -> medium.com/m/global-identity -> dev.to/?gi=...), discarding those leads to infinite loop - made redirects look at full url
+Some blogs require query params for paging - whitelisted common ones to include in canonical url
+Filtering links by original host discards some rss posts (medium + dev.to + towardsdatascience combo), allowing all hosts blows up the volume. Solution is to allow all hosts seen in RSS
+Matching redirects on fetch urls introduces more requests if it leads to a known page that would already match a canonical url
+I don't have to write smart logic to find RSS link and determine the right one. Feedly seems to only look at marked head links, presenting all, and their own cache
+Some blogs can 429 even at 1 request a second after a while
+A website generated with Ghost can depend on javascript to load more posts on scroll but also have a hidden <link rel="next> in <head> that leads to page 2
+A website (seattle times) can time out requests with bad user agent
+Link can be under <a> or <link> or <area> tag, these seem to be the only three that have href attribute
+<a> can be in svg which is different xml namespace
+
+
+# URL processing
+see to_canonical_link_spec
+
+
+# Figuring out rules
+Manual review is required for the first 500
+Force graph layout is useless to see the structure
+Even the simplest case like archives page has complications: list sorted either way, duplicate consecutive items in list, two star xpaths, first item highlighted, items shuffled by category, 10 recent + others shuffled
+A new blog looks like archives at first (everything on one page), then transitions into another rule
+For small WP blogs, paging takes fewer requests that two level archives by month.
+RSS can be sorted either way
+RSS can have consecutive duplicates
+RSS can be shuffled but have correct dates
+Same autogeneration process can put one node as /p/a and the other as /p[1]/a, so every intermediate node needs an implicit [1]
+Historical links can lead to other domains than in RSS, and should be included if they match the pattern well
+At the link extraction stage, order of links is very important, so no filter/partition then concat. Sorting by xpath won't work.
+meta property article:published_time has precise time
+Same page can have same links in the content area and in the recent posts sidebar, can't just pick one xpath
+Post link can redirect to a login page that requires js, two such posts causing duplicates. Not following redirects in some cases may be better than following them. Redirects don't matter once we're out of RSS.
+Blogspot blogs are the only ones in the dataset that page with query params
+Blog pages can have different sizes, but the cost of false positive is silently dropping items with different layout
+Blogspot blogs are the only ones in the dataset that group posts on page by date and require two stars in xpath
+Dates on the page might have significant typos (https://what-if.xkcd.com/archive/)
+
+
+# Engineering
+RSS gem fails non-deterministically, parsing at XML level works alright
+Parallelization makes reruns faster but Ruby multithreading is single OS thread. Multiprocessing uses all cores but communication is more of a PITA, and a child process can die of OOM and you won't know.
+Ruby is unstable in corner cases: segfaults on debugging exceptions, child processes segfault on interrupt, fork doesn't work on windows
+ruby-prof sucks for threads and processes
+If extraction rules will be returning hints for further crawling and more extraction rules, I will need something resembling a type system with matching
+
+
+# Boiling the ocean
+Caching network requests locally speeds up end to end reruns
+Important to support blogging platforms - multiple rss per domain
+There is a public crawled dataset with 75M RSS in it
+Starting with known 500, then testing on the next 500 from the internet will give an estimate how generalizable the rules are. After that it's like counting the fish in the ocean by sampling.
+Big e2e dashboard is good
+Manual comments in db is good
+Dataset of 10K feeds: https://github.com/jeryini/distributed-rss/blob/master/target/classes/com/jernejerin/10K-RSS-feeds.csv
+
+
+# User experience
+If I've seen a blog a month ago, it published new entries, but rss still overlaps with known ones, I can quickly assemble the new list. Will still need to check for deleted posts in the background.
+
+
+# Ideas
+Make tooling to easier categorize websites manually
+Mechanical turk can help with manual efforts
+Some individual blogs are more important than others - look up public page ranks
+There can be a little AI that looks at the known signals after each request and tries to figure out the fewest-request way to discover all posts
+There can be an end-user UI like "we're not sure, which of the three options is better?"
+If I can reliably determine what's wrong with the blog (like RSS of 1 item), I can suggest the user to contact the blog author to fix
+If I don't see a pattern, offer to just schedule RSS items
+If item order seems to be random, I can offer to deliver in page order or to do some attempt on sorting

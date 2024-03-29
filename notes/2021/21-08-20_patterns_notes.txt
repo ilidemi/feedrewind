@@ -1,0 +1,22 @@
+Good
+551, 552, 553, 557, 558, 562, 565, 571, 574, 577, 581, 585, 589, 595, 600, 606, 609, 612, 617, 621, 626, 629, 632, 635, 642, 646, 650, 654, 661
+
+Bad
+v 603 - matched archives but there's a link to the next page?
+v 638 - feed is truncated at 100
+v 658 - /archive.html is actually old blog but has last 20 on the sidebar. /index.html has more than 20.
+579 - archives2level
+v 599 - not sure why?
+v 619 - not sure why?
+
+Understandably Bad
+556 - Some RSS items are not linked from the website, one link is malformed
+
+It depends on the pattern
+For paged, I want to go to the last page and confirm the last post, and look at page sizes, see if anything was missed if it's uneven (either manually page through or sum up counts for archives2level)
+For archives, I confirm the last link to see that there wasn't a random link captured
+Long feed - find an archives page and count items, inspect feed for extra random links
+
+So I do need a visual inspection as well to get a holistic view of what blogs are like. So a tool would need to show me the website (GUI), but could speed things up with keyboard shortcuts
+Will I be able to only look at errors at some point? Who knows. Looking at every website by eye would certainly help with understanding the domain thoroughly, no matter what the domain is.
+The tool would need a place for manual data entry right there.

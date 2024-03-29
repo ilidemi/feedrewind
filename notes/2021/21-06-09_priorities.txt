@@ -1,0 +1,16 @@
+Stable state
+    MP is unreliable
+    Reports are garbled
+    Where is the CPU time going?
+    Why was it doing extra requests?
+Next work
+    Rule about archives says it's good but it's not good
+    Unclear what is next page
+    There is a ton of work in classifying the blogs
+    Maybe look through some sample manually and classify them
+    Also add a comment for known bogus ones (or that's later?)
+    I am not trying to solve it in my head before I have data
+
+1. Reliability: MP, reports, profile, requests - done. Profile says extract_links is bad, I'll get to it once I know how should historical rules look like.
+2. Exploration on what registered as archives, then the rest. Write comments to db so that they show up in report. I'm ok if there are many kinds. I need to see the big picture first, just like yesterday.
+3. If reliability comes up, take it first and understand what I'm doing.

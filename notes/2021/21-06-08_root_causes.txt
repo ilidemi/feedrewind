@@ -1,0 +1,45 @@
+Feed not found 57
+    /20
+    Feed not linked 12 ~ 36
+    Redirect 3xx 2 ~ 6
+    Feedburner (external domain) 1
+    Feed does not exist 1
+    Redirect through meta http-equiv="refresh" 1
+    Feed linked from a better page 1
+    Feed linked wrongly 1
+    Feed is text/html 1
+Items not found at all 40
+    /20
+    Item link 3xx 10 ~ 20 - fixed
+    Javascript required 5 ~ 10
+    Item link starts with // 2
+    Bad starting place without js 1
+    Items unreachable from website 1
+    Wrong feed due to my db stale 1
+No outgoing links 25
+    /11
+    Website moved to another domain 4
+    www. is treated as a separate domain 3 ~ 6
+    Broken links, website ineligible 2
+        id=291,542
+    Website actually doesn't have good links 1
+    Link in my db is not html 1
+Items Partially found 23
+    /11
+    Item link 3xx 3
+    Links graph not good 3
+    Links graph human good, computer not good 1
+        id=399
+    Javascript required 1
+    New post published between crawls 1
+    Non-blog links in RSS (minor amount) 1
+    RSS links to removed posts 1
+PG non-unicode 3
+HTTP 5xx 4
+Many links 6
+Random shit of 1-2 10
+
+Tech debt
+    Commented redirect code, am I causing duplicates? Deque for redirects?
+    Logged counters are confusing
+    Establishing https is slow for some sites, reuse connections (id=158)

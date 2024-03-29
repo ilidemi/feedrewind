@@ -1,0 +1,3 @@
+If first page and feed have 10 posts and page 2 is not picked up, page 1 will be archives
+If first page has 10 posts, feed has 12 posts and page 2 is not picked up, page 1 will be archives (feed)
+If some middle page has different layout that causes xpath to miss some posts, it will be accepted as uneven pages

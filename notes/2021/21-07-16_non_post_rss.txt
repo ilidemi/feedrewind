@@ -1,0 +1,22 @@
+132 archives 4 /posts/* -1 /pages/marin/
+439 archives 5 /posts/* -1 /linguistics/
+140 archives 6 /posts/* -1 /posts/
+458 archives 8 /posts/* -2 /archives/ /search/
+301 archives 9 /blog/* -2 /code/ /about/
+370 archives 10 /posts/* -1 /contact/
+217 archives 10 /blog/* -1 /idea/2019/08/29/html-css-zines.html
+304 archives 12 /posts/* -2 /about-me/ /about/
+324 paged_next 13 /blog/* -2 /about/ /discuss/
+230 archives 13 /blog/* -1 /about/
+251 archives 14 /:date/* -2 /notes/category-theory-resources/ /about/
+150 archives 26 /post/* -1 /about/
+338 archives 30 /post/* -2 /about.html /speaking.html
+409 archives 31 /posts/* -1 /about/
+225 paged_next 116 /post/* -1 /about/
+
+410 paged_next 26 /:date/* /post/* -3 /dateurl/title/ /about/ /projects/
+375 archives_shuffled 28 /posts/* /recurse/* -3 /about/ /lists/interesting-lynx/ /lists/what-are-those/
+147 archives_almost 34 /* -2 /about/ /projects/
+440 paged_next_almost 53 /* -3 /architecture/ /page/support/ /page/principles/
+145 archives 62 /* -4 /canon/ / /now/ /resume/
+209 archives 488 /* -3 / /assets/css/style.css /feed.xml

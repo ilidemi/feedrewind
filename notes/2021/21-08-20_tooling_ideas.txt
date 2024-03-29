@@ -1,0 +1,17 @@
+Either a desktop app that embeds a tab of Chromium or a Chrome extension + some way to get data into it (for example, local server)
+
+Highlight items on the page matching xpath/feed: xpath+feed orange, xpath yellow, last item blue (so that I can check it is the one I think it is)
+tooling/highlight_xpath.js
+
+Always display the result with extra
+Always display the skipped feed links and their indices
+
+long_feed: is there an archives page or a paged match? Maybe run the main logic for long feed too?
+archives (all variations): open the page, highlight, confirm no extra links at the end, confirm no extra shuffled links in the middle or somewhere
+archives_categories: open each category, highlight, switch between them with hotkeys. let's say no tracking of last because each of them would have last?
+paged: open first page, highlight, check it's the main one. if a page in the middle has a count not matching, have a hotkey and switch to it (with highlight). if uneven pages but there are archives2level counters, sum those up manually. check the last post on the last page.
+
+Label as correct or as incorrect with comment, go through incorrect ones later
+Group by pattern so no destroying attention
+
+This does not cover tooling for complete failures and tooling to screen the HN pages for blogs and non-blogs
