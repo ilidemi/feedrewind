@@ -11,7 +11,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/antchfx/htmlquery"
 	"golang.org/x/exp/slices"
 )
 
@@ -476,7 +475,7 @@ func guidedCrawlHistorical(
 		}
 	}
 
-	if htmlquery.QuerySelector(startPage.Document, substackCdnXPath) != nil {
+	if feedGenerator == FeedGeneratorSubstack {
 		archiveLink, _ := ToCanonicalLink("/archive", logger, startPage.FetchUri)
 		if !seenCurisSet.contains(archiveLink.Curi) {
 			logger.Info("Adding missing substack archives: %s", archiveLink.Url)
@@ -779,7 +778,7 @@ func guidedCrawlFetchLoop(
 		}
 
 		puppeteerPage, err := crawlWithPuppeteerIfMatch(
-			page, guidedCtx.FeedEntryCurisTitlesMap, crawlCtx, logger,
+			page, guidedCtx.FeedGenerator, guidedCtx.FeedEntryCurisTitlesMap, crawlCtx, logger,
 		)
 		if err != nil {
 			logger.Info("Couldn't crawl with Puppeteer: %v", err)
@@ -888,8 +887,8 @@ func tryExtractHistorical(
 
 	archivesAlmostMatchThreshold := getArchivesAlmostMatchThreshold(guidedCtx.FeedEntryLinks.Length)
 	extractionsByStarCount := getExtractionsByStarCount(
-		pageLinks, guidedCtx.FeedEntryLinks, &guidedCtx.FeedEntryCurisTitlesMap, guidedCtx.CuriEqCfg,
-		archivesAlmostMatchThreshold, logger,
+		pageLinks, guidedCtx.FeedGenerator, guidedCtx.FeedEntryLinks, &guidedCtx.FeedEntryCurisTitlesMap,
+		guidedCtx.CuriEqCfg, archivesAlmostMatchThreshold, logger,
 	)
 
 	archivesResults := tryExtractArchives(
@@ -1781,4 +1780,109 @@ func countLinkTitleSources(links []*titledLink) string {
 	}
 
 	return fmt.Sprintf("{%s}", strings.Join(tokens, ", "))
+}
+
+func ExtractSubstackPublicAndTotalCounts(
+	rootUrl string, crawlCtx *CrawlContext, logger Logger,
+) (publicCount, totalCount int, err error) {
+	rootUrl = strings.TrimRight(rootUrl, "/")
+	curiEqCfg := &CanonicalEqualityConfig{SameHosts: nil, ExpectTumblrPaths: false}
+
+	feedUrl := rootUrl + "/feed"
+	feedLink, ok := ToCanonicalLink(feedUrl, logger, nil)
+	if !ok {
+		return 0, 0, oops.Newf("Couldn't parse feed url: %s", feedUrl)
+	}
+	feedOrHtmlPage, err := crawlFeedOrHtmlPage(feedLink, crawlCtx, logger)
+	if err != nil {
+		return 0, 0, err
+	}
+	feedPage, ok := feedOrHtmlPage.(*feedPage)
+	if !ok {
+		return 0, 0, oops.Newf("Link is not a feed: %v", feedLink.Url)
+	}
+	parsedFeed, err := ParseFeed(feedPage.Content, feedLink.Uri, logger)
+	if err != nil {
+		return 0, 0, err
+	}
+	feedEntryCurisTitlesMap := NewCanonicalUriMap[*LinkTitle](curiEqCfg)
+	for _, entryLink := range parsedFeed.EntryLinks.ToSlice() {
+		feedEntryCurisTitlesMap.Add(entryLink.Link, entryLink.MaybeTitle)
+	}
+	guidedCtx := guidedCrawlContext{
+		SeenCurisSet:            newGuidedSeenCurisSet(curiEqCfg),
+		ArchivesCategoriesState: nil,
+		FeedEntryLinks:          &parsedFeed.EntryLinks,
+		FeedEntryCurisTitlesMap: feedEntryCurisTitlesMap,
+		FeedGenerator:           parsedFeed.Generator,
+		CuriEqCfg:               curiEqCfg,
+		AllowedHosts:            nil,
+		HardcodedError:          nil,
+	}
+
+	archivesUrl := rootUrl + "/archive"
+	archivesLink, ok := ToCanonicalLink(archivesUrl, logger, nil)
+	if !ok {
+		return 0, 0, oops.Newf("Couldn't parse archives url: %s", feedUrl)
+	}
+	archivesHtmlPage, err := crawlHtmlPage(archivesLink, crawlCtx, logger)
+	if err != nil {
+		return 0, 0, err
+	}
+	pageAllLinks := extractLinks(
+		archivesHtmlPage.Document, archivesHtmlPage.FetchUri, nil, crawlCtx.Redirects, logger,
+		includeXPathAndClassXPath,
+	)
+	var pageCuris []CanonicalUri
+	for _, pageLink := range pageAllLinks {
+		pageCuris = append(pageCuris, pageLink.Curi)
+	}
+	pageCurisSet := NewCanonicalUriSet(pageCuris, curiEqCfg)
+
+	filteredFeedEntryLinks := FeedEntryLinks{
+		LinkBuckets:    [][]FeedEntryLink{},
+		Length:         0,
+		IsOrderCertain: parsedFeed.EntryLinks.IsOrderCertain,
+	}
+	for _, bucket := range guidedCtx.FeedEntryLinks.LinkBuckets {
+		var filteredBucket []FeedEntryLink
+		for _, link := range bucket {
+			if pageCurisSet.Contains(link.Link.Curi) {
+				filteredBucket = append(filteredBucket, link)
+			}
+		}
+		if len(filteredBucket) > 0 {
+			filteredFeedEntryLinks.LinkBuckets = append(filteredFeedEntryLinks.LinkBuckets, filteredBucket)
+			filteredFeedEntryLinks.Length += len(filteredBucket)
+		}
+	}
+	guidedCtx.FeedEntryLinks = &filteredFeedEntryLinks
+
+	archivesAlmostMatchThreshold := getArchivesAlmostMatchThreshold(filteredFeedEntryLinks.Length)
+	extractionsByStarCount := getExtractionsByStarCount(
+		pageAllLinks, guidedCtx.FeedGenerator, &filteredFeedEntryLinks, &feedEntryCurisTitlesMap, curiEqCfg,
+		archivesAlmostMatchThreshold, logger,
+	)
+	historicalResults := tryExtractArchives(
+		archivesLink, archivesHtmlPage, pageAllLinks, &pageCurisSet, extractionsByStarCount,
+		archivesAlmostMatchThreshold, &guidedCtx, logger,
+	)
+	if len(historicalResults) != 1 {
+		return 0, 0, oops.Newf("Expected 1 historical result, got %d", len(historicalResults))
+	}
+	historicalResult := historicalResults[0]
+
+	archivesSortedResult, ok := historicalResult.(*archivesSortedResult)
+	if !ok {
+		return 0, 0, oops.Newf("Expected archivesSortedResult, got %T", historicalResult)
+	}
+	if len(archivesSortedResult.PostCategories) != 1 {
+		return 0, 0, oops.Newf("Expected 1 category, got %d", len(archivesSortedResult.PostCategories))
+	}
+	category := archivesSortedResult.PostCategories[0]
+	if category.Name != "Public" {
+		return 0, 0, oops.Newf("Expected the category to be named Public, got %s", category.Name)
+	}
+
+	return len(category.PostLinks), len(archivesSortedResult.Links), nil
 }

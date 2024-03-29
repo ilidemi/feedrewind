@@ -86,6 +86,8 @@ func (d *DummyLogger) Replay(logger log.Logger) {
 		default:
 			panic(fmt.Errorf("Unknown log level: %d", entry.Level))
 		}
-		event.Bool("replay", true).Msgf(entry.Format, entry.Args...)
+		event = event.Bool("replay", true)
+		args := entry.Args[0].([]any)
+		event.Msgf(entry.Format, args...)
 	}
 }

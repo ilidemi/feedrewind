@@ -82,10 +82,11 @@ type ParsedFeed struct {
 type FeedGenerator string
 
 const (
-	FeedGeneratorOther   FeedGenerator = ""
-	FeedGeneratorTumblr  FeedGenerator = "tumblr"
-	FeedGeneratorBlogger FeedGenerator = "blogger"
-	FeedGeneratorMedium  FeedGenerator = "medium"
+	FeedGeneratorOther    FeedGenerator = ""
+	FeedGeneratorTumblr   FeedGenerator = "tumblr"
+	FeedGeneratorBlogger  FeedGenerator = "blogger"
+	FeedGeneratorMedium   FeedGenerator = "medium"
+	FeedGeneratorSubstack FeedGenerator = "substack"
 )
 
 type feedEntry struct {
@@ -197,6 +198,8 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 				generator = FeedGeneratorBlogger
 			} else if generatorText == "medium" {
 				generator = FeedGeneratorMedium
+			} else if generatorText == "substack" {
+				generator = FeedGeneratorSubstack
 			}
 
 			if generator != FeedGeneratorOther {

@@ -183,7 +183,7 @@ func GuidedCrawlingJob_Perform(
 						addedCount++
 					}
 
-					if addedCount > 0 {
+					if addedCount > 0 && !(category.IsTop && addedCount == len(historicalResult.Links)) {
 						topStatus := models.BlogPostCategoryCustomOnly
 						if category.IsTop {
 							topStatus = models.BlogPostCategoryTopOnly
@@ -406,8 +406,8 @@ func NewProgressSaver(blogId models.BlogId, feedUrl string, conn *pgw.Conn) *Pro
 }
 
 func (s *ProgressSaver) SaveStatusAndCount(status string, maybeCount *int) {
-	err := util.Tx(s.Conn, func(tx *pgw.Tx, conn util.Clobber) error {
-		row := s.Conn.QueryRow(`
+	err := util.Tx(s.Conn, func(tx *pgw.Tx, _ util.Clobber) error {
+		row := tx.QueryRow(`
 			update blog_crawl_progresses
 			set progress = $1, count = $2, epoch = epoch + 1
 			where blog_id = $3
@@ -452,8 +452,8 @@ func (s *ProgressSaver) SaveStatusAndCount(status string, maybeCount *int) {
 }
 
 func (s *ProgressSaver) SaveStatus(status string) {
-	err := util.Tx(s.Conn, func(tx *pgw.Tx, conn util.Clobber) error {
-		row := s.Conn.QueryRow(`
+	err := util.Tx(s.Conn, func(tx *pgw.Tx, _ util.Clobber) error {
+		row := tx.QueryRow(`
 			update blog_crawl_progresses
 			set progress = $1, epoch = epoch + 1
 			where blog_id = $2
@@ -494,8 +494,8 @@ func (s *ProgressSaver) SaveStatus(status string) {
 }
 
 func (s *ProgressSaver) SaveCount(maybeCount *int) {
-	err := util.Tx(s.Conn, func(tx *pgw.Tx, conn util.Clobber) error {
-		row := s.Conn.QueryRow(`
+	err := util.Tx(s.Conn, func(tx *pgw.Tx, _ util.Clobber) error {
+		row := tx.QueryRow(`
 			update blog_crawl_progresses
 			set count = $1, epoch = epoch + 1
 			where blog_id = $2
@@ -562,7 +562,7 @@ func (s *ProgressSaver) updateEpochTimes(tx *pgw.Tx, maybeEpochTimes *string) er
 	} else {
 		newEpochTimes = newEpochTimeStr
 	}
-	_, err := s.Conn.Exec(`
+	_, err := tx.Exec(`
 		update blog_crawl_progresses set epoch_times = $1 where blog_id = $2
 	`, newEpochTimes, s.BlogId)
 	if err != nil {

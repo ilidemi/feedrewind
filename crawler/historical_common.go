@@ -33,6 +33,7 @@ type maskedXPathExtraction struct {
 	MaybeUrlDatesExtraction     maybeDatesExtraction
 	TitleRelativeXPaths         []titleRelativeXPath
 	XPathName                   string
+	DistanceToTopParent         int
 }
 
 type linksExtraction struct {
@@ -73,7 +74,7 @@ type titleRelativeXPath struct {
 }
 
 func getExtractionsByStarCount(
-	pageLinks []*xpathLink, feedEntryLinks *FeedEntryLinks,
+	pageLinks []*xpathLink, feedGenerator FeedGenerator, feedEntryLinks *FeedEntryLinks,
 	feedEntryCurisTitlesMap *CanonicalUriMap[*LinkTitle], curiEqCfg *CanonicalEqualityConfig,
 	almostMatchThreshold int, logger Logger,
 ) []starCountExtractions {
@@ -87,7 +88,8 @@ func getExtractionsByStarCount(
 		var maskedXPathExtractions []maskedXPathExtraction
 		for _, linksGrouping := range maskedXPathLinkGroupings {
 			extraction := getMaskedXPathExtraction(
-				linksGrouping, starCount, feedEntryLinks, feedEntryCurisTitlesMap, curiEqCfg, almostMatchThreshold,
+				linksGrouping, starCount, feedGenerator, feedEntryLinks, feedEntryCurisTitlesMap, curiEqCfg,
+				almostMatchThreshold,
 			)
 			maskedXPathExtractions = append(maskedXPathExtractions, extraction)
 		}
@@ -672,9 +674,9 @@ func init() {
 }
 
 func getMaskedXPathExtraction(
-	linksGrouping maskedXPathLinksGrouping, starCount int, feedEntryLinks *FeedEntryLinks,
-	feedEntryCurisTitlesMap *CanonicalUriMap[*LinkTitle], curiEqCfg *CanonicalEqualityConfig,
-	almostMatchThreshold int,
+	linksGrouping maskedXPathLinksGrouping, starCount int, feedGenerator FeedGenerator,
+	feedEntryLinks *FeedEntryLinks, feedEntryCurisTitlesMap *CanonicalUriMap[*LinkTitle],
+	curiEqCfg *CanonicalEqualityConfig, almostMatchThreshold int,
 ) maskedXPathExtraction {
 	links := linksGrouping.Links
 	logLines := slices.Clone(linksGrouping.LogLines)
@@ -829,7 +831,7 @@ func getMaskedXPathExtraction(
 		}
 	}
 
-	if uniqueLinksMatchingFeedCount == feedEntryLinks.Length-1 {
+	if feedGenerator == FeedGeneratorMedium && uniqueLinksMatchingFeedCount == feedEntryLinks.Length-1 {
 		maybeMediumMarkupDates, maybeMediumMarkupDatesLogLines := extractMaybeMarkupDates(
 			collapsedLinks, linksMatchingFeed, linksGrouping.DistanceToTopParent,
 			linksGrouping.RelativeXPathToTopParent, true,
@@ -907,6 +909,7 @@ func getMaskedXPathExtraction(
 		MaybeUrlDatesExtraction:     maybeUrlDatesExtraction,
 		TitleRelativeXPaths:         linksGrouping.TitleRelativeXPaths,
 		XPathName:                   linksGrouping.XPathName,
+		DistanceToTopParent:         linksGrouping.DistanceToTopParent,
 	}
 }
 
