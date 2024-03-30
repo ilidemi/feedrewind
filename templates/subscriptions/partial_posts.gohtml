@@ -8,7 +8,7 @@
           {{if .IsEarliest}}
             <span class="text-gray-500">(earliest)</span>
           {{else if .IsNewest}}
-            <span class="text-gray-500">(newest)</span>
+            <span class="text-gray-500">(latest)</span>
           {{end}}
         </div>
       {{end}}
@@ -39,7 +39,7 @@
         <div>
           <a href="{{.Url}}" class="link text-black" target="_blank">{{.Title}}</a>
           {{if .IsNewest}}
-            <span class="text-gray-500">(newest)</span>
+            <span class="text-gray-500">(latest)</span>
           {{end}}
         </div>
       {{end}}
