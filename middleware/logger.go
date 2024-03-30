@@ -76,6 +76,10 @@ func Logger(next http.Handler) http.Handler {
 
 		commonFields := func(event *zerolog.Event) {
 			event.
+				Str("scheme", r.URL.Scheme).
+				Bool("tls", r.TLS != nil).
+				Str("url_host", r.URL.Host).
+				Str("req_host", r.Host).
 				Str("method", r.Method).
 				Str("path", path)
 			if formErr != nil {
