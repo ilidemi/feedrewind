@@ -101,6 +101,7 @@ func runServer(port int) {
 	staticR.Use(middleware.Compress(3))
 	staticR.Use(frmiddleware.Recoverer)
 	staticR.Use(frmiddleware.DefaultHeaders)
+	staticR.Use(frmiddleware.RedirectHttpToHttps)
 	staticR.Use(middleware.GetHead)
 	staticR.Use(frmiddleware.DB)
 
