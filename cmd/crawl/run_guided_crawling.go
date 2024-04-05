@@ -223,11 +223,12 @@ func runGuidedCrawl(
 		`, startLinkId)
 		var issue, severity string
 		err := commentRow.Scan(&severity, &issue)
-		if errors.Is(err, pgx.ErrNoRows) {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
 			// Do nothing
-		} else if err != nil {
+		case err != nil:
 			return &result, newError(err, result)
-		} else {
+		default:
 			result.Comment = issue
 			if severity == "fail" {
 				result.CommentStatus = crawler.StatusFailure
@@ -242,6 +243,7 @@ func runGuidedCrawl(
 	var gtPattern, gtBlogCanonicalUrl, gtMainPageCanonicalUrl, gtOldestEntryCanonicalUrl string
 	var gtEntriesCount int
 	var gtTitleStrs, gtLinks []string
+tables:
 	for _, gtTable := range gtTables {
 		query := fmt.Sprintf(`
 			select
@@ -255,14 +257,15 @@ func runGuidedCrawl(
 			&gtPattern, &gtEntriesCount, &gtBlogCanonicalUrl, &gtMainPageCanonicalUrl,
 			&gtOldestEntryCanonicalUrl, &gtTitleStrs, &gtLinks,
 		)
-		if errors.Is(err, pgx.ErrNoRows) {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
 			gtKnown = false
-		} else if err != nil {
+		case err != nil:
 			return &result, newError(err, result)
-		} else if err == nil {
+		default:
 			gtKnown = true
 			result.GroundTruthPattern = gtPattern
-			break
+			break tables
 		}
 	}
 
@@ -332,11 +335,12 @@ func runGuidedCrawl(
 	pastSuccessRow := conn.QueryRow(`select 1 from guided_successes where start_link_id = $1`, startLinkId)
 	var one int
 	err = pastSuccessRow.Scan(&one)
-	if errors.Is(err, pgx.ErrNoRows) {
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
 		hasGuidedSucceededBefore = false
-	} else if err != nil {
+	case err != nil:
 		return &result, newError(err, result)
-	} else {
+	default:
 		hasGuidedSucceededBefore = true
 	}
 
@@ -502,11 +506,12 @@ func runGuidedCrawl(
 				)
 			}
 		}
-		if len(gtTitles) == 0 {
+		switch {
+		case len(gtTitles) == 0:
 			logger.Info("Ground truth titles not present")
 			result.HistoricalLinksTitlesPartiallyMatchingStatus = crawler.StatusNeutral
 			result.HistoricalLinksTitlesExactlyMatchingStatus = crawler.StatusNeutral
-		} else if entriesCount == len(gtTitles) {
+		case entriesCount == len(gtTitles):
 			type TitleMismatch struct {
 				Title   crawler.LinkTitle
 				GTTitle crawler.LinkTitle
@@ -565,7 +570,7 @@ func runGuidedCrawl(
 					)
 				}
 			}
-		} else {
+		default:
 			gtTitleEqValues := make(map[string]bool)
 			for _, title := range gtTitles {
 				gtTitleEqValues[title.EqualizedValue] = true

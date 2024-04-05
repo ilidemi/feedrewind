@@ -2,9 +2,9 @@ package crawler
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/slices"
 	"golang.org/x/net/html"
 )
 
@@ -88,15 +88,16 @@ func (r *archivesLongFeedResult) speculativeCount() int {
 }
 
 func getArchivesAlmostMatchThreshold(feedLength int) int {
-	if feedLength <= 3 {
+	switch {
+	case feedLength <= 3:
 		return feedLength
-	} else if feedLength <= 7 {
+	case feedLength <= 7:
 		return feedLength - 1
-	} else if feedLength <= 25 {
+	case feedLength <= 25:
 		return feedLength - 2
-	} else if feedLength <= 62 {
+	case feedLength <= 62:
 		return feedLength - 3
-	} else {
+	default:
 		return feedLength - 7
 	}
 }
@@ -1045,10 +1046,8 @@ func tryExtractShuffled(
 			appendLogLinef(
 				&logLines, "almost feed match %d/%d", targetFeedEntryLinks.Length, feedEntryLinks.Length,
 			)
-		} else {
-			if !feedEntryLinks.allIncluded(&curisSet) {
-				continue
-			}
+		} else if !feedEntryLinks.allIncluded(&curisSet) {
+			continue
 		}
 
 		maybeDates := slices.Clone(maybeUrlDatesExtraction.MaybeDates)

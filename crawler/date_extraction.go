@@ -26,23 +26,23 @@ func (d date) String() string {
 	return fmt.Sprintf("%04d-%02d-%02d", d.Year, d.Month, d.Day)
 }
 
-func dateCompare(d1, d2 date) int {
-	if d1.Year == d2.Year && d1.Month == d2.Month && d1.Day == d2.Day {
+func (d date) Compare(d2 date) int {
+	if d.Year == d2.Year && d.Month == d2.Month && d.Day == d2.Day {
 		return 0
 	}
-	if d1.Year < d2.Year {
+	if d.Year < d2.Year {
 		return -1
 	}
-	if d1.Year > d2.Year {
+	if d.Year > d2.Year {
 		return 1
 	}
-	if d1.Month < d2.Month {
+	if d.Month < d2.Month {
 		return -1
 	}
-	if d1.Month > d2.Month {
+	if d.Month > d2.Month {
 		return 1
 	}
-	if d1.Day < d2.Day {
+	if d.Day < d2.Day {
 		return -1
 	}
 	return 1
@@ -163,7 +163,8 @@ func tryExtractTextDate(text string, guessYear bool) *date {
 
 	textNumbers := digitsRegex.FindAllString(text, -1)
 
-	if fuzzyDate.YearIsSet {
+	switch {
+	case fuzzyDate.YearIsSet:
 		yearStr := fmt.Sprint(fuzzyDate.Year)
 		var yearTwoDigitStr string
 		if len(yearStr) >= 2 {
@@ -181,11 +182,11 @@ func tryExtractTextDate(text string, guessYear bool) *date {
 		if !found {
 			return nil
 		}
-	} else if guessYear {
+	case guessYear:
 		// Special treatment only for missing year but not month or day
 		fuzzyDate.Year = time.Now().UTC().Year()
 		fuzzyDate.YearIsSet = true
-	} else {
+	default:
 		return nil
 	}
 

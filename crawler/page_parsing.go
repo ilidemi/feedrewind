@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/antchfx/htmlquery"
@@ -87,12 +87,14 @@ func extractLinks(
 			if xpathMode >= includeXPathOnly {
 				tagCounts[tag]++
 				xpathToken := fmt.Sprintf("/%s[%d]", tag, tagCounts[tag])
-				childXPathTokens = append(xpathTokens, xpathToken)
+				childXPathTokens = slices.Clone(xpathTokens)
+				childXPathTokens = append(childXPathTokens, xpathToken)
 
 				if xpathMode == includeXPathAndClassXPath {
 					classesStr := getClassesStr(child)
 					childClassXPathToken := fmt.Sprintf("/%s(%s)[%d]", tag, classesStr, tagCounts[tag])
-					childClassXPathTokens = append(classXPathTokens, childClassXPathToken)
+					childClassXPathTokens = slices.Clone(classXPathTokens)
+					childClassXPathTokens = append(childClassXPathTokens, childClassXPathToken)
 				}
 			}
 			traverse(child, childXPathTokens, childClassXPathTokens)
@@ -133,7 +135,7 @@ func getClassesStr(element *html.Node) string {
 		class = strings.ToLower(class)
 		filteredClasses = append(filteredClasses, class)
 	}
-	sort.Strings(filteredClasses)
+	slices.Sort(filteredClasses)
 	return strings.Join(filteredClasses, ",")
 }
 

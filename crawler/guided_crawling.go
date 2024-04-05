@@ -3,15 +3,14 @@ package crawler
 import (
 	"errors"
 	"feedrewind/oops"
+	"feedrewind/util"
 	"fmt"
 	"reflect"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
-
-	"golang.org/x/exp/slices"
 )
 
 type Feed struct {
@@ -166,13 +165,9 @@ func GuidedCrawl(
 	}
 	if !feedEntryLinksSameHost {
 		logger.Info("Feed entry links come from a different host than feed and start page")
-		sortedFeedEntryHosts := make([]string, 0, len(feedEntryLinksByHost))
-		for host := range feedEntryLinksByHost {
-			sortedFeedEntryHosts = append(sortedFeedEntryHosts, host)
-		}
-		sort.Slice(sortedFeedEntryHosts, func(i, j int) bool {
-			return len(feedEntryLinksByHost[sortedFeedEntryHosts[i]]) >
-				len(feedEntryLinksByHost[sortedFeedEntryHosts[j]])
+		sortedFeedEntryHosts := util.Keys(feedEntryLinksByHost)
+		slices.SortFunc(sortedFeedEntryHosts, func(a, b string) int {
+			return len(feedEntryLinksByHost[b]) - len(feedEntryLinksByHost[a]) // descending
 		})
 		entryLinkFromPopularHost := feedEntryLinksByHost[sortedFeedEntryHosts[0]][0]
 		entryPage, err := crawlPage(&entryLinkFromPopularHost, false, crawlCtx, logger)
@@ -462,15 +457,16 @@ func guidedCrawlHistorical(
 			continue
 		}
 
-		if archivesRegex.MatchString(link.Curi.TrimmedPath) {
+		switch {
+		case archivesRegex.MatchString(link.Curi.TrimmedPath):
 			seenCurisSet.add(link.Curi)
 			archivesQueue = append(archivesQueue, link)
 			logger.Info("Enqueued archives: %s", link.Url)
-		} else if mainPageRegex.MatchString(link.Curi.TrimmedPath) {
+		case mainPageRegex.MatchString(link.Curi.TrimmedPath):
 			seenCurisSet.add(link.Curi)
 			mainPageQueue = append(mainPageQueue, link)
 			logger.Info("Enqueued main page: %s", link.Url)
-		} else {
+		default:
 			startPageOtherLinks = append(startPageOtherLinks, link)
 		}
 	}
@@ -562,11 +558,12 @@ func guidedCrawlHistorical(
 			continue
 		}
 
-		if archivesRegex.MatchString(link.Curi.TrimmedPath) {
+		switch {
+		case archivesRegex.MatchString(link.Curi.TrimmedPath):
 			archivesQueue = append(archivesQueue, link)
-		} else if mainPageRegex.MatchString(link.Curi.TrimmedPath) {
+		case mainPageRegex.MatchString(link.Curi.TrimmedPath):
 			mainPageQueue = append(mainPageQueue, link)
-		} else {
+		default:
 			twoEntriesOtherLinks = append(twoEntriesOtherLinks, link)
 		}
 	}
@@ -1090,8 +1087,8 @@ func postprocessArchivesShuffledResults(
 ) (*postprocessedResult, bool) {
 	logger.Info("Postprocess archives shuffled results start")
 	sortedTentativeResults := slices.Clone(archivesShuffledResults.Results)
-	sort.Slice(sortedTentativeResults, func(i, j int) bool {
-		return len(sortedTentativeResults[i].Links) < len(sortedTentativeResults[j].Links)
+	slices.SortFunc(sortedTentativeResults, func(a, b *archivesShuffledResult) int {
+		return len(a.Links) - len(b.Links)
 	})
 	archivesShuffledCounts := make([]int, len(sortedTentativeResults))
 	for i, tentativeResult := range sortedTentativeResults {
@@ -1688,17 +1685,18 @@ func fetchMissingTitles(
 		}
 
 		arePrefixSuffixValid := false
-		if len(pageTitles) == len(links) {
+		switch {
+		case len(pageTitles) == len(links):
 			logger.Info(
 				"All links needed title fetching, can't validate prefix/suffix but proceeding with it",
 			)
 			arePrefixSuffixValid = true
-		} else if len(pageTitles) >= 15 {
+		case len(pageTitles) >= 15:
 			logger.Info(
 				"%d titles is enough to use prefix/suffix without an extra fetch", len(pageTitles),
 			)
 			arePrefixSuffixValid = true
-		} else {
+		default:
 			progressLogger.LogAndSavePostprocessingCounts(feedPresentTitlesCount+fetchedTitlesCount+1, 1)
 			page, err := crawlHtmlPage(&testLink, crawlCtx, logger)
 			progressLogger.LogAndSavePostprocessingCounts(feedPresentTitlesCount+fetchedTitlesCount+1, 0)
@@ -1706,14 +1704,14 @@ func fetchMissingTitles(
 				logger.Info("Couldn't fetch first link title: %s (%v)", testLink.Uri, err)
 			} else {
 				testPageTitle := getPageTitle(page, feedGenerator, logger)
-				if !strings.HasPrefix(testPageTitle, prefix) {
+				switch {
+				case !strings.HasPrefix(testPageTitle, prefix):
 					logger.Info("Test link prefix doesn't check out: %q, %q", testPageTitle, prefix)
-				} else if !strings.HasSuffix(testPageTitle, suffix) {
+				case !strings.HasSuffix(testPageTitle, suffix):
 					logger.Info("Test link suffix doesn't check out: %q, %q", testPageTitle, suffix)
-				} else {
+				default:
 					logger.Info("Title prefix and suffix check out with the test link")
 					arePrefixSuffixValid = true
-
 				}
 			}
 		}
@@ -1764,8 +1762,8 @@ func countLinkTitleSources(links []*titledLink) string {
 			Count:  count,
 		})
 	}
-	sort.Slice(sourceCounts, func(i, j int) bool {
-		return sourceCounts[i].Count > sourceCounts[j].Count
+	slices.SortFunc(sourceCounts, func(a, b SourceCount) int {
+		return b.Count - a.Count // descending
 	})
 
 	tokens := make([]string, 0, len(sourceCounts))

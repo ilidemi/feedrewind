@@ -4,6 +4,7 @@ import (
 	"feedrewind/jobs"
 	"feedrewind/middleware"
 	"feedrewind/models"
+	"feedrewind/oops"
 	"feedrewind/publish"
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
@@ -74,11 +75,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	conn := rutil.DBConn(r)
 	user, err := models.FullUser_FindByEmail(conn, email)
-	if errors.Is(err, models.ErrUserNotFound) {
+	switch {
+	case errors.Is(err, models.ErrUserNotFound):
 		logger.Info().Msg("User not found")
-	} else if err != nil {
+	case err != nil:
 		panic(err)
-	} else {
+	default:
 		err := bcrypt.CompareHashAndPassword([]byte(user.PasswordDigest), []byte(password))
 		if err == nil {
 			middleware.MustSetSessionAuthToken(w, r, user.AuthToken)
@@ -198,7 +200,11 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 	} else {
-		name := email[:strings.Index(email, "@")]
+		atIdx := strings.Index(email, "@")
+		if atIdx == -1 {
+			panic(oops.Newf("Email is expected to contain an @: %s", email))
+		}
+		name := email[:atIdx]
 		productUserId := rutil.CurrentProductUserId(r)
 		productUserExists, err := models.User_ExistsByProductUserId(tx, productUserId)
 		if err != nil {
@@ -212,15 +218,16 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		user, err = models.FullUser_Create(tx, email, password, name, productUserId)
-		if errors.Is(err, models.ErrUserAlreadyExists) {
+		switch {
+		case errors.Is(err, models.ErrUserAlreadyExists):
 			result := newSignUpResult(r, userAlreadyExists)
 			templates.MustWrite(w, "login_signup/signup", result)
 			return
-		} else if errors.Is(err, models.ErrPasswordTooShort) {
+		case errors.Is(err, models.ErrPasswordTooShort):
 			result := newSignUpResult(r, passwordTooShort)
 			templates.MustWrite(w, "login_signup/signup", result)
 			return
-		} else if err != nil {
+		case err != nil:
 			panic(err)
 		}
 

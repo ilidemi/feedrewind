@@ -6,6 +6,7 @@ import (
 	"github.com/quasilyte/go-ruleguard/dsl"
 )
 
+//nolint:unused
 func callToTimeNow(m dsl.Matcher) {
 	m.Match(`require.NoError`).
 		Report(`calls to require.NoError() are disallowed, use oops.RequireNoError() for nice stacktraces`)

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 	neturl "net/url"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -174,13 +174,13 @@ func getTumblrApiHistorical(
 	for _, category := range categoriesByName {
 		categories = append(categories, *category)
 	}
-	sort.Slice(categories, func(i, j int) bool {
-		count1 := len(categories[i].PostLinks)
-		count2 := len(categories[j].PostLinks)
+	slices.SortFunc(categories, func(a, b HistoricalBlogPostCategory) int {
+		count1 := len(a.PostLinks)
+		count2 := len(b.PostLinks)
 		if count1 != count2 {
-			return count1 > count2
+			return count2 - count1 // descending
 		}
-		return strings.ToLower(categories[i].Name) < strings.ToLower(categories[j].Name)
+		return strings.Compare(a.Name, b.Name)
 	})
 	logger.Info("Categories: %s", categoryCountsString(categories))
 

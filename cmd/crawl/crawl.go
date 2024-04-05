@@ -5,6 +5,7 @@ import (
 	"errors"
 	"feedrewind/config"
 	"feedrewind/db/pgw"
+	"feedrewind/oops"
 	"fmt"
 	"os"
 	"os/exec"
@@ -23,8 +24,8 @@ func init() {
 	Crawl = &cobra.Command{
 		Use:  "crawl",
 		Args: cobra.MaximumNArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			crawl(args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return crawl(args)
 		},
 	}
 	Crawl.Flags().IntVar(&threads, "threads", 16, "(only used when crawling all)")
@@ -35,7 +36,7 @@ var defaultStartLinkId = 224
 var threads int
 var allowJS bool
 
-func crawl(args []string) {
+func crawl(args []string) error {
 	cpuFile, err := os.Create("cpuprofile")
 	if err != nil {
 		panic(err)
@@ -56,22 +57,22 @@ func crawl(args []string) {
 
 	if len(args) == 0 {
 		runSingle(defaultStartLinkId)
-		return
+		return nil
 	}
 
 	arg := args[0]
 	if arg == "all" {
 		runAll()
-		return
+		return nil
 	}
 
 	startLinkId, err := strconv.ParseInt(arg, 10, 64)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Expected start link id, got: %s", arg)
-		os.Exit(1)
+		return oops.Newf("Expected start link id, got: %s", arg)
 	}
 
 	runSingle(int(startLinkId))
+	return nil
 }
 
 func connectDB() *pgw.Pool {
@@ -255,8 +256,7 @@ func runAll() {
 
 	}
 
-	for threadIdx := 0; threadIdx < threads; threadIdx++ {
-		threadIdx := threadIdx
+	for threadIdx := range threads {
 		go func() {
 			threadConn, err := pool.AcquireBackground()
 			if err != nil {
@@ -307,11 +307,12 @@ Loop:
 			currentTime := time.Now()
 			elapsedSeconds := int(currentTime.Sub(startTime).Seconds())
 			var elapsedStr string
-			if elapsedSeconds < 60 {
+			switch {
+			case elapsedSeconds < 60:
 				elapsedStr = fmt.Sprintf("%ds", elapsedSeconds)
-			} else if elapsedSeconds < 3600 {
+			case elapsedSeconds < 3600:
 				elapsedStr = fmt.Sprintf("%dm%02ds", elapsedSeconds/60, elapsedSeconds%60)
-			} else {
+			default:
 				elapsedStr = fmt.Sprintf(
 					"%dh%02dm%02ds", elapsedSeconds/3600, (elapsedSeconds%3600)/60, elapsedSeconds%60,
 				)

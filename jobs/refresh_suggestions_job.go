@@ -12,7 +12,7 @@ import (
 	"feedrewind/util/schedule"
 	"math"
 	neturl "net/url"
-	"sort"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -58,9 +58,7 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		}
 		feedUrls = append(feedUrls, feedUrl)
 	}
-	sort.Slice(feedUrls, func(i, j int) bool {
-		return feedUrls[i] < feedUrls[j]
-	})
+	slices.Sort(feedUrls)
 
 	httpClient := crawler.NewHttpClientImpl(ctx, false)
 feeds:

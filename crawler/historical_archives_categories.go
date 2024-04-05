@@ -3,10 +3,10 @@ package crawler
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
 	om "github.com/wk8/go-ordered-map/v2"
-	"golang.org/x/exp/slices"
 )
 
 type archivesCategoriesState struct {
@@ -218,11 +218,12 @@ func tryExtractArchivesCategories(
 }
 
 func getArchivesCategoriesAlmostMatchThreshold(feedLength int) int {
-	if feedLength <= 9 {
+	switch {
+	case feedLength <= 9:
 		return feedLength
-	} else if feedLength <= 19 {
+	case feedLength <= 19:
 		return feedLength - 1
-	} else {
+	default:
 		return feedLength - 2
 	}
 }
@@ -232,7 +233,7 @@ func checkCombination(
 	almostMatchThreshold int, combinationsChecked int, mainLink *Link, logger Logger,
 ) (crawlHistoricalResult, bool) {
 	feedOverlap := 0
-	for i := 0; i < feedEntryLinks.Length; i++ {
+	for i := range feedEntryLinks.Length {
 		for _, category := range categories {
 			if category.FeedMatchBitmap[i] == '1' {
 				feedOverlap++

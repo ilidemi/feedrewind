@@ -11,7 +11,7 @@ import (
 	"feedrewind/routes/rutil"
 	"feedrewind/util/schedule"
 	"fmt"
-	"sort"
+	"slices"
 	"time"
 )
 
@@ -289,7 +289,7 @@ func publishRssFeeds(
 		if err != nil {
 			return err
 		}
-		reversePosts(remainingPosts)
+		slices.Reverse(remainingPosts)
 
 		subscriptionUrl := rutil.SubscriptionUrl(subscription.Id)
 		var subscriptionItems []item
@@ -312,11 +312,8 @@ func publishRssFeeds(
 			})
 		}
 
-		subscriptionPosts :=
-			make([]models.PublishedSubscriptionBlogPost, 0, len(newPosts)+len(remainingPosts))
-		subscriptionPosts = append(subscriptionPosts, remainingPosts...)
-		subscriptionPosts = append(subscriptionPosts, newPosts...)
-		reversePosts(subscriptionPosts)
+		subscriptionPosts := slices.Concat(remainingPosts, newPosts)
+		slices.Reverse(subscriptionPosts)
 
 		for _, post := range subscriptionPosts {
 			link := rutil.SubscriptionPostUrl(post.Title, post.RandomId)
@@ -389,8 +386,8 @@ func publishRssFeeds(
 	}
 
 	// Date desc, index asc (= publish date desc, sub date desc, post index desc)
-	sort.SliceStable(userDatesItems, func(i, j int) bool {
-		return userDatesItems[i].PublishedAt.After(userDatesItems[j].PublishedAt)
+	slices.SortStableFunc(userDatesItems, func(a, b UserDateItem) int {
+		return b.PublishedAt.Compare(a.PublishedAt)
 	})
 	userItems := make([]item, 0, postsInRss)
 	for i, userDateItem := range userDatesItems {
@@ -417,12 +414,6 @@ func publishRssFeeds(
 	logger.Info().Msgf("Saved RSS for user %d", userId)
 
 	return nil
-}
-
-func reversePosts(posts []models.PublishedSubscriptionBlogPost) {
-	for i, j := 0, len(posts)-1; i < j; i, j = i+1, j-1 {
-		posts[i], posts[j] = posts[j], posts[i]
-	}
 }
 
 func makeGuid(value string) string {

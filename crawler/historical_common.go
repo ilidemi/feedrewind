@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"math"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/antchfx/htmlquery"
 	om "github.com/wk8/go-ordered-map/v2"
-	"golang.org/x/exp/slices"
 	"golang.org/x/net/html"
 )
 
@@ -440,7 +439,7 @@ func groupLinksByMaskedXPath(
 
 	// Prioritize xpaths with maximum number of original link titles matching feed, then discovered link
 	// titles matching feed
-	sortKey := func(linksGrouping *maskedXPathLinksGrouping) int64 {
+	sortKey := func(linksGrouping maskedXPathLinksGrouping) int64 {
 		originalTitleMatchingCount := int32(0)
 		discoveredTitleMatchingCount := int32(0)
 		for _, link := range linksGrouping.Links {
@@ -459,8 +458,16 @@ func groupLinksByMaskedXPath(
 		key := math.MinInt32*int64(originalTitleMatchingCount) - int64(discoveredTitleMatchingCount)
 		return key
 	}
-	sort.SliceStable(maskedXPathLinkGroupings, func(i, j int) bool {
-		return sortKey(&maskedXPathLinkGroupings[i]) < sortKey(&maskedXPathLinkGroupings[j])
+	slices.SortStableFunc(maskedXPathLinkGroupings, func(a, b maskedXPathLinksGrouping) int {
+		diff := sortKey(a) - sortKey(b)
+		switch {
+		case diff < 0:
+			return -1
+		case diff > 0:
+			return 1
+		default:
+			return 0
+		}
 	})
 
 	return maskedXPathLinkGroupings
@@ -496,11 +503,12 @@ func extractTitleRelativeXPaths(
 	}
 
 	getAllowedMismatchCount := func(linksCount int) int {
-		if linksCount <= 8 {
+		switch {
+		case linksCount <= 8:
 			return 0
-		} else if linksCount <= 52 {
+		case linksCount <= 52:
 			return 2
-		} else {
+		default:
 			return 3
 		}
 	}
@@ -690,7 +698,8 @@ func getMaskedXPathExtraction(
 			lastLink := collapsedLinks[len(collapsedLinks)-1]
 			link := links[linkIdx]
 			var newMaybeTitle *LinkTitle
-			if lastLink.MaybeTitle != nil && link.MaybeTitle != nil {
+			switch {
+			case lastLink.MaybeTitle != nil && link.MaybeTitle != nil:
 				newTitleValue := lastLink.MaybeTitle.Value + link.MaybeTitle.Value
 				var newTitleSource linkTitleSource
 				if lastLink.MaybeTitle.Source == link.MaybeTitle.Source {
@@ -700,9 +709,9 @@ func getMaskedXPathExtraction(
 				}
 				newTitle := NewLinkTitle(newTitleValue, newTitleSource, nil)
 				newMaybeTitle = &newTitle
-			} else if lastLink.MaybeTitle != nil {
+			case lastLink.MaybeTitle != nil:
 				newMaybeTitle = lastLink.MaybeTitle
-			} else {
+			default:
 				newMaybeTitle = link.MaybeTitle
 			}
 
@@ -787,14 +796,14 @@ func getMaskedXPathExtraction(
 			if starCount >= 2 {
 				matchingAreSorted = sortedStatusYes
 				for i := 0; i < len(matchingMarkupDates)-1; i++ {
-					if dateCompare(matchingMarkupDates[i], matchingMarkupDates[i+1]) == -1 {
+					if matchingMarkupDates[i].Compare(matchingMarkupDates[i+1]) == -1 {
 						matchingAreSorted = sortedStatusNo
 						break
 					}
 				}
 				matchingAreReverseSorted = sortedStatusYes
 				for i := 0; i < len(matchingMarkupDates)-1; i++ {
-					if dateCompare(matchingMarkupDates[i], matchingMarkupDates[i+1]) == 1 {
+					if matchingMarkupDates[i].Compare(matchingMarkupDates[i+1]) == 1 {
 						matchingAreReverseSorted = sortedStatusNo
 						break
 					}
@@ -1003,20 +1012,21 @@ func extractMaybeMarkupDates(
 	var dateRelativeXPath string
 	var dateRelativeXPathFound bool
 	var logLine string
-	if len(dateXPaths) == 1 {
+	switch {
+	case len(dateXPaths) == 1:
 		dateRelativeXPath = dateXPaths[0].RelativeXPath
 		dateRelativeXPathFound = true
 		logLine = fmt.Sprintf("single date XPath: %s", dateRelativeXPath)
-	} else if len(datesXPathsFromTime) == 1 {
+	case len(datesXPathsFromTime) == 1:
 		dateRelativeXPath = datesXPathsFromTime[0]
 		dateRelativeXPathFound = true
 		logLine = fmt.Sprintf(
 			"multiple date XPaths (%d), one from time: %s", len(dateXPaths), dateRelativeXPath,
 		)
-	} else if len(dateXPaths) > 0 {
+	case len(dateXPaths) > 0:
 		dateRelativeXPathFound = false
 		logLine = fmt.Sprintf("multiple date XPaths (%d), no way to resolve", len(dateXPaths))
-	} else {
+	default:
 		dateRelativeXPathFound = false
 		logLine = "no date XPath"
 	}

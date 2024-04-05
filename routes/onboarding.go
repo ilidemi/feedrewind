@@ -310,12 +310,13 @@ func onboarding_MustDiscoverFeeds(
 			panic(err)
 		}
 		subscription, err := models.Subscription_CreateForBlog(tx, blog, currentUser, productUserId)
-		if errors.Is(err, models.ErrBlogFailed) {
+		switch {
+		case errors.Is(err, models.ErrBlogFailed):
 			logger.Info().Msgf("Discover feeds for %s - unsupported blog", startUrl)
 			return &discoveredUnsupportedBlog{blog: blog}, models.TypedBlogUrlResultHardcoded
-		} else if err != nil {
+		case err != nil:
 			panic(err)
-		} else {
+		default:
 			logger.Info().Msgf("Discover feeds for %s - created subscription", startUrl)
 			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultHardcoded
 		}
@@ -346,12 +347,13 @@ func onboarding_MustDiscoverFeeds(
 			panic(err)
 		}
 		subscription, err := models.Subscription_CreateForBlog(tx, updatedBlog, currentUser, productUserId)
-		if errors.Is(err, models.ErrBlogFailed) {
+		switch {
+		case errors.Is(err, models.ErrBlogFailed):
 			logger.Info().Msgf("Discover feeds at %s - unsupported blog", startUrl)
 			return &discoveredUnsupportedBlog{blog: updatedBlog}, models.TypedBlogUrlResultKnownUnsupported
-		} else if err != nil {
+		case err != nil:
 			panic(err)
-		} else {
+		default:
 			logger.Info().Msgf("Discover feeds at %s - created subscription", startUrl)
 			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultFeed
 		}

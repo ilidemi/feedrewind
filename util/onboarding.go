@@ -23,6 +23,7 @@ type ScreenshotLink struct {
 	IsNewest    bool
 }
 
+//nolint:exhaustruct
 var ScreenshotLinks = []ScreenshotLink{
 	{
 		Url:      "https://www.kalzumeus.com/2012/01/23/salary-negotiation/",
@@ -141,6 +142,7 @@ type MiscellaneousBlog struct {
 	NonBreakingTag string
 }
 
+//nolint:exhaustruct
 var SuggestedCategories = []SuggestedCategory{
 	{
 		Name:           "Programming",
@@ -275,6 +277,7 @@ func SubscriptionAddFeedPath(feedUrl string) string {
 	return fmt.Sprintf("/subscriptions/add/%s", url.PathEscape(feedUrl))
 }
 
+//nolint:exhaustruct
 var MiscellaneousBlogs = []MiscellaneousBlog{
 	{
 		Url:     "https://acoup.blog/",
