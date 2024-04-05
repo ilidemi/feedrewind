@@ -233,12 +233,13 @@ func Blog_CreateOrUpdate(
 			defer util.CommitOrRollbackErr(nestedTx, &err)
 
 			_, err = Blog_Downgrade(nestedTx, blog.Id)
-			if err == nil {
+			switch {
+			case err == nil:
 				newBlog, err = blog_CreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobScheduleFunc)
 				if err != nil {
 					return nil, err
 				}
-			} else if errors.Is(err, ErrNoLatestVersion) || errors.Is(err, errBlogAlreadyExists) {
+			case errors.Is(err, ErrNoLatestVersion) || errors.Is(err, errBlogAlreadyExists):
 				// Another writer deprecated this blog at the same time
 				newBlog, err = Blog_GetLatestByFeedUrl(nestedTx, startFeed.Url)
 				if errors.Is(err, ErrBlogNotFound) {
@@ -249,7 +250,7 @@ func Blog_CreateOrUpdate(
 				} else if err != nil {
 					return nil, err
 				}
-			} else if err != nil {
+			case err != nil:
 				return nil, err
 			}
 
@@ -342,7 +343,7 @@ func Blog_CreateOrUpdate(
 					return nil, err
 				}
 				batch := nestedTx.NewBatch()
-				for i := 0; i < len(newLinks); i++ {
+				for i := range len(newLinks) {
 					index := maxIndex + 1 + i
 					link := newLinks[len(newLinks)-1-i]
 					var title string
@@ -352,11 +353,12 @@ func Blog_CreateOrUpdate(
 						title = link.Url
 					}
 					var categoryNames []string
-					if isACX {
+					switch {
+					case isACX:
 						categoryNames = crawler.ExtractACXCategories(link, logger)
-					} else if isDontWorryAboutTheVase {
+					case isDontWorryAboutTheVase:
 						categoryNames = crawler.ExtractDontWorryAboutTheVaseCategories(link, logger)
-					} else if isOvercomingBias {
+					case isOvercomingBias:
 						categoryNames = crawler.ExtractOvercomingBiasCategories(link, logger)
 					}
 					categoryIds := []BlogPostCategoryId{everythingId}
@@ -540,7 +542,6 @@ func Blog_InitCrawled(
 	batch := tx.NewBatch()
 	blogPostIds := make([]BlogPostId, len(crawledBlogPosts))
 	for i, crawledBlogPost := range crawledBlogPosts {
-		i := i
 		batch.Queue(`
 			insert into blog_posts (blog_id, index, url, title)
 			values ($1, $2, $3, $4)
@@ -559,7 +560,6 @@ func Blog_InitCrawled(
 		batch := tx.NewBatch()
 		categoryIds := make([]BlogPostCategoryId, len(categories))
 		for i, category := range categories {
-			i := i
 			batch.Queue(`
 				insert into blog_post_categories (blog_id, name, index, top_status)
 				values ($1, $2, $3, $4)
@@ -594,10 +594,7 @@ func Blog_InitCrawled(
 		}
 	}
 
-	sameHosts := make([]string, 0, len(curiEqCfg.SameHosts))
-	for sameHost := range curiEqCfg.SameHosts {
-		sameHosts = append(sameHosts, sameHost)
-	}
+	sameHosts := util.Keys(curiEqCfg.SameHosts)
 	_, err = tx.Exec(`
 		insert into blog_canonical_equality_configs (blog_id, same_hosts, expect_tumblr_paths)
 		values ($1, $2, $3)

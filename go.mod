@@ -1,6 +1,6 @@
 module feedrewind
 
-go 1.19
+go 1.22
 
 require (
 	github.com/antchfx/htmlquery v1.3.0
@@ -25,7 +25,6 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	golang.org/x/crypto v0.14.0
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/net v0.17.0
 	golang.org/x/text v0.14.0
 	gopkg.in/yaml.v3 v3.0.1

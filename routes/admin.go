@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -98,9 +98,7 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 				topAndCustomCategoriesSet[categoryName] = true
 			}
 		}
-		postCategories := make([]string, 0, len(topCategories)+len(topAndCustomCategories))
-		postCategories = append(postCategories, topCategories...)
-		postCategories = append(postCategories, topAndCustomCategories...)
+		postCategories := slices.Concat(topCategories, topAndCustomCategories)
 		topStatusByCategoryName := map[string]models.BlogPostCategoryTopStatus{}
 		postCategoriesSet := make(map[string]bool)
 		for _, topCategory := range topCategories {
@@ -501,15 +499,15 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 	for key := range telemetriesByKey {
 		sortedKeys = append(sortedKeys, key)
 	}
-	sort.Slice(sortedKeys, func(i, j int) bool {
+	slices.SortFunc(sortedKeys, func(a, b string) int {
 		for _, priorityKey := range priorityKeys {
-			if sortedKeys[i] == priorityKey {
-				return true
-			} else if sortedKeys[j] == priorityKey {
-				return false
+			if a == priorityKey {
+				return -1
+			} else if b == priorityKey {
+				return 0
 			}
 		}
-		return strings.Compare(sortedKeys[i], sortedKeys[j]) == -1
+		return strings.Compare(a, b)
 	})
 
 	var dashboards []Dashboard
@@ -525,11 +523,12 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 		yScaleMax := 1.0
 		if yMax > 0 {
 			yMax10 := math.Pow10(int(math.Ceil(math.Log10(yMax))))
-			if yMax10/yMax >= 5 {
+			switch {
+			case yMax10/yMax >= 5:
 				yScaleMax = yMax10 / 5
-			} else if yMax10/yMax >= 2 {
+			case yMax10/yMax >= 2:
 				yScaleMax = yMax10 / 2
-			} else {
+			default:
 				yScaleMax = yMax10
 			}
 		}
@@ -580,7 +579,7 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 			for extraKey := range telemetry.Extra {
 				extraKeys = append(extraKeys, extraKey)
 			}
-			sort.Strings(extraKeys)
+			slices.Sort(extraKeys)
 			for _, extraKey := range extraKeys {
 				fmt.Fprintf(&hover, "\n%s: %v", extraKey, telemetry.Extra[extraKey])
 			}

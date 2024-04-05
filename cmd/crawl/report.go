@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"html"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 )
@@ -81,8 +81,8 @@ func outputReport(filename string, results []Result, expectedTotal int) error {
 		}
 	}
 
-	sort.Slice(evaluatedResults, func(i, j int) bool {
-		return evaluatedResults[i].Key < evaluatedResults[j].Key
+	slices.SortFunc(evaluatedResults, func(a, b EvaluatedResult) int {
+		return strings.Compare(a.Key, b.Key)
 	})
 
 	type Counter struct {

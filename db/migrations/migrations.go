@@ -2,7 +2,8 @@ package migrations
 
 import (
 	"feedrewind/db/pgw"
-	"sort"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -16,8 +17,8 @@ type Migration interface {
 var All []Migration
 
 func init() {
-	sort.Slice(All, func(i, j int) bool {
-		return All[i].Version() < All[j].Version()
+	slices.SortFunc(All, func(a, b Migration) int {
+		return strings.Compare(a.Version(), b.Version())
 	})
 }
 

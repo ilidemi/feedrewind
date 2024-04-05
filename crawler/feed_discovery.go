@@ -74,11 +74,12 @@ func DiscoverFeedsAtUrl(
 	startUrl string, enforceTimeout bool, crawlCtx *CrawlContext, logger Logger,
 ) DiscoverFeedsResult {
 	var fullStartUrl string
-	if strings.HasPrefix(startUrl, "http://") || strings.HasPrefix(startUrl, "https://") {
+	switch {
+	case strings.HasPrefix(startUrl, "http://") || strings.HasPrefix(startUrl, "https://"):
 		fullStartUrl = startUrl
-	} else if strings.Contains(startUrl, ".") {
+	case strings.Contains(startUrl, "."):
 		fullStartUrl = "http://" + startUrl
-	} else {
+	default:
 		return &DiscoverFeedsErrorNotAUrl{}
 	}
 
@@ -220,9 +221,10 @@ func DiscoverFeedsAtUrl(
 			}
 		}
 
-		if len(dedupFeeds) == 0 {
+		switch len(dedupFeeds) {
+		case 0:
 			return &DiscoverFeedsErrorNoFeeds{}
-		} else if len(dedupFeeds) == 1 {
+		case 1:
 			singleFeedResult := FetchFeedAtUrl(dedupFeeds[0].Url, enforceTimeout, crawlCtx, logger)
 			switch r := singleFeedResult.(type) {
 			case *FetchedPage:
@@ -254,7 +256,7 @@ func DiscoverFeedsAtUrl(
 			default:
 				panic("unknown fetch feed result type")
 			}
-		} else {
+		default:
 			return &DiscoveredMultipleFeeds{
 				StartPage: startPage,
 				Feeds:     dedupFeeds,

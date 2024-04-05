@@ -1,11 +1,11 @@
 package crawler
 
 import (
+	"feedrewind/util"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/slices"
 	"golang.org/x/net/html"
 )
 
@@ -65,7 +65,8 @@ func historicalArchivesSortAdd(
 			tagCounts[tag]++
 
 			childXPathSegment := fmt.Sprintf("/%s[%d]", tag, tagCounts[tag])
-			childXPathSegments := append(xpathSegments, childXPathSegment) // OK to overwrite memory here
+			childXPathSegments := slices.Clone(xpathSegments)
+			childXPathSegments = append(childXPathSegments, childXPathSegment)
 
 			if tag == "meta" && findAttr(child, "property") == "article:published_time" {
 				if content := findAttr(child, "content"); content != "" {
@@ -128,10 +129,7 @@ func historicalArchivesSortAdd(
 		}
 	}
 
-	keys := make([]xpathDateSource, 0, len(newSortState.DatesByXPathSource))
-	for key := range newSortState.DatesByXPathSource {
-		keys = append(keys, key)
-	}
+	keys := util.Keys(newSortState.DatesByXPathSource)
 	logger.Info("Sort state after %s: %v (%d total)", page.FetchUri, keys, len(newSortState.PageTitles))
 
 	if len(newSortState.DatesByXPathSource) == 0 {
@@ -168,14 +166,15 @@ func historicalArchivesSortFinish(
 			}
 		}
 		var resultDates []date
-		if len(maybeSortState.DatesByXPathSource) == 1 {
+		switch {
+		case len(maybeSortState.DatesByXPathSource) == 1:
 			for xs, dates := range maybeSortState.DatesByXPathSource {
 				xs := xs
 				dateSource = &xs
 				resultDates = *dates
 				logger.Info("Good shuffled date xpath_source: %s", xs)
 			}
-		} else if len(datesByXPathFromMeta) == 1 {
+		case len(datesByXPathFromMeta) == 1:
 			for xpath, dates := range datesByXPathFromMeta {
 				dateSource = &xpathDateSource{
 					XPath:      xpath,
@@ -184,7 +183,7 @@ func historicalArchivesSortFinish(
 				resultDates = *dates
 				logger.Info("Good shuffled date xpath from meta: %s", xpath)
 			}
-		} else if len(datesByXPathFromTime) == 1 {
+		case len(datesByXPathFromTime) == 1:
 			for xpath, dates := range datesByXPathFromTime {
 				dateSource = &xpathDateSource{
 					XPath:      xpath,
@@ -193,7 +192,7 @@ func historicalArchivesSortFinish(
 				resultDates = *dates
 				logger.Info("Good shuffled date xpath from time: %s", xpath)
 			}
-		} else {
+		default:
 			logger.Info("Couldn't sort links: %v", *maybeSortState)
 			return nil, nil, false
 		}
@@ -289,8 +288,8 @@ type linkDate struct {
 // Sort newest to oldest, preserve link order within the same date
 func sortLinksDates(linksDates []linkDate) []linkDate {
 	sortedLinksDates := slices.Clone(linksDates)
-	sort.SliceStable(sortedLinksDates, func(i, j int) bool {
-		return dateCompare(sortedLinksDates[i].Date, sortedLinksDates[j].Date) > 0
+	slices.SortStableFunc(sortedLinksDates, func(a, b linkDate) int {
+		return b.Date.Compare(a.Date)
 	})
 	return sortedLinksDates
 }

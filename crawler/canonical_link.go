@@ -4,10 +4,9 @@ import (
 	"fmt"
 	neturl "net/url"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/slices"
 	"golang.org/x/net/html"
 )
 
@@ -191,8 +190,8 @@ func CanonicalUriFromUri(uri *neturl.URL) CanonicalUri {
 				value: values[0],
 			})
 		}
-		sort.Slice(queryTokens, func(i, j int) bool {
-			return queryTokens[i].key < queryTokens[j].key
+		slices.SortFunc(queryTokens, func(a, b QueryToken) int {
+			return strings.Compare(a.key, b.key)
 		})
 		if len(queryTokens) > 0 {
 			var builder strings.Builder

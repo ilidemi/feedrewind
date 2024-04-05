@@ -83,11 +83,12 @@ func (c *HttpClientImpl) Request(uri *url.URL, shouldThrottle bool, logger Logge
 	resp, err := c.Client.Do(req)
 	var hostnameError x509.HostnameError
 	var unknownAuthorityError x509.UnknownAuthorityError
-	if errors.As(err, &hostnameError) || errors.As(err, &unknownAuthorityError) {
+	switch {
+	case errors.As(err, &hostnameError) || errors.As(err, &unknownAuthorityError):
 		return newHttpResponse(codeSSLError), nil
-	} else if os.IsTimeout(err) {
+	case os.IsTimeout(err):
 		return newHttpResponse("Timeout"), nil
-	} else if err != nil {
+	case err != nil:
 		logger.Info("HTTP request error: %v", err)
 		return newHttpResponse("Error"), nil
 	}

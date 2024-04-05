@@ -263,11 +263,12 @@ func GuidedCrawlingJob_Perform(
 		}
 
 		var slackBlogUrl string
-		if maybeBlogUrl != nil {
+		switch {
+		case maybeBlogUrl != nil:
 			slackBlogUrl = NotifySlackJob_Escape(*maybeBlogUrl)
-		} else if maybeStartPage != nil {
+		case maybeStartPage != nil:
 			slackBlogUrl = NotifySlackJob_Escape(maybeStartPage.Url)
-		} else {
+		default:
 			slackBlogUrl = NotifySlackJob_Escape(startFeed.Url)
 		}
 		slackBlogName := NotifySlackJob_Escape(blogName)
@@ -367,11 +368,12 @@ func logCrawlFinished(
 	batch := tx.NewBatch()
 	for _, sub := range crawledSubscriptions {
 		var productUserId models.ProductUserId
-		if sub.MaybeProductUserId != nil {
+		switch {
+		case sub.MaybeProductUserId != nil:
 			productUserId = *sub.MaybeProductUserId
-		} else if sub.MaybeAnonProductUserId != nil {
+		case sub.MaybeAnonProductUserId != nil:
 			productUserId = *sub.MaybeAnonProductUserId
-		} else {
+		default:
 			return oops.New("both product_user_id and anon_product_user_id are null")
 		}
 		models.ProductEvent_EmitToBatch(batch, productUserId, eventType, map[string]any{

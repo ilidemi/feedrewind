@@ -70,7 +70,7 @@ func init() {
 			} else {
 				templateName = filename
 			}
-			allTemplates[dirName] = append(allTemplates[dir.Name()], NamedTemplate{
+			allTemplates[dirName] = append(allTemplates[dirName], NamedTemplate{
 				DirName: dirName,
 				Name:    templateName,
 				Content: string(content),

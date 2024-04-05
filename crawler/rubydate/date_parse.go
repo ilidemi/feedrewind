@@ -370,7 +370,8 @@ func dateZoneToDiff(str string) (int, bool) {
 				p := s + len(hourStr)
 				var hourErr error
 				hour, hourErr = strconv.Atoi(hourStr)
-				if groups[2].Length > 0 {
+				switch {
+				case groups[2].Length > 0:
 					if hourErr != nil || outOfRange(hour, 0, 23) {
 						return 0, false
 					}
@@ -390,7 +391,7 @@ func dateZoneToDiff(str string) (int, bool) {
 							return 0, false
 						}
 					}
-				} else if p < len(str) && (str[p] == '.' || str[p] == ',') {
+				case p < len(str) && (str[p] == '.' || str[p] == ','):
 					if hourErr != nil || outOfRange(hour, 0, 23) {
 						return 0, false
 					}
@@ -424,7 +425,7 @@ func dateZoneToDiff(str string) (int, bool) {
 						offset = second + hour*3600
 					}
 					return offset, true
-				} else if l > 2 {
+				case l > 2:
 					if l >= 1 {
 						hour, _ = strconv.Atoi(str[s : s+2-l%2])
 					}
@@ -1537,15 +1538,16 @@ func checkClass(str string) classFlags {
 	var flags classFlags
 	for i := 0; i < len(str); i++ {
 		c := str[i]
-		if isAlpha(c) {
+		switch {
+		case isAlpha(c):
 			flags |= classFlagHaveAlpha
-		} else if isDigit(c) {
+		case isDigit(c):
 			flags |= classFlagHaveDigit
-		} else if c == '-' {
+		case c == '-':
 			flags |= classFlagHaveDash
-		} else if c == '.' {
+		case c == '.':
 			flags |= classFlagHaveDot
-		} else if c == '/' {
+		case c == '/':
 			flags |= classFlagHaveSlash
 		}
 	}

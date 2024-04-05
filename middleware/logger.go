@@ -11,7 +11,7 @@ import (
 	"feedrewind/util/schedule"
 	"net/http"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -53,17 +53,18 @@ func Logger(next http.Handler) http.Handler {
 			for key := range r.PostForm {
 				keys = append(keys, key)
 			}
-			sort.Strings(keys)
+			slices.Sort(keys)
 
 			for _, key := range keys {
 				values := r.PostForm[key]
 
 				var kv FormKV
-				if formFilter.MatchString(key) {
+				switch {
+				case formFilter.MatchString(key):
 					kv = FormKV{key, "*******"}
-				} else if len(values) == 1 {
+				case len(values) == 1:
 					kv = FormKV{key, values[0]}
-				} else {
+				default:
 					arr := zerolog.Arr()
 					for _, value := range values {
 						arr.Str(value)
@@ -124,7 +125,8 @@ func Logger(next http.Handler) http.Handler {
 
 		defer func() {
 			status := ww.Status()
-			if errorWrapper.err != nil && errors.Is(errorWrapper.err, csrfValidationFailed) {
+			switch {
+			case errorWrapper.err != nil && errors.Is(errorWrapper.err, csrfValidationFailed):
 				event := logger.
 					Warn().
 					Func(commonFields)
@@ -136,9 +138,9 @@ func Logger(next http.Handler) http.Handler {
 					TimeDiff("duration", time.Now(), t1).
 					Dur("db_duration", pgw.DbDuration(r.Context())).
 					Msg("failed")
-			} else if (status/100 == 4 || status/100 == 5) &&
+			case (status/100 == 4 || status/100 == 5) &&
 				status != http.StatusMethodNotAllowed &&
-				status != http.StatusNotFound {
+				status != http.StatusNotFound:
 
 				event := logger.
 					Error().
@@ -151,7 +153,7 @@ func Logger(next http.Handler) http.Handler {
 					TimeDiff("duration", time.Now(), t1).
 					Dur("db_duration", pgw.DbDuration(r.Context())).
 					Msg("failed")
-			} else if !isStaticFile {
+			case !isStaticFile:
 				logger.
 					Info().
 					Func(commonFields).
@@ -199,7 +201,7 @@ func GetLogger(r *http.Request) *WebLogger {
 
 func setLoggerUserId(r *http.Request, userId models.UserId) {
 	logger := GetLogger(r)
-	(*logger).MaybeUserId = &userId
+	logger.MaybeUserId = &userId
 }
 
 type WebLogger struct {

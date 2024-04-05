@@ -171,7 +171,8 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 			crawlCtx.DuplicateFetches++
 		}
 
-		if resp.Code[0] == '3' {
+		switch {
+		case resp.Code[0] == '3':
 			redirectionUrl := *resp.MaybeLocation
 			redirectionLink, err := processRedirect(
 				redirectionUrl, initialLink, link, resp.Code, requestMs, duplicateFetchLog, seenUrls,
@@ -183,7 +184,7 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 
 			link = redirectionLink
 			shouldThrottle = false
-		} else if resp.Code == "200" {
+		case resp.Code == "200":
 			var contentType string
 			var body string
 			if resp.MaybeContentType != nil {
@@ -209,12 +210,13 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 				FetchUri: link.Uri,
 			}
 			var page page
-			if isFeedExpected && isFeed(body, logger) {
+			switch {
+			case isFeedExpected && isFeed(body, logger):
 				page = &feedPage{
 					pageBase: pageBase,
 					Content:  body,
 				}
-			} else if contentType == "text/html" {
+			case contentType == "text/html":
 				document, err := parseHtml(body, logger)
 				if err != nil {
 					return nil, err
@@ -224,7 +226,7 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 					Content:  body,
 					Document: document,
 				}
-			} else {
+			default:
 				page = (*nonHtmlPage)(&pageBase)
 			}
 
@@ -266,7 +268,7 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 			crawlCtx.FetchedCuris.add(link.Curi)
 			logger.Info("%s %s %dms %s%s", resp.Code, contentType, requestMs, link.Url, duplicateFetchLog)
 			return page, nil
-		} else if resp.Code == codeSSLError {
+		case resp.Code == codeSSLError:
 			if strings.HasPrefix(link.Uri.Host, "www.") {
 				newUri := *link.Uri
 				newUri.Host = newUri.Host[4:]
@@ -279,17 +281,17 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 				logger.Info("SSLError %dms %s", requestMs, link.Url)
 				return nil, oops.New("SSLError")
 			}
-		} else if permanentErrorCodes[resp.Code] || httpErrorsCount >= 3 {
+		case permanentErrorCodes[resp.Code] || httpErrorsCount >= 3:
 			crawlCtx.FetchedCuris.add(link.Curi)
 			logger.Info("%s %dms %s - permanent error", resp.Code, requestMs, link.Url)
 			return nil, oops.Newf("Permanent error (%s): %s", resp.Code, link.Url)
-		} else if httpErrorsCount < 3 {
+		case httpErrorsCount < 3:
 			sleepInterval := crawlCtx.HttpClient.GetRetryDelay(httpErrorsCount)
 			logger.Info("%s %dms %s - sleeping %fs", resp.Code, requestMs, link.Url, sleepInterval)
 			time.Sleep(time.Duration(sleepInterval * float64(time.Second)))
 			httpErrorsCount++
 			continue
-		} else {
+		default:
 			return nil, oops.New("Unexpected crawling branch")
 		}
 	}
@@ -371,23 +373,23 @@ func crawlWithPuppeteerIfMatch(
 	var findLoadMoreButton PuppeteerFindLoadMoreButton
 	puppeteerMatch := false
 	extendedScrollTime := false
-	if htmlquery.QuerySelector(page.Document, loadMoreXPath) != nil {
+	switch {
+	case htmlquery.QuerySelector(page.Document, loadMoreXPath) != nil:
 		logger.Info("Found load more button, rerunning with puppeteer")
 		puppeteerMatch = true
 		findLoadMoreButton = func(page *rod.Page) (*rod.Element, error) {
 			return page.Sleeper(rod.NotFoundSleeper).ElementX(loadMoreXPathStr)
 		}
-	} else if htmlquery.QuerySelector(page.Document, mediumFeedLinkXPath) != nil &&
-		len(htmlquery.Find(page.Document, "//article")) == 10 {
+	case htmlquery.QuerySelector(page.Document, mediumFeedLinkXPath) != nil &&
+		len(htmlquery.Find(page.Document, "//article")) == 10:
 
 		logger.Info("Spotted Medium page, rerunning with puppeteer")
 		puppeteerMatch = true
-	} else if strings.HasSuffix(page.Curi.TrimmedPath, "/archive") && feedGenerator == FeedGeneratorSubstack {
+	case strings.HasSuffix(page.Curi.TrimmedPath, "/archive") && feedGenerator == FeedGeneratorSubstack:
 		logger.Info("Spotted Substack archives, rerunning with puppeteer")
 		puppeteerMatch = true
 		extendedScrollTime = true
-	} else if htmlquery.QuerySelector(page.Document, buttondownTwitterXPath) != nil {
-
+	case htmlquery.QuerySelector(page.Document, buttondownTwitterXPath) != nil:
 		logger.Info("Spotted Buttondown page, rerunning with puppeteer")
 		puppeteerMatch = true
 	}

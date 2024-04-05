@@ -10,6 +10,7 @@ import (
 	"feedrewind/util"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -23,7 +24,7 @@ func CSRF(next http.Handler) http.Handler {
 		var rawAuthToken []byte
 		if authToken != "" {
 			var err error
-			urlAuthToken := strings.Replace(strings.Replace(authToken, "+", "-", -1), "/", "_", -1)
+			urlAuthToken := strings.ReplaceAll(strings.ReplaceAll(authToken, "+", "-"), "/", "_")
 			rawAuthToken, err = base64.RawURLEncoding.DecodeString(urlAuthToken)
 			if err != nil {
 				panic(err)
@@ -85,12 +86,12 @@ func mustValidateCSRFToken(csrfToken string, authToken []byte) bool {
 		decodedCSRFToken[i] = oneTimePad[i] ^ encryptedCSRFToken[i]
 	}
 
-	return subtle.ConstantTimeCompare(decodedCSRFToken[:], []byte(authToken)) == 1
+	return subtle.ConstantTimeCompare(decodedCSRFToken, []byte(authToken)) == 1
 }
 
 func mustMaskCSRFToken(authToken []byte) string {
 	oneTimePad := make([]byte, config.AuthTokenLength)
-	_, err := rand.Read(oneTimePad[:])
+	_, err := rand.Read(oneTimePad)
 	if err != nil {
 		panic(err)
 	}
@@ -108,7 +109,7 @@ func mustMaskCSRFToken(authToken []byte) string {
 	for i := 0; i < config.AuthTokenLength; i++ {
 		encryptedCSRFToken[i] = oneTimePad[i] ^ decodedCSRFToken[i]
 	}
-	maskedCSRFToken := append(oneTimePad[:], encryptedCSRFToken[:]...)
+	maskedCSRFToken := slices.Concat(oneTimePad, encryptedCSRFToken)
 
 	return base64.RawStdEncoding.EncodeToString(maskedCSRFToken)
 }

@@ -56,7 +56,7 @@ func TestTryExtractTextDatePassing(t *testing.T) {
 		{Text: "Tue 18 November 2014", Year: 2014, Month: 11, Day: 18},
 		{Text: "2021-07-16 17:00:00+00:00", Year: 2021, Month: 7, Day: 16},
 		{Text: "/ Dec 14, 2018", Year: 2018, Month: 12, Day: 14},
-		{Text: "07H05 (2018-04-13)", Year: 2018, Month: 4, Day: 13}, //Trips up Ruby DateParse
+		{Text: "07H05 (2018-04-13)", Year: 2018, Month: 4, Day: 13}, // Trips up Ruby DateParse
 	}
 
 	for _, test := range tests {

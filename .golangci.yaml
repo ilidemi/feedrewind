@@ -1,5 +1,5 @@
 run:
-  skip-files:
+  exclude-files:
     - lint/gorules.go
 linters:
   enable:
@@ -8,8 +8,8 @@ linters:
 linters-settings:
   exhaustruct:
     exclude:
-      - 'cobra\.Command$'
-      - 'http\.Cookie$'
+      - '.*cobra\.Command$'
+      - '.*http\.Cookie$'
   gocritic:
     enabled-checks:
       - ruleguard

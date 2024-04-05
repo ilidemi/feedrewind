@@ -7,7 +7,7 @@ import (
 	"html"
 	"io"
 	neturl "net/url"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -108,7 +108,8 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 	var entries []feedEntry
 	generator := FeedGeneratorOther
 
-	if isRSS(xml) {
+	switch {
+	case isRSS(xml):
 		logger.Info("RSS Feed")
 
 		channel := xmlquery.FindOne(xml, "/rss/channel")
@@ -192,13 +193,14 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 		generatorNode := xmlquery.FindOne(channel, "generator")
 		if generatorNode != nil {
 			generatorText := strings.ToLower(generatorNode.InnerText())
-			if strings.HasPrefix(generatorText, "tumblr") {
+			switch {
+			case strings.HasPrefix(generatorText, "tumblr"):
 				generator = FeedGeneratorTumblr
-			} else if generatorText == "blogger" {
+			case generatorText == "blogger":
 				generator = FeedGeneratorBlogger
-			} else if generatorText == "medium" {
+			case generatorText == "medium":
 				generator = FeedGeneratorMedium
-			} else if generatorText == "substack" {
+			case generatorText == "substack":
 				generator = FeedGeneratorSubstack
 			}
 
@@ -206,7 +208,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 				logger.Info("Feed generator: %s", generator)
 			}
 		}
-	} else if isRDF(xml) {
+	case isRDF(xml):
 		logger.Info("RDF feed")
 
 		channel := xmlquery.FindOne(xml, "/rdf:RDF/channel")
@@ -254,7 +256,7 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 
 		// Generator stays uninitialized
 
-	} else {
+	default:
 		logger.Info("Atom feed")
 		if hasFeedburnerNamespace {
 			logger.Info("Feed is from feedburner")
@@ -313,11 +315,12 @@ func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed
 			})
 		}
 
-		if isPublishedDateUsed && isUpdatedDateUsed {
+		switch {
+		case isPublishedDateUsed && isUpdatedDateUsed:
 			logger.Info("Published and updated dates used")
-		} else if isPublishedDateUsed {
+		case isPublishedDateUsed:
 			logger.Info("Published dates used")
-		} else if isUpdatedDateUsed {
+		case isUpdatedDateUsed:
 			logger.Info("Updated dates used")
 		}
 
@@ -490,7 +493,7 @@ func trySortReverseChronological(
 	allDatesEqual := true
 	areDatesAscending := true
 	areDatesDescending := true
-	for i := 0; i < len(items)-1; i++ {
+	for i := range len(items) - 1 {
 		date1 := items[i].pubDate
 		date2 := items[i+1].pubDate
 		if !date1.Equal(date2) {
@@ -508,20 +511,18 @@ func trySortReverseChronological(
 		logger.Info("All item dates are equal")
 	}
 
-	if !areDatesAscending && !areDatesDescending {
+	switch {
+	case !areDatesAscending && !areDatesDescending:
 		logger.Info("Item dates are unsorted")
-		sortedItems = make([]feedEntry, len(items))
-		copy(sortedItems, items)
-		sort.SliceStable(sortedItems, func(i, j int) bool {
-			return sortedItems[i].pubDate.After(sortedItems[j].pubDate)
+		sortedItems = slices.Clone(items)
+		slices.SortStableFunc(sortedItems, func(a, b feedEntry) int {
+			return b.pubDate.Compare(a.pubDate) // descending
 		})
-	} else if areDatesAscending {
+	case areDatesAscending:
 		logger.Info("Item dates are ascending")
-		sortedItems = make([]feedEntry, len(items))
-		for i, item := range items {
-			sortedItems[len(items)-i-1] = item
-		}
-	} else {
+		sortedItems = slices.Clone(items)
+		slices.Reverse(sortedItems)
+	default:
 		logger.Info("Item dates are descending")
 		sortedItems = items
 	}

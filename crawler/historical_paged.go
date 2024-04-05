@@ -1,15 +1,15 @@
 package crawler
 
 import (
+	"feedrewind/util"
 	"fmt"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/antchfx/htmlquery"
 	om "github.com/wk8/go-ordered-map/v2"
-	"golang.org/x/exp/slices"
 	"golang.org/x/net/html"
 )
 
@@ -236,8 +236,8 @@ func tryExtractPage1(
 		return nil, false
 	}
 
-	sort.SliceStable(page1Extractions, func(i, j int) bool {
-		return page1Extractions[i].PageSize > page1Extractions[j].PageSize
+	slices.SortStableFunc(page1Extractions, func(a, b page1Extraction) int {
+		return b.PageSize - a.PageSize // descending
 	})
 
 	maxPage1Size := page1Extractions[0].PageSize
@@ -548,7 +548,8 @@ func tryExtractPage2(
 						}
 					}
 
-					childXPathSegments := append(xpathSegments, xpathSegment{ // Overwriting memory is ok here
+					childXPathSegments := slices.Clone(xpathSegments)
+					childXPathSegments = append(childXPathSegments, xpathSegment{
 						Tag:   tag,
 						Index: xpathSegmentIndex(tagCounts[tag]),
 					})
@@ -623,17 +624,18 @@ func tryExtractPage2(
 		postCategories := postCategoriesMap.flatten()
 		postTags := postTagsMap.flatten()
 		var postCategoriesExtra []string
-		if !(len(postCategories) == 1 && postCategories[0].Name == uncategorized) {
+		switch {
+		case !(len(postCategories) == 1 && postCategories[0].Name == uncategorized):
 			postCategoriesOrTags = postCategories
 			postCategoriesStr := categoryCountsString(postCategories)
 			logger.Info("Categories: %s", postCategoriesStr)
 			appendLogLinef(&postCategoriesExtra, "categories: %s", postCategoriesStr)
-		} else if !(len(postTags) == 1 && postTags[0].Name == uncategorized) {
+		case !(len(postTags) == 1 && postTags[0].Name == uncategorized):
 			postCategoriesOrTags = postTags
 			postCategoriesStr := categoryCountsString(postTags)
 			logger.Info("Categories from tags: %s", postCategoriesStr)
 			appendLogLinef(&postCategoriesExtra, "categories from tags: %s", postCategoriesStr)
-		} else {
+		default:
 			logger.Info("No categories")
 		}
 
@@ -812,10 +814,11 @@ func tryExtractNextPage(
 
 	var postCategoriesOrTags []HistoricalBlogPostCategory
 	var postCategoriesSource string
-	if CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedMrMoneyMustache, curiEqCfg) {
+	switch {
+	case CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedMrMoneyMustache, curiEqCfg):
 		postCategoriesOrTags = hardcodedMrMoneyMustacheCategories
 		postCategoriesSource = " hardcoded"
-	} else if CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedFactorio, curiEqCfg) {
+	case CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedFactorio, curiEqCfg):
 		factorioCategories, err := extractFactorioCategories(nextEntryLinks)
 		if err != nil {
 			logger.Info("Couldn't extract Factorio categories: %v", err)
@@ -824,7 +827,7 @@ func tryExtractNextPage(
 			postCategoriesOrTags = factorioCategories
 			postCategoriesSource = " hardcoded"
 		}
-	} else if CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedACOUP, curiEqCfg) {
+	case CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedACOUP, curiEqCfg):
 		acoupCategoires, err := extractACOUPCategories(nextEntryLinks)
 		if err != nil {
 			logger.Info("Couldn't extract ACOUP categories: %v", err)
@@ -835,13 +838,13 @@ func tryExtractNextPage(
 		}
 		postCategoriesOrTags = append(postCategoriesOrTags, postTagsMap.flatten()...)
 		postCategoriesSource += " from tags"
-	} else if CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedCryptographyEngineering, curiEqCfg) {
+	case CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedCryptographyEngineering, curiEqCfg):
 		postCategoriesOrTags = append(
 			slices.Clone(hardcodedCryptographyEngineeringCategories),
 			postTagsMap.flatten()...,
 		)
 		postCategoriesSource = " hardcoded + from tags"
-	} else {
+	default:
 		postCategories := postCategoriesMap.flatten()
 		postTags := postTagsMap.flatten()
 		if !(len(postCategories) == 1 && postCategories[0].Name == uncategorized) {
@@ -1196,8 +1199,8 @@ func (c postCategoriesMap) flatten() []HistoricalBlogPostCategory {
 	for _, category := range c.CategoriesByLowercaseName {
 		categories = append(categories, *category)
 	}
-	sort.Slice(categories, func(i, j int) bool {
-		return len(categories[i].PostLinks) > len(categories[j].PostLinks)
+	slices.SortFunc(categories, func(a, b HistoricalBlogPostCategory) int {
+		return len(b.PostLinks) - len(a.PostLinks) // descending
 	})
 	return categories
 }
@@ -1262,12 +1265,9 @@ func countPageSizesStr(pageSizes []int) string {
 	for _, pageSize := range pageSizes {
 		pageSizeCounts[pageSize]++
 	}
-	sortedPageSizes := make([]int, 0, len(pageSizeCounts))
-	for pageSize := range pageSizeCounts {
-		sortedPageSizes = append(sortedPageSizes, pageSize)
-	}
-	sort.SliceStable(sortedPageSizes, func(i, j int) bool {
-		return pageSizeCounts[sortedPageSizes[i]] > pageSizeCounts[sortedPageSizes[j]]
+	sortedPageSizes := util.Keys(pageSizeCounts)
+	slices.SortStableFunc(sortedPageSizes, func(a, b int) int {
+		return pageSizeCounts[b] - pageSizeCounts[a] // descending
 	})
 	var sb strings.Builder
 	sb.WriteRune('{')

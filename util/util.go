@@ -85,7 +85,7 @@ func Tx(parentTx pgw.Queryable, f func(*pgw.Tx, Clobber) error) error {
 }
 
 func Ordinal(number int) string {
-	number = number % 100
+	number %= 100
 	if number == 11 || number == 12 || number == 13 {
 		return "th"
 	}
@@ -120,4 +120,12 @@ func RandomInt63() (int64, error) {
 
 func DecorateTitle(title string) string {
 	return title + " · FeedRewind"
+}
+
+func Keys[K comparable, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }

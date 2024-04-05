@@ -91,11 +91,12 @@ func Rss_UserFeed(w http.ResponseWriter, r *http.Request) {
 
 func resolveRssClient(r *http.Request) string {
 	userAgent := r.UserAgent()
-	if strings.HasPrefix(userAgent, "Feedly/") {
+	switch {
+	case strings.HasPrefix(userAgent, "Feedly/"):
 		return "Feedly"
-	} else if strings.Contains(userAgent, "inoreader.com;") {
+	case strings.Contains(userAgent, "inoreader.com;"):
 		return "Inoreader"
-	} else {
+	default:
 		return userAgent
 	}
 }

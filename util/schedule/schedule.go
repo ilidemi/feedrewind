@@ -107,6 +107,10 @@ func (t Time) Equal(t2 Time) bool {
 	return time.Time(t).Equal(time.Time(t2))
 }
 
+func (t Time) Compare(t2 Time) int {
+	return time.Time(t).Compare(time.Time(t2))
+}
+
 func (t Time) UTC() Time {
 	return Time(time.Time(t).UTC())
 }

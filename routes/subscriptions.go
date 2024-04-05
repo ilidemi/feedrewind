@@ -18,7 +18,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -87,11 +87,12 @@ func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 	var activeSubscriptions []Subscription
 	var finishedSubscriptions []Subscription
 	for _, subscription := range subscriptions {
-		if subscription.Status != models.SubscriptionStatusLive {
+		switch {
+		case subscription.Status != models.SubscriptionStatusLive:
 			settingUpSubscriptions = append(settingUpSubscriptions, subscription)
-		} else if subscription.PublishedCount < subscription.TotalCount {
+		case subscription.PublishedCount < subscription.TotalCount:
 			activeSubscriptions = append(activeSubscriptions, subscription)
-		} else {
+		default:
 			finishedSubscriptions = append(finishedSubscriptions, subscription)
 		}
 	}
@@ -533,8 +534,8 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			sort.Slice(allBlogPosts, func(i, j int) bool {
-				return allBlogPosts[i].Index < allBlogPosts[j].Index
+			slices.SortFunc(allBlogPosts, func(a, b models.BlogPost) int {
+				return int(a.Index - b.Index)
 			})
 
 			blogPostsById := make(map[models.BlogPostId]*models.BlogPost)
@@ -1367,7 +1368,8 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 
 		pc := models.NewProductEventContext(tx, r, rutil.CurrentProductUserId(r))
 		var deliveryChannel models.DeliveryChannel
-		if deliveryChannelParam != "" {
+		switch {
+		case deliveryChannelParam != "":
 			switch deliveryChannelParam {
 			case "rss":
 				deliveryChannel = models.DeliveryChannelMultipleFeeds
@@ -1393,9 +1395,9 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 			}, map[string]any{
 				"delivery_channel": newUserSettings.MaybeDeliveryChannel,
 			})
-		} else if oldUserSettings.MaybeDeliveryChannel == nil {
+		case oldUserSettings.MaybeDeliveryChannel == nil:
 			panic("Delivery channel is not set for the user and is not passed in the params")
-		} else {
+		default:
 			deliveryChannel = *oldUserSettings.MaybeDeliveryChannel
 		}
 
@@ -1748,17 +1750,18 @@ func subscriptions_GetRealisticScheduleDate(
 	if err != nil {
 		return "", err
 	}
-	if nextScheduleDate == "" {
+	switch {
+	case nextScheduleDate == "":
 		if localTime.IsEarlyMorning() {
 			return localDate, nil
 		} else {
 			nextDay := localTime.AddDate(0, 0, 1)
 			return nextDay.Date(), nil
 		}
-	} else if nextScheduleDate < localDate {
+	case nextScheduleDate < localDate:
 		logger.Warn().Msgf("Job is scheduled in the past for user %d: %s (today is %s)", userId, nextScheduleDate, localDate)
 		return localDate, nil
-	} else {
+	default:
 		return nextScheduleDate, nil
 	}
 }

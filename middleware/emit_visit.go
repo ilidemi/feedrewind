@@ -27,7 +27,7 @@ func EmitVisit(next http.Handler) http.Handler {
 					rawMethod, route string, handler http.Handler,
 					middlewares ...func(http.Handler) http.Handler,
 				) error {
-					route = strings.Replace(route, "/*/", "/", -1)
+					route = strings.ReplaceAll(route, "/*/", "/")
 					route = strings.TrimSuffix(route, "//")
 					route = strings.TrimSuffix(route, "/")
 					var methods []string

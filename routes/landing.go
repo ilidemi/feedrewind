@@ -40,6 +40,7 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 			Links:      util.ScreenshotLinks,
 			LinksCount: len(util.ScreenshotLinks),
 			DaysOfWeek: schedule.DaysOfWeek,
+			//nolint:exhaustruct
 			ScheduleColumns: [][]ScheduleCell{
 				{
 					{IsAdd: true},
