@@ -371,15 +371,22 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 	currentUser := rutil.CurrentUser(r)
 	var subscriptionStatus models.SubscriptionStatus
 	var blogStatus models.BlogStatus
+	var feedUrl string
 	var subscriptionName string
 	var blogId models.BlogId
 	var maybeSubscriptionUserId *models.UserId
 	row := conn.QueryRow(`
-		select status, (select status from blogs where id = blog_id) as blog_status, name, blog_id, user_id
+		select
+			status,
+			(select status from blogs where id = blog_id) as blog_status,
+			(select feed_url from blogs where id = blog_id) as feed_url,
+			name, blog_id, user_id
 		from subscriptions_without_discarded
 		where id = $1
 	`, subscriptionId)
-	err := row.Scan(&subscriptionStatus, &blogStatus, &subscriptionName, &blogId, &maybeSubscriptionUserId)
+	err := row.Scan(
+		&subscriptionStatus, &blogStatus, &feedUrl, &subscriptionName, &blogId, &maybeSubscriptionUserId,
+	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		subscriptions_RedirectNotFound(w, r)
 		return
@@ -500,6 +507,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				PostsCount                  int
 				Posts                       TopCategoryPosts
 				BlogPostIdsJS               template.JS
+				SSCAbridgedAttribution      bool
 				SubscriptionSelectPostsPath string
 				Submit                      Submit
 			}
@@ -616,12 +624,18 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 					}
 					idsBuilder.WriteString("]")
 
+					sscAbridgedAttribution := false
+					if feedUrl == crawler.HardcodedSlateStarCodexFeed && i == 0 {
+						sscAbridgedAttribution = true
+					}
+
 					topCategories = append(topCategories, TopCategory{
 						Id:                          category.Id,
 						Name:                        category.Name,
 						PostsCount:                  len(category.BlogPostIds),
 						Posts:                       topPosts,
 						BlogPostIdsJS:               template.JS(idsBuilder.String()),
+						SSCAbridgedAttribution:      sscAbridgedAttribution,
 						SubscriptionSelectPostsPath: subscriptionSelectPostsPath,
 						Submit: Submit{
 							Suffix:                    suffix,

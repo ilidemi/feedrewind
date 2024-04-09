@@ -43,6 +43,7 @@ var hardcodedKalzumeus CanonicalUri
 var hardcodedMrMoneyMustache CanonicalUri
 var HardcodedOvercomingBiasFeed CanonicalUri
 var hardcodedPaulGraham CanonicalUri
+var HardcodedSlateStarCodexFeed string
 
 func init() {
 	logger := NewDummyLogger()
@@ -87,6 +88,7 @@ func init() {
 	hardcodedMrMoneyMustache = hardcodedMustParse("https://www.mrmoneymustache.com/blog")
 	HardcodedOvercomingBiasFeed = hardcodedMustParse("https://www.overcomingbias.com/feed")
 	hardcodedPaulGraham = hardcodedMustParse("http://www.aaronsw.com/2002/feeds/pgessays.rss")
+	HardcodedSlateStarCodexFeed = "https://slatestarcodex.com/feed/"
 }
 
 func hardcodedMustParse(url string) CanonicalUri {
