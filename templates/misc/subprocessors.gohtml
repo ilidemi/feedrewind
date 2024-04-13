@@ -1,0 +1,24 @@
+{{template "layouts/application" .}}
+
+{{define "content"}}
+<div class="flex flex-col gap-6 text-sm">
+  <div class="flex flex-col gap-3">
+    <h2>Subprocessors</h2>
+    <p>Last updated April 12, 2024</p>
+    <p>We as a company use third-party software that may process your information under certain circumstances.</p>
+    <p>For the following processors, we have established GDPR-compliant data processing agreements, extending <a href="/privacy" class="underline">GDPR safeguards</a> everywhere personal data is processed. These processors are all located in the United States:</p>
+    <ul class="ml-9 list-disc">
+      <li><a href="https://www.heroku.com/policy/security#privacy" class="link font-semibold">Heroku</a>: Cloud services provider</li>
+      <li><a href="https://postmarkapp.com/eu-privacy" class="link font-semibold">Postmark</a>: Email delivery service</li>
+      <li><a href="https://www.solarwinds.com/trust-center" class="link font-semibold">Papertrail</a>: Log management service</li>
+      <li><a href="https://www.pagerduty.com/privacy-policy/" class="link font-semibold">PagerDuty</a>: Incident response platform</li>
+      <li><a href="https://amplitude.com/trust" class="link font-semibold">Amplitude</a>: Analytics platform</li>
+      <li><a href="https://cloud.google.com/privacy/gdpr" class="link font-semibold">Google Workspace</a>: Support email service</li>
+      <li><a href="https://slack.com/trust/compliance/gdpr" class="link font-semibold">Slack</a>: Internal communications tool</li>
+      <li><a href="https://stripe.com/legal/privacy-center" class="link font-semibold">Stripe</a>: Payment processing service</li>
+    </ul>
+  </div>
+
+  <div class="text-xs text-gray-500 italic">Adapted from the <a href="https://github.com/basecamp/policies" class="underline">Basecamp open-source policies</a> / <a href="https://creativecommons.org/licenses/by/4.0/" class="underline">CC BY 4.0</a></div>
+</div>
+{{end}}

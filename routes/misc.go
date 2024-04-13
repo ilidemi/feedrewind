@@ -27,6 +27,13 @@ func Misc_Privacy(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func Misc_Subprocessors(w http.ResponseWriter, r *http.Request) {
+	templates.MustWrite(w, "misc/subprocessors", miscResult{
+		Title:   util.DecorateTitle("Subprocessors"),
+		Session: rutil.Session(r),
+	})
+}
+
 func Misc_About(w http.ResponseWriter, r *http.Request) {
 	templates.MustWrite(w, "misc/about", miscResult{
 		Title:   util.DecorateTitle("About"),

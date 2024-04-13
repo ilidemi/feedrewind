@@ -31,6 +31,10 @@
         @apply text-xl font-bold
     }
 
+    h4 {
+        @apply text-lg font-bold
+    }
+
     .link {
         @apply underline decoration-from-font text-blue-700 hover:text-blue-900 hover:cursor-pointer disabled:hover:text-blue-700 disabled:hover:cursor-default
     }
