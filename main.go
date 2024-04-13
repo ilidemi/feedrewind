@@ -139,6 +139,7 @@ func runServer(port int) {
 
 		r.Get("/terms", routes.Misc_Terms)
 		r.Get("/privacy", routes.Misc_Privacy)
+		r.Get("/subprocessors", routes.Misc_Subprocessors)
 		r.Get("/about", routes.Misc_About)
 
 		r.Group(func(authorized chi.Router) {
