@@ -1461,11 +1461,10 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 			pc, "schedule", subscriptionId, blogBestUrl, totalCount, productActiveDays,
 		)
 
-		slackEmail := jobs.NotifySlackJob_Escape(currentUser.Email)
 		slackBlogUrl := jobs.NotifySlackJob_Escape(blogBestUrl)
 		slackBlogName := jobs.NotifySlackJob_Escape(blogName)
 		err = jobs.NotifySlackJob_PerformNow(
-			tx, fmt.Sprintf("*%s* subscribed to *<%s|%s>*", slackEmail, slackBlogUrl, slackBlogName),
+			tx, fmt.Sprintf("Someone subscribed to *<%s|%s>*", slackBlogUrl, slackBlogName),
 		)
 		if err != nil {
 			logger.Error().Err(err).Msg("Error while submitting a NotifySlackJob")
