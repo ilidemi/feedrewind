@@ -9,26 +9,48 @@
     <h2>Settings</h2>
   </div>
 
-  <div class="flex flex-col gap-6">
-    <div class="flex flex-col gap-1.5">
-      <div class="flex flex-row gap-[0.3125rem] items-center">
-        <div class="font-semibold">Time zone</div>
-        <div id="timezone_save_spinner" class="spinner spinner-light hidden"></div>
+  <div class="flex flex-col gap-9">
+    <div class="flex flex-col gap-6">
+      <div class="flex flex-col gap-1.5">
+        <div class="flex flex-row gap-[0.3125rem] items-center">
+          <div class="font-semibold">Time zone</div>
+          <div id="timezone_save_spinner" class="spinner spinner-light hidden"></div>
+        </div>
+        <select name="timezone" id="timezone" class="border border-gray-300 rounded-md max-w-full">
+          {{range .TimezoneOptions}}
+            <option {{if .IsSelected}}selected="selected" {{end}}value="{{.Value}}">{{.Label}}</option>
+          {{end}}
+        </select>
+        <div id="timezone_suggestion" class="hidden">
+          (This device is on <button id="client_timezone" class="link"></button>)
+        </div>
       </div>
-      <select name="timezone" id="timezone" class="border border-gray-300 rounded-md max-w-full">
-        {{range .TimezoneOptions}}
-          <option {{if .IsSelected}}selected="selected" {{end}}value="{{.Value}}">{{.Label}}</option>
-        {{end}}
-      </select>
-      <div id="timezone_suggestion" class="hidden">
-        (This device is on <button id="client_timezone" class="link"></button>)
+      <div id="future_timezone" class="hidden">Entries will be arriving in early mornings
+        <span id="future_timezone_name"></span>.
       </div>
-    </div>
-    <div id="future_timezone" class="hidden">Entries will be arriving in early mornings
-      <span id="future_timezone_name"></span>.
+
+      {{template "partial_delivery_channel" .DeliveryChannel}}
     </div>
 
-    {{template "partial_delivery_channel" .DeliveryChannel}}
+    <div class="w-full h-px bg-primary-300"></div>
+
+    <div class="flex flex-col gap-1.5">
+      <div class="font-semibold">Delete account</div>
+      <div>
+        <button id="delete_account_button" class="btn-red">Delete my account</button>
+      </div>
+    </div>
+
+    <script>
+      document
+          .getElementById("delete_account_button")
+          .addEventListener("click", () => {
+              showDeletePopup(
+                  "Delete your account? This cannot be undone.", "/delete_account",
+                  "Keep", "Delete"
+              );
+          })
+    </script>
 
     <script>
         let maxSeenVersion = {{.Version}};

@@ -71,7 +71,12 @@ func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = conn.Exec(`delete from users where id = $1`, user.Id)
+	_, err = conn.Exec(`delete from users_with_discarded where id = $1`, user.Id)
+	if err != nil {
+		panic(err)
+	}
+	logger := rutil.Logger(r)
+	err = jobs.PublishPostsJob_Delete(conn, user.Id, logger)
 	if err != nil {
 		panic(err)
 	}

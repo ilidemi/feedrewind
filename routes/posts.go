@@ -17,7 +17,7 @@ func Posts_Post(w http.ResponseWriter, r *http.Request) {
 			(select coalesce(url, feed_url) from blogs where blogs.id = (
 				select blog_id from blog_posts where blog_posts.id = subscription_posts.blog_post_id
 			)),
-			(select product_user_id from users where users.id = (
+			(select product_user_id from users_with_discarded where users_with_discarded.id = (
 				select user_id from subscriptions_with_discarded
 				where subscriptions_with_discarded.id = subscription_id
 			))

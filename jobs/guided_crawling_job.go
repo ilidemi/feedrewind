@@ -333,7 +333,8 @@ func logCrawlFinished(
 ) error {
 	rows, err := tx.Query(`
 		select id, created_at, anon_product_user_id, (
-			select product_user_id from users where users.id = subscriptions_with_discarded.user_id
+			select product_user_id from users_with_discarded
+			where users_with_discarded.id = subscriptions_with_discarded.user_id
 		), (
 			select coalesce(url, feed_url) from blogs where blogs.id = subscriptions_with_discarded.blog_id
 		)

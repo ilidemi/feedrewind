@@ -39,7 +39,7 @@ func User_FindByAuthToken(tx pgw.Queryable, authToken string) (*User, error) {
 func user_FindBy(tx pgw.Queryable, column string, value string) (*User, error) {
 	row := tx.QueryRow(`
 		select id, email, name, product_user_id
-		from users
+		from users_without_discarded
 		where `+column+` = $1
 	`, value)
 	var user User
@@ -56,7 +56,7 @@ func user_FindBy(tx pgw.Queryable, column string, value string) (*User, error) {
 }
 
 func User_Exists(tx pgw.Queryable, userId UserId) (bool, error) {
-	row := tx.QueryRow("select 1 from users where id = $1", userId)
+	row := tx.QueryRow("select 1 from users_without_discarded where id = $1", userId)
 	var one int
 	err := row.Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -69,7 +69,7 @@ func User_Exists(tx pgw.Queryable, userId UserId) (bool, error) {
 }
 
 func User_ExistsByProductUserId(tx pgw.Queryable, productUserId ProductUserId) (bool, error) {
-	row := tx.QueryRow("select 1 from users where product_user_id = $1", productUserId)
+	row := tx.QueryRow("select 1 from users_with_discarded where product_user_id = $1", productUserId)
 	var one int
 	err := row.Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -82,7 +82,7 @@ func User_ExistsByProductUserId(tx pgw.Queryable, productUserId ProductUserId) (
 }
 
 func User_GetProductUserId(tx pgw.Queryable, userId UserId) (ProductUserId, error) {
-	row := tx.QueryRow(`select product_user_id from users where id = $1`, userId)
+	row := tx.QueryRow(`select product_user_id from users_without_discarded where id = $1`, userId)
 	var productUserId ProductUserId
 	err := row.Scan(&productUserId)
 	if err != nil {
@@ -103,7 +103,7 @@ type FullUser struct {
 func FullUser_FindByEmail(tx pgw.Queryable, email string) (*FullUser, error) {
 	row := tx.QueryRow(`
 		select id, email, password_digest, auth_token, name, product_user_id
-		from users
+		from users_without_discarded
 		where email = $1
 	`, email)
 	var user FullUser
@@ -131,7 +131,7 @@ func FullUser_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*Ful
 	}
 
 	row := tx.QueryRow(`
-		update users
+		update users_without_discarded
 		set password_digest = $1, auth_token = $2 where id = $3
 		returning id, email, password_digest, auth_token, name, product_user_id
 	`, passwordDigest, authToken, id)
@@ -158,19 +158,19 @@ func FullUser_Create(
 		return nil, err
 	}
 
-	idInt, err := mutil.RandomId(tx, "users")
+	idInt, err := mutil.RandomId(tx, "users_with_discarded")
 	if err != nil {
 		return nil, err
 	}
 	id := UserId(idInt)
 
 	_, err = tx.Exec(`
-		insert into users(id, email, password_digest, auth_token, name, product_user_id)
+		insert into users_without_discarded(id, email, password_digest, auth_token, name, product_user_id)
 		values($1, $2, $3, $4, $5, $6)
 	`, id, email, passwordDigest, authToken, name, productUserId)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
-		pgErr.ConstraintName == "users_email_unique" {
+		pgErr.ConstraintName == "users_email_without_discarded" {
 		return nil, ErrUserAlreadyExists
 	} else if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func generateAuthToken(tx pgw.Queryable) (string, error) {
 		}
 		authTokenStr := base64.RawStdEncoding.EncodeToString(authTokenBytes)
 
-		row := tx.QueryRow("select 1 from users where auth_token = $1", authTokenStr)
+		row := tx.QueryRow("select 1 from users_with_discarded where auth_token = $1", authTokenStr)
 		var one int
 		err = row.Scan(&one)
 		if errors.Is(err, pgx.ErrNoRows) {

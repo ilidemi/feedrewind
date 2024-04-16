@@ -26,7 +26,7 @@ func Rss_SubscriptionFeed(w http.ResponseWriter, r *http.Request) {
 			(is_paused or (final_item_published_at is not null)),
 			(select body from subscription_rsses where subscription_id = $1),
 			(select coalesce(url, feed_url) from blogs where blogs.id = blog_id),
-			(select product_user_id from users where users.id = user_id)
+			(select product_user_id from users_with_discarded where users_with_discarded.id = user_id)
 		from subscriptions_without_discarded where id = $1
 	`, subscriptionId)
 	err := row.Scan(&isPausedOrFinished, &rss, &blogBestUrl, &productUserId)
@@ -69,7 +69,7 @@ func Rss_UserFeed(w http.ResponseWriter, r *http.Request) {
 			select body from user_rsses where user_id = $1
 		),
 		product_user_id
-		from users
+		from users_with_discarded
 		where id = $1
 	`, userId)
 	err := row.Scan(&hasActiveSubscriptions, &rss, &productUserId)
