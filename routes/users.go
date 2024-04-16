@@ -277,11 +277,11 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		pc := models.NewProductEventContext(tx, r, user.ProductUserId)
 		models.ProductEvent_MustEmitFromRequest(pc, "sign up", nil, nil)
 
-		slackMessage := "New user signed up"
+		slackMessage := "New signup"
 		if atIndex := strings.LastIndex(user.Email, "@"); atIndex >= 0 {
 			emailHost := strings.ToLower(user.Email[atIndex+1:])
 			if popularEmailHosts[emailHost] {
-				slackMessage = fmt.Sprintf("New user @%s signed up", emailHost)
+				slackMessage = fmt.Sprintf("New signup @%s", emailHost)
 			}
 		}
 		err = jobs.NotifySlackJob_PerformNow(tx, slackMessage)
