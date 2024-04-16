@@ -53,7 +53,8 @@ func RetryBouncedEmailJob_Perform(
 
 	row = conn.QueryRow(`
 		select name, user_id, (
-			select email from users where users.id = subscriptions_without_discarded.user_id
+			select email from users_with_discarded
+			where users_with_discarded.id = subscriptions_without_discarded.user_id
 		)
 		from subscriptions_without_discarded
 		where id = $1

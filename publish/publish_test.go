@@ -1477,7 +1477,7 @@ func createUser(tx pgw.Queryable) (*testUser, error) {
 	userId := models.UserId(0)
 	productUserId := models.ProductUserId("00000000-0000-0000-0000-000000000000")
 	_, err := tx.Exec(`
-        insert into users (id, email, name, password_digest, auth_token, product_user_id)
+        insert into users_without_discarded (id, email, name, password_digest, auth_token, product_user_id)
         values ($1, 'test@feedrewind.com', 'test', 'asdf', 'asdf', $2)
     `, userId, productUserId)
 	if err != nil {
@@ -1590,7 +1590,7 @@ func cleanup(tx pgw.Queryable) error {
 
 	tables := []string{
 		"subscription_posts", "blog_posts", "schedules", "subscriptions_without_discarded", "blogs",
-		"user_settings", "users",
+		"user_settings", "users_with_discarded",
 	}
 	for _, table := range tables {
 		_, err := tx.Exec(`delete from ` + table)

@@ -154,6 +154,7 @@ func runServer(port int) {
 			authorized.Get("/settings", routes.UserSettings_Page)
 			authorized.Post("/settings/save_timezone", routes.UserSettings_SaveTimezone)
 			authorized.Post("/settings/save_delivery_channel", routes.UserSettings_SaveDeliveryChannel)
+			authorized.Post("/delete_account", routes.DeleteAccount)
 		})
 
 		r.Group(func(admin chi.Router) {

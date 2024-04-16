@@ -43,7 +43,7 @@
 
           {{if not .IsDeliveryChannelSet}}
             <div class="flex flex-col gap-1">
-              {{template "users/partial_delivery_channel" .DeliveryChannel}}
+              {{template "settings/partial_delivery_channel" .DeliveryChannel}}
               <div id="delivery_channel_empty_error" class="text-red-600 text-sm">Pick one</div>
             </div>
           {{end}}

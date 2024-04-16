@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"feedrewind/db/pgw"
 	"feedrewind/jobs"
 	"feedrewind/middleware"
 	"feedrewind/models"
@@ -55,7 +56,7 @@ func Login_Page(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := newLoginResult(r, "", redirect)
-	templates.MustWrite(w, "login_signup/login", result)
+	templates.MustWrite(w, "users/login", result)
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +122,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := newLoginResult(r, "Email or password is invalid", redirect)
-	templates.MustWrite(w, "login_signup/login", result)
+	templates.MustWrite(w, "users/login", result)
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +159,7 @@ func SignUp_Page(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := newSignUpResult(r, "")
-	templates.MustWrite(w, "login_signup/signup", result)
+	templates.MustWrite(w, "users/signup", result)
 }
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
@@ -194,7 +195,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		user, err = models.FullUser_UpdatePassword(tx, existingUser.Id, password)
 		if errors.Is(err, models.ErrPasswordTooShort) {
 			result := newSignUpResult(r, passwordTooShort)
-			templates.MustWrite(w, "login_signup/signup", result)
+			templates.MustWrite(w, "users/signup", result)
 			return
 		} else if err != nil {
 			panic(err)
@@ -221,11 +222,11 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, models.ErrUserAlreadyExists):
 			result := newSignUpResult(r, userAlreadyExists)
-			templates.MustWrite(w, "login_signup/signup", result)
+			templates.MustWrite(w, "users/signup", result)
 			return
 		case errors.Is(err, models.ErrPasswordTooShort):
 			result := newSignUpResult(r, passwordTooShort)
-			templates.MustWrite(w, "login_signup/signup", result)
+			templates.MustWrite(w, "users/signup", result)
 			return
 		case err != nil:
 			panic(err)
@@ -314,6 +315,33 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func DeleteAccount(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
+	user := rutil.CurrentUser(r)
+	conn := rutil.DBConn(r)
+	err := util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		_, err := tx.Exec(`update users_with_discarded set discarded_at = utc_now() where id = $1`, user.Id)
+		if err != nil {
+			return err
+		}
+		result, err := tx.Exec(`
+			update subscriptions_without_discarded
+			set is_paused = true
+			where user_id = $1 and not is_paused
+		`, user.Id)
+		if err != nil {
+			return err
+		}
+		logger.Info().Msgf("Paused %d subscription(s)", result.RowsAffected())
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
 var popularEmailHosts map[string]bool
 
 func init() {
@@ -341,8 +369,7 @@ func init() {
 		"hotmail.com.mx", "prodigy.net.mx", "yahoo.ca", "hotmail.ca", "bell.net", "shaw.ca", "sympatico.ca",
 		"rogers.com", "yahoo.com.br", "hotmail.com.br", "outlook.com.br", "uol.com.br", "bol.com.br",
 		"terra.com.br", "ig.com.br", "itelefonica.com.br", "r7.com", "zipmail.com.br", "globo.com",
-		"globomail.com",
-		"oi.com.br",
+		"globomail.com", "oi.com.br", "hey.com",
 	} {
 		popularEmailHosts[host] = true
 	}

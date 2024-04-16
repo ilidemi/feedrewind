@@ -86,7 +86,7 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		ShortFriendlyNameByGroupIdJson       template.JS
 		GroupIdByTimezoneIdJson              template.JS
 	}
-	templates.MustWrite(w, "users/settings", SettingsResult{
+	templates.MustWrite(w, "settings/settings", SettingsResult{
 		Title:                                util.DecorateTitle("Settings"),
 		Session:                              rutil.Session(r),
 		TimezoneOptions:                      timezoneOptions,

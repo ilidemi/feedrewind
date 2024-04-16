@@ -91,20 +91,12 @@ func (conn *Conn) Begin() (*Tx, error) {
 	}, nil
 }
 
-var fromSubscriptionsRegex *regexp.Regexp
-var ErrDontUseSubscriptions = errors.New("Use of subscriptions table is deprecated. Use subscriptions_with_discarded or subscriptions_without_discarded instead.")
-var CheckSubscriptionsUsage = true
-
-func init() {
-	fromSubscriptionsRegex = regexp.MustCompile(`\b(from|into)\s+subscriptions\b`)
-}
-
 func (conn *Conn) Exec(sql string, args ...any) (pgconn.CommandTag, error) {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
 
-	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
-		return pgconn.CommandTag{}, oops.Wrap(ErrDontUseSubscriptions) // nolint:exhaustruct
+	if err := checkDiscarded(sql); err != nil {
+		return pgconn.CommandTag{}, err // nolint:exhaustruct
 	}
 
 	result, err := conn.impl.Exec(conn.ctx, sql, args...)
@@ -115,8 +107,8 @@ func (conn *Conn) ExecWithContext(ctx context.Context, sql string, args ...any) 
 	t1 := time.Now()
 	defer addDuration(ctx, t1)()
 
-	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
-		return pgconn.CommandTag{}, oops.Wrap(ErrDontUseSubscriptions) // nolint:exhaustruct
+	if err := checkDiscarded(sql); err != nil {
+		return pgconn.CommandTag{}, err // nolint:exhaustruct
 	}
 
 	result, err := conn.impl.Exec(ctx, sql, args...)
@@ -127,8 +119,8 @@ func (conn *Conn) Query(sql string, args ...any) (*Rows, error) {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
 
-	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
-		return nil, oops.Wrap(ErrDontUseSubscriptions)
+	if err := checkDiscarded(sql); err != nil {
+		return nil, err
 	}
 
 	rows, err := conn.impl.Query(conn.ctx, sql, args...)
@@ -139,8 +131,8 @@ func (conn *Conn) QueryRow(sql string, args ...any) *Row {
 	t1 := time.Now()
 	defer addDuration(conn.ctx, t1)()
 
-	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
-		return newErrRow(ErrDontUseSubscriptions)
+	if err := checkDiscarded(sql); err != nil {
+		return newErrRow(err)
 	}
 
 	row := conn.impl.QueryRow(conn.ctx, sql, args...)
@@ -235,8 +227,8 @@ func (tx *Tx) Exec(sql string, arguments ...any) (pgconn.CommandTag, error) {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
-	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
-		return pgconn.CommandTag{}, oops.Wrap(ErrDontUseSubscriptions) // nolint:exhaustruct
+	if err := checkDiscarded(sql); err != nil {
+		return pgconn.CommandTag{}, err // nolint:exhaustruct
 	}
 
 	result, err := tx.impl.Exec(tx.ctx, sql, arguments...)
@@ -247,8 +239,8 @@ func (tx *Tx) Query(sql string, arguments ...any) (*Rows, error) {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
-	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
-		return nil, oops.Wrap(ErrDontUseSubscriptions)
+	if err := checkDiscarded(sql); err != nil {
+		return nil, err
 	}
 
 	rows, err := tx.impl.Query(tx.ctx, sql, arguments...)
@@ -259,8 +251,8 @@ func (tx *Tx) QueryRow(sql string, arguments ...any) *Row {
 	t1 := time.Now()
 	defer addDuration(tx.ctx, t1)()
 
-	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
-		return newErrRow(ErrDontUseSubscriptions)
+	if err := checkDiscarded(sql); err != nil {
+		return newErrRow(err)
 	}
 
 	row := tx.impl.QueryRow(tx.ctx, sql, arguments...)
@@ -461,4 +453,28 @@ func WithDBDuration(r *http.Request) *http.Request {
 	dbDuration := time.Duration(0)
 	r = r.WithContext(context.WithValue(r.Context(), dbDurationKey, &dbDuration))
 	return r
+}
+
+var fromSubscriptionsRegex *regexp.Regexp
+var ErrDontUseSubscriptions = errors.New("Use of subscriptions table is deprecated. Use subscriptions_with_discarded or subscriptions_without_discarded instead.")
+var CheckSubscriptionsUsage = true
+var fromUsersRegex *regexp.Regexp
+var ErrDontUseUsers = errors.New("Use of users table is deprecated. Use users_with_discarded or users_without_discarded instead.")
+var CheckUsersUsage = true
+
+func init() {
+	fromSubscriptionsRegex = regexp.MustCompile(`\b(from|into)\s+subscriptions\b`)
+	fromUsersRegex = regexp.MustCompile(`\b(from|into)\s+users\b`)
+}
+
+func checkDiscarded(sql string) error {
+	if CheckSubscriptionsUsage && fromSubscriptionsRegex.MatchString(sql) {
+		return oops.Wrap(ErrDontUseSubscriptions)
+	}
+
+	if CheckUsersUsage && fromUsersRegex.MatchString(sql) {
+		return oops.Wrap(ErrDontUseUsers)
+	}
+
+	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"feedrewind/db/pgw"
+	"feedrewind/log"
 	"feedrewind/models"
 	"feedrewind/oops"
 	"feedrewind/publish"
@@ -178,6 +179,46 @@ func PublishPostsJob_ScheduleInitial(
 	nextRunDate := nextRun.MustUTCString()
 
 	return PublishPostsJob_PerformAt(tx, nextRun, userId, date.Date(), nextRunDate, isManual)
+}
+
+func PublishPostsJob_Delete(tx pgw.Queryable, userId models.UserId, logger log.Logger) error {
+	var attempt int
+	for attempt = 0; attempt < 3; attempt++ {
+		tx2, err := tx.Begin()
+		if err != nil {
+			return err
+		}
+
+		result, err := tx2.Exec(`
+			delete from delayed_jobs
+			where (handler like concat(E'%class: PublishPostsJob\n%'))
+				and handler like concat(E'%arguments:\n  - ', $1::text, E'\n%')
+		`, fmt.Sprint(userId))
+		if err != nil {
+			if err := tx2.Rollback(); err != nil {
+				return err
+			}
+			return err
+		}
+		jobsDeleted := result.RowsAffected()
+		if jobsDeleted > 1 {
+			logger.Info().Msgf("Expected to delete 0-1 PublishPostsJob, got %d; retrying", jobsDeleted)
+			if err := tx2.Rollback(); err != nil {
+				return err
+			}
+
+			time.Sleep(time.Second)
+			continue
+		}
+
+		if err := tx2.Commit(); err != nil {
+			return err
+		}
+		logger.Info().Msgf("Deleted PublishPostsJob for user %d", userId)
+		return nil
+	}
+
+	return oops.Newf("Couldn't delete PublishPostsJob after %d attempts", attempt)
 }
 
 type LockedPublishPostsJob struct {

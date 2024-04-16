@@ -83,7 +83,7 @@ func EmailFinalItemJob_Perform(
 		}
 
 		row := tx.QueryRow(`
-			select name, final_item_publish_status, (select email from users where id = $1)
+			select name, final_item_publish_status, (select email from users_with_discarded where id = $1)
 			from subscriptions_without_discarded
 			where id = $2
 		`, userId, subscriptionId)

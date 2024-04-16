@@ -934,8 +934,46 @@ CREATE TABLE public.users (
     auth_token character varying NOT NULL,
     id bigint NOT NULL,
     name text NOT NULL,
-    product_user_id uuid NOT NULL
+    product_user_id uuid NOT NULL,
+    discarded_at timestamp without time zone
 );
+
+
+--
+-- Name: users_with_discarded; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.users_with_discarded AS
+ SELECT users.email,
+    users.password_digest,
+    users.created_at,
+    users.updated_at,
+    users.auth_token,
+    users.id,
+    users.name,
+    users.product_user_id,
+    users.discarded_at
+   FROM public.users
+  WITH CASCADED CHECK OPTION;
+
+
+--
+-- Name: users_without_discarded; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.users_without_discarded AS
+ SELECT users.email,
+    users.password_digest,
+    users.created_at,
+    users.updated_at,
+    users.auth_token,
+    users.id,
+    users.name,
+    users.product_user_id,
+    users.discarded_at
+   FROM public.users
+  WHERE (users.discarded_at IS NULL)
+  WITH CASCADED CHECK OPTION;
 
 
 --
@@ -1277,14 +1315,6 @@ ALTER TABLE ONLY public.user_settings
 
 
 --
--- Name: users users_email_unique; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.users
-    ADD CONSTRAINT users_email_unique UNIQUE (email);
-
-
---
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1374,6 +1404,13 @@ CREATE UNIQUE INDEX index_users_on_id ON public.users USING btree (id);
 --
 
 CREATE UNIQUE INDEX index_users_on_product_user_id ON public.users USING btree (product_user_id);
+
+
+--
+-- Name: users_email_without_discarded; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX users_email_without_discarded ON public.users USING btree (email) WHERE (discarded_at IS NULL);
 
 
 --
@@ -1942,4 +1979,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20240315060348'),
 ('20240315105550'),
 ('20240327044621'),
-('20240415075004');
+('20240415075004'),
+('20240415084139'),
+('20240415093553'),
+('20240415100337');

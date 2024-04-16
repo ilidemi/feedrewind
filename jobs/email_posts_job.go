@@ -106,7 +106,7 @@ func EmailPostsJob_Perform(
 			return nil
 		}
 
-		row := tx.QueryRow(`select email, product_user_id from users where id = $1`, userId)
+		row := tx.QueryRow(`select email, product_user_id from users_with_discarded where id = $1`, userId)
 		var userEmail string
 		var productUserId models.ProductUserId
 		err = row.Scan(&userEmail, &productUserId)
