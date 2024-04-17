@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"feedrewind/crawler"
-	"feedrewind/db/migrations"
 	"feedrewind/db/pgw"
 	"feedrewind/models"
 	"feedrewind/oops"
@@ -28,8 +27,6 @@ func init() {
 			return RefreshSuggestionsJob_Perform(ctx, conn)
 		},
 	)
-
-	migrations.RefreshSuggestionsJob_PerformAtFunc = RefreshSuggestionsJob_PerformAt
 }
 
 func RefreshSuggestionsJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {

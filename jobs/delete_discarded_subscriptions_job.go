@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"context"
-	"feedrewind/db/migrations"
 	"feedrewind/db/pgw"
 	"feedrewind/oops"
 	"feedrewind/util/schedule"
@@ -19,7 +18,6 @@ func init() {
 			return DeleteDiscardedSubscriptionsJob_Perform(ctx, conn)
 		},
 	)
-	migrations.DeleteDiscardedSubscriptionsJob_PerformAtFunc = DeleteDiscardedSubscriptionsJob_PerformAt
 }
 
 func DeleteDiscardedSubscriptionsJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {

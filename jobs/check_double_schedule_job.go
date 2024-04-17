@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"context"
-	"feedrewind/db/migrations"
 	"feedrewind/db/pgw"
 	"feedrewind/oops"
 	"feedrewind/util/schedule"
@@ -19,8 +18,6 @@ func init() {
 			return CheckDoubleScheduleJob_Perform(ctx, conn)
 		},
 	)
-
-	migrations.CheckDoubleScheduleJob_PerformAtFunc = CheckDoubleScheduleJob_PerformAt
 }
 
 func CheckDoubleScheduleJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
