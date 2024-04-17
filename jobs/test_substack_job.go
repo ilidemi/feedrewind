@@ -3,7 +3,6 @@ package jobs
 import (
 	"context"
 	"feedrewind/crawler"
-	"feedrewind/db/migrations"
 	"feedrewind/db/pgw"
 	"feedrewind/oops"
 	"feedrewind/third_party/tzdata"
@@ -21,8 +20,6 @@ func init() {
 			return TestSubstackJob_Perform(ctx, conn)
 		},
 	)
-
-	migrations.ScheduleTestSubstackJob_PerformAtFunc = TestSubstackJob_PerformAt
 }
 
 func TestSubstackJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
