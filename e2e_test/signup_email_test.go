@@ -146,6 +146,8 @@ func TestSignupEmail(t *testing.T) {
 		require.Equal(t, "OK", pageText(page), description)
 		page = visitAdmin(browser, "delete_email_metadata")
 		require.Equal(t, "OK", pageText(page), description)
+		page = visitAdminf(browser, "destroy_user?email=%s", tc.Email)
+		require.Equal(t, "OK", pageText(page), description)
 
 		browser.MustClose()
 		l.Cleanup()
