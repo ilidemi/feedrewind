@@ -133,6 +133,8 @@ func TestSignupRss(t *testing.T) {
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60)
+		page = visitAdminf(browser, "destroy_user?email=%s", tc.Email)
+		require.Equal(t, "OK", pageText(page))
 
 		browser.MustClose()
 		l.Cleanup()
