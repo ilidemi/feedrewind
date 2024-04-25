@@ -301,6 +301,8 @@ func TestEmailSchedule(t *testing.T) {
 		require.Equal(t, "OK", pageText(page), description)
 		page = visitAdmin(browser, "delete_email_metadata")
 		require.Equal(t, "OK", pageText(page), description)
+		page = visitAdmin(browser, "destroy_user_subscriptions")
+		require.Equal(t, "OK", pageText(page), description)
 		visitDev(browser, "logout")
 
 		browser.MustClose()
