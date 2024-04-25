@@ -68,13 +68,13 @@
     function showDeleteSubscriptionPopup(
         promptPrefix, subscriptionName, promptSuffix, subscriptionDeletePath, keepLabel, deleteLabel
     ) {
-        let prompt = document.createElement("span")
-        prompt.appendChild(promptPrefix);
+        let prompt = document.createElement("span");
+        prompt.appendChild(document.createTextNode(promptPrefix));
         let subscriptionNameElement = document.createElement("span");
         subscriptionNameElement.classList.add("font-semibold");
         subscriptionNameElement.innerText = subscriptionName;
         prompt.appendChild(subscriptionNameElement);
-        prompt.appendChild(promptSuffix);
+        prompt.appendChild(document.createTextNode(promptSuffix));
         
         showDeletePopup(prompt, subscriptionDeletePath, keepLabel, deleteLabel);
     }

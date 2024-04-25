@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUpdateFromFeed(t *testing.T) {
+func TestUpdateFromFeedAndDelete(t *testing.T) {
 	l := launcher.New().Headless(false)
 	defer l.Cleanup()
 	browserUrl := l.MustLaunch()
@@ -76,4 +76,45 @@ https://ilidemi.github.io/dummy-blogs/1man/post5 post5`,
 	numberSuffixRegex := regexp.MustCompile("[0-9]+$")
 	totalCountStr := numberSuffixRegex.FindString(publishedCountStr)
 	require.Equal(t, "5", totalCountStr)
+
+	page.MustElement("#delete_button").MustClick()
+	page.MustElement("#delete_popup_keep_button").MustClick()
+	page.MustWaitDOMStable()
+	page.MustElement("#delete_button").MustClick()
+	page.MustElement("#delete_popup_delete_button").MustClick()
+	page.MustElement("#no_subscriptions")
+}
+
+func TestSubscriptionDeleteSettingUp(t *testing.T) {
+	l := launcher.New().Headless(false)
+	defer l.Cleanup()
+	browserUrl := l.MustLaunch()
+
+	browser := rod.New().ControlURL(browserUrl).MustConnect()
+	defer browser.MustClose()
+
+	page := visitDev(browser, "login")
+	page.MustElement("#email").MustInput("test_pst@feedrewind.com")
+	page.MustElement("#current-password").MustInput("tz123456")
+	page.MustElementR("input", "Sign in").MustClick()
+	page.MustWaitLoad()
+
+	page = visitAdmin(browser, "destroy_user_subscriptions")
+	require.Equal(t, "OK", pageText(page))
+
+	page = visitDev(browser, "subscriptions/add")
+	page.MustElement("#start_url").MustInput("https://ilidemi.github.io/dummy-blogs/1man/rss.xml")
+	page.MustElementR("button", "Go").MustClick()
+
+	page.MustElementR("input", "Continue").MustClick()
+
+	subscriptionId := parseSubscriptionId(page)
+	page = visitDev(browser, "subscriptions")
+	page.MustElement("#delete_button_" + subscriptionId).MustClick()
+	page.MustElement("#delete_popup_keep_button").MustClick()
+	page.MustWaitDOMStable()
+	page.MustElement("#delete_button_" + subscriptionId).MustClick()
+	page.MustElement("#delete_popup_delete_button").MustClick()
+	page.MustWaitDOMStable()
+	page.MustElement("#no_subscriptions")
 }
