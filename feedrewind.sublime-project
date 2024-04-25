@@ -29,14 +29,6 @@
                     "shell_cmd": "go test ./e2e_test -tags emailtesting,e2etesting,testing -timeout 60m -count=1 -v",
                 },
                 {
-                    "name": "crawl all",
-                    "shell_cmd": "go run . crawl all",
-                },
-                {
-                    "name": "crawl one",
-                    "shell_cmd": "go run . crawl",
-                },
-                {
                     "name": "golangci-lint",
                     "shell_cmd": "golangci-lint cache clean && golangci-lint run --build-tags testing,e2etesting,emailtesting",
                 },
@@ -51,6 +43,14 @@
                 {
                     "name": "wsl startup",
                     "shell_cmd": "go run . wsl-startup",
+                },
+                {
+                    "name": "crawl all",
+                    "shell_cmd": "go run . crawl all",
+                },
+                {
+                    "name": "crawl one",
+                    "shell_cmd": "go run . crawl",
                 },
                 {
                     "name": "generate timezones",
@@ -87,4 +87,13 @@
             ],
         }
     ],
+    "settings": {
+        "LSP": {
+            "gopls": {
+                "settings": {
+                    "gopls.buildFlags": ["-tags", "emailtesting,e2etesting,testing"],
+                },
+            },
+        },
+    },
 }
