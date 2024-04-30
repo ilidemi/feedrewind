@@ -102,6 +102,11 @@ feeds:
 		}
 
 		if maybeBlogId != nil && maybeBlogStatus != nil && models.BlogFailedStatuses[*maybeBlogStatus] {
+			if *maybeBlogStatus == models.BlogStatusUpdateFromFeedFailed {
+				logger.Warn().Msgf("Blog previously failed update from feed, skipping: %s", feedUrl)
+				continue
+			}
+
 			logger.Info().Msgf("Downgrading blog %d (%s)", *maybeBlogId, feedUrl)
 			_, err := models.Blog_Downgrade(conn, *maybeBlogId)
 			if err != nil {
@@ -175,7 +180,14 @@ feeds:
 				return err
 			}
 		}
-		logger.Info().Msgf("Created or updated blog %d: %s", updatedBlog.Id, updatedBlog.Status)
+		if models.BlogFailedStatuses[updatedBlog.Status] {
+			logger.Warn().Msgf(
+				"Creating or updating failed (%s) for blog %d (%s)",
+				updatedBlog.Status, updatedBlog.Id, feedUrl,
+			)
+		} else {
+			logger.Info().Msgf("Created or updated blog %d: %s", updatedBlog.Id, updatedBlog.Status)
+		}
 	}
 
 	runAt := schedule.UTCNow().Add(time.Hour).BeginningOfHour().Add(30 * time.Minute)

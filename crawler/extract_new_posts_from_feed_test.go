@@ -223,6 +223,42 @@ func TestExtractNewPostsFromFeed(t *testing.T) {
 			expectedOk: true,
 		},
 		{
+			description: "handle feed with updates on the same date but out of order",
+			feed: `
+				<rss><channel>
+					<item>
+						<link>https://blog/post1</link>
+						<pubDate>Wed, 21 Oct 2015 07:00:00 GMT</pubDate>
+					</item>
+					<item>
+						<link>https://blog/post2</link>
+						<pubDate>Wed, 21 Oct 2015 07:00:00 GMT</pubDate>
+					</item>
+					<item>
+						<link>https://blog/post3</link>
+						<pubDate>Wed, 21 Oct 2014 07:00:00 GMT</pubDate>
+					</item>
+					<item>
+						<link>https://blog/post4</link>
+						<pubDate>Wed, 21 Oct 2014 07:00:00 GMT</pubDate>
+					</item>
+					<item>
+						<link>https://blog/post5</link>
+						<pubDate>Wed, 21 Oct 2012 07:00:00 GMT</pubDate>
+					</item>
+				</channel></rss>
+			`,
+			existingPostUrls: []string{
+				"https://blog/post1", "https://blog/post3", "https://blog/post4", "https://blog/post5",
+			},
+			discardedFeedEntryUrls:   nil,
+			missingFromFeedEntryUrls: nil,
+			expectedNewLinkUrls: []string{
+				"https://blog/post2",
+			},
+			expectedOk: true,
+		},
+		{
 			description: "handle discarded feed entry urls",
 			feed: `
 				<rss><channel>
