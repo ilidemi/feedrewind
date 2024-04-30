@@ -66,6 +66,10 @@ func ExtractNewPostsFromFeed(
 		logger.Info("Can't update from feed because the existing posts don't match")
 		return nil, ErrExtractNewPostsNoMatch
 	}
+	suffixLinksSet := NewCanonicalUriSet(nil, curiEqCfg)
+	for _, suffixLink := range suffixLinks {
+		suffixLinksSet.add(suffixLink.Curi)
+	}
 
 	// Protects from feed out of order as without it feed [6] [1] [2] [3] [4] [5] would still find suffix in
 	// existing posts [2 3 4 5 6]
@@ -74,5 +78,10 @@ func ExtractNewPostsFromFeed(
 		return nil, ErrExtractNewPostsNoMatch
 	}
 
-	return feedEntryLinksSlice[:newPostsCount], nil
+	for _, feedLink := range feedEntryLinksSlice {
+		if !suffixLinksSet.Contains(feedLink.Curi) {
+			newLinks = append(newLinks, feedLink)
+		}
+	}
+	return newLinks, nil
 }
