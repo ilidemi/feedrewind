@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
+	"feedrewind/config"
 	"feedrewind/crawler"
 	"feedrewind/db/pgw"
 	"feedrewind/models"
@@ -68,16 +69,20 @@ feeds:
 		progressLogger := crawler.NewMockProgressLogger(discoverLogger)
 		crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
 		var discoverFeedsResult crawler.DiscoverFeedsResult
-		for attempt := 0; ; attempt++ {
+		for attempt := 1; ; attempt++ {
 			discoverFeedsResult = crawler.DiscoverFeedsAtUrl(feedUrl, true, &crawlCtx, discoverLogger)
 			if _, ok := discoverFeedsResult.(*crawler.DiscoverFeedsErrorCouldNotReach); !ok {
 				break
 			}
-			if attempt >= 5 {
+			maxAttempts := 5
+			if config.Cfg.Env.IsDevOrTest() {
+				maxAttempts = 2
+			}
+			if attempt >= maxAttempts {
 				logger.Error().Msgf("Couldn't reach feed: %s, attempts exhausted", feedUrl)
 				continue feeds
 			} else {
-				delay := time.Duration(math.Pow(5, float64(attempt))) * time.Second
+				delay := time.Duration(math.Pow(5, float64(attempt-1))) * time.Second
 				logger.Info().Msgf("Couldn't reach feed: %s, sleeping for %v", feedUrl, delay)
 				time.Sleep(delay)
 			}
