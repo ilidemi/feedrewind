@@ -62,7 +62,10 @@ func ProcessPostmarkBounceJob_Perform(ctx context.Context, conn *pgw.Conn, bounc
 	var subscriptionId models.SubscriptionId
 	var maybeSubscriptionPostId *models.SubscriptionPostId
 	err = row.Scan(&messageType, &subscriptionId, &maybeSubscriptionPostId)
-	if err != nil {
+	if errors.Is(err, pgx.ErrNoRows) {
+		logger.Error().Msgf("Bounced mssage not found in the db: %s", messageId)
+		return nil
+	} else if err != nil {
 		return err
 	}
 
