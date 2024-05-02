@@ -191,7 +191,10 @@ feeds:
 				updatedBlog.Status, updatedBlog.Id, feedUrl,
 			)
 		} else {
-			logger.Info().Msgf("Created or updated blog %d: %s", updatedBlog.Id, updatedBlog.Status)
+			logger.Info().Msgf(
+				"Created or updated blog %d (%s): %s",
+				updatedBlog.Id, updatedBlog.BestUrl, updatedBlog.Status,
+			)
 		}
 	}
 
