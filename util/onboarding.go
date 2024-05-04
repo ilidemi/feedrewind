@@ -199,11 +199,12 @@ var SuggestedCategories = []SuggestedCategory{
 				FeedUrl: "https://distill.pub/rss.xml",
 				Name:    "Distill",
 			},
-			{
-				Url:     "https://openai.com/blog/",
-				FeedUrl: "https://openai.com/blog/rss.xml",
-				Name:    "OpenAI",
-			},
+			// TODO: reenable
+			// {
+			// 	Url:     "https://openai.com/blog/",
+			// 	FeedUrl: "https://openai.com/blog/rss.xml",
+			// 	Name:    "OpenAI",
+			// },
 			{
 				Url:     "https://deepmind.google/discover/blog/",
 				FeedUrl: "https://deepmind.google/blog/rss.xml",
