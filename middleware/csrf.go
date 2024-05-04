@@ -48,7 +48,7 @@ func CSRF(next http.Handler) http.Handler {
 				if len(rawAuthToken) != 0 &&
 					(r.URL.Path == util.LoginPath || r.URL.Path == util.SignUpPath) {
 					// Trying to log in or sign up when already logged in
-					http.Redirect(w, r, "/", http.StatusFound)
+					http.Redirect(w, r, "/", http.StatusSeeOther)
 					return
 				}
 

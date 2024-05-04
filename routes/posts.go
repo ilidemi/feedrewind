@@ -38,5 +38,5 @@ func Posts_Post(w http.ResponseWriter, r *http.Request) {
 		"blog_url":        blogBestUrl,
 	}, nil)
 
-	http.Redirect(w, r, url, http.StatusFound)
+	http.Redirect(w, r, url, http.StatusSeeOther)
 }

@@ -211,7 +211,7 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if status != models.SubscriptionStatusLive {
-		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
+		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
 		return
 	}
 
@@ -399,7 +399,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if currentUser == nil && subscriptionStatus != models.SubscriptionStatusWaitingForBlog {
-		http.Redirect(w, r, "/pricing", http.StatusFound)
+		http.Redirect(w, r, "/pricing", http.StatusSeeOther)
 		return
 	}
 
@@ -1133,7 +1133,7 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 			blogStatus == models.BlogStatusCrawledConfirmed ||
 			blogStatus == models.BlogStatusCrawledLooksWrong ||
 			blogStatus == models.BlogStatusManuallyInserted)) {
-		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
+		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
 		return
 	}
 
@@ -1218,9 +1218,9 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if currentUser != nil {
-		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
+		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
 	} else {
-		http.Redirect(w, r, "/pricing", http.StatusFound)
+		http.Redirect(w, r, "/pricing", http.StatusSeeOther)
 	}
 }
 
@@ -1270,7 +1270,7 @@ func Subscriptions_MarkWrong(w http.ResponseWriter, r *http.Request) {
 			blogStatus == models.BlogStatusCrawledConfirmed ||
 			blogStatus == models.BlogStatusCrawledLooksWrong ||
 			blogStatus == models.BlogStatusManuallyInserted)) {
-		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
+		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
 		return
 	}
 
@@ -1678,7 +1678,7 @@ func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
 	}, nil)
 
 	if redirect, ok := r.Form["redirect"]; ok && redirect[0] == "add" {
-		http.Redirect(w, r, "/subscriptions/add", http.StatusFound)
+		http.Redirect(w, r, "/subscriptions/add", http.StatusSeeOther)
 	} else {
 		subscriptions_RedirectNotFound(w, r)
 	}
@@ -1914,7 +1914,7 @@ func subscriptions_RedirectNotFound(w http.ResponseWriter, r *http.Request) {
 	if rutil.CurrentUser(r) != nil {
 		path = "/subscriptions"
 	}
-	http.Redirect(w, r, path, http.StatusFound)
+	http.Redirect(w, r, path, http.StatusSeeOther)
 }
 
 func subscriptions_RedirectIfUserMismatch(
@@ -1923,10 +1923,10 @@ func subscriptions_RedirectIfUserMismatch(
 	if subscriptionUserId != nil {
 		currentUser := rutil.CurrentUser(r)
 		if currentUser == nil {
-			http.Redirect(w, r, util.LoginPathWithRedirect(r), http.StatusFound)
+			http.Redirect(w, r, util.LoginPathWithRedirect(r), http.StatusSeeOther)
 			return true
 		} else if *subscriptionUserId != currentUser.Id {
-			http.Redirect(w, r, "/subscriptions", http.StatusFound)
+			http.Redirect(w, r, "/subscriptions", http.StatusSeeOther)
 			return true
 		}
 	}

@@ -9,7 +9,7 @@ func Authorize(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		if GetCurrentUser(r) == nil {
 			redirectUrl := util.LoginPathWithRedirect(r)
-			http.Redirect(w, r, redirectUrl, http.StatusFound)
+			http.Redirect(w, r, redirectUrl, http.StatusSeeOther)
 			return
 		}
 

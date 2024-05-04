@@ -11,7 +11,7 @@ import (
 
 func Landing_Index(w http.ResponseWriter, r *http.Request) {
 	if rutil.CurrentUser(r) != nil {
-		http.Redirect(w, r, "/subscriptions", http.StatusFound)
+		http.Redirect(w, r, "/subscriptions", http.StatusSeeOther)
 		return
 	}
 
