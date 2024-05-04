@@ -84,6 +84,30 @@ func Tx(parentTx pgw.Queryable, f func(*pgw.Tx, Clobber) error) error {
 	return nil
 }
 
+func TxReturn[T any](parentTx pgw.Queryable, f func(*pgw.Tx, Clobber) (T, error)) (T, error) {
+	var zero T
+	tx, err := parentTx.Begin()
+	if err != nil {
+		return zero, err
+	}
+
+	result, err := f(tx, Clobber{})
+	if err != nil {
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			parentTx.Logger().Error().Err(rollbackErr).Msg("Rollback error")
+		}
+		return zero, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return zero, err
+	}
+
+	return result, nil
+}
+
 func Ordinal(number int) string {
 	number %= 100
 	if number == 11 || number == 12 || number == 13 {

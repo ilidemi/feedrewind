@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+
+	"github.com/stripe/stripe-go/v78"
 )
 
 func productionConfig() Config {
@@ -36,6 +38,7 @@ func productionConfig() Config {
 		panic(err)
 	}
 
+	stripe.Key = mustLookupEnv("STRIPE_KEY")
 	return Config{
 		Env:  EnvProduction,
 		Dyno: mustLookupEnv("DYNO"),
@@ -47,6 +50,7 @@ func productionConfig() Config {
 			DBName:        dbName,
 		},
 		IsHeroku:                true,
+		RootUrl:                 "https://feedrewind.com",
 		SessionHashKey:          sessionHashKey,
 		SessionBlockKey:         sessionBlockKey,
 		AmplitudeApiKey:         "REDACTED_AMPLITUDE_API_KEY",
@@ -54,6 +58,7 @@ func productionConfig() Config {
 		PostmarkApiToken:        mustLookupEnv("POSTMARK_API_TOKEN"),
 		PostmarkWebhookSecret:   mustLookupEnv("POSTMARK_WEBHOOK_SECRET"),
 		SlackWebhook:            mustLookupEnv("SLACK_WEBHOOK"),
+		StripeWebhookSecret:     mustLookupEnv("STRIPE_WEBHOOK_SECRET"),
 		AdminUserIds: map[int64]bool{
 			6835322936850076956: true, // belk94@gmail.com
 			6862710086337347875: true, // test@test.com

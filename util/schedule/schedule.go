@@ -142,6 +142,10 @@ func (t Time) Date() Date {
 	return Date(time.Time(t).Format("2006-01-02"))
 }
 
+func (t Time) Unix() int64 {
+	return time.Time(t).Unix()
+}
+
 func (t Time) IsEarlyMorning() bool {
 	return time.Time(t).Hour() < 5
 }

@@ -147,6 +147,8 @@ func FullUser_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*Ful
 
 func FullUser_Create(
 	tx pgw.Queryable, email string, password string, name string, productUserId ProductUserId,
+	offerId OfferId, maybeStripeSubscriptionId *string, maybeStripeCustomerId *string,
+	maybeBillingInterval *string,
 ) (*FullUser, error) {
 	passwordDigest, err := generatePasswordDigest(password)
 	if err != nil {
@@ -165,9 +167,14 @@ func FullUser_Create(
 	id := UserId(idInt)
 
 	_, err = tx.Exec(`
-		insert into users_without_discarded(id, email, password_digest, auth_token, name, product_user_id)
-		values($1, $2, $3, $4, $5, $6)
-	`, id, email, passwordDigest, authToken, name, productUserId)
+		insert into users_without_discarded(
+			id, email, password_digest, auth_token, name, product_user_id, offer_id,
+			stripe_subscription_id, stripe_customer_id, billing_interval
+		)
+		values($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, id, email, passwordDigest, authToken, name, productUserId, offerId, maybeStripeSubscriptionId,
+		maybeStripeCustomerId, maybeBillingInterval,
+	)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
 		pgErr.ConstraintName == "users_email_without_discarded" {
@@ -218,4 +225,70 @@ func generateAuthToken(tx pgw.Queryable) (string, error) {
 
 		// continue
 	}
+}
+
+// UserSettings
+
+type DeliveryChannel string
+
+const (
+	DeliveryChannelSingleFeed    DeliveryChannel = "single_feed"
+	DeliveryChannelMultipleFeeds DeliveryChannel = "multiple_feeds"
+	DeliveryChannelEmail         DeliveryChannel = "email"
+)
+
+type UserSettings struct {
+	UserId               UserId
+	Timezone             string
+	Version              int
+	MaybeDeliveryChannel *DeliveryChannel
+}
+
+func UserSettings_Create(tx pgw.Queryable, userId UserId, timezone string) error {
+	_, err := tx.Exec(`
+		insert into user_settings(user_id, timezone, delivery_channel, version)
+		values ($1, $2, null, 1)
+	`, userId, timezone)
+	return err
+}
+
+func UserSettings_Get(tx pgw.Queryable, userId UserId) (*UserSettings, error) {
+	row := tx.QueryRow(`
+		select timezone, version, delivery_channel from user_settings where user_id = $1
+	`, userId)
+	var us UserSettings
+	us.UserId = userId
+	err := row.Scan(&us.Timezone, &us.Version, &us.MaybeDeliveryChannel)
+	if err != nil {
+		return nil, err
+	}
+
+	return &us, nil
+}
+
+func UserSettings_SaveTimezone(
+	tx pgw.Queryable, userId UserId, timezone string, version int,
+) error {
+	_, err := tx.Exec(`
+		update user_settings set timezone = $1, version = $2 where user_id = $3
+	`, timezone, version, userId)
+	return err
+}
+
+func UserSettings_SaveDeliveryChannelVersion(
+	tx pgw.Queryable, userId UserId, deliveryChannel DeliveryChannel, version int,
+) error {
+	_, err := tx.Exec(`
+		update user_settings set delivery_channel = $1, version = $2 where user_id = $3
+	`, deliveryChannel, version, userId)
+	return err
+}
+
+func UserSettings_SaveDeliveryChannel(
+	tx pgw.Queryable, userId UserId, deliveryChannel DeliveryChannel,
+) error {
+	_, err := tx.Exec(`
+		update user_settings set delivery_channel = $1 where user_id = $2
+	`, deliveryChannel, userId)
+	return err
 }

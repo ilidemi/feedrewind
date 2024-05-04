@@ -55,6 +55,7 @@ Missed:
 	before_action :log_visit (except admintest)
 	postmark message id can be null
 	http to https upgrade that was a production config option (the only relevant one)
+	enforce db timestamps and updated_at trigger
 
 
 ## Hours

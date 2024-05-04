@@ -17,6 +17,8 @@ func testingConfig() Config {
 			DBName:        "rss_catchup_rails_test",
 		},
 		IsHeroku:                false,
+		RootUrl:                 devCfg.RootUrl,
+		StripeWebhookSecret:     devCfg.StripeWebhookSecret,
 		SessionHashKey:          devCfg.SessionHashKey,
 		SessionBlockKey:         devCfg.SessionBlockKey,
 		AmplitudeApiKey:         devCfg.AmplitudeApiKey,

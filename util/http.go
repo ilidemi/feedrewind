@@ -43,6 +43,17 @@ func EnsureParamStr(r *http.Request, name string) string {
 	return value[0]
 }
 
+func MaybeParamStr(r *http.Request, name string) (string, bool) {
+	if r.Form == nil {
+		panic("call r.ParseForm() before util.EnsureParam()")
+	}
+
+	if value, ok := r.Form[name]; ok {
+		return value[0], true
+	}
+	return "", false
+}
+
 func EnsureParamInt64(r *http.Request, name string) int64 {
 	str := EnsureParamStr(r, name)
 	val, err := strconv.ParseInt(str, 10, 64)

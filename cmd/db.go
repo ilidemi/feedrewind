@@ -34,8 +34,9 @@ func init() {
 	}
 
 	generateMigraionCmd := &cobra.Command{
-		Use:  "generate-migration [name]",
-		Args: cobra.ExactArgs(1),
+		Use:     "generate-migration [name]",
+		Args:    cobra.ExactArgs(1),
+		Aliases: []string{"gm"},
 		Run: func(_ *cobra.Command, args []string) {
 			generateMigration(args[0])
 		},
@@ -138,7 +139,7 @@ func generateMigration(name string) {
 		panic(fmt.Errorf("migration name is not an exported identifier: %s", name))
 	}
 
-	version := time.Now().Format("20060102030405")
+	version := time.Now().Format("20060102150405")
 	templateParams := struct {
 		Version    string
 		StructName string
@@ -240,6 +241,10 @@ func migrate() {
 		}()
 
 		migration.Up(migrations.WrapTx(tx))
+		if !checkIncompleteTables(tx) {
+			fmt.Println("Found incomplete tables")
+			// panic("Found incomplete tables")
+		}
 		_, err = tx.Exec("insert into schema_migrations (version) values ($1)", version)
 		if err != nil {
 			panic(err)
@@ -290,6 +295,10 @@ func rollback() {
 		}()
 
 		migration.Down(migrations.WrapTx(tx))
+		if !checkIncompleteTables(tx) {
+			fmt.Println("Found incomplete tables")
+			// panic("Found incomplete tables")
+		}
 		tag, err := tx.Exec("delete from schema_migrations where version = $1", maxVersion)
 		if err != nil {
 			panic(err)
@@ -343,4 +352,160 @@ func migrationUnlock(conn *pgw.Conn, lockId int) func() {
 			panic("Failed to release advisory lock")
 		}
 	}
+}
+
+func checkIncompleteTables(tx *pgw.Tx) bool {
+	foundIncompleteTables := false
+
+	for _, column := range []string{"created_at", "updated_at"} {
+		rows, err := tx.Query(`
+			select table_name from information_schema.tables
+			where table_schema = 'public' and
+				table_type = 'BASE TABLE' and
+				table_name not in (
+					select table_name from information_schema.columns where column_name = '` + column + `'
+				)
+		`)
+		if err != nil {
+			panic(err)
+		}
+		for rows.Next() {
+			var tableName string
+			err := rows.Scan(&tableName)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Printf("%s.%s is missing\n", tableName, column)
+			foundIncompleteTables = true
+		}
+		if err := rows.Err(); err != nil {
+			panic(err)
+		}
+
+		rows, err = tx.Query(`
+			select tables.table_name, data_type, is_nullable, column_default
+			from information_schema.tables
+			left outer join (
+				select * from information_schema.columns where column_name = '` + column + `'
+			) as columns on tables.table_name = columns.table_name
+			where tables.table_schema = 'public' and
+				tables.table_type = 'BASE TABLE' and (
+					data_type != 'timestamp without time zone' or
+					is_nullable != 'NO' or
+					column_default != 'utc_now()'
+				)
+		`)
+		if err != nil {
+			panic(err)
+		}
+		for rows.Next() {
+			var tableName, dataType, isNullable, columnDefault string
+			err := rows.Scan(&tableName, &dataType, &isNullable, &columnDefault)
+			if err != nil {
+				panic(err)
+			}
+			if dataType != "timestamp without time zone" {
+				fmt.Printf(
+					"%s.%s: expected data_type = 'timestamp without time zone', found '%s'\n",
+					tableName, column, dataType,
+				)
+			}
+			if isNullable != "NO" {
+				fmt.Printf(
+					"%s.%s: expected is_nullable = 'NO', found '%s'\n",
+					tableName, column, isNullable,
+				)
+			}
+			if columnDefault != "utc_now()" {
+				fmt.Printf(
+					"%s.%s: expected column_default = 'utc_now()', found '%s'\n",
+					tableName, column, columnDefault,
+				)
+			}
+			foundIncompleteTables = true
+		}
+		if err := rows.Err(); err != nil {
+			panic(err)
+		}
+	}
+
+	rows, err := tx.Query(`
+		select table_name from information_schema.tables
+		where table_schema = 'public' and
+			table_type = 'BASE TABLE' and
+			table_name not in (
+				select event_object_table from information_schema.triggers
+				where trigger_name = 'bump_updated_at'
+			)
+	`)
+	if err != nil {
+		panic(err)
+	}
+	for rows.Next() {
+		var tableName string
+		err := rows.Scan(&tableName)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("bump_updated_at trigger is missing for %s\n", tableName)
+		foundIncompleteTables = true
+	}
+	if err := rows.Err(); err != nil {
+		panic(err)
+	}
+
+	rows, err = tx.Query(`
+		select tables.table_name, action_timing, event_manipulation, action_orientation, action_statement
+		from information_schema.tables
+		left outer join (
+			select * from information_schema.triggers where trigger_name = 'bump_updated_at'
+		) as triggers on tables.table_name = triggers.event_object_table
+		where tables.table_schema = 'public' and
+			tables.table_type = 'BASE TABLE' and (
+				action_timing != 'BEFORE' or
+				event_manipulation != 'UPDATE' or
+				action_orientation != 'ROW' or
+				action_statement != 'EXECUTE FUNCTION bump_updated_at_utc()'
+			)
+	`)
+	if err != nil {
+		panic(err)
+	}
+	for rows.Next() {
+		var tableName, actionTiming, eventManipulation, actionOrientation, actionStatement string
+		err := rows.Scan(&tableName, &actionTiming, &eventManipulation, &actionOrientation, &actionStatement)
+		if err != nil {
+			panic(err)
+		}
+		if actionTiming != "BEFORE" {
+			fmt.Printf(
+				"%s bump_updated_at: expected action_timing = 'BEFORE', found '%s'\n",
+				tableName, actionTiming,
+			)
+		}
+		if eventManipulation != "UPDATE" {
+			fmt.Printf(
+				"%s bump_updated_at: expected event_manipulation = 'UPDATE', found '%s'\n",
+				tableName, eventManipulation,
+			)
+		}
+		if actionOrientation != "ROW" {
+			fmt.Printf(
+				"%s bump_updated_at: expected action_orientation = 'ROW', found '%s'\n",
+				tableName, actionOrientation,
+			)
+		}
+		if actionStatement != "EXECUTE FUNCTION bump_updated_at_utc()" {
+			fmt.Printf(
+				"%s bump_updated_at: expected action_statement = 'EXECUTE FUNCTION bump_updated_at_utc()', found '%s'\n",
+				tableName, actionStatement,
+			)
+		}
+		foundIncompleteTables = true
+	}
+	if err := rows.Err(); err != nil {
+		panic(err)
+	}
+
+	return !foundIncompleteTables
 }

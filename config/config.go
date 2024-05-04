@@ -10,6 +10,7 @@ type Config struct {
 	Dyno                    string
 	DB                      DBConfig
 	IsHeroku                bool
+	RootUrl                 string
 	SessionHashKey          []byte
 	SessionBlockKey         []byte
 	AmplitudeApiKey         string
@@ -17,6 +18,7 @@ type Config struct {
 	PostmarkApiToken        string
 	PostmarkWebhookSecret   string
 	SlackWebhook            string
+	StripeWebhookSecret     string
 	AdminUserIds            map[int64]bool
 }
 

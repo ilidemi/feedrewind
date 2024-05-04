@@ -9,7 +9,7 @@
   </div>
   <div class="text-2xl text-center">Sign up for FeedRewind</div>
 
-  <form id="{{.FormId}}" novalidate="novalidate" action="/signup" accept-charset="UTF-8" method="post">
+  <form id="{{.Form.FormId}}" novalidate="novalidate" action="/signup" accept-charset="UTF-8" method="post">
     {{.Session.CSRFField}}
     <div class="flex flex-col gap-2">
       {{if .Error}}
@@ -24,13 +24,14 @@
           <input
             type="email"
             name="email"
-            id="{{.EmailInputId}}"
+            id="{{.Form.EmailInputId}}"
             placeholder="your@email.com"
+            value="{{.Email}}"
             class="rounded-md border border-gray-300 placeholder:text-gray-400"
             autocomplete="username"
             required="required"
           >
-          <span id="{{.EmailErrorId}}"
+          <span id="{{.Form.EmailErrorId}}"
                 class="invisible self-end text-sm font-semibold text-red-600"
                 aria-live="polite"
           >
@@ -44,14 +45,17 @@
           <input
             type="password"
             name="new-password"
-            id="{{.PasswordInputId}}"
+            id="{{.Form.PasswordInputId}}"
             placeholder="correct horse battery staple"
             class="rounded-md border border-gray-300 placeholder:text-gray-400"
+            {{if .Email}}
+            autofocus
+            {{end}}
             autocomplete="new-password"
             required="required"
             minlength="8"
           >
-          <span id="{{.PasswordErrorId}}"
+          <span id="{{.Form.PasswordErrorId}}"
                 class="invisible self-end text-sm font-semibold text-red-600"
                 aria-live="polite"
           >
@@ -70,11 +74,15 @@
           document.getElementById("time_offset").value = new Date().getTimezoneOffset();
       </script>
 
+      {{if .StripeSubscriptionToken}}
+      <input type="hidden" name="stripe_subscription_token" value="{{.StripeSubscriptionToken}}">
+      {{end}}
+
       <input type="submit" name="commit" value="Sign up" class="btn" data-disable-with="Sign up">
     </div>
   </form>
 
-  {{template "partial_validation" .}}
+  {{template "partial_validation" .Form}}
 
   <div class="flex flex-col gap-5">
     <div class="text-sm text-gray-500 text-center">

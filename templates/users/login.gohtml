@@ -9,7 +9,7 @@
   </div>
   <div class="text-2xl text-center">Sign in to FeedRewind</div>
 
-  <form id="{{.FormId}}" novalidate="novalidate" action="/login" accept-charset="UTF-8" method="post">
+  <form id="{{.Form.FormId}}" novalidate="novalidate" action="/login" accept-charset="UTF-8" method="post">
     {{.Session.CSRFField}}
     <div class="flex flex-col gap-2">
       {{if .Error}}
@@ -24,13 +24,13 @@
           <input
             type="email"
             name="email"
-            id="{{.EmailInputId}}"
+            id="{{.Form.EmailInputId}}"
             placeholder="your@email.com"
             class="rounded-md border border-gray-300 placeholder:text-gray-400"
             autocomplete="username"
             required="required"
           >
-          <span id="{{.EmailErrorId}}"
+          <span id="{{.Form.EmailErrorId}}"
                 class="invisible self-end text-sm font-semibold text-red-600"
                 aria-live="polite"
           >
@@ -44,13 +44,13 @@
           <input
             type="password"
             name="current-password"
-            id="{{.PasswordInputId}}"
+            id="{{.Form.PasswordInputId}}"
             placeholder="correct horse battery staple"
             class="rounded-md border border-gray-300 placeholder:text-gray-400"
             autocomplete="current-password"
             required="required"
           >
-          <span id="{{.PasswordErrorId}}"
+          <span id="{{.Form.PasswordErrorId}}"
                 class="invisible self-end text-sm font-semibold text-red-600"
                 aria-live="polite"
           >
@@ -63,12 +63,12 @@
     </div>
   </form>
 
-  {{template "partial_validation" .}}
+  {{template "partial_validation" .Form}}
 
   <div class="flex flex-col gap-5">
     <div class="text-sm text-gray-500 text-center">
-      Need an account?
-      <a class="btn-secondary" href="/signup">Sign up</a>
+      Don't have an account yet?
+      <a class="btn-secondary" href="/pricing">Get started</a>
     </div>
 
     <div class="text-sm text-gray-500 text-center">

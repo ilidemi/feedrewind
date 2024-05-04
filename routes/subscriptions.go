@@ -399,7 +399,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if currentUser == nil && subscriptionStatus != models.SubscriptionStatusWaitingForBlog {
-		http.Redirect(w, r, "/signup", http.StatusFound)
+		http.Redirect(w, r, "/pricing", http.StatusFound)
 		return
 	}
 
@@ -1220,7 +1220,7 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 	if currentUser != nil {
 		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
 	} else {
-		http.Redirect(w, r, "/signup", http.StatusFound)
+		http.Redirect(w, r, "/pricing", http.StatusFound)
 	}
 }
 

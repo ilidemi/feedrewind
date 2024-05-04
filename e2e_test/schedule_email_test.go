@@ -1,4 +1,4 @@
-//go:build e2etesting && emailtesting
+//go:build emailtesting
 
 package e2etest
 
@@ -125,7 +125,7 @@ func TestEmailSchedule(t *testing.T) {
 
 		emailMetadata, err := util.RandomInt63()
 		oops.RequireNoError(t, err, description)
-		page = visitAdminf(browser, "set_email_metadata?value=%d", emailMetadata)
+		page = visitAdminf(browser, "set_test_singleton?key=email_metadata&value=%d", emailMetadata)
 		require.Equal(t, "OK", pageText(page), description)
 
 		page = visitDev(browser, "subscriptions/add")
@@ -299,7 +299,7 @@ func TestEmailSchedule(t *testing.T) {
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60, description)
 		page = visitAdmin(browser, "reschedule_user_job")
 		require.Equal(t, "OK", pageText(page), description)
-		page = visitAdmin(browser, "delete_email_metadata")
+		page = visitAdmin(browser, "delete_test_singleton?key=email_metadata")
 		require.Equal(t, "OK", pageText(page), description)
 		page = visitAdmin(browser, "destroy_user_subscriptions")
 		require.Equal(t, "OK", pageText(page), description)

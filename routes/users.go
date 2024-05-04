@@ -5,6 +5,7 @@ import (
 	"feedrewind/jobs"
 	"feedrewind/middleware"
 	"feedrewind/models"
+	"feedrewind/models/mutil"
 	"feedrewind/oops"
 	"feedrewind/publish"
 	"feedrewind/routes/rutil"
@@ -15,35 +16,37 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
+	"github.com/stripe/stripe-go/v78"
+	"github.com/stripe/stripe-go/v78/checkout/session"
+	"github.com/stripe/stripe-go/v78/subscription"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type loginResult struct {
-	Session         *util.Session
-	Error           string
-	Redirect        string
-	FormId          string
-	EmailInputId    string
-	EmailErrorId    string
-	PasswordInputId string
-	PasswordErrorId string
+	Session  *util.Session
+	Error    string
+	Redirect string
+	Form     userFormResult
 }
 
 func newLoginResult(r *http.Request, error string, redirect string) loginResult {
 	return loginResult{
-		Session:         rutil.Session(r),
-		Error:           error,
-		Redirect:        redirect,
-		FormId:          "login_form",
-		EmailInputId:    "email",
-		EmailErrorId:    "email_error",
-		PasswordInputId: "current-password",
-		PasswordErrorId: "password_error",
+		Session:  rutil.Session(r),
+		Error:    error,
+		Redirect: redirect,
+		Form: userFormResult{
+			FormId:          "login_form",
+			EmailInputId:    "email",
+			EmailErrorId:    "email_error",
+			PasswordInputId: "current-password",
+			PasswordErrorId: "password_error",
+		},
 	}
 }
 
-func Login_Page(w http.ResponseWriter, r *http.Request) {
+func Users_LoginPage(w http.ResponseWriter, r *http.Request) {
 	if rutil.CurrentUser(r) != nil {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
@@ -59,7 +62,7 @@ func Login_Page(w http.ResponseWriter, r *http.Request) {
 	templates.MustWrite(w, "users/login", result)
 }
 
-func Login(w http.ResponseWriter, r *http.Request) {
+func Users_Login(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
 	if rutil.CurrentUser(r) != nil {
 		http.Redirect(w, r, "/", http.StatusFound)
@@ -125,14 +128,20 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	templates.MustWrite(w, "users/login", result)
 }
 
-func Logout(w http.ResponseWriter, r *http.Request) {
+func Users_Logout(w http.ResponseWriter, r *http.Request) {
 	middleware.MustSetSessionAuthToken(w, r, "")
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 type signUpResult struct {
-	Session         *util.Session
-	Error           string
+	Session                 *util.Session
+	Error                   string
+	Email                   string
+	StripeSubscriptionToken string
+	Form                    userFormResult
+}
+
+type userFormResult struct {
 	FormId          string
 	EmailInputId    string
 	EmailErrorId    string
@@ -140,10 +149,8 @@ type signUpResult struct {
 	PasswordErrorId string
 }
 
-func newSignUpResult(r *http.Request, errorMsg string) signUpResult {
-	return signUpResult{
-		Session:         rutil.Session(r),
-		Error:           errorMsg,
+func newSignUpFormResult() userFormResult {
+	return userFormResult{
 		FormId:          "signup_form",
 		EmailInputId:    "email",
 		EmailErrorId:    "email_error",
@@ -152,17 +159,66 @@ func newSignUpResult(r *http.Request, errorMsg string) signUpResult {
 	}
 }
 
-func SignUp_Page(w http.ResponseWriter, r *http.Request) {
+func Users_SignUpPage(w http.ResponseWriter, r *http.Request) {
 	if rutil.CurrentUser(r) != nil {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
 
-	result := newSignUpResult(r, "")
+	var email, stripeSubscriptionToken string
+	sessionId, ok := util.MaybeParamStr(r, "session_id")
+	if ok {
+		sesh, err := session.Get(sessionId, nil)
+		if err != nil {
+			panic(err)
+		}
+		sub, err := subscription.Get(sesh.Subscription.ID, nil)
+		if err != nil {
+			panic(err)
+		}
+		email = sesh.CustomerDetails.Email
+		conn := rutil.DBConn(r)
+		stripeSubscriptionToken, err = util.TxReturn(conn,
+			func(tx *pgw.Tx, conn util.Clobber) (string, error) {
+				randomId, err := mutil.RandomId(tx, "stripe_subscription_tokens")
+				if err != nil {
+					return "", err
+				}
+				stripeProductId := sub.Items.Data[0].Price.Product.ID
+				stripePriceId := sub.Items.Data[0].Price.ID
+				billingInterval, err := models.BillingInterval_GetByOffer(tx, stripeProductId, stripePriceId)
+				if err != nil {
+					return "", err
+				}
+				_, err = tx.Exec(`
+					insert into stripe_subscription_tokens (
+						id, offer_id, stripe_subscription_id, stripe_customer_id, billing_interval
+					)
+					values ($1,	(select id from pricing_offers where stripe_product_id = $2), $3, $4, $5)
+				`, randomId, stripeProductId, sub.ID, sub.Customer.ID, billingInterval,
+				)
+				if err != nil {
+					return "", err
+				}
+				return fmt.Sprint(randomId), nil
+			},
+		)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	result := signUpResult{
+		Session:                 rutil.Session(r),
+		Error:                   "",
+		Email:                   email,
+		StripeSubscriptionToken: stripeSubscriptionToken,
+		Form:                    newSignUpFormResult(),
+	}
 	templates.MustWrite(w, "users/signup", result)
 }
 
-func SignUp(w http.ResponseWriter, r *http.Request) {
+func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
 	if rutil.CurrentUser(r) != nil {
 		http.Redirect(w, r, "/", http.StatusFound)
@@ -173,6 +229,15 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	password := util.EnsureParamStr(r, "new-password")
 	timezone := util.EnsureParamStr(r, "timezone")
 	timeOffsetStr := util.EnsureParamStr(r, "time_offset")
+	stripeSubscriptionToken, stripeSubscriptionTokenOk := util.MaybeParamStr(r, "stripe_subscription_token")
+	var stripeSubscriptionTokenId int64
+	if stripeSubscriptionTokenOk {
+		var err error
+		stripeSubscriptionTokenId, err = strconv.ParseInt(stripeSubscriptionToken, 10, 64)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	tx, err := rutil.DBConn(r).Begin()
 	if err != nil {
@@ -194,7 +259,13 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	if userExists && existingUser.PasswordDigest == "" {
 		user, err = models.FullUser_UpdatePassword(tx, existingUser.Id, password)
 		if errors.Is(err, models.ErrPasswordTooShort) {
-			result := newSignUpResult(r, passwordTooShort)
+			result := signUpResult{
+				Session:                 rutil.Session(r),
+				Error:                   passwordTooShort,
+				Email:                   email,
+				StripeSubscriptionToken: stripeSubscriptionToken,
+				Form:                    newSignUpFormResult(),
+			}
 			templates.MustWrite(w, "users/signup", result)
 			return
 		} else if err != nil {
@@ -218,18 +289,66 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 		}
-		user, err = models.FullUser_Create(tx, email, password, name, productUserId)
+		var planId models.PlanId
+		var offerId models.OfferId
+		var maybeStripeSubscriptionId, maybeStripeCustomerId, maybeBillingInterval *string
+		if stripeSubscriptionTokenOk {
+			planId = models.PlanIdSupporter
+			row := tx.QueryRow(`
+				select offer_id, stripe_subscription_id, stripe_customer_id, billing_interval
+				from stripe_subscription_tokens
+				where id = $1
+			`, stripeSubscriptionTokenId)
+			err = row.Scan(
+				&offerId, &maybeStripeSubscriptionId, &maybeStripeCustomerId, &maybeBillingInterval,
+			)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			planId = models.PlanIdFree
+			row := tx.QueryRow(`select default_offer_id from pricing_plans where id = $1`, models.PlanIdFree)
+			err := row.Scan(&offerId)
+			if err != nil {
+				panic(err)
+			}
+		}
+		user, err = models.FullUser_Create(
+			tx, email, password, name, productUserId, offerId, maybeStripeSubscriptionId,
+			maybeStripeCustomerId, maybeBillingInterval,
+		)
 		switch {
 		case errors.Is(err, models.ErrUserAlreadyExists):
-			result := newSignUpResult(r, userAlreadyExists)
+			result := signUpResult{
+				Session:                 rutil.Session(r),
+				Error:                   userAlreadyExists,
+				Email:                   email,
+				StripeSubscriptionToken: stripeSubscriptionToken,
+				Form:                    newSignUpFormResult(),
+			}
 			templates.MustWrite(w, "users/signup", result)
 			return
 		case errors.Is(err, models.ErrPasswordTooShort):
-			result := newSignUpResult(r, passwordTooShort)
+			result := signUpResult{
+				Session:                 rutil.Session(r),
+				Error:                   passwordTooShort,
+				Email:                   email,
+				StripeSubscriptionToken: stripeSubscriptionToken,
+				Form:                    newSignUpFormResult(),
+			}
 			templates.MustWrite(w, "users/signup", result)
 			return
 		case err != nil:
 			panic(err)
+		}
+
+		if stripeSubscriptionTokenOk {
+			_, err = tx.Exec(`
+				delete from stripe_subscription_tokens where id = $1
+			`, stripeSubscriptionTokenId)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		var timezoneOut string
@@ -275,7 +394,15 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		}
 
 		pc := models.NewProductEventContext(tx, r, user.ProductUserId)
-		models.ProductEvent_MustEmitFromRequest(pc, "sign up", nil, nil)
+		models.ProductEvent_MustEmitFromRequest(pc, "sign up", map[string]any{
+			"pricing_plan":     planId,
+			"pricing_offer":    offerId,
+			"billing_interval": maybeBillingInterval,
+		}, map[string]any{
+			"pricing_plan":     planId,
+			"pricing_offer":    offerId,
+			"billing_interval": maybeBillingInterval,
+		})
 
 		slackMessage := "New signup"
 		if atIndex := strings.LastIndex(user.Email, "@"); atIndex >= 0 {
@@ -315,12 +442,77 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func DeleteAccount(w http.ResponseWriter, r *http.Request) {
+func Users_Upgrade(w http.ResponseWriter, r *http.Request) {
+	sessionId := util.EnsureParamStr(r, "session_id")
+	sesh, err := session.Get(sessionId, nil)
+	if err != nil {
+		panic(err)
+	}
+	sub, err := subscription.Get(sesh.Subscription.ID, nil)
+	if err != nil {
+		panic(err)
+	}
+	currentUser := rutil.CurrentUser(r)
+	conn := rutil.DBConn(r)
+	stripeProductId := sub.Items.Data[0].Price.Product.ID
+	row := conn.QueryRow(`
+		select id, plan_id from pricing_offers where stripe_product_id = $1
+	`, stripeProductId)
+	var offerId models.OfferId
+	var planId models.PlanId
+	err = row.Scan(&offerId, &planId)
+	if err != nil {
+		panic(err)
+	}
+	stripePriceId := sub.Items.Data[0].Price.ID
+	billingInterval, err := models.BillingInterval_GetByOffer(conn, stripeProductId, stripePriceId)
+	if err != nil {
+		panic(err)
+	}
+	// It is possible that this route is visited twice with the use of a back button and so the update here
+	// happens twice. Hopefully no one will keep this tab open, cancel the subscription later, then go to the
+	// old tab and press back
+	_, err = conn.Exec(`
+		update users_without_discarded
+		set offer_id = $1,
+			stripe_subscription_id = $2,
+			stripe_customer_id = $3,
+			billing_interval = $4
+		where id = $5
+	`, offerId, sub.ID, sub.Customer.ID, billingInterval, currentUser.Id)
+	if err != nil {
+		panic(err)
+	}
+
+	http.Redirect(w, r, "/settings", http.StatusSeeOther)
+}
+
+func Users_DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
 	user := rutil.CurrentUser(r)
 	conn := rutil.DBConn(r)
 	err := util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
-		_, err := tx.Exec(`update users_with_discarded set discarded_at = utc_now() where id = $1`, user.Id)
+		row := tx.QueryRow(`
+			select stripe_subscription_id from users_without_discarded
+			where id = $1 and stripe_subscription_id is not null
+		`, user.Id)
+		var stripeSubscriptionId string
+		err := row.Scan(&stripeSubscriptionId)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		isPaid := false
+		if err == nil {
+			isPaid = true
+			_, err := subscription.Cancel(stripeSubscriptionId, nil)
+			if stripeErr, ok := err.(*stripe.Error); ok && stripeErr.Code == stripe.ErrorCodeResourceMissing {
+				// already deleted
+			} else if err != nil {
+				return oops.Wrap(err)
+			}
+		}
+
+		_, err = tx.Exec(`update users_with_discarded set discarded_at = utc_now() where id = $1`, user.Id)
 		if err != nil {
 			return err
 		}
@@ -333,6 +525,17 @@ func DeleteAccount(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		logger.Info().Msgf("Paused %d subscription(s)", result.RowsAffected())
+
+		isPaidStr := "free"
+		if isPaid {
+			isPaidStr = "paid"
+		}
+		slackMessage := fmt.Sprintf("Account deleted (%s)", isPaidStr)
+		err = jobs.NotifySlackJob_PerformNow(tx, slackMessage)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	})
 	if err != nil {

@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+
+	"github.com/stripe/stripe-go/v78"
 )
 
 func DevelopmentDBConfig() DBConfig {
@@ -60,11 +62,13 @@ func developmentConfig() Config {
 		panic(err)
 	}
 
+	stripe.Key = "REDACTED_DEV_STRIPE_API_KEY"
 	return Config{
 		Env:                     EnvDevelopment,
 		Dyno:                    dyno,
 		DB:                      dbConfig,
 		IsHeroku:                false,
+		RootUrl:                 "http://localhost:3000",
 		SessionHashKey:          sessionHashKey,
 		SessionBlockKey:         sessionBlockKey,
 		AmplitudeApiKey:         "REDACTED_DEV_AMPLITUDE_API_KEY",
@@ -72,6 +76,7 @@ func developmentConfig() Config {
 		PostmarkApiToken:        "REDACTED_DEV_POSTMARK_API_TOKEN", // FeedRewindDevelopment
 		PostmarkWebhookSecret:   "REDACTED_DEV_POSTMARK_WEBHOOK_SECRET",
 		SlackWebhook:            "REDACTED_DEV_SLACK_WEBHOOK",
+		StripeWebhookSecret:     "REDACTED_DEV_STRIPE_WEBHOOK_SECRET",
 		AdminUserIds:            nil,
 	}
 }

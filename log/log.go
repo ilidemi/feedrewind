@@ -118,13 +118,13 @@ func marshalStack(err error) interface{} {
 			"source": source,
 			"line":   line,
 			"func":   funcName,
-			"~":      "    ", // Visual spacing
+			"~":      "        ", // Visual spacing
 		})
 		if funcName == "(*Mux).routeHTTP" {
 			// Omit middleware
 			out = append(out, map[string]string{
 				"middleware_omitted": "true",
-				"~":                  "    ", // Visual spacing
+				"~":                  "        ", // Visual spacing
 			})
 			isOmittingMiddleware = true
 		}
