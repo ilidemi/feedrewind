@@ -55,7 +55,7 @@ func DeleteDiscardedUsersJob_Perform(ctx context.Context, conn *pgw.Conn) error 
 			logger.Info().Msgf("Deleting %d users", len(userIds))
 		}
 		for _, userId := range userIds {
-			err := PublishPostsJob_Delete(tx, userId, logger)
+			err := PublishPostsJob_Delete(ctx, tx, userId, logger)
 			if err != nil {
 				return err
 			}

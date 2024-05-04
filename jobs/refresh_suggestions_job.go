@@ -84,7 +84,10 @@ feeds:
 			} else {
 				delay := time.Duration(math.Pow(5, float64(attempt-1))) * time.Second
 				logger.Info().Msgf("Couldn't reach feed: %s, sleeping for %v", feedUrl, delay)
-				time.Sleep(delay)
+				err := util.Sleep(ctx, delay)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		discoveredSingleFeed, ok := discoverFeedsResult.(*crawler.DiscoveredSingleFeed)

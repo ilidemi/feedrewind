@@ -115,7 +115,7 @@ func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, userId := range deletedIds {
-		err := jobs.PublishPostsJob_Delete(conn, userId, logger)
+		err := jobs.PublishPostsJob_Delete(r.Context(), conn, userId, logger)
 		if err != nil {
 			panic(err)
 		}

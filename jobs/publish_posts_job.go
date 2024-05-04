@@ -181,7 +181,9 @@ func PublishPostsJob_ScheduleInitial(
 	return PublishPostsJob_PerformAt(tx, nextRun, userId, date.Date(), nextRunDate, isManual)
 }
 
-func PublishPostsJob_Delete(tx pgw.Queryable, userId models.UserId, logger log.Logger) error {
+func PublishPostsJob_Delete(
+	ctx context.Context, tx pgw.Queryable, userId models.UserId, logger log.Logger,
+) error {
 	var attempt int
 	for attempt = 0; attempt < 3; attempt++ {
 		tx2, err := tx.Begin()
@@ -207,7 +209,9 @@ func PublishPostsJob_Delete(tx pgw.Queryable, userId models.UserId, logger log.L
 				return err
 			}
 
-			time.Sleep(time.Second)
+			if err := util.Sleep(ctx, time.Second); err != nil {
+				return err
+			}
 			continue
 		}
 
