@@ -22,7 +22,6 @@ type friendlyTimezone struct {
 	friendlyName            string
 	shortFriendlyPrefixName string
 	shortFriendlySuffixName string
-	shortFriendlyName       string
 }
 
 func main() {
@@ -45,7 +44,6 @@ func main() {
 			friendlyName:            "+13:00 Phoenix Islands Time - Endenbury",
 			shortFriendlyPrefixName: "+13:00 Phoenix Islands Time",
 			shortFriendlySuffixName: "Phoenix Islands Time (+13:00)",
-			shortFriendlyName:       "Phoenix Islands Time",
 		},
 	}
 
@@ -73,7 +71,6 @@ func main() {
 				friendlyName:            tzRow.RawFormat,
 				shortFriendlyPrefixName: shortFriendlyPrefixName,
 				shortFriendlySuffixName: shortFriendlySuffixName,
-				shortFriendlyName:       tzRow.AlternativeName,
 			}
 		}
 
@@ -101,21 +98,15 @@ func main() {
 
 	shortFriendlyPrefixNameByGroupId := make(map[string]string)
 	shortFriendlySuffixNameByGroupId := make(map[string]string)
-	shortFriendlyNameByGroupId := make(map[string]string)
 	for _, friendlyTz := range friendlyTimezones {
 		shortFriendlyPrefixNameByGroupId[friendlyTz.groupId] = friendlyTz.shortFriendlyPrefixName
 		shortFriendlySuffixNameByGroupId[friendlyTz.groupId] = friendlyTz.shortFriendlySuffixName
-		shortFriendlyNameByGroupId[friendlyTz.groupId] = friendlyTz.shortFriendlyName
 	}
 	shortFriendlyPrefixNameByGroupIdJson, err := json.Marshal(&shortFriendlyPrefixNameByGroupId)
 	if err != nil {
 		panic(err)
 	}
 	shortFriendlySuffixNameByGroupIdJson, err := json.Marshal(&shortFriendlySuffixNameByGroupId)
-	if err != nil {
-		panic(err)
-	}
-	shortFriendlyNameByGroupIdJson, err := json.Marshal(&shortFriendlyNameByGroupId)
 	if err != nil {
 		panic(err)
 	}
@@ -167,7 +158,6 @@ func main() {
 	fmt.Fprintln(&b)
 	fmt.Fprintf(&b, "const ShortFriendlyPrefixNameByGroupIdJson = template.JS(%q)\n", shortFriendlyPrefixNameByGroupIdJson)
 	fmt.Fprintf(&b, "const ShortFriendlySuffixNameByGroupIdJson = template.JS(%q)\n", shortFriendlySuffixNameByGroupIdJson)
-	fmt.Fprintf(&b, "const ShortFriendlyNameByGroupIdJson = template.JS(%q)\n", shortFriendlyNameByGroupIdJson)
 	fmt.Fprintf(&b, "const GroupIdByTimezoneIdJson = template.JS(%q)\n", groupIdByTimezoneIdJson)
 	fmt.Fprintln(&b)
 	fmt.Fprintln(&b, `const TimezoneUTC = "UTC"`)

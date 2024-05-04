@@ -113,17 +113,19 @@ func runServer(port int) {
 
 		r.Get("/", routes.Landing_Index)
 
-		r.Get(util.LoginPath, routes.Login_Page)
-		r.Post(util.LoginPath, routes.Login)
-		r.Get("/logout", routes.Logout)
-		r.Get(util.SignUpPath, routes.SignUp_Page)
-		r.Post(util.SignUpPath, routes.SignUp)
+		r.Get(util.LoginPath, routes.Users_LoginPage)
+		r.Post(util.LoginPath, routes.Users_Login)
+		r.Get("/logout", routes.Users_Logout)
+		r.Get(util.SignUpPath, routes.Users_SignUpPage)
+		r.Post(util.SignUpPath, routes.Users_SignUp)
 
 		r.Get("/subscriptions/add", routes.Onboarding_Add)
 		r.Post("/subscriptions/add/{start_url}", routes.Onboarding_Add)
 		r.Post("/subscriptions/add", routes.Onboarding_AddLanding)
 		r.Post("/subscriptions/discover_feeds", routes.Onboarding_DiscoverFeeds)
 		r.Get("/preview/{slug}", routes.Onboarding_Preview)
+		r.Get("/pricing", routes.Onboarding_Pricing)
+		r.Post("/checkout", routes.Onboarding_Checkout)
 
 		r.Get("/subscriptions/{id:\\d+}/setup", routes.Subscriptions_Setup)
 		r.Post("/subscriptions", routes.Subscriptions_Create)
@@ -154,7 +156,9 @@ func runServer(port int) {
 			authorized.Get("/settings", routes.UserSettings_Page)
 			authorized.Post("/settings/save_timezone", routes.UserSettings_SaveTimezone)
 			authorized.Post("/settings/save_delivery_channel", routes.UserSettings_SaveDeliveryChannel)
-			authorized.Post("/delete_account", routes.DeleteAccount)
+			authorized.Post("/billing", routes.UserSettings_Billing)
+			authorized.Get("/upgrade", routes.Users_Upgrade)
+			authorized.Post("/delete_account", routes.Users_DeleteAccount)
 		})
 
 		r.Group(func(admin chi.Router) {
@@ -171,13 +175,17 @@ func runServer(port int) {
 			r.Get("/test/run_reset_failed_blogs_job", routes.AdminTest_RunResetFailedBlogsJob)
 			r.Get("/test/destroy_user_subscriptions", routes.AdminTest_DestroyUserSubscriptions)
 			r.Get("/test/destroy_user", routes.AdminTest_DestroyUser)
-			r.Get("/test/set_email_metadata", routes.AdminTest_SetEmailMetadata)
+			r.Get("/test/set_test_singleton", routes.AdminTest_SetTestSingleton)
+			r.Get("/test/delete_test_singleton", routes.AdminTest_DeleteTestSingleton)
 			r.Get("/test/assert_email_count_with_metadata", routes.AdminTest_AssertEmailCountWithMetadata)
-			r.Get("/test/delete_email_metadata", routes.AdminTest_DeleteEmailMetadata)
 			r.Get("/test/travel_to", routes.AdminTest_TravelTo)
 			r.Get("/test/travel_back", routes.AdminTest_TravelBack)
 			r.Get("/test/wait_for_publish_posts_job", routes.AdminTest_WaitForPublishPostsJob)
 			r.Get("/test/execute_sql", routes.AdminTest_ExecuteSql)
+			r.Get("/test/ensure_stripe_listen", routes.AdminTest_EnsureStripeListen)
+			r.Get("/test/delete_stripe_subscription", routes.AdminTest_DeleteStripeSubscription)
+			r.Get("/test/forward_stripe_customer_45_days", routes.AdminTest_ForwardStripeCustomer45Days)
+			r.Get("/test/delete_stripe_clocks", routes.AdminTest_DeleteStripeClocks)
 		}
 	})
 
@@ -190,7 +198,8 @@ func runServer(port int) {
 
 		anonR.Get("/posts/{slug}/{random_id:[A-Za-z0-9_-]+}/", routes.Posts_Post)
 
-		anonR.Post("/postmark/report_bounce", routes.Postmark_ReportBounce)
+		anonR.Post("/postmark/report_bounce", routes.Webhooks_PostmarkReportBounce)
+		anonR.Post("/stripe/webhook", routes.Webhooks_Stripe)
 	})
 
 	staticR.Get(util.StaticRouteTemplate, routes.Static_File)

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"feedrewind/config"
 	"feedrewind/crawler"
 	"feedrewind/db/pgw"
 	"feedrewind/jobs"
@@ -12,8 +13,13 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
+	"github.com/stripe/stripe-go/v78"
+	"github.com/stripe/stripe-go/v78/checkout/session"
+	"github.com/stripe/stripe-go/v78/customer"
+	"github.com/stripe/stripe-go/v78/testhelpers/testclock"
 )
 
 type feedsData struct {
@@ -387,4 +393,156 @@ func onboarding_MustDiscoverFeeds(
 	default:
 		panic("unknown discover feeds result type")
 	}
+}
+
+func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
+	currentUser := rutil.CurrentUser(r)
+	conn := rutil.DBConn(r)
+	isOnFreePlan := false
+	isOnSupporterPlan := false
+	if currentUser != nil {
+		row := conn.QueryRow(`
+			select plan_id from pricing_offers
+			where id = (select offer_id from users_without_discarded where id = $1)
+		`, currentUser.Id)
+		var currentPlanId models.PlanId
+		err := row.Scan(&currentPlanId)
+		if err != nil {
+			panic(err)
+		}
+
+		switch currentPlanId {
+		case models.PlanIdFree:
+			isOnFreePlan = true
+		case models.PlanIdSupporter:
+			isOnSupporterPlan = true
+		default:
+			panic(fmt.Errorf("Unknown plan id: %s", currentPlanId))
+		}
+	}
+	row := conn.QueryRow(`
+		select id, monthly_rate, yearly_rate from pricing_offers
+		where id = (select default_offer_id from pricing_plans where id = $1)
+	`, models.PlanIdSupporter)
+	var offerId, supporterMonthlyRate, supporterYearlyRate string
+	err := row.Scan(&offerId, &supporterMonthlyRate, &supporterYearlyRate)
+	if err != nil {
+		panic(err)
+	}
+
+	type PricingResult struct {
+		Title                string
+		Session              *util.Session
+		IsOnFreePlan         bool
+		IsOnSupporterPlan    bool
+		OfferId              string
+		MonthlyIntervalName  models.BillingInterval
+		YearlyIntervalName   models.BillingInterval
+		SupporterMonthlyRate string
+		SupporterYearlyRate  string
+	}
+	templates.MustWrite(w, "onboarding/pricing", PricingResult{
+		Title:                util.DecorateTitle("Pricing"),
+		Session:              rutil.Session(r),
+		IsOnFreePlan:         isOnFreePlan,
+		IsOnSupporterPlan:    isOnSupporterPlan,
+		OfferId:              offerId,
+		MonthlyIntervalName:  models.BillingIntervalMonthly,
+		YearlyIntervalName:   models.BillingIntervalYearly,
+		SupporterMonthlyRate: strings.TrimSuffix(supporterMonthlyRate, ".00"),
+		SupporterYearlyRate:  strings.TrimSuffix(supporterYearlyRate, ".00"),
+	})
+}
+
+func Onboarding_Checkout(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
+	currentUser := rutil.CurrentUser(r)
+	var maybeCustomerEmail *string
+	var maybeMetadata map[string]string
+	successPath := "/signup"
+	if currentUser != nil {
+		row := conn.QueryRow(`
+			select plan_id from pricing_offers
+			where id = (select offer_id from users_without_discarded where id = $1)
+		`, currentUser.Id)
+		var planId models.PlanId
+		err := row.Scan(&planId)
+		if err != nil {
+			panic(err)
+		}
+
+		switch planId {
+		case models.PlanIdFree:
+			maybeCustomerEmail = stripe.String(currentUser.Email)
+			maybeMetadata = map[string]string{"user_id": fmt.Sprint(currentUser.Id)}
+			successPath = "/upgrade"
+		case models.PlanIdSupporter:
+			http.Redirect(w, r, "/subscriptions", http.StatusSeeOther)
+			return
+		default:
+			panic(fmt.Errorf("Unknown plan: %s", planId))
+		}
+	}
+	interval := util.EnsureParamStr(r, "interval")
+	if interval != "monthly" && interval != "yearly" {
+		panic(fmt.Errorf("Unknown interval: %s", interval))
+	}
+	offerId := util.EnsureParamStr(r, "offer_id")
+	row := conn.QueryRow(`
+		select stripe_`+interval+`_price_id from pricing_offers
+		where id = $1
+	`, offerId)
+	var priceId string
+	err := row.Scan(&priceId)
+	if err != nil {
+		panic(err)
+	}
+
+	var maybeCustomerId *string
+	if config.Cfg.Env.IsDevOrTest() {
+		maybeTestClock, err := models.TestSingleton_GetValue(conn, "test_clock")
+		if err != nil {
+			panic(err)
+		}
+		if maybeTestClock != nil && *maybeTestClock == "yes" {
+			//nolint:exhaustruct
+			clock, err := testclock.New(&stripe.TestHelpersTestClockParams{
+				FrozenTime: stripe.Int64(time.Now().Unix()),
+			})
+			if err != nil {
+				panic(err)
+			}
+			//nolint:exhaustruct
+			cus, err := customer.New(&stripe.CustomerParams{
+				TestClock: &clock.ID,
+			})
+			if err != nil {
+				panic(err)
+			}
+			maybeCustomerId = &cus.ID
+		}
+	}
+
+	successUrl := fmt.Sprintf("%s%s?session_id={CHECKOUT_SESSION_ID}", config.Cfg.RootUrl, successPath)
+	cancelUrl := fmt.Sprintf("%s/pricing", config.Cfg.RootUrl)
+	//nolint:exhaustruct
+	params := &stripe.CheckoutSessionParams{
+		CustomerEmail: maybeCustomerEmail,
+		Customer:      maybeCustomerId,
+		SuccessURL:    stripe.String(successUrl),
+		CancelURL:     stripe.String(cancelUrl),
+		Mode:          stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+		LineItems: []*stripe.CheckoutSessionLineItemParams{{
+			Price:    stripe.String(priceId),
+			Quantity: stripe.Int64(1),
+		}},
+		Metadata: maybeMetadata,
+	}
+
+	sesh, err := session.New(params)
+	if err != nil {
+		panic(err)
+	}
+
+	http.Redirect(w, r, sesh.URL, http.StatusSeeOther)
 }

@@ -22,11 +22,19 @@
                 },
                 {
                     "name": "test e2e",
-                    "shell_cmd": "go test ./e2e_test -tags e2etesting,testing -timeout 60m -count=1 -v",
+                    "shell_cmd": "go test ./e2e_test -tags e2etesting -timeout 60m -count=1 -v",
                 },
                 {
-                    "name": "test e2e with email",
-                    "shell_cmd": "go test ./e2e_test -tags emailtesting,e2etesting,testing -timeout 60m -count=1 -v",
+                    "name": "test email",
+                    "shell_cmd": "go test ./e2e_test -tags emailtesting -timeout 60m -count=1 -v",
+                },
+                {
+                    "name": "test stripe",
+                    "shell_cmd": "go test ./e2e_test -tags stripetesting -timeout 60m -count=1 -v",
+                },
+                {
+                    "name": "test all",
+                    "shell_cmd": "go test ./... -tags testing,e2etesting,emailtesting,stripetesting -timeout 60m -count=1 -v",
                 },
                 {
                     "name": "golangci-lint",
@@ -91,7 +99,7 @@
         "LSP": {
             "gopls": {
                 "settings": {
-                    "gopls.buildFlags": ["-tags", "emailtesting,e2etesting,testing"],
+                    "gopls.buildFlags": ["-tags", "testing,e2etesting,emailtesting,stripetesting"],
                 },
             },
         },

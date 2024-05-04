@@ -9,35 +9,62 @@
     <h2>Settings</h2>
   </div>
 
-  <div class="flex flex-col gap-9">
-    <div class="flex flex-col gap-6">
-      <div class="flex flex-col gap-1.5">
-        <div class="flex flex-row gap-[0.3125rem] items-center">
-          <div class="font-semibold">Time zone</div>
-          <div id="timezone_save_spinner" class="spinner spinner-light hidden"></div>
-        </div>
-        <select name="timezone" id="timezone" class="border border-gray-300 rounded-md max-w-full">
-          {{range .TimezoneOptions}}
-            <option {{if .IsSelected}}selected="selected" {{end}}value="{{.Value}}">{{.Label}}</option>
-          {{end}}
-        </select>
-        <div id="timezone_suggestion" class="hidden">
-          (This device is on <button id="client_timezone" class="link"></button>)
-        </div>
-      </div>
-      <div id="future_timezone" class="hidden">Entries will be arriving in early mornings
-        <span id="future_timezone_name"></span>.
+  <div class="flex flex-col gap-[3.75rem]">
+    <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-0.5">
+        <div class="font-semibold text-lg">Delivery</div>
+        <div class="w-full h-px bg-primary-300"></div>
       </div>
 
-      {{template "partial_delivery_channel" .DeliveryChannel}}
+      <div class="flex flex-col gap-6">
+        <div class="flex flex-col gap-1.5">
+          <div class="flex flex-row gap-[0.3125rem] items-center">
+            <div class="font-semibold">Time zone</div>
+            <div id="timezone_save_spinner" class="spinner spinner-light hidden"></div>
+          </div>
+          <select name="timezone" id="timezone" class="border border-gray-300 rounded-md max-w-full">
+            {{range .TimezoneOptions}}
+              <option {{if .IsSelected}}selected="selected" {{end}}value="{{.Value}}">{{.Label}}</option>
+            {{end}}
+          </select>
+          <div id="timezone_suggestion" class="hidden text-sm">
+            (This device is on <button id="client_timezone" class="link"></button>)
+          </div>
+          <div id="future_timezone" class="hidden text-sm">Entries will be arriving in early mornings.</div>
+        </div>
+
+        {{template "partial_delivery_channel" .DeliveryChannel}}
+      </div>
     </div>
 
-    <div class="w-full h-px bg-primary-300"></div>
+    <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-0.5">
+        <div class="font-semibold text-lg">Account</div>
+        <div class="w-full h-px bg-primary-300"></div>
+      </div>
 
-    <div class="flex flex-col gap-1.5">
-      <div class="font-semibold">Delete account</div>
-      <div>
-        <button id="delete_account_button" class="btn-red">Delete my account</button>
+      <div class="flex flex-col gap-6">
+        <div class="flex flex-col gap-1.5">
+          <div class="font-semibold">Subscription</div>
+          <div id="current_plan">Current plan: {{.CurrentPlan}}{{if .CancelAt}} (ends on {{.CancelAt}}){{end}}</div>
+          {{if .IsPaid}}
+          <form action="/billing" method="POST">
+            {{.Session.CSRFField}}
+            <button id="manage_billing" type="submit" class="btn">Manage billing</button>
+          </form>
+          {{else}}
+          <div class="shrink-0">
+            <a id="upgrade" href="/pricing" class="btn inline-block">Upgrade</a>
+          </div>
+          {{end}}
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <div class="font-semibold">Delete account</div>
+          <div>
+            <button id="delete_account_button" class="btn-red">Delete my account</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -59,7 +86,6 @@
         const clientOffset = new Date().getTimezoneOffset();
 
         const shortFriendlyPrefixNameByGroupId = {{.ShortFriendlyPrefixNameByGroupIdJson}};
-        const shortFriendlyNameByGroupId = {{.ShortFriendlyNameByGroupIdJson}};
         const groupIdByTimezoneId = {{.GroupIdByTimezoneIdJson}};
 
         let timezoneRequestsInFlight = 0;
@@ -151,15 +177,6 @@
                 timezoneSuggestion.classList.remove("hidden");
             } else {
                 timezoneSuggestion.classList.add("hidden");
-            }
-
-            const futureTimezoneName = document.getElementById("future_timezone_name");
-            // Select is guaranteed to have every value from the friendly names map, but the friendly names
-            // map may not have a weird tz that user had on signup and we have to display here. Hence fallback
-            if (shortFriendlyNameByGroupId.hasOwnProperty(timezoneSelect.value)) {
-                futureTimezoneName.innerText = shortFriendlyNameByGroupId[timezoneSelect.value];
-            } else {
-                futureTimezoneName.innerText = timezoneSelect.value;
             }
             document.getElementById("future_timezone").classList.remove("hidden");
         }

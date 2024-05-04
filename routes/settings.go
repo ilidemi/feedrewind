@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"feedrewind/config"
 	"feedrewind/jobs"
 	"feedrewind/models"
 	"feedrewind/routes/rutil"
@@ -11,6 +12,9 @@ import (
 	"html/template"
 	"net/http"
 	"time"
+
+	"github.com/stripe/stripe-go/v78"
+	"github.com/stripe/stripe-go/v78/billingportal/session"
 )
 
 type deliveryChannel string
@@ -51,6 +55,41 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	userGroupId, userGroupFound := util.GroupIdByTimezoneId[userSettings.Timezone]
+	row := conn.QueryRow(`
+		select plan_id from pricing_offers
+		where id = (select offer_id from users_without_discarded where id = $1)
+	`, currentUser.Id)
+	var planId models.PlanId
+	err = row.Scan(&planId)
+	if err != nil {
+		panic(err)
+	}
+	var currentPlan string
+	switch planId {
+	case models.PlanIdFree:
+		currentPlan = "Free"
+	case models.PlanIdSupporter:
+		currentPlan = "Supporter"
+	default:
+		panic(fmt.Errorf("Unknown plan: %s", planId))
+	}
+	isPaid := planId != models.PlanIdFree
+
+	cancelAtStr := ""
+	if isPaid {
+		row = conn.QueryRow(`
+			select stripe_cancel_at from users_without_discarded where id = $1
+		`, currentUser.Id)
+		var cancelAt *time.Time
+		err := row.Scan(&cancelAt)
+		if err != nil {
+			panic(err)
+		}
+		if cancelAt != nil {
+			timezone := tzdata.LocationByName[userSettings.Timezone]
+			cancelAtStr = cancelAt.In(timezone).Format("Jan 2, 2006")
+		}
+	}
 
 	type TimezoneOption struct {
 		Value      string
@@ -83,8 +122,10 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		DeliveryChannel                      deliverySettings
 		Version                              int
 		ShortFriendlyPrefixNameByGroupIdJson template.JS
-		ShortFriendlyNameByGroupIdJson       template.JS
 		GroupIdByTimezoneIdJson              template.JS
+		CurrentPlan                          string
+		CancelAt                             string
+		IsPaid                               bool
 	}
 	templates.MustWrite(w, "settings/settings", SettingsResult{
 		Title:                                util.DecorateTitle("Settings"),
@@ -93,8 +134,10 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		DeliveryChannel:                      newDeliverySettings(userSettings),
 		Version:                              userSettings.Version,
 		ShortFriendlyPrefixNameByGroupIdJson: util.ShortFriendlyPrefixNameByGroupIdJson,
-		ShortFriendlyNameByGroupIdJson:       util.ShortFriendlyNameByGroupIdJson,
 		GroupIdByTimezoneIdJson:              util.GroupIdByTimezoneIdJson,
+		CurrentPlan:                          currentPlan,
+		CancelAt:                             cancelAtStr,
+		IsPaid:                               isPaid,
 	})
 }
 
@@ -324,4 +367,35 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			failedLockAttempts++
 		}
 	}
+}
+
+func UserSettings_Billing(w http.ResponseWriter, r *http.Request) {
+	currentUserId := rutil.CurrentUserId(r)
+	conn := rutil.DBConn(r)
+	row := conn.QueryRow(`
+		select stripe_customer_id, (select plan_id from pricing_offers where id = offer_id)
+		from users_without_discarded
+		where id = $1
+	`, currentUserId)
+	var stripeCustomerId string
+	var planId models.PlanId
+	err := row.Scan(&stripeCustomerId, &planId)
+	if err != nil {
+		panic(err)
+	}
+	if planId == models.PlanIdFree {
+		http.Redirect(w, r, "/settings", http.StatusSeeOther)
+		return
+	}
+
+	//nolint:exhaustruct
+	params := &stripe.BillingPortalSessionParams{
+		Customer:  stripe.String(stripeCustomerId),
+		ReturnURL: stripe.String(config.Cfg.RootUrl + "/settings"),
+	}
+	portalSession, err := session.New(params)
+	if err != nil {
+		panic(err)
+	}
+	http.Redirect(w, r, portalSession.URL, http.StatusSeeOther)
 }

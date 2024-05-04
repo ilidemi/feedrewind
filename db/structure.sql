@@ -31,6 +31,16 @@ COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 
 
 --
+-- Name: billing_interval; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.billing_interval AS ENUM (
+    'monthly',
+    'yearly'
+);
+
+
+--
 -- Name: blog_crawl_vote_value; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -510,8 +520,8 @@ CREATE TABLE public.delayed_jobs (
     failed_at timestamp without time zone,
     locked_by character varying,
     queue character varying,
-    created_at timestamp(6) without time zone DEFAULT public.utc_now(),
-    updated_at timestamp(6) without time zone DEFAULT public.utc_now()
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -571,6 +581,35 @@ CREATE TABLE public.postmark_messages (
     updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     message_type public.postmark_message_type NOT NULL,
     subscription_id bigint NOT NULL
+);
+
+
+--
+-- Name: pricing_offers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pricing_offers (
+    id text NOT NULL,
+    monthly_rate money NOT NULL,
+    yearly_rate money NOT NULL,
+    stripe_product_id text,
+    stripe_monthly_price_id text,
+    stripe_yearly_price_id text,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    plan_id text NOT NULL
+);
+
+
+--
+-- Name: pricing_plans; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pricing_plans (
+    id text NOT NULL,
+    default_offer_id text NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -652,7 +691,9 @@ ALTER SEQUENCE public.schedules_id_seq OWNED BY public.schedules.id;
 --
 
 CREATE TABLE public.schema_migrations (
-    version character varying NOT NULL
+    version character varying NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
 
 
@@ -703,6 +744,46 @@ CREATE SEQUENCE public.start_pages_id_seq
 --
 
 ALTER SEQUENCE public.start_pages_id_seq OWNED BY public.start_pages.id;
+
+
+--
+-- Name: stripe_hanging_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.stripe_hanging_sessions (
+    stripe_session_id text NOT NULL,
+    stripe_subscription_id text NOT NULL,
+    stripe_customer_id text NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
+);
+
+
+--
+-- Name: stripe_subscription_tokens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.stripe_subscription_tokens (
+    id bigint NOT NULL,
+    offer_id text NOT NULL,
+    stripe_subscription_id text NOT NULL,
+    stripe_customer_id text NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    billing_interval public.billing_interval NOT NULL
+);
+
+
+--
+-- Name: stripe_webhook_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.stripe_webhook_events (
+    id text NOT NULL,
+    payload bytea NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
+);
 
 
 --
@@ -935,7 +1016,12 @@ CREATE TABLE public.users (
     id bigint NOT NULL,
     name text NOT NULL,
     product_user_id uuid NOT NULL,
-    discarded_at timestamp without time zone
+    discarded_at timestamp without time zone,
+    offer_id text NOT NULL,
+    stripe_subscription_id text,
+    stripe_customer_id text,
+    billing_interval public.billing_interval,
+    stripe_cancel_at timestamp without time zone
 );
 
 
@@ -952,7 +1038,12 @@ CREATE VIEW public.users_with_discarded AS
     users.id,
     users.name,
     users.product_user_id,
-    users.discarded_at
+    users.discarded_at,
+    users.offer_id,
+    users.stripe_subscription_id,
+    users.stripe_customer_id,
+    users.billing_interval,
+    users.stripe_cancel_at
    FROM public.users
   WITH CASCADED CHECK OPTION;
 
@@ -970,7 +1061,12 @@ CREATE VIEW public.users_without_discarded AS
     users.id,
     users.name,
     users.product_user_id,
-    users.discarded_at
+    users.discarded_at,
+    users.offer_id,
+    users.stripe_subscription_id,
+    users.stripe_customer_id,
+    users.billing_interval,
+    users.stripe_cancel_at
    FROM public.users
   WHERE (users.discarded_at IS NULL)
   WITH CASCADED CHECK OPTION;
@@ -1211,6 +1307,22 @@ ALTER TABLE ONLY public.postmark_messages
 
 
 --
+-- Name: pricing_offers pricing_offers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_offers
+    ADD CONSTRAINT pricing_offers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pricing_plans pricing_plans_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_plans
+    ADD CONSTRAINT pricing_plans_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: product_events product_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1248,6 +1360,30 @@ ALTER TABLE ONLY public.start_feeds
 
 ALTER TABLE ONLY public.start_pages
     ADD CONSTRAINT start_pages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: stripe_hanging_sessions stripe_hanging_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stripe_hanging_sessions
+    ADD CONSTRAINT stripe_hanging_sessions_pkey PRIMARY KEY (stripe_session_id);
+
+
+--
+-- Name: stripe_subscription_tokens stripe_subscription_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stripe_subscription_tokens
+    ADD CONSTRAINT stripe_subscription_tokens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: stripe_webhook_events stripe_webhook_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stripe_webhook_events
+    ADD CONSTRAINT stripe_webhook_events_pkey PRIMARY KEY (id);
 
 
 --
@@ -1533,6 +1669,20 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.postmark_messages FOR EAC
 
 
 --
+-- Name: pricing_offers bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.pricing_offers FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
+
+
+--
+-- Name: pricing_plans bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.pricing_plans FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
+
+
+--
 -- Name: product_events bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1547,6 +1697,13 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.schedules FOR EACH ROW EX
 
 
 --
+-- Name: schema_migrations bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.schema_migrations FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
+
+
+--
 -- Name: start_feeds bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1558,6 +1715,27 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.start_feeds FOR EACH ROW 
 --
 
 CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.start_pages FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
+
+
+--
+-- Name: stripe_hanging_sessions bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.stripe_hanging_sessions FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
+
+
+--
+-- Name: stripe_subscription_tokens bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.stripe_subscription_tokens FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
+
+
+--
+-- Name: stripe_webhook_events bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.stripe_webhook_events FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
 
 
 --
@@ -1817,6 +1995,38 @@ ALTER TABLE ONLY public.blog_crawl_votes
 
 
 --
+-- Name: pricing_offers pricing_offers_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_offers
+    ADD CONSTRAINT pricing_offers_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.pricing_plans(id);
+
+
+--
+-- Name: pricing_plans pricing_plans_default_offer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_plans
+    ADD CONSTRAINT pricing_plans_default_offer_id_fkey FOREIGN KEY (default_offer_id) REFERENCES public.pricing_offers(id);
+
+
+--
+-- Name: stripe_subscription_tokens stripe_subscription_tokens_offer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stripe_subscription_tokens
+    ADD CONSTRAINT stripe_subscription_tokens_offer_id_fkey FOREIGN KEY (offer_id) REFERENCES public.pricing_offers(id);
+
+
+--
+-- Name: users users_offer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_offer_id_fkey FOREIGN KEY (offer_id) REFERENCES public.pricing_offers(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
@@ -1982,4 +2192,20 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20240415075004'),
 ('20240415084139'),
 ('20240415093553'),
-('20240415100337');
+('20240415100337'),
+('20240416094504'),
+('20240422084958'),
+('20240422100424'),
+('20240422111631'),
+('20240422112841'),
+('20240422113836'),
+('20240423112537'),
+('20240423214821'),
+('20240425211542'),
+('20240425212306'),
+('20240425220339'),
+('20240429215829'),
+('20240430220101'),
+('20240501133956'),
+('20240501214712'),
+('20240502165329');

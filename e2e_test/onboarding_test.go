@@ -42,6 +42,9 @@ func TestOnboardingSuggestion(t *testing.T) {
 
 	page.MustElementR("input", "Continue").MustClick()
 
+	// Pricing
+	page.MustElement("#signup_free").MustClick()
+
 	// Create user
 	err := proto.EmulationSetTimezoneOverride{TimezoneID: timezone}.Call(page)
 	oops.RequireNoError(t, err)
@@ -107,6 +110,9 @@ func TestOnboardingCustomLink(t *testing.T) {
 	page.MustElement("#discover_go").MustClick()
 
 	page.MustElementR("input", "Continue").MustClick()
+
+	// Pricing
+	page.MustElement("#signup_free").MustClick()
 
 	// Create user
 	err := proto.EmulationSetTimezoneOverride{TimezoneID: timezone}.Call(page)

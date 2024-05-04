@@ -1477,9 +1477,9 @@ func createUser(tx pgw.Queryable) (*testUser, error) {
 	userId := models.UserId(0)
 	productUserId := models.ProductUserId("00000000-0000-0000-0000-000000000000")
 	_, err := tx.Exec(`
-        insert into users_without_discarded (id, email, name, password_digest, auth_token, product_user_id)
-        values ($1, 'test@feedrewind.com', 'test', 'asdf', 'asdf', $2)
-    `, userId, productUserId)
+        insert into users_without_discarded (id, email, name, password_digest, auth_token, offer_id, product_user_id)
+        values ($1, 'test@feedrewind.com', 'test', 'asdf', 'asdf', (select default_offer_id from pricing_plans where id = $2), $3)
+    `, userId, models.PlanIdFree, productUserId)
 	if err != nil {
 		return nil, err
 	}

@@ -12,7 +12,16 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"os/exec"
+	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/pkg/errors"
+	"github.com/stripe/stripe-go/v78"
+	"github.com/stripe/stripe-go/v78/customer"
+	"github.com/stripe/stripe-go/v78/subscription"
+	"github.com/stripe/stripe-go/v78/testhelpers/testclock"
 )
 
 func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
@@ -65,32 +74,70 @@ func AdminTest_DestroyUserSubscriptions(w http.ResponseWriter, r *http.Request) 
 func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 	email := util.EnsureParamStr(r, "email")
 	conn := rutil.DBConn(r)
-	user, err := models.User_FindByEmail(conn, email)
-	if err == models.ErrUserNotFound {
+	row := conn.QueryRow(`
+		select stripe_subscription_id from users_without_discarded
+		where email = $1 and stripe_subscription_id is not null
+	`, email)
+	var stripeSubscriptionId string
+	err := row.Scan(&stripeSubscriptionId)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		panic(err)
+	}
+	if err == nil {
+		_, err := subscription.Cancel(stripeSubscriptionId, nil)
+		if stripeErr, ok := err.(*stripe.Error); ok && stripeErr.Code == stripe.ErrorCodeResourceMissing {
+			// already deleted
+		} else if err != nil {
+			panic(err)
+		}
+	}
+
+	logger := rutil.Logger(r)
+	rows, err := conn.Query(`delete from users_with_discarded where email = $1 returning id`, email)
+	if err != nil {
+		panic(err)
+	}
+	var deletedIds []models.UserId
+	for rows.Next() {
+		var userId models.UserId
+		err := rows.Scan(&userId)
+		if err != nil {
+			panic(err)
+		}
+		deletedIds = append(deletedIds, userId)
+	}
+	if err := rows.Err(); err != nil {
+		panic(err)
+	}
+	if len(deletedIds) == 0 {
 		util.MustWrite(w, "NotFound")
 		return
 	}
 
-	_, err = conn.Exec(`delete from users_with_discarded where id = $1`, user.Id)
-	if err != nil {
-		panic(err)
+	for _, userId := range deletedIds {
+		err := jobs.PublishPostsJob_Delete(conn, userId, logger)
+		if err != nil {
+			panic(err)
+		}
 	}
-	logger := rutil.Logger(r)
-	err = jobs.PublishPostsJob_Delete(conn, user.Id, logger)
+	util.MustWrite(w, "OK")
+}
+
+func AdminTest_SetTestSingleton(w http.ResponseWriter, r *http.Request) {
+	key := util.EnsureParamStr(r, "key")
+	value := util.EnsureParamStr(r, "value")
+	conn := rutil.DBConn(r)
+	_, err := conn.Exec(`update test_singletons set value = $1 where key = $2`, value, key)
 	if err != nil {
 		panic(err)
 	}
 	util.MustWrite(w, "OK")
 }
 
-func AdminTest_SetEmailMetadata(w http.ResponseWriter, r *http.Request) {
-	value := util.EnsureParamStr(r, "value")
+func AdminTest_DeleteTestSingleton(w http.ResponseWriter, r *http.Request) {
+	key := util.EnsureParamStr(r, "key")
 	conn := rutil.DBConn(r)
-	_, err := conn.Exec(`
-		update test_singletons
-		set value = $1
-		where key = 'email_metadata'
-	`, value)
+	_, err := conn.Exec(`update test_singletons set value = null where key = $1`, key)
 	if err != nil {
 		panic(err)
 	}
@@ -147,19 +194,6 @@ func AdminTest_AssertEmailCountWithMetadata(w http.ResponseWriter, r *http.Reque
 			panic(oops.Newf("Email count doesn't match: expected %d, actual %d", count, len(messages)))
 		}
 	}
-}
-
-func AdminTest_DeleteEmailMetadata(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
-	_, err := conn.Exec(`
-		update test_singletons
-		set value = null
-		where key = 'email_metadata'
-	`)
-	if err != nil {
-		panic(err)
-	}
-	util.MustWrite(w, "OK")
 }
 
 func AdminTest_TravelTo(w http.ResponseWriter, r *http.Request) {
@@ -291,4 +325,101 @@ func adminTest_CompareTimestamps(conn *pgw.Conn, commandId int64) error {
 		return oops.Newf("Web timestamp %s doesn't match worker timestamp %s", webTimestamp, workerTimestamp)
 	}
 	return nil
+}
+
+func AdminTest_EnsureStripeListen(w http.ResponseWriter, r *http.Request) {
+	queryCmd := exec.Command(
+		"pwsh", "-command",
+		`Get-CimInstance win32_process -Filter "name='stripe.exe'" | select -expandproperty CommandLine`,
+	)
+	queryOutput, err := queryCmd.Output()
+	if err != nil {
+		panic(err)
+	}
+	queryOutputTokens := strings.Fields(string(queryOutput))
+	if len(queryOutputTokens) == 4 &&
+		(queryOutputTokens[0] == "stripe" || queryOutputTokens[0] == "stripe.exe") &&
+		queryOutputTokens[1] == "listen" &&
+		queryOutputTokens[2] == "--forward-to" &&
+		queryOutputTokens[3] == "localhost:3000/stripe/webhook" {
+
+		// Found it
+		util.MustWrite(w, "OK")
+		return
+	} else if len(queryOutputTokens) > 0 {
+		panic(fmt.Errorf("Found unknown stripe process: %s", string(queryOutput)))
+	}
+
+	// Need to start it ourselves
+	stripeCmd := exec.Command(
+		"cmd", "/c", "start", "stripe", "listen", "--forward-to", "localhost:3000/stripe/webhook",
+	)
+	err = stripeCmd.Start()
+	if err != nil {
+		panic(err)
+	}
+	time.Sleep(3 * time.Second)
+	util.MustWrite(w, "OK")
+}
+
+func AdminTest_DeleteStripeSubscription(w http.ResponseWriter, r *http.Request) {
+	email := util.EnsureParamStr(r, "email")
+	conn := rutil.DBConn(r)
+	row := conn.QueryRow(`
+		select stripe_subscription_id from users_without_discarded
+		where email = $1 and stripe_subscription_id is not null
+	`, email)
+	var stripeSubscriptionId string
+	err := row.Scan(&stripeSubscriptionId)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = subscription.Cancel(stripeSubscriptionId, nil)
+	if stripeErr, ok := err.(*stripe.Error); ok && stripeErr.Code == stripe.ErrorCodeResourceMissing {
+		// already deleted
+	} else if err != nil {
+		panic(err)
+	}
+
+	util.MustWrite(w, "OK")
+}
+
+func AdminTest_ForwardStripeCustomer45Days(w http.ResponseWriter, r *http.Request) {
+	email := util.EnsureParamStr(r, "email")
+	conn := rutil.DBConn(r)
+	row := conn.QueryRow(`select stripe_customer_id from users_without_discarded where email = $1`, email)
+	var stripeCustomerId string
+	err := row.Scan(&stripeCustomerId)
+	if err != nil {
+		panic(err)
+	}
+	cus, err := customer.Get(stripeCustomerId, nil)
+	if err != nil {
+		panic(err)
+	}
+	//nolint:exhaustruct
+	_, err = testclock.Advance(cus.TestClock.ID, &stripe.TestHelpersTestClockAdvanceParams{
+		FrozenTime: stripe.Int64(time.Now().AddDate(0, 0, 45).Unix()),
+	})
+	if err != nil {
+		panic(err)
+	}
+	util.MustWrite(w, "OK")
+}
+
+func AdminTest_DeleteStripeClocks(w http.ResponseWriter, r *http.Request) {
+	it := testclock.List(nil)
+	for it.Next() {
+		clock := it.TestHelpersTestClock()
+		_, err := testclock.Del(clock.ID, nil)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if err := it.Err(); err != nil {
+		panic(err)
+	}
+
+	util.MustWrite(w, "OK")
 }

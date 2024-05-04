@@ -43,3 +43,25 @@ func (tx *Tx) MustExec(sql string, arguments ...any) pgconn.CommandTag {
 	}
 	return tag
 }
+
+func (tx *Tx) MustAddTimestamps(tableName string) {
+	tx.MustExec(`alter table ` + tableName + ` add column created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL`)
+	tx.MustExec(`alter table ` + tableName + ` add column updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL`)
+	tx.MustExec(`create trigger bump_updated_at before update on ` + tableName + ` FOR EACH ROW EXECUTE FUNCTION bump_updated_at_utc();`)
+}
+
+func (tx *Tx) MustUpdateDiscardedViews(tableName string, checkTableUsage *bool) {
+	*checkTableUsage = false
+	tx.MustExec(`
+		create or replace view ` + tableName + `_with_discarded as
+			select * from ` + tableName + `
+		with cascaded check option
+	`)
+	tx.MustExec(`
+		create or replace view ` + tableName + `_without_discarded as
+			select * from ` + tableName + `
+			where discarded_at is null
+		with cascaded check option
+	`)
+	*checkTableUsage = true
+}

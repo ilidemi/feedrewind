@@ -1,0 +1,46 @@
+{{template "layouts/application" .}}
+
+{{define "content"}}
+<div class="flex flex-col gap-6 max-w-lg">
+  <div class="flex flex-row justify-center align-center gap-6">
+    <div>
+      {{if .IsOnFreePlan}}
+      <div id="current_free" class="border rounded-md px-3 py-2 text-gray-500 border-gray-300">Current plan</div>
+      {{else if .IsOnSupporterPlan}}
+      <form action="/billing" method="POST">
+        {{.Session.CSRFField}}
+        <button id="downgrade_to_free" type="submit" class="btn">Downgrade</button>
+      </form>
+      {{else}}
+      <a id="signup_free" class="btn inline-block" href="/signup">Free</a>
+      {{end}}
+    </div>
+    <div class="flex flex-col gap-3">
+      <form action="/checkout" method="POST">
+        {{.Session.CSRFField}}
+        <input class="hidden" name="offer_id" value="{{.OfferId}}">
+        <input class="hidden" name="interval" value="{{.MonthlyIntervalName}}">
+        {{if .IsOnFreePlan}}
+        <button id="upgrade_supporter_monthly" class="btn" type="submit">Upgrade for {{.SupporterMonthlyRate}}/mo</button>
+        {{else if .IsOnSupporterPlan}}
+        <div id="current_supporter_monthly" class="border rounded-md px-3 py-2 text-gray-500 border-gray-300">Current plan</div>
+        {{else}}
+        <button id="signup_supporter_monthly" class="btn" type="submit">{{.SupporterMonthlyRate}}/mo</button>
+        {{end}}
+      </form>
+      <form action="/checkout" method="POST">
+        {{.Session.CSRFField}}
+        <input class="hidden" name="offer_id" value="{{.OfferId}}">
+        <input class="hidden" name="interval" value="{{.YearlyIntervalName}}">
+        {{if .IsOnFreePlan}}
+        <button id="upgrade_supporter_yearly" class="btn" type="submit">Upgrade for {{.SupporterYearlyRate}}/yr</button>
+        {{else if .IsOnSupporterPlan}}
+        <div id="current_supporter_yearly" class="border rounded-md px-3 py-2 text-gray-500 border-gray-300">Current plan</div>
+        {{else}}
+        <button id="signup_supporter_yearly" class="btn" type="submit">{{.SupporterYearlyRate}}/yr</button>
+        {{end}}
+      </form>
+    </div>
+  </div>
+</div>
+{{end}}
