@@ -48,7 +48,7 @@ func newLoginResult(r *http.Request, error string, redirect string) loginResult 
 
 func Users_LoginPage(w http.ResponseWriter, r *http.Request) {
 	if rutil.CurrentUser(r) != nil {
-		http.Redirect(w, r, "/", http.StatusFound)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -65,7 +65,7 @@ func Users_LoginPage(w http.ResponseWriter, r *http.Request) {
 func Users_Login(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
 	if rutil.CurrentUser(r) != nil {
-		http.Redirect(w, r, "/", http.StatusFound)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -110,14 +110,14 @@ func Users_Login(w http.ResponseWriter, r *http.Request) {
 					if err != nil {
 						panic(err)
 					}
-					http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
+					http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
 				}
 			}
 
 			if redirect == "" {
 				redirect = "/subscriptions"
 			}
-			http.Redirect(w, r, redirect, http.StatusFound)
+			http.Redirect(w, r, redirect, http.StatusSeeOther)
 			return
 		} else {
 			logger.Info().Err(err).Msg("Password doesn't match")
@@ -130,7 +130,7 @@ func Users_Login(w http.ResponseWriter, r *http.Request) {
 
 func Users_Logout(w http.ResponseWriter, r *http.Request) {
 	middleware.MustSetSessionAuthToken(w, r, "")
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 type signUpResult struct {
@@ -161,7 +161,7 @@ func newSignUpFormResult() userFormResult {
 
 func Users_SignUpPage(w http.ResponseWriter, r *http.Request) {
 	if rutil.CurrentUser(r) != nil {
-		http.Redirect(w, r, "/", http.StatusFound)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -221,7 +221,7 @@ func Users_SignUpPage(w http.ResponseWriter, r *http.Request) {
 func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
 	if rutil.CurrentUser(r) != nil {
-		http.Redirect(w, r, "/", http.StatusFound)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -430,14 +430,14 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusFound)
+			http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
 			return
 		} else {
-			http.Redirect(w, r, "/subscriptions", http.StatusFound)
+			http.Redirect(w, r, "/subscriptions", http.StatusSeeOther)
 			return
 		}
 	} else {
-		http.Redirect(w, r, "/subscriptions", http.StatusFound)
+		http.Redirect(w, r, "/subscriptions", http.StatusSeeOther)
 		return
 	}
 }
@@ -542,7 +542,7 @@ func Users_DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 var popularEmailHosts map[string]bool

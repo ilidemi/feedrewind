@@ -103,10 +103,12 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 		switch discoverResult := discoverFeedsResult.(type) {
 		case *discoveredSubscription:
 			models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
-			http.Redirect(w, r, rutil.SubscriptionSetupPath(discoverResult.subscription.Id), http.StatusFound)
+			http.Redirect(
+				w, r, rutil.SubscriptionSetupPath(discoverResult.subscription.Id), http.StatusSeeOther,
+			)
 			return
 		case *discoveredUnsupportedBlog:
-			http.Redirect(w, r, rutil.BlogUnsupportedPath(discoverResult.blog.Id), http.StatusFound)
+			http.Redirect(w, r, rutil.BlogUnsupportedPath(discoverResult.blog.Id), http.StatusSeeOther)
 			return
 		case *discoveredFeeds:
 			result = OnboardingResult{
@@ -181,11 +183,11 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 	case *discoveredSubscription:
 		models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
 		redirectPath := rutil.SubscriptionSetupPath(discoverResult.subscription.Id)
-		http.Redirect(w, r, redirectPath, http.StatusFound)
+		http.Redirect(w, r, redirectPath, http.StatusSeeOther)
 		return
 	case *discoveredUnsupportedBlog:
 		redirectPath := rutil.BlogUnsupportedPath(discoverResult.blog.Id)
-		http.Redirect(w, r, redirectPath, http.StatusFound)
+		http.Redirect(w, r, redirectPath, http.StatusSeeOther)
 		return
 	case *discoveredFeeds:
 		result = OnboardingResult{
@@ -263,7 +265,7 @@ func Onboarding_Preview(w http.ResponseWriter, r *http.Request) {
 	slug := util.URLParamStr(r, "slug")
 	link, ok := util.ScreenshotLinksBySlug[slug]
 	if !ok {
-		http.Redirect(w, r, "/", http.StatusFound)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
