@@ -24,4 +24,7 @@ func callToTimeNow(m dsl.Matcher) {
 			!(m.File().PkgPath.Matches(`feedrewind/jobs`) && m.File().Name.Matches(`worker.go`)) &&
 			!m.File().PkgPath.Matches(`^feedrewind$`)).
 		Report(`Background context is probably a mistake. Pass through request context instead`)
+	m.Match(`time.Sleep`).
+		Where(m.File().PkgPath.Matches(`feedrewind/jobs`) && !m.File().Name.Matches(`worker.go`)).
+		Report(`Don't use time.Sleep in jobs, use util.Sleep(ctx, delay) instead`)
 }
