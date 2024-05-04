@@ -142,24 +142,24 @@
   </div>
 
   <script>
-      document.getElementById("licenses_toggle").addEventListener("click", () => {
-          const suggestionsToggleIcon = document.getElementById("licenses_toggle_icon");
-          suggestionsToggleIcon.classList.toggle("rotate-180");
+    document.getElementById("licenses_toggle").addEventListener("click", () => {
+      const suggestionsToggleIcon = document.getElementById("licenses_toggle_icon");
+      suggestionsToggleIcon.classList.toggle("rotate-180");
 
-          const suggestionsBody = document.getElementById("licenses_body");
-          if (suggestionsBody.style.maxHeight) {
-              suggestionsBody.style.maxHeight = null;
-          } else {
-              suggestionsBody.style.maxHeight = suggestionsBody.scrollHeight + "px";
-          }
-      });
+      const suggestionsBody = document.getElementById("licenses_body");
+      if (suggestionsBody.style.maxHeight) {
+        suggestionsBody.style.maxHeight = null;
+      } else {
+        suggestionsBody.style.maxHeight = suggestionsBody.scrollHeight + "px";
+      }
+    });
 
-      document.getElementById("licenses_body").addEventListener("transitionend", () => {
-          const suggestionsBody = document.getElementById("licenses_body");
-          if (suggestionsBody.style.maxHeight) {
-              suggestionsBody.style.maxHeight = "fit-content";
-          }
-      });
+    document.getElementById("licenses_body").addEventListener("transitionend", () => {
+      const suggestionsBody = document.getElementById("licenses_body");
+      if (suggestionsBody.style.maxHeight) {
+        suggestionsBody.style.maxHeight = "fit-content";
+      }
+    });
   </script>
 </div>
 {{end}}

@@ -4,27 +4,27 @@
 </div>
 
 <script>
-    let infoPopup = document.getElementById("info_popup");
-    document.getElementById("info_popup").addEventListener("animationend", (event) => {
-        if (event.animationName === "popup-disappear") {
-            infoPopup.classList.remove("popup");
-            infoPopup.classList.add("hidden");
-        }
-    });
-
-    function showInfoPopup(message) {
-        infoPopup.classList.add("hidden");
-        infoPopup.classList.remove("popup");
-        infoPopup.innerText = message;
-        void infoPopup.offsetWidth; // trigger reflow
-        infoPopup.classList.remove("hidden");
-        infoPopup.classList.add("popup");
+  let infoPopup = document.getElementById("info_popup");
+  document.getElementById("info_popup").addEventListener("animationend", (event) => {
+    if (event.animationName === "popup-disappear") {
+      infoPopup.classList.remove("popup");
+      infoPopup.classList.add("hidden");
     }
+  });
 
-    function hideInfoPopup() {
-        infoPopup.classList.remove("popup");
-        infoPopup.classList.add("hidden");
-    }
+  function showInfoPopup(message) {
+    infoPopup.classList.add("hidden");
+    infoPopup.classList.remove("popup");
+    infoPopup.innerText = message;
+    void infoPopup.offsetWidth; // trigger reflow
+    infoPopup.classList.remove("hidden");
+    infoPopup.classList.add("popup");
+  }
+
+  function hideInfoPopup() {
+    infoPopup.classList.remove("popup");
+    infoPopup.classList.add("hidden");
+  }
 </script>
 
 <div id="refresh_popup_background" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 z-40"></div>
@@ -38,19 +38,19 @@
 </div>
 
 <script>
-    document.getElementById("popup_refresh_button").addEventListener("click", () => window.location.reload());
+  document.getElementById("popup_refresh_button").addEventListener("click", () => window.location.reload());
 
-    function showRefreshPopup(message) {
-        for (let element of document.getElementsByClassName("modal-inert")) {
-            element.inert = true;
-        }
-
-        document.getElementById("refresh_popup_message").innerText = message;
-        let refreshPopup = document.getElementById("refresh_popup");
-        refreshPopup.classList.remove("hidden");
-        refreshPopup.classList.add("popup-appear");
-        document.getElementById("refresh_popup_background").classList.remove("hidden");
+  function showRefreshPopup(message) {
+    for (let element of document.getElementsByClassName("modal-inert")) {
+      element.inert = true;
     }
+
+    document.getElementById("refresh_popup_message").innerText = message;
+    let refreshPopup = document.getElementById("refresh_popup");
+    refreshPopup.classList.remove("hidden");
+    refreshPopup.classList.add("popup-appear");
+    document.getElementById("refresh_popup_background").classList.remove("hidden");
+  }
 </script>
 
 <div id="delete_popup_background" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 z-40"></div>
@@ -65,72 +65,72 @@
 </div>
 
 <script>
-    function showDeleteSubscriptionPopup(
-        promptPrefix, subscriptionName, promptSuffix, subscriptionDeletePath, keepLabel, deleteLabel
-    ) {
-        let prompt = document.createElement("span");
-        prompt.appendChild(document.createTextNode(promptPrefix));
-        let subscriptionNameElement = document.createElement("span");
-        subscriptionNameElement.classList.add("font-semibold");
-        subscriptionNameElement.innerText = subscriptionName;
-        prompt.appendChild(subscriptionNameElement);
-        prompt.appendChild(document.createTextNode(promptSuffix));
-        
-        showDeletePopup(prompt, subscriptionDeletePath, keepLabel, deleteLabel);
+  function showDeleteSubscriptionPopup(
+    promptPrefix, subscriptionName, promptSuffix, subscriptionDeletePath, keepLabel, deleteLabel
+  ) {
+    let prompt = document.createElement("span");
+    prompt.appendChild(document.createTextNode(promptPrefix));
+    let subscriptionNameElement = document.createElement("span");
+    subscriptionNameElement.classList.add("font-semibold");
+    subscriptionNameElement.innerText = subscriptionName;
+    prompt.appendChild(subscriptionNameElement);
+    prompt.appendChild(document.createTextNode(promptSuffix));
+    
+    showDeletePopup(prompt, subscriptionDeletePath, keepLabel, deleteLabel);
+  }
+
+  /**
+   * @param {(string|Element)} prompt
+   */
+  function showDeletePopup(prompt, deletePath, keepLabel, deleteLabel) {
+    for (let element of document.getElementsByClassName("modal-inert")) {
+        element.inert = true;
     }
 
-    /**
-     * @param {(string|Element)} prompt
-     */
-    function showDeletePopup(prompt, deletePath, keepLabel, deleteLabel) {
-        for (let element of document.getElementsByClassName("modal-inert")) {
-            element.inert = true;
-        }
+    // replace works for strings and elements
+    document.getElementById("delete_popup_prompt").replaceChildren(prompt);
 
-        // replace works for strings and elements
-        document.getElementById("delete_popup_prompt").replaceChildren(prompt);
+    document.getElementById("delete_popup_keep_button").innerText = keepLabel;
 
-        document.getElementById("delete_popup_keep_button").innerText = keepLabel;
+    let deleteButton = document.getElementById("delete_popup_delete_button");
+    deleteButton.innerText = deleteLabel;
+    deleteButton.href = deletePath;
 
-        let deleteButton = document.getElementById("delete_popup_delete_button");
-        deleteButton.innerText = deleteLabel;
-        deleteButton.href = deletePath;
+    let deletePopup = document.getElementById("delete_popup");
+    let deleteBackground = document.getElementById("delete_popup_background");
+    deletePopup.classList.add("hidden");
+    deletePopup.classList.remove("popup-appear");
+    void deletePopup.offsetWidth; // trigger reflow
+    deletePopup.classList.remove("hidden");
+    deletePopup.classList.add("popup-appear");
+    deleteBackground.classList.remove("hidden");
+  }
 
-        let deletePopup = document.getElementById("delete_popup");
-        let deleteBackground = document.getElementById("delete_popup_background");
-        deletePopup.classList.add("hidden");
-        deletePopup.classList.remove("popup-appear");
-        void deletePopup.offsetWidth; // trigger reflow
-        deletePopup.classList.remove("hidden");
-        deletePopup.classList.add("popup-appear");
-        deleteBackground.classList.remove("hidden");
+  function hideDeletePopup() {
+    let deletePopup = document.getElementById("delete_popup");
+    let deleteBackground = document.getElementById("delete_popup_background");
+    deletePopup.classList.remove("popup-appear");
+    deletePopup.classList.add("popup-disappear");
+    deleteBackground.classList.add("hidden");
+
+    for (let element of document.getElementsByClassName("modal-inert")) {
+      element.inert = false;
     }
+  }
 
-    function hideDeletePopup() {
-        let deletePopup = document.getElementById("delete_popup");
-        let deleteBackground = document.getElementById("delete_popup_background");
-        deletePopup.classList.remove("popup-appear");
-        deletePopup.classList.add("popup-disappear");
-        deleteBackground.classList.add("hidden");
+  document.getElementById("delete_popup_keep_button").addEventListener("click", () => {
+    hideDeletePopup();
+  });
 
-        for (let element of document.getElementsByClassName("modal-inert")) {
-            element.inert = false;
-        }
+  document.getElementById("delete_popup_background").addEventListener("click", () => {
+    hideDeletePopup();
+  });
+
+  document.getElementById("delete_popup").addEventListener("animationend", (event) => {
+    let deletePopup = document.getElementById("delete_popup");
+    if (event.animationName === "popup-disappear") {
+      deletePopup.classList.remove("popup-disappear");
+      deletePopup.classList.add("hidden");
     }
-
-    document.getElementById("delete_popup_keep_button").addEventListener("click", () => {
-        hideDeletePopup();
-    });
-
-    document.getElementById("delete_popup_background").addEventListener("click", () => {
-        hideDeletePopup();
-    });
-
-    document.getElementById("delete_popup").addEventListener("animationend", (event) => {
-        let deletePopup = document.getElementById("delete_popup");
-        if (event.animationName === "popup-disappear") {
-            deletePopup.classList.remove("popup-disappear");
-            deletePopup.classList.add("hidden");
-        }
-    });
+  });
 </script>

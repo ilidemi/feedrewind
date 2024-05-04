@@ -70,189 +70,189 @@
 
     <script>
       document
-          .getElementById("delete_account_button")
-          .addEventListener("click", () => {
-              showDeletePopup(
-                  "Delete your account? This cannot be undone.", "/delete_account",
-                  "Keep", "Delete"
-              );
-          })
+        .getElementById("delete_account_button")
+        .addEventListener("click", () => {
+          showDeletePopup(
+            "Delete your account? This cannot be undone.", "/delete_account",
+            "Keep", "Delete"
+          );
+        })
     </script>
 
     <script>
-        let maxSeenVersion = {{.Version}};
+      let maxSeenVersion = {{.Version}};
 
-        const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const clientOffset = new Date().getTimezoneOffset();
+      const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const clientOffset = new Date().getTimezoneOffset();
 
-        const shortFriendlyPrefixNameByGroupId = {{.ShortFriendlyPrefixNameByGroupIdJson}};
-        const groupIdByTimezoneId = {{.GroupIdByTimezoneIdJson}};
+      const shortFriendlyPrefixNameByGroupId = {{.ShortFriendlyPrefixNameByGroupIdJson}};
+      const groupIdByTimezoneId = {{.GroupIdByTimezoneIdJson}};
 
-        let timezoneRequestsInFlight = 0;
+      let timezoneRequestsInFlight = 0;
 
-        function showTimezoneSpinner() {
-            timezoneRequestsInFlight++;
-            let spinner = document.getElementById("timezone_save_spinner");
-            spinner.classList.remove("hidden");
+      function showTimezoneSpinner() {
+        timezoneRequestsInFlight++;
+        let spinner = document.getElementById("timezone_save_spinner");
+        spinner.classList.remove("hidden");
+      }
+
+      function maybeHideTimezoneSpinner() {
+        timezoneRequestsInFlight--;
+        if (timezoneRequestsInFlight === 0) {
+          let spinner = document.getElementById("timezone_save_spinner");
+          spinner.classList.add("hidden");
         }
+      }
 
-        function maybeHideTimezoneSpinner() {
-            timezoneRequestsInFlight--;
-            if (timezoneRequestsInFlight === 0) {
-                let spinner = document.getElementById("timezone_save_spinner");
-                spinner.classList.add("hidden");
+      const timezoneSelect = document.getElementById("timezone");
+      timezoneSelect.addEventListener("change", async () => {
+        let newTimezone = document.getElementById("timezone").value;
+        showTimezoneSpinner();
+        maxSeenVersion += 1;
+        const requestVersion = maxSeenVersion;
+
+        try {
+          const abortController = new AbortController();
+          const timeoutId = setTimeout(() => abortController.abort(), 30000);
+          let formData = new FormData();
+          formData.set("timezone", newTimezone);
+          formData.set("client_timezone", clientTimezone); // Just for logging
+          formData.set("client_offset", clientOffset.toString()); // Just for logging
+          formData.set("version", requestVersion);
+          const body = new URLSearchParams(formData);
+          const response = await fetch(
+            "settings/save_timezone",
+            {
+              method: "post",
+              headers: {
+                "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+              },
+              body: body,
+              signal: abortController.signal
             }
+          );
+
+          if (response.status === 200) {
+            clearTimeout(timeoutId);
+            maybeHideTimezoneSpinner();
+            updateTimezoneLabels();
+          } else if (response.status === 409) {
+            const json = await response.json();
+            clearTimeout(timeoutId);
+            maybeHideTimezoneSpinner();
+            if (json.version >= maxSeenVersion) {
+              showRefreshPopup("Settings are out of date. Please refresh the page.");
+            }
+            // If the version is older, we're expecting some other request to succeed
+          } else {
+            clearTimeout(timeoutId);
+            maybeHideTimezoneSpinner();
+            if (requestVersion === maxSeenVersion) {
+              showRefreshPopup("Something went wrong. Please refresh the page.");
+            }
+            // If the version is older, we're expecting some other request to succeed
+          }
+        } catch (err) {
+          // Timeout
+          maybeHideTimezoneSpinner();
+          showRefreshPopup("Something went wrong. Please refresh the page.");
         }
+      });
 
-        const timezoneSelect = document.getElementById("timezone");
-        timezoneSelect.addEventListener("change", async () => {
-            let newTimezone = document.getElementById("timezone").value;
-            showTimezoneSpinner();
-            maxSeenVersion += 1;
-            const requestVersion = maxSeenVersion;
+      const timezoneSuggestion = document.getElementById("timezone_suggestion");
+      let clientTimezoneGroupId;
 
-            try {
-                const abortController = new AbortController();
-                const timeoutId = setTimeout(() => abortController.abort(), 30000);
-                let formData = new FormData();
-                formData.set("timezone", newTimezone);
-                formData.set("client_timezone", clientTimezone); // Just for logging
-                formData.set("client_offset", clientOffset.toString()); // Just for logging
-                formData.set("version", requestVersion);
-                const body = new URLSearchParams(formData);
-                const response = await fetch(
-                    "settings/save_timezone",
-                    {
-                        method: "post",
-                        headers: {
-                            "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
-                        },
-                        body: body,
-                        signal: abortController.signal
-                    }
-                );
+      timezoneSuggestion.addEventListener("click", () => {
+        timezoneSelect.value = clientTimezoneGroupId;
+        timezoneSelect.dispatchEvent(new Event('change'));
+      });
 
-                if (response.status === 200) {
-                    clearTimeout(timeoutId);
-                    maybeHideTimezoneSpinner();
-                    updateTimezoneLabels();
-                } else if (response.status === 409) {
-                    const json = await response.json();
-                    clearTimeout(timeoutId);
-                    maybeHideTimezoneSpinner();
-                    if (json.version >= maxSeenVersion) {
-                        showRefreshPopup("Settings are out of date. Please refresh the page.");
-                    }
-                    // If the version is older, we're expecting some other request to succeed
-                } else {
-                    clearTimeout(timeoutId);
-                    maybeHideTimezoneSpinner();
-                    if (requestVersion === maxSeenVersion) {
-                        showRefreshPopup("Something went wrong. Please refresh the page.");
-                    }
-                    // If the version is older, we're expecting some other request to succeed
-                }
-            } catch (err) {
-                // Timeout
-                maybeHideTimezoneSpinner();
-                showRefreshPopup("Something went wrong. Please refresh the page.");
-            }
-        });
+      function updateTimezoneLabels() {
+        if (groupIdByTimezoneId.hasOwnProperty(clientTimezone) &&
+          timezoneSelect.value !== groupIdByTimezoneId[clientTimezone]
+        ) {
+          clientTimezoneGroupId = groupIdByTimezoneId[clientTimezone];
+          document.getElementById("client_timezone").innerText =
+            shortFriendlyPrefixNameByGroupId[clientTimezoneGroupId];
+          timezoneSuggestion.classList.remove("hidden");
+        } else {
+          timezoneSuggestion.classList.add("hidden");
+        }
+        document.getElementById("future_timezone").classList.remove("hidden");
+      }
 
-        const timezoneSuggestion = document.getElementById("timezone_suggestion");
-        let clientTimezoneGroupId;
+      updateTimezoneLabels();
 
-        timezoneSuggestion.addEventListener("click", () => {
-            timezoneSelect.value = clientTimezoneGroupId;
-            timezoneSelect.dispatchEvent(new Event('change'));
-        });
+      let deliveryChannelRequestsInFlight = 0;
 
-        function updateTimezoneLabels() {
-            if (groupIdByTimezoneId.hasOwnProperty(clientTimezone) &&
-                timezoneSelect.value !== groupIdByTimezoneId[clientTimezone]
-            ) {
-                clientTimezoneGroupId = groupIdByTimezoneId[clientTimezone];
-                document.getElementById("client_timezone").innerText =
-                    shortFriendlyPrefixNameByGroupId[clientTimezoneGroupId];
-                timezoneSuggestion.classList.remove("hidden");
+      function showDeliveryChannelSpinner() {
+        deliveryChannelRequestsInFlight++;
+        let spinner = document.getElementById("delivery_channel_save_spinner");
+        spinner.classList.remove("hidden");
+      }
+
+      function maybeHideDeliveryChannelSpinner() {
+        deliveryChannelRequestsInFlight--;
+        if (deliveryChannelRequestsInFlight === 0) {
+          let spinner = document.getElementById("delivery_channel_save_spinner");
+          spinner.classList.add("hidden");
+        }
+      }
+
+      const deliveryChannelRadios = document.querySelectorAll("input[name='delivery_channel']");
+      for (let radio of deliveryChannelRadios) {
+        radio.addEventListener("change", async (event) => {
+          showDeliveryChannelSpinner();
+          maxSeenVersion += 1;
+          const requestVersion = maxSeenVersion;
+
+          try {
+            const abortController = new AbortController();
+            const timeoutId = setTimeout(() => abortController.abort(), 30000);
+            let formData = new FormData();
+            formData.set("delivery_channel", event.target.value);
+            formData.set("client_timezone", clientTimezone); // Just for logging
+            formData.set("client_offset", clientOffset.toString()); // Just for logging
+            formData.set("version", requestVersion);
+            const body = new URLSearchParams(formData);
+            const response = await fetch(
+              "settings/save_delivery_channel",
+              {
+                method: "post",
+                headers: {
+                  "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: body,
+                signal: abortController.signal
+              }
+            );
+
+            if (response.status === 200) {
+              clearTimeout(timeoutId);
+              maybeHideDeliveryChannelSpinner();
+            } else if (response.status === 409) {
+              const json = await response.json();
+              clearTimeout(timeoutId);
+              maybeHideDeliveryChannelSpinner();
+              if (json.version >= maxSeenVersion) {
+                showRefreshPopup("Settings are out of date. Please refresh the page.");
+              }
+              // If the version is older, we're expecting some other request to succeed
             } else {
-                timezoneSuggestion.classList.add("hidden");
+              clearTimeout(timeoutId);
+              maybeHideDeliveryChannelSpinner();
+              if (requestVersion === maxSeenVersion) {
+                showRefreshPopup("Something went wrong. Please refresh the page.");
+              }
+              // If the version is older, we're expecting some other request to succeed
             }
-            document.getElementById("future_timezone").classList.remove("hidden");
-        }
-
-        updateTimezoneLabels();
-
-        let deliveryChannelRequestsInFlight = 0;
-
-        function showDeliveryChannelSpinner() {
-            deliveryChannelRequestsInFlight++;
-            let spinner = document.getElementById("delivery_channel_save_spinner");
-            spinner.classList.remove("hidden");
-        }
-
-        function maybeHideDeliveryChannelSpinner() {
-            deliveryChannelRequestsInFlight--;
-            if (deliveryChannelRequestsInFlight === 0) {
-                let spinner = document.getElementById("delivery_channel_save_spinner");
-                spinner.classList.add("hidden");
-            }
-        }
-
-        const deliveryChannelRadios = document.querySelectorAll("input[name='delivery_channel']");
-        for (let radio of deliveryChannelRadios) {
-            radio.addEventListener("change", async (event) => {
-                showDeliveryChannelSpinner();
-                maxSeenVersion += 1;
-                const requestVersion = maxSeenVersion;
-
-                try {
-                    const abortController = new AbortController();
-                    const timeoutId = setTimeout(() => abortController.abort(), 30000);
-                    let formData = new FormData();
-                    formData.set("delivery_channel", event.target.value);
-                    formData.set("client_timezone", clientTimezone); // Just for logging
-                    formData.set("client_offset", clientOffset.toString()); // Just for logging
-                    formData.set("version", requestVersion);
-                    const body = new URLSearchParams(formData);
-                    const response = await fetch(
-                        "settings/save_delivery_channel",
-                        {
-                            method: "post",
-                            headers: {
-                                "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
-                            },
-                            body: body,
-                            signal: abortController.signal
-                        }
-                    );
-
-                    if (response.status === 200) {
-                        clearTimeout(timeoutId);
-                        maybeHideDeliveryChannelSpinner();
-                    } else if (response.status === 409) {
-                        const json = await response.json();
-                        clearTimeout(timeoutId);
-                        maybeHideDeliveryChannelSpinner();
-                        if (json.version >= maxSeenVersion) {
-                            showRefreshPopup("Settings are out of date. Please refresh the page.");
-                        }
-                        // If the version is older, we're expecting some other request to succeed
-                    } else {
-                        clearTimeout(timeoutId);
-                        maybeHideDeliveryChannelSpinner();
-                        if (requestVersion === maxSeenVersion) {
-                            showRefreshPopup("Something went wrong. Please refresh the page.");
-                        }
-                        // If the version is older, we're expecting some other request to succeed
-                    }
-                } catch (err) {
-                    // Timeout
-                    maybeHideDeliveryChannelSpinner();
-                    showRefreshPopup("Something went wrong. Please refresh the page.");
-                }
-            });
-        }
+          } catch (err) {
+            // Timeout
+            maybeHideDeliveryChannelSpinner();
+            showRefreshPopup("Something went wrong. Please refresh the page.");
+          }
+        });
+      }
     </script>
   </div>
 </div>

@@ -72,27 +72,27 @@
           </div>
 
           <script>
-              document.getElementById("web_reader_menu_button").addEventListener("click", () => {
-                  let userMenu = document.getElementById("web_reader_menu");
-                  userMenu.classList.remove("dropdown-disappear");
-                  userMenu.classList.remove("hidden");
-                  userMenu.classList.add("dropdown-appear");
-                  document.getElementById("web_reader_menu_background").classList.remove("hidden");
-              });
+            document.getElementById("web_reader_menu_button").addEventListener("click", () => {
+              let userMenu = document.getElementById("web_reader_menu");
+              userMenu.classList.remove("dropdown-disappear");
+              userMenu.classList.remove("hidden");
+              userMenu.classList.add("dropdown-appear");
+              document.getElementById("web_reader_menu_background").classList.remove("hidden");
+            });
 
-              document.getElementById("web_reader_menu_background").addEventListener("click", () => {
-                  let userMenu = document.getElementById("web_reader_menu");
-                  userMenu.classList.remove("dropdown-appear");
-                  userMenu.classList.add("dropdown-disappear");
-                  document.getElementById("web_reader_menu_background").classList.add("hidden");
-              });
+            document.getElementById("web_reader_menu_background").addEventListener("click", () => {
+              let userMenu = document.getElementById("web_reader_menu");
+              userMenu.classList.remove("dropdown-appear");
+              userMenu.classList.add("dropdown-disappear");
+              document.getElementById("web_reader_menu_background").classList.add("hidden");
+            });
 
-              document.getElementById("web_reader_menu").addEventListener("animationend", (event) => {
-                  let userMenu = document.getElementById("web_reader_menu");
-                  if (event.animationName === "dropdown-disappear") {
-                      userMenu.classList.add("hidden");
-                  }
-              });
+            document.getElementById("web_reader_menu").addEventListener("animationend", (event) => {
+              let userMenu = document.getElementById("web_reader_menu");
+              if (event.animationName === "dropdown-disappear") {
+                userMenu.classList.add("hidden");
+              }
+            });
           </script>
         </div>
       </div>

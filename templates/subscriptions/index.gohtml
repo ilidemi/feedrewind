@@ -29,14 +29,14 @@
               </button>
 
               <script>
-                  document
-                      .getElementById("delete_button_{{.Id}}")
-                      .addEventListener("click", () => {
-                          showDeleteSubscriptionPopup(
-                              "Delete ", "{{.Name}}", "? This cannot be undone.", "{{.DeletePath}}",
-                              "Keep", "Delete"
-                          );
-                      })
+                document
+                  .getElementById("delete_button_{{.Id}}")
+                  .addEventListener("click", () => {
+                    showDeleteSubscriptionPopup(
+                      "Delete ", "{{.Name}}", "? This cannot be undone.", "{{.DeletePath}}",
+                      "Keep", "Delete"
+                    );
+                  })
               </script>
             {{end}}
           </div>

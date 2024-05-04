@@ -32,11 +32,11 @@
         <span>All done</span>
       {{else}}
         <span id="active_status"
-              {{if .IsPaused}} class="hidden" {{end}}
+          {{if .IsPaused}} class="hidden" {{end}}
         >
           Active
         </span><span id="paused_status"
-              {{if not .IsPaused}} class="hidden" {{end}}
+          {{if not .IsPaused}} class="hidden" {{end}}
         >
           Paused
         </span>
@@ -63,99 +63,97 @@
         </div>
 
         <script>
-            function showPauseSpinner() {
-                let spinner = document.getElementById("paused_save_spinner");
-                spinner.classList.remove("hidden");
-                void spinner.offsetWidth; // trigger reflow
-            }
+          function showPauseSpinner() {
+            let spinner = document.getElementById("paused_save_spinner");
+            spinner.classList.remove("hidden");
+            void spinner.offsetWidth; // trigger reflow
+          }
 
-            function hidePauseSpinner() {
-                let spinner = document.getElementById("paused_save_spinner");
-                spinner.classList.add("hidden");
-            }
+          function hidePauseSpinner() {
+            let spinner = document.getElementById("paused_save_spinner");
+            spinner.classList.add("hidden");
+          }
 
-            const activeStatus = document.getElementById("active_status");
-            const pausedStatus = document.getElementById("paused_status");
-            const pauseButton = document.getElementById("pause_button");
-            const resumeButton = document.getElementById("resume_button");
+          const activeStatus = document.getElementById("active_status");
+          const pausedStatus = document.getElementById("paused_status");
+          const pauseButton = document.getElementById("pause_button");
+          const resumeButton = document.getElementById("resume_button");
 
-            pauseButton.addEventListener("click", async () => {
-                pauseButton.disabled = true;
-                showPauseSpinner();
+          pauseButton.addEventListener("click", async () => {
+            pauseButton.disabled = true;
+            showPauseSpinner();
 
-                try {
-                    const abortController = new AbortController();
-                    const timeoutId = setTimeout(() => abortController.abort(), 30000);
-                    const response = await fetch(
-                        "{{.PausePath}}",
-                        {
-                            method: "post",
-                            headers: {
-                                "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
-                            },
-                            signal: abortController.signal
-                        }
-                    );
-
-                    if (response.status === 200) {
-                        clearTimeout(timeoutId);
-                        hidePauseSpinner();
-                        pauseButton.disabled = false;
-                        activeStatus.classList.add("hidden");
-                        pauseButton.classList.add("hidden");
-                        pausedStatus.classList.remove("hidden");
-                        resumeButton.classList.remove("hidden");
-
-                    } else {
-                        clearTimeout(timeoutId);
-                        hidePauseSpinner();
-                        showRefreshPopup("Something went wrong. Please refresh the page.");
-                    }
-                } catch (err) {
-                    // Timeout
-                    hidePauseSpinner();
-                    showRefreshPopup("Something went wrong. Please refresh the page.");
+            try {
+              const abortController = new AbortController();
+              const timeoutId = setTimeout(() => abortController.abort(), 30000);
+              const response = await fetch(
+                "{{.PausePath}}",
+                {
+                  method: "post",
+                  headers: {
+                      "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                  },
+                  signal: abortController.signal
                 }
-            });
+              );
 
-            resumeButton.addEventListener("click", async () => {
-                resumeButton.disabled = true;
-                showPauseSpinner();
+              if (response.status === 200) {
+                clearTimeout(timeoutId);
+                hidePauseSpinner();
+                pauseButton.disabled = false;
+                activeStatus.classList.add("hidden");
+                pauseButton.classList.add("hidden");
+                pausedStatus.classList.remove("hidden");
+                resumeButton.classList.remove("hidden");
+              } else {
+                clearTimeout(timeoutId);
+                hidePauseSpinner();
+                showRefreshPopup("Something went wrong. Please refresh the page.");
+              }
+            } catch (err) {
+              // Timeout
+              hidePauseSpinner();
+              showRefreshPopup("Something went wrong. Please refresh the page.");
+            }
+          });
 
-                try {
-                    const abortController = new AbortController();
-                    const timeoutId = setTimeout(() => abortController.abort(), 30000);
-                    const response = await fetch(
-                        "{{.UnpausePath}}",
-                        {
-                            method: "post",
-                            headers: {
-                                "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
-                            },
-                            signal: abortController.signal
-                        }
-                    );
+          resumeButton.addEventListener("click", async () => {
+            resumeButton.disabled = true;
+            showPauseSpinner();
 
-                    if (response.status === 200) {
-                        clearTimeout(timeoutId);
-                        hidePauseSpinner();
-                        resumeButton.disabled = false;
-                        pausedStatus.classList.add("hidden");
-                        resumeButton.classList.add("hidden");
-                        activeStatus.classList.remove("hidden");
-                        pauseButton.classList.remove("hidden");
-
-                    } else {
-                        clearTimeout(timeoutId);
-                        hidePauseSpinner();
-                        showRefreshPopup("Something went wrong. Please refresh the page.");
-                    }
-                } catch (err) {
-                    // Timeout
-                    hidePauseSpinner();
-                    showRefreshPopup("Something went wrong. Please refresh the page.");
+            try {
+              const abortController = new AbortController();
+              const timeoutId = setTimeout(() => abortController.abort(), 30000);
+              const response = await fetch(
+                "{{.UnpausePath}}",
+                {
+                  method: "post",
+                  headers: {
+                    "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                  },
+                  signal: abortController.signal
                 }
-            });
+              );
+
+              if (response.status === 200) {
+                clearTimeout(timeoutId);
+                hidePauseSpinner();
+                resumeButton.disabled = false;
+                pausedStatus.classList.add("hidden");
+                resumeButton.classList.add("hidden");
+                activeStatus.classList.remove("hidden");
+                pauseButton.classList.remove("hidden");
+              } else {
+                clearTimeout(timeoutId);
+                hidePauseSpinner();
+                showRefreshPopup("Something went wrong. Please refresh the page.");
+              }
+            } catch (err) {
+              // Timeout
+              hidePauseSpinner();
+              showRefreshPopup("Something went wrong. Please refresh the page.");
+            }
+          });
         </script>
       {{end}}
     </div>
@@ -180,100 +178,100 @@
         </div>
 
         <script>
-            let scheduleRequestsInFlight = 0;
-            let isScheduleValid = true;
-            let maxSeenScheduleVersion = {{.ScheduleVersion}};
+          let scheduleRequestsInFlight = 0;
+          let isScheduleValid = true;
+          let maxSeenScheduleVersion = {{.ScheduleVersion}};
 
-            function showScheduleSpinner() {
-                scheduleRequestsInFlight++;
-                let spinner = document.getElementById("schedule_save_spinner");
-                spinner.classList.remove("hidden");
-                void spinner.offsetWidth; // trigger reflow
+          function showScheduleSpinner() {
+            scheduleRequestsInFlight++;
+            let spinner = document.getElementById("schedule_save_spinner");
+            spinner.classList.remove("hidden");
+            void spinner.offsetWidth; // trigger reflow
+          }
+
+          function maybeHideScheduleSpinner() {
+            scheduleRequestsInFlight--;
+            if (scheduleRequestsInFlight === 0) {
+              let spinner = document.getElementById("schedule_save_spinner");
+              spinner.classList.add("hidden");
+            }
+          }
+
+          async function {{.ScheduleJS.ValidateCallback}}(isValid, countsByDay, hasSomethingChanged) {
+            isScheduleValid = isValid;
+
+            const scheduleHeader = document.getElementById("schedule_header");
+            const scheduleError = document.getElementById("schedule_empty_error");
+            const scheduleSpinnerContainer = document.getElementById("schedule_save_spinner_container");
+            const scheduleMobile = document.getElementById("schedule_mobile");
+            if (isValid) {
+              scheduleError.classList.add("invisible");
+              scheduleSpinnerContainer.classList.remove("hidden");
+              updateNextPosts(countsByDay);
+            } else {
+              scheduleSpinnerContainer.classList.add("hidden");
+              const scheduleMobileStyle = window.getComputedStyle(scheduleMobile);
+              if (scheduleMobileStyle.display !== "none") {
+                scheduleHeader.style.maxWidth = scheduleMobileStyle.width;
+              } else {
+                scheduleHeader.style.maxWidth = null;
+              }
+              scheduleError.classList.remove("invisible");
+              // Don't update next posts because the schedule won't be saved
             }
 
-            function maybeHideScheduleSpinner() {
-                scheduleRequestsInFlight--;
-                if (scheduleRequestsInFlight === 0) {
-                    let spinner = document.getElementById("schedule_save_spinner");
-                    spinner.classList.add("hidden");
-                }
-            }
+            if (isValid && hasSomethingChanged) {
+              showScheduleSpinner();
+              maxSeenScheduleVersion += 1;
+              const requestVersion = maxSeenScheduleVersion;
 
-            async function {{.ScheduleJS.ValidateCallback}}(isValid, countsByDay, hasSomethingChanged) {
-                isScheduleValid = isValid;
+              try {
+                const abortController = new AbortController();
+                const timeoutId = setTimeout(() => abortController.abort(), 30000);
+                const formData = new FormData(document.getElementById("schedule_form"));
+                formData.set("schedule_version", maxSeenScheduleVersion);
+                const body = new URLSearchParams(formData);
+                const response = await fetch(
+                  window.location,
+                  {
+                    method: "post",
+                    headers: {
+                        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: body,
+                    signal: abortController.signal
+                  }
+                );
 
-                const scheduleHeader = document.getElementById("schedule_header");
-                const scheduleError = document.getElementById("schedule_empty_error");
-                const scheduleSpinnerContainer = document.getElementById("schedule_save_spinner_container");
-                const scheduleMobile = document.getElementById("schedule_mobile");
-                if (isValid) {
-                    scheduleError.classList.add("invisible");
-                    scheduleSpinnerContainer.classList.remove("hidden");
-                    updateNextPosts(countsByDay);
+                if (response.status === 200) {
+                  clearTimeout(timeoutId);
+                  maybeHideScheduleSpinner();
+                } else if (response.status === 409) {
+                  const json = await response.json();
+                  clearTimeout(timeoutId);
+                  maybeHideScheduleSpinner();
+                  if (json.schedule_version >= maxSeenScheduleVersion) {
+                    showRefreshPopup("Schedule is out of date. Please refresh the page.");
+                  }
+                  // If the version is older, we're expecting some other request to succeed
                 } else {
-                    scheduleSpinnerContainer.classList.add("hidden");
-                    const scheduleMobileStyle = window.getComputedStyle(scheduleMobile);
-                    if (scheduleMobileStyle.display !== "none") {
-                        scheduleHeader.style.maxWidth = scheduleMobileStyle.width;
-                    } else {
-                        scheduleHeader.style.maxWidth = null;
-                    }
-                    scheduleError.classList.remove("invisible");
-                    // Don't update next posts because the schedule won't be saved
+                  clearTimeout(timeoutId);
+                  maybeHideScheduleSpinner();
+                  if (requestVersion === maxSeenScheduleVersion) {
+                    showRefreshPopup("Something went wrong. Please refresh the page.");
+                  }
+                  // If the version is older, we're expecting some other request to succeed
                 }
-
-                if (isValid && hasSomethingChanged) {
-                    showScheduleSpinner();
-                    maxSeenScheduleVersion += 1;
-                    const requestVersion = maxSeenScheduleVersion;
-
-                    try {
-                        const abortController = new AbortController();
-                        const timeoutId = setTimeout(() => abortController.abort(), 30000);
-                        const formData = new FormData(document.getElementById("schedule_form"));
-                        formData.set("schedule_version", maxSeenScheduleVersion);
-                        const body = new URLSearchParams(formData);
-                        const response = await fetch(
-                            window.location,
-                            {
-                                method: "post",
-                                headers: {
-                                    "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
-                                },
-                                body: body,
-                                signal: abortController.signal
-                            }
-                        );
-
-                        if (response.status === 200) {
-                            clearTimeout(timeoutId);
-                            maybeHideScheduleSpinner();
-                        } else if (response.status === 409) {
-                            const json = await response.json();
-                            clearTimeout(timeoutId);
-                            maybeHideScheduleSpinner();
-                            if (json.schedule_version >= maxSeenScheduleVersion) {
-                                showRefreshPopup("Schedule is out of date. Please refresh the page.");
-                            }
-                            // If the version is older, we're expecting some other request to succeed
-                        } else {
-                            clearTimeout(timeoutId);
-                            maybeHideScheduleSpinner();
-                            if (requestVersion === maxSeenScheduleVersion) {
-                                showRefreshPopup("Something went wrong. Please refresh the page.");
-                            }
-                            // If the version is older, we're expecting some other request to succeed
-                        }
-                    } catch (err) {
-                        // Timeout
-                        maybeHideScheduleSpinner();
-                        showRefreshPopup("Something went wrong. Please refresh the page.");
-                    }
-                }
+              } catch (err) {
+                // Timeout
+                maybeHideScheduleSpinner();
+                showRefreshPopup("Something went wrong. Please refresh the page.");
+              }
             }
+          }
 
-            function {{.ScheduleJS.SetNameChangeCallback}}(callback) {
-            }
+          function {{.ScheduleJS.SetNameChangeCallback}}(callback) {
+          }
         </script>
       </form>
 
@@ -293,13 +291,13 @@
     </button>
 
     <script>
-        document
-            .getElementById("delete_button")
-            .addEventListener("click", () => {
-                showDeleteSubscriptionPopup(
-                    "Delete ", "{{.Name}}", "? This cannot be undone.", "{{.DeletePath}}", "Keep", "Delete"
-                );
-            })
+      document
+        .getElementById("delete_button")
+        .addEventListener("click", () => {
+          showDeleteSubscriptionPopup(
+            "Delete ", "{{.Name}}", "? This cannot be undone.", "{{.DeletePath}}", "Keep", "Delete"
+          );
+        })
     </script>
   </div>
 </div>

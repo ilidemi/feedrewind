@@ -92,22 +92,22 @@
                 {{end}}
                 <div id="link_glow_color" class="hidden text-primary-400"></div>
                 <script>
-                    let linkGlowColor = window.getComputedStyle(
-                        document.getElementById("link_glow_color")
-                    ).getPropertyValue("color");
-                    for (let i = 0; i < {{.LinksCount}}; i++) {
-                        document.getElementById(`landing_post_${i}`).animate([
-                            {color: "black"},
-                            {color: "black", offset: 0.3 + 0.05 * i},
-                            {color: linkGlowColor, offset: 0.4 + 0.05 * i},
-                            {color: "black", offset: 0.5 + 0.05 * i},
-                            {color: "black"}
-                        ], {
-                            easing: "ease-in-out",
-                            duration: 5000,
-                            iterations: Infinity
-                        });
-                    }
+                  let linkGlowColor = window.getComputedStyle(
+                    document.getElementById("link_glow_color")
+                  ).getPropertyValue("color");
+                  for (let i = 0; i < {{.LinksCount}}; i++) {
+                    document.getElementById(`landing_post_${i}`).animate([
+                      {color: "black"},
+                      {color: "black", offset: 0.3 + 0.05 * i},
+                      {color: linkGlowColor, offset: 0.4 + 0.05 * i},
+                      {color: "black", offset: 0.5 + 0.05 * i},
+                      {color: "black"}
+                    ], {
+                      easing: "ease-in-out",
+                      duration: 5000,
+                      iterations: Infinity
+                    });
+                  }
                 </script>
               </div>
             </div>
@@ -192,22 +192,22 @@
       </div>
     </div>
     <script>
-        let screenshotsAreScaled = false;
-        let scaleScreenshots = () => {
-            let mainWidth = document.getElementsByTagName("main")[0].offsetWidth;
-            let defaultWidth = 480;
-            if (mainWidth >= defaultWidth && !screenshotsAreScaled) {
-                return;
-            }
-            let ratio = Math.min(mainWidth / defaultWidth, 1.0);
-            let container = document.getElementById("screenshot_container");
-            let scaledContainer = document.getElementById("screenshot_scaled_container");
-            scaledContainer.style.transform = `scale(${ratio})`
-            container.style.maxHeight = `${scaledContainer.offsetHeight * ratio}px`;
-            screenshotsAreScaled = true;
+      let screenshotsAreScaled = false;
+      let scaleScreenshots = () => {
+        let mainWidth = document.getElementsByTagName("main")[0].offsetWidth;
+        let defaultWidth = 480;
+        if (mainWidth >= defaultWidth && !screenshotsAreScaled) {
+          return;
         }
-        scaleScreenshots();
-        window.addEventListener("resize", scaleScreenshots);
+        let ratio = Math.min(mainWidth / defaultWidth, 1.0);
+        let container = document.getElementById("screenshot_container");
+        let scaledContainer = document.getElementById("screenshot_scaled_container");
+        scaledContainer.style.transform = `scale(${ratio})`
+        container.style.maxHeight = `${scaledContainer.offsetHeight * ratio}px`;
+        screenshotsAreScaled = true;
+      }
+      scaleScreenshots();
+      window.addEventListener("resize", scaleScreenshots);
     </script>
     {{end}}
 
@@ -240,18 +240,18 @@
           </button>
 
           <script>
-              function showSpinner() {
-                  const label = document.getElementById("discover_go_label");
-                  label.classList.add("invisible");
-                  const spinner = document.getElementById("discover_spinner");
-                  spinner.classList.remove("hidden");
-                  void spinner.offsetWidth; // trigger reflow
-              }
+            function showSpinner() {
+              const label = document.getElementById("discover_go_label");
+              label.classList.add("invisible");
+              const spinner = document.getElementById("discover_spinner");
+              spinner.classList.remove("hidden");
+              void spinner.offsetWidth; // trigger reflow
+            }
 
-              const discoverButton = document.getElementById("discover_go");
-              discoverButton.addEventListener("click", () => {
-                  showSpinner();
-              });
+            const discoverButton = document.getElementById("discover_go");
+            discoverButton.addEventListener("click", () => {
+              showSpinner();
+            });
           </script>
         </div>
       </form>

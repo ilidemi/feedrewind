@@ -17,34 +17,34 @@
   <div class="overflow-wrap-break-word">
     <div id="select_posts" class="flex flex-col gap-6 mb-8">
       <style>
-          body {
-              overflow-y: scroll; /* Show scrollbars */
-          }
+        body {
+          overflow-y: scroll; /* Show scrollbars */
+        }
       </style>
       <ul id="category_tabs" role="tablist" class="flex flex-row flex-wrap">
         <script>
-            let prevSuffix = "0";
-            let activeSuffix = "0";
-            let activateTab = (suffix) => {
-                if (suffix === activeSuffix) return;
-                let currentTab = document.getElementById(`category_tab_${activeSuffix}`);
-                let newTab = document.getElementById(`category_tab_${suffix}`);
-                currentTab.classList.remove("active-tab");
-                currentTab.classList.add("tab");
-                currentTab.setAttribute("aria-selected", "false");
-                newTab.classList.remove("tab");
-                newTab.classList.add("active-tab");
-                newTab.setAttribute("aria-selected", "true");
-                let currentPosts = document.getElementById(`category_posts_${activeSuffix}`);
-                if (suffix > activeSuffix) {
-                    currentPosts.classList.add("tab-out-left");
-                } else {
-                    currentPosts.classList.add("tab-out-right");
-                }
-                document.getElementById("select_posts").classList.add("overflow-hidden");
-                prevSuffix = activeSuffix;
-                activeSuffix = suffix;
-            };
+          let prevSuffix = "0";
+          let activeSuffix = "0";
+          let activateTab = (suffix) => {
+            if (suffix === activeSuffix) return;
+            let currentTab = document.getElementById(`category_tab_${activeSuffix}`);
+            let newTab = document.getElementById(`category_tab_${suffix}`);
+            currentTab.classList.remove("active-tab");
+            currentTab.classList.add("tab");
+            currentTab.setAttribute("aria-selected", "false");
+            newTab.classList.remove("tab");
+            newTab.classList.add("active-tab");
+            newTab.setAttribute("aria-selected", "true");
+            let currentPosts = document.getElementById(`category_posts_${activeSuffix}`);
+            if (suffix > activeSuffix) {
+              currentPosts.classList.add("tab-out-left");
+            } else {
+              currentPosts.classList.add("tab-out-right");
+            }
+            document.getElementById("select_posts").classList.add("overflow-hidden");
+            prevSuffix = activeSuffix;
+            activeSuffix = suffix;
+          };
         </script>
 
         {{range $index, $topCategory := .TopCategories}}
@@ -58,9 +58,9 @@
             </button>
           </li>
           <script>
-              document
-                  .getElementById("category_tab_{{$index}}")
-                  .addEventListener("click", () => activateTab("{{$index}}"));
+            document
+              .getElementById("category_tab_{{$index}}")
+              .addEventListener("click", () => activateTab("{{$index}}"));
           </script>
         {{end}}
 
@@ -80,49 +80,49 @@
           </button>
         </li>
         <script>
-            document
-                .getElementById("category_tab_custom")
-                .addEventListener("click", () => activateTab("custom"));
+          document
+            .getElementById("category_tab_custom")
+            .addEventListener("click", () => activateTab("custom"));
         </script>
 
         <div id="category_tab_filler" class="flex-grow border-b-2 border-gray-200"></div>
       </ul>
       <script>
-          let categoryTabBar = document.getElementById("category_tabs");
-          let categoryTabFiller = document.getElementById("category_tab_filler");
-          let categoryTabs = Array.from(categoryTabBar.children).filter(e => e.tagName === "LI");
-          let totalTabWidth = 0;
-          for (let tab of categoryTabs) {
-              totalTabWidth += tab.offsetWidth;
+        let categoryTabBar = document.getElementById("category_tabs");
+        let categoryTabFiller = document.getElementById("category_tab_filler");
+        let categoryTabs = Array.from(categoryTabBar.children).filter(e => e.tagName === "LI");
+        let totalTabWidth = 0;
+        for (let tab of categoryTabs) {
+          totalTabWidth += tab.offsetWidth;
+        }
+        let areTabsAutoSized = false;
+
+        let updateTabsLayout = () => {
+          let tabBarWidth = categoryTabBar.offsetWidth;
+          if (totalTabWidth > tabBarWidth && !areTabsAutoSized) {
+            for (let tab of categoryTabs) {
+              tab.classList.add("flex-grow");
+            }
+            categoryTabFiller.classList.add("hidden");
+            areTabsAutoSized = true;
+          } else if (totalTabWidth <= tabBarWidth && areTabsAutoSized) {
+            for (let tab of categoryTabs) {
+              tab.classList.remove("flex-grow");
+            }
+            categoryTabFiller.classList.remove("hidden");
+            areTabsAutoSized = false;
           }
-          let areTabsAutoSized = false;
+        };
 
-          let updateTabsLayout = () => {
-              let tabBarWidth = categoryTabBar.offsetWidth;
-              if (totalTabWidth > tabBarWidth && !areTabsAutoSized) {
-                  for (let tab of categoryTabs) {
-                      tab.classList.add("flex-grow");
-                  }
-                  categoryTabFiller.classList.add("hidden");
-                  areTabsAutoSized = true;
-              } else if (totalTabWidth <= tabBarWidth && areTabsAutoSized) {
-                  for (let tab of categoryTabs) {
-                      tab.classList.remove("flex-grow");
-                  }
-                  categoryTabFiller.classList.remove("hidden");
-                  areTabsAutoSized = false;
-              }
-          };
-
-          updateTabsLayout();
-          window.addEventListener("resize", updateTabsLayout);
+        updateTabsLayout();
+        window.addEventListener("resize", updateTabsLayout);
       </script>
 
       <script>
-          let {{.MarkWrongFuncJS}} = (suffix) => {
-              const looksWrongField = document.getElementById(`looks_wrong_${suffix}`);
-              looksWrongField.value = "1";
-          };
+        let {{.MarkWrongFuncJS}} = (suffix) => {
+          const looksWrongField = document.getElementById(`looks_wrong_${suffix}`);
+          looksWrongField.value = "1";
+        };
       </script>
 
       {{$csrfField := .Session.CSRFField}}
@@ -159,104 +159,104 @@
                class="category-posts flex flex-col gap-6 hidden"
       >
         <script>
-            let postIdsByTopCategoryId = new Map([
-                {{range .TopCategories}}
-                [
-                    "{{.Id}}",
-                    new Set({{.BlogPostIdsJS}})
-                ],
-                {{end}}
-            ]);
+          let postIdsByTopCategoryId = new Map([
+            {{range .TopCategories}}
+            [
+              "{{.Id}}",
+              new Set({{.BlogPostIdsJS}})
+            ],
+            {{end}}
+          ]);
 
-            let topCategoryNamesById = new Map([
-                {{range .TopCategories}}
-                [
-                    "{{.Id}}",
-                    "{{.Name}}"
-                ],
-                {{end}}
-            ]);
+          let topCategoryNamesById = new Map([
+            {{range .TopCategories}}
+            [
+              "{{.Id}}",
+              "{{.Name}}"
+            ],
+            {{end}}
+          ]);
 
-            let allPostFormInputs = [];
-            let allPostCheckboxes = [];
+          let allPostFormInputs = [];
+          let allPostCheckboxes = [];
 
-            let isPostInputChecked = (postInput) => {
-                if (postInput.type === "checkbox") return postInput.checked;
-                return postInput.value === "1";
-            };
+          let isPostInputChecked = (postInput) => {
+            if (postInput.type === "checkbox") return postInput.checked;
+            return postInput.value === "1";
+          };
 
-            let updateSelectedCountAndButtons = () => {
-                let selectedPostIds = new Set();
-                for (let postInput of allPostFormInputs) {
-                    if (!isPostInputChecked(postInput)) continue;
+          let updateSelectedCountAndButtons = () => {
+            let selectedPostIds = new Set();
+            for (let postInput of allPostFormInputs) {
+              if (!isPostInputChecked(postInput)) continue;
 
-                    selectedPostIds.add(postInput.dataset.postId);
+              selectedPostIds.add(postInput.dataset.postId);
+            }
+
+            let selectedCategoryId;
+            for (let [categoryId, postIds] of postIdsByTopCategoryId) {
+              if (selectedPostIds.size !== postIds.size) continue;
+
+              let arePostsMatching = true;
+              for (let selectedPostId of selectedPostIds) {
+                if (!postIds.has(selectedPostId)) {
+                  arePostsMatching = false;
+                  break;
                 }
+              }
+              if (!arePostsMatching) continue;
 
-                let selectedCategoryId;
-                for (let [categoryId, postIds] of postIdsByTopCategoryId) {
-                    if (selectedPostIds.size !== postIds.size) continue;
+              selectedCategoryId = categoryId;
+              break;
+            }
+            let selectedCountLabel = document.getElementById("selected_count_label");
+            let topCategoryIdField = document.getElementById("top_category_custom");
+            if (selectedCategoryId) {
+              let selectedCategoryName = topCategoryNamesById.get(selectedCategoryId);
+              selectedCountLabel.innerText = `${selectedCategoryName} (${selectedPostIds.size})`;
+              topCategoryIdField.value = selectedCategoryId;
+            } else {
+              selectedCountLabel.innerText = `${selectedPostIds.size}`;
+              topCategoryIdField.value = null;
+            }
 
-                    let arePostsMatching = true;
-                    for (let selectedPostId of selectedPostIds) {
-                        if (!postIds.has(selectedPostId)) {
-                            arePostsMatching = false;
-                            break;
-                        }
-                    }
-                    if (!arePostsMatching) continue;
+            let selectAllButton = document.getElementById("select_all_btn");
+            let unselectAllButton = document.getElementById("unselect_all_btn");
+            let resetSelectionButton = document.getElementById("reset_selection_btn");
+            if (selectedPostIds.size === {{.AllPostsCount}}) {
+              selectAllButton.disabled = true;
+              unselectAllButton.disabled = false;
+              if (resetSelectionButton) resetSelectionButton.disabled = false;
+            } else if (selectedPostIds.size === 0) {
+              selectAllButton.disabled = false;
+              unselectAllButton.disabled = true;
+              if (resetSelectionButton) resetSelectionButton.disabled = false;
+            } else if (resetSelectionButton &&
+              selectedCategoryId &&
+              selectedCategoryId === "{{.CheckedTopCategoryId}}"
+            ) {
+              selectAllButton.disabled = false;
+              unselectAllButton.disabled = false;
+              resetSelectionButton.disabled = true;
+            } else {
+              selectAllButton.disabled = false;
+              unselectAllButton.disabled = false;
+              if (resetSelectionButton) resetSelectionButton.disabled = false;
+            }
 
-                    selectedCategoryId = categoryId;
-                    break;
-                }
-                let selectedCountLabel = document.getElementById("selected_count_label");
-                let topCategoryIdField = document.getElementById("top_category_custom");
-                if (selectedCategoryId) {
-                    let selectedCategoryName = topCategoryNamesById.get(selectedCategoryId);
-                    selectedCountLabel.innerText = `${selectedCategoryName} (${selectedPostIds.size})`;
-                    topCategoryIdField.value = selectedCategoryId;
-                } else {
-                    selectedCountLabel.innerText = `${selectedPostIds.size}`;
-                    topCategoryIdField.value = null;
-                }
-
-                let selectAllButton = document.getElementById("select_all_btn");
-                let unselectAllButton = document.getElementById("unselect_all_btn");
-                let resetSelectionButton = document.getElementById("reset_selection_btn");
-                if (selectedPostIds.size === {{.AllPostsCount}}) {
-                    selectAllButton.disabled = true;
-                    unselectAllButton.disabled = false;
-                    if (resetSelectionButton) resetSelectionButton.disabled = false;
-                } else if (selectedPostIds.size === 0) {
-                    selectAllButton.disabled = false;
-                    unselectAllButton.disabled = true;
-                    if (resetSelectionButton) resetSelectionButton.disabled = false;
-                } else if (resetSelectionButton &&
-                    selectedCategoryId &&
-                    selectedCategoryId === "{{.CheckedTopCategoryId}}"
-                ) {
-                    selectAllButton.disabled = false;
-                    unselectAllButton.disabled = false;
-                    resetSelectionButton.disabled = true;
-                } else {
-                    selectAllButton.disabled = false;
-                    unselectAllButton.disabled = false;
-                    if (resetSelectionButton) resetSelectionButton.disabled = false;
-                }
-
-                let continueButton = document.getElementById("continue_btn_custom");
-                let continueButton2 = document.getElementById("continue_btn_2_custom");
-                let continueError = document.getElementById("continue_error_custom");
-                if (selectedPostIds.size > 0) {
-                    continueButton.disabled = false;
-                    continueButton2.disabled = false;
-                    continueError.classList.add("invisible");
-                } else {
-                    continueButton.disabled = true;
-                    continueButton2.disabled = true;
-                    continueError.classList.remove("invisible");
-                }
-            };
+            let continueButton = document.getElementById("continue_btn_custom");
+            let continueButton2 = document.getElementById("continue_btn_2_custom");
+            let continueError = document.getElementById("continue_error_custom");
+            if (selectedPostIds.size > 0) {
+              continueButton.disabled = false;
+              continueButton2.disabled = false;
+              continueError.classList.add("invisible");
+            } else {
+              continueButton.disabled = true;
+              continueButton2.disabled = true;
+              continueError.classList.remove("invisible");
+            }
+          };
         </script>
 
         <div class="flex flex-row flex-wrap gap-3 -mt-3">
@@ -298,134 +298,134 @@
         <div class="flex flex-col gap-1.5">
           <div class="{{if .CustomCategories}}font-semibold{{end}}">Selected:
             <span id="selected_count_label">
-                {{.CheckedTopCategoryName}} ({{.CheckedBlogPostIdsCount}})
+              {{.CheckedTopCategoryName}} ({{.CheckedBlogPostIdsCount}})
             </span>
           </div>
 
           {{if .CustomCategories}}
             <script>
-                let allCategoryCheckboxes = [];
-                let postCheckboxesByCategoryIndex = [];
-                let postCheckboxesByPostId = new Map();
-                let postHiddenFieldsByPostId = new Map();
+              let allCategoryCheckboxes = [];
+              let postCheckboxesByCategoryIndex = [];
+              let postCheckboxesByPostId = new Map();
+              let postHiddenFieldsByPostId = new Map();
 
-                let updateCategorySelection = (categoryCheckbox) => {
-                    if (categoryCheckbox.dataset.postsCheckedCount === categoryCheckbox.dataset.postsCount) {
-                        categoryCheckbox.checked = true;
-                        categoryCheckbox.indeterminate = false;
-                    } else if (categoryCheckbox.dataset.postsCheckedCount === '0') {
-                        categoryCheckbox.checked = false;
-                        categoryCheckbox.indeterminate = false;
-                    } else {
-                        categoryCheckbox.indeterminate = true;
-                    }
-                };
-
-                let updatePostSelection = (isPostIdSelected) => {
-                    for (let checkbox of allPostCheckboxes) {
-                        checkbox.checked = isPostIdSelected(checkbox.dataset.postId);
-                        let postId = checkbox.dataset.postId;
-                        let hiddenField = document.getElementById(`post_${postId}`);
-                        hiddenField.value = checkbox.checked ? "1" : "0";
-                    }
-                    for (let categoryCheckbox of allCategoryCheckboxes) {
-                        let categoryIndex = categoryCheckbox.dataset.selfIndex;
-                        let childCheckboxes = postCheckboxesByCategoryIndex[parseInt(categoryIndex)];
-                        let childrenCheckedCount = 0;
-                        for (let childCheckbox of childCheckboxes) {
-                            if (childCheckbox.checked) {
-                                childrenCheckedCount += 1;
-                            }
-                        }
-                        categoryCheckbox.dataset.postsCheckedCount = childrenCheckedCount.toString();
-                        updateCategorySelection(categoryCheckbox);
-                    }
-                    updateSelectedCountAndButtons();
+              let updateCategorySelection = (categoryCheckbox) => {
+                if (categoryCheckbox.dataset.postsCheckedCount === categoryCheckbox.dataset.postsCount) {
+                  categoryCheckbox.checked = true;
+                  categoryCheckbox.indeterminate = false;
+                } else if (categoryCheckbox.dataset.postsCheckedCount === '0') {
+                  categoryCheckbox.checked = false;
+                  categoryCheckbox.indeterminate = false;
+                } else {
+                  categoryCheckbox.indeterminate = true;
                 }
+              };
 
-                let updateCategoryCountAndSelection = (categoryIndex, checkedDelta) => {
-                    let categoryCheckbox = document.getElementById(`category_${categoryIndex}`);
-                    categoryCheckbox.dataset.postsCheckedCount =
-                        (parseInt(categoryCheckbox.dataset.postsCheckedCount) + checkedDelta)
-                            .toString();
-                    updateCategorySelection(categoryCheckbox);
-                };
-
-                let handleCategoryChange = (event) => {
-                    let categoryIndex = parseInt(event.target.dataset.selfIndex);
-                    let checkedDelta = event.target.checked ? 1 : -1;
-                    let childCheckboxes = postCheckboxesByCategoryIndex[categoryIndex];
-                    let selectedCountDelta = 0;
-                    let checkedDeltaByCategoryIndex = new Map();
-                    for (let childCheckbox of childCheckboxes) {
-                        if (childCheckbox.checked === event.target.checked) continue;
-
-                        selectedCountDelta += 1;
-                        childCheckbox.checked = event.target.checked;
-                        let postId = parseInt(childCheckbox.dataset.postId);
-                        let hiddenField = postHiddenFieldsByPostId.get(postId);
-                        hiddenField.value = event.target.checked ? "1" : "0";
-                        let postCheckboxes = postCheckboxesByPostId.get(postId);
-                        for (let postCheckbox of postCheckboxes) {
-                            let postCategoryIndex = parseInt(postCheckbox.dataset.categoryIndex);
-                            if (postCategoryIndex === categoryIndex) continue;
-
-                            postCheckbox.checked = event.target.checked;
-                            if (checkedDeltaByCategoryIndex.has(postCategoryIndex)) {
-                                let prevCheckedDelta = checkedDeltaByCategoryIndex.get(postCategoryIndex);
-                                checkedDeltaByCategoryIndex.set(
-                                    postCategoryIndex, prevCheckedDelta + checkedDelta
-                                );
-                            } else {
-                                checkedDeltaByCategoryIndex.set(postCategoryIndex, checkedDelta);
-                            }
-                        }
-                    }
-                    for (let [categoryIndex, checkedDelta] of checkedDeltaByCategoryIndex) {
-                        updateCategoryCountAndSelection(categoryIndex, checkedDelta);
-                    }
-                    event.target.dataset.postsCheckedCount =
-                        event.target.checked ? event.target.dataset.postsCount : '0';
-                    updateSelectedCountAndButtons();
-                };
-
-                let handlePostChange = (event) => {
-                    let checkedDelta = event.target.checked ? 1 : -1;
-                    let postId = event.target.dataset.postId;
-                    let hiddenField = document.getElementById(`post_${postId}`);
-                    hiddenField.value = event.target.checked ? "1" : "0";
-                    let postCheckboxes = postCheckboxesByPostId.get(parseInt(postId));
-                    for (let checkbox of postCheckboxes) {
-                        checkbox.checked = event.target.checked;
-                        let categoryIndex = checkbox.dataset.categoryIndex;
-                        updateCategoryCountAndSelection(categoryIndex, checkedDelta);
-                    }
-                    updateSelectedCountAndButtons();
-                };
-
-                let toggleCategory = (categoryIndex) => {
-                    let rightChevron = document.getElementById(`category_${categoryIndex}_right`);
-                    let downChevron = document.getElementById(`category_${categoryIndex}_down`);
-                    let childCheckboxes = postCheckboxesByCategoryIndex[categoryIndex];
-                    let isExpanded = rightChevron.classList.contains("hidden");
-                    if (isExpanded) {
-                        rightChevron.classList.remove("hidden");
-                        rightChevron.focus();
-                        downChevron.classList.add("hidden");
-                        for (let childCheckbox of childCheckboxes) {
-                            let post = childCheckbox.parentElement.parentElement;
-                            post.classList.add("hidden");
-                        }
-                    } else {
-                        rightChevron.classList.add("hidden");
-                        downChevron.classList.remove("hidden");
-                        downChevron.focus();
-                        for (let childCheckbox of childCheckboxes) {
-                            let post = childCheckbox.parentElement.parentElement;
-                            post.classList.remove("hidden");
-                        }
-                    }
+              let updatePostSelection = (isPostIdSelected) => {
+                for (let checkbox of allPostCheckboxes) {
+                  checkbox.checked = isPostIdSelected(checkbox.dataset.postId);
+                  let postId = checkbox.dataset.postId;
+                  let hiddenField = document.getElementById(`post_${postId}`);
+                  hiddenField.value = checkbox.checked ? "1" : "0";
                 }
+                for (let categoryCheckbox of allCategoryCheckboxes) {
+                  let categoryIndex = categoryCheckbox.dataset.selfIndex;
+                  let childCheckboxes = postCheckboxesByCategoryIndex[parseInt(categoryIndex)];
+                  let childrenCheckedCount = 0;
+                  for (let childCheckbox of childCheckboxes) {
+                    if (childCheckbox.checked) {
+                      childrenCheckedCount += 1;
+                    }
+                  }
+                  categoryCheckbox.dataset.postsCheckedCount = childrenCheckedCount.toString();
+                  updateCategorySelection(categoryCheckbox);
+                }
+                updateSelectedCountAndButtons();
+              }
+
+              let updateCategoryCountAndSelection = (categoryIndex, checkedDelta) => {
+                let categoryCheckbox = document.getElementById(`category_${categoryIndex}`);
+                categoryCheckbox.dataset.postsCheckedCount =
+                  (parseInt(categoryCheckbox.dataset.postsCheckedCount) + checkedDelta)
+                    .toString();
+                updateCategorySelection(categoryCheckbox);
+              };
+
+              let handleCategoryChange = (event) => {
+                let categoryIndex = parseInt(event.target.dataset.selfIndex);
+                let checkedDelta = event.target.checked ? 1 : -1;
+                let childCheckboxes = postCheckboxesByCategoryIndex[categoryIndex];
+                let selectedCountDelta = 0;
+                let checkedDeltaByCategoryIndex = new Map();
+                for (let childCheckbox of childCheckboxes) {
+                  if (childCheckbox.checked === event.target.checked) continue;
+
+                  selectedCountDelta += 1;
+                  childCheckbox.checked = event.target.checked;
+                  let postId = parseInt(childCheckbox.dataset.postId);
+                  let hiddenField = postHiddenFieldsByPostId.get(postId);
+                  hiddenField.value = event.target.checked ? "1" : "0";
+                  let postCheckboxes = postCheckboxesByPostId.get(postId);
+                  for (let postCheckbox of postCheckboxes) {
+                    let postCategoryIndex = parseInt(postCheckbox.dataset.categoryIndex);
+                    if (postCategoryIndex === categoryIndex) continue;
+
+                    postCheckbox.checked = event.target.checked;
+                    if (checkedDeltaByCategoryIndex.has(postCategoryIndex)) {
+                      let prevCheckedDelta = checkedDeltaByCategoryIndex.get(postCategoryIndex);
+                      checkedDeltaByCategoryIndex.set(
+                        postCategoryIndex, prevCheckedDelta + checkedDelta
+                      );
+                    } else {
+                      checkedDeltaByCategoryIndex.set(postCategoryIndex, checkedDelta);
+                    }
+                  }
+                }
+                for (let [categoryIndex, checkedDelta] of checkedDeltaByCategoryIndex) {
+                  updateCategoryCountAndSelection(categoryIndex, checkedDelta);
+                }
+                event.target.dataset.postsCheckedCount =
+                  event.target.checked ? event.target.dataset.postsCount : '0';
+                updateSelectedCountAndButtons();
+              };
+
+              let handlePostChange = (event) => {
+                let checkedDelta = event.target.checked ? 1 : -1;
+                let postId = event.target.dataset.postId;
+                let hiddenField = document.getElementById(`post_${postId}`);
+                hiddenField.value = event.target.checked ? "1" : "0";
+                let postCheckboxes = postCheckboxesByPostId.get(parseInt(postId));
+                for (let checkbox of postCheckboxes) {
+                  checkbox.checked = event.target.checked;
+                  let categoryIndex = checkbox.dataset.categoryIndex;
+                  updateCategoryCountAndSelection(categoryIndex, checkedDelta);
+                }
+                updateSelectedCountAndButtons();
+              };
+
+              let toggleCategory = (categoryIndex) => {
+                let rightChevron = document.getElementById(`category_${categoryIndex}_right`);
+                let downChevron = document.getElementById(`category_${categoryIndex}_down`);
+                let childCheckboxes = postCheckboxesByCategoryIndex[categoryIndex];
+                let isExpanded = rightChevron.classList.contains("hidden");
+                if (isExpanded) {
+                  rightChevron.classList.remove("hidden");
+                  rightChevron.focus();
+                  downChevron.classList.add("hidden");
+                  for (let childCheckbox of childCheckboxes) {
+                    let post = childCheckbox.parentElement.parentElement;
+                    post.classList.add("hidden");
+                  }
+                } else {
+                  rightChevron.classList.add("hidden");
+                  downChevron.classList.remove("hidden");
+                  downChevron.focus();
+                  for (let childCheckbox of childCheckboxes) {
+                    let post = childCheckbox.parentElement.parentElement;
+                    post.classList.remove("hidden");
+                  }
+                }
+              }
             </script>
 
             <div class="flex flex-col gap-6">
@@ -492,47 +492,47 @@
 
                 <script>
                     {{range $categoryIndex, $customCategory := .CustomCategories}}
-                        {
-                            document
-                                .getElementById("category_{{$categoryIndex}}_right")
-                                .addEventListener("click", () => {
-                                    toggleCategory({{$categoryIndex}});
-                                });
-                            document
-                                .getElementById("category_{{$categoryIndex}}_down")
-                                .addEventListener("click", () => {
-                                    toggleCategory({{$categoryIndex}});
-                                });
-                            document
-                                .getElementById("category_{{$categoryIndex}}_label")
-                                .addEventListener("click", (event) => {
-                                    toggleCategory({{$categoryIndex}});
-                                    // Expanding the category is less "destructive" than toggling the checkbox
-                                    event.preventDefault();
-                                });
+                      {
+                        document
+                          .getElementById("category_{{$categoryIndex}}_right")
+                          .addEventListener("click", () => {
+                            toggleCategory({{$categoryIndex}});
+                          });
+                        document
+                          .getElementById("category_{{$categoryIndex}}_down")
+                          .addEventListener("click", () => {
+                            toggleCategory({{$categoryIndex}});
+                          });
+                        document
+                          .getElementById("category_{{$categoryIndex}}_label")
+                          .addEventListener("click", (event) => {
+                            toggleCategory({{$categoryIndex}});
+                            // Expanding the category is less "destructive" than toggling the checkbox
+                            event.preventDefault();
+                          });
 
-                            let categoryCheckbox = document.getElementById("category_{{$categoryIndex}}");
-                            {{if $customCategory.IsIndeterminate}}
-                            categoryCheckbox.indeterminate = true;
-                            {{end}}
-                            categoryCheckbox.addEventListener("change", handleCategoryChange);
-
-                            allCategoryCheckboxes.push(categoryCheckbox);
-                            postCheckboxesByCategoryIndex[{{$categoryIndex}}] = [];
-                        }
-                        {{range $customCategory.Posts}}
-                            {
-                                let postCheckbox = document
-                                    .getElementById("post_{{$categoryIndex}}_{{.Id}}");
-                                postCheckbox.addEventListener("change", handlePostChange);
-                                allPostCheckboxes.push(postCheckbox);
-                                postCheckboxesByCategoryIndex[{{$categoryIndex}}].push(postCheckbox);
-                                if (!postCheckboxesByPostId.has({{.Id}})) {
-                                    postCheckboxesByPostId.set({{.Id}}, []);
-                                }
-                                postCheckboxesByPostId.get({{.Id}}).push(postCheckbox);
-                            }
+                        let categoryCheckbox = document.getElementById("category_{{$categoryIndex}}");
+                        {{if $customCategory.IsIndeterminate}}
+                        categoryCheckbox.indeterminate = true;
                         {{end}}
+                        categoryCheckbox.addEventListener("change", handleCategoryChange);
+
+                        allCategoryCheckboxes.push(categoryCheckbox);
+                        postCheckboxesByCategoryIndex[{{$categoryIndex}}] = [];
+                      }
+                      {{range $customCategory.Posts}}
+                        {
+                          let postCheckbox = document
+                            .getElementById("post_{{$categoryIndex}}_{{.Id}}");
+                          postCheckbox.addEventListener("change", handlePostChange);
+                          allPostCheckboxes.push(postCheckbox);
+                          postCheckboxesByCategoryIndex[{{$categoryIndex}}].push(postCheckbox);
+                          if (!postCheckboxesByPostId.has({{.Id}})) {
+                            postCheckboxesByPostId.set({{.Id}}, []);
+                          }
+                          postCheckboxesByPostId.get({{.Id}}).push(postCheckbox);
+                        }
+                      {{end}}
                     {{end}}
                 </script>
               </div>
@@ -554,11 +554,11 @@
                 {{end}}
                 <script>
                     {{range .AllPosts}}
-                        {
-                            let postHiddenField = document.getElementById("post_{{.Id}}");
-                            allPostFormInputs.push(postHiddenField);
-                            postHiddenFieldsByPostId.set({{.Id}}, postHiddenField);
-                        }
+                      {
+                        let postHiddenField = document.getElementById("post_{{.Id}}");
+                        allPostFormInputs.push(postHiddenField);
+                        postHiddenFieldsByPostId.set({{.Id}}, postHiddenField);
+                      }
                     {{end}}
                 </script>
 
@@ -570,11 +570,11 @@
           {{else}}
             <script>
                 let updatePostSelection = (isPostIdSelected) => {
-                    let form = document.getElementById("custom_form");
-                    for (let checkbox of allPostCheckboxes) {
-                        checkbox.checked = isPostIdSelected(checkbox.dataset.postId);
-                    }
-                    updateSelectedCountAndButtons();
+                  let form = document.getElementById("custom_form");
+                  for (let checkbox of allPostCheckboxes) {
+                    checkbox.checked = isPostIdSelected(checkbox.dataset.postId);
+                  }
+                  updateSelectedCountAndButtons();
                 };
             </script>
 
@@ -615,12 +615,12 @@
                     </label>
                   </div>
                   <script>
-                      {
-                          let postCheckbox = document.getElementById("post_{{$blogPost.Id}}");
-                          postCheckbox.addEventListener("change", updateSelectedCountAndButtons);
-                          allPostFormInputs.push(postCheckbox);
-                          allPostCheckboxes.push(postCheckbox);
-                      }
+                    {
+                      let postCheckbox = document.getElementById("post_{{$blogPost.Id}}");
+                      postCheckbox.addEventListener("change", updateSelectedCountAndButtons);
+                      allPostFormInputs.push(postCheckbox);
+                      allPostCheckboxes.push(postCheckbox);
+                    }
                   </script>
                 {{end}}
               </div>
@@ -644,38 +644,38 @@
 
           {{if not .IsCheckedEverything}}
           document.getElementById("reset_selection_btn").addEventListener("click", () => {
-              let postIdsToSelect = postIdsByTopCategoryId.get("{{.CheckedTopCategoryId}}");
-              updatePostSelection((postId) => postIdsToSelect.has(postId));
+            let postIdsToSelect = postIdsByTopCategoryId.get("{{.CheckedTopCategoryId}}");
+            updatePostSelection((postId) => postIdsToSelect.has(postId));
           });
           {{end}}
 
           for (let categoryPosts of Array.from(document.getElementsByClassName("category-posts"))) {
-              categoryPosts.addEventListener("animationend", (event) => {
-                  let newPosts = document.getElementById(`category_posts_${activeSuffix}`);
-                  let selectPosts = document.getElementById("select_posts");
-                  switch (event.animationName) {
-                      case "tab-out-left":
-                          event.target.classList.remove("tab-out-left");
-                          event.target.classList.add("hidden");
-                          newPosts.classList.remove("hidden");
-                          newPosts.classList.add("tab-in-left");
-                          break;
-                      case "tab-out-right":
-                          event.target.classList.remove("tab-out-right");
-                          event.target.classList.add("hidden");
-                          newPosts.classList.remove("hidden");
-                          newPosts.classList.add("tab-in-right");
-                          break;
-                      case "tab-in-left":
-                          event.target.classList.remove("tab-in-left");
-                          selectPosts.classList.remove("overflow-hidden");
-                          break;
-                      case "tab-in-right":
-                          event.target.classList.remove("tab-in-right");
-                          selectPosts.classList.remove("overflow-hidden");
-                          break;
-                  }
-              });
+            categoryPosts.addEventListener("animationend", (event) => {
+              let newPosts = document.getElementById(`category_posts_${activeSuffix}`);
+              let selectPosts = document.getElementById("select_posts");
+              switch (event.animationName) {
+                case "tab-out-left":
+                  event.target.classList.remove("tab-out-left");
+                  event.target.classList.add("hidden");
+                  newPosts.classList.remove("hidden");
+                  newPosts.classList.add("tab-in-left");
+                  break;
+                case "tab-out-right":
+                  event.target.classList.remove("tab-out-right");
+                  event.target.classList.add("hidden");
+                  newPosts.classList.remove("hidden");
+                  newPosts.classList.add("tab-in-right");
+                  break;
+                case "tab-in-left":
+                  event.target.classList.remove("tab-in-left");
+                  selectPosts.classList.remove("overflow-hidden");
+                  break;
+                case "tab-in-right":
+                  event.target.classList.remove("tab-in-right");
+                  selectPosts.classList.remove("overflow-hidden");
+                  break;
+              }
+            });
           }
       </script>
     </div>
