@@ -1,74 +1,74 @@
 <script>
-    const emailInput = document.getElementById("{{.EmailInputId}}");
-    const emailError = document.getElementById("{{.EmailErrorId}}");
-    let emailWasValid = true;
+  const emailInput = document.getElementById("{{.EmailInputId}}");
+  const emailError = document.getElementById("{{.EmailErrorId}}");
+  let emailWasValid = true;
 
-    function validateEmail() {
-        if (emailInput.validity.valid) {
-            emailError.textContent = "No error";
-            emailError.classList.add("invisible");
-            emailInput.classList.remove("border-red-500");
-        } else {
-            if (emailInput.validity.valueMissing) {
-                emailError.textContent = "Required";
-            } else if (emailInput.validity.typeMismatch) {
-                emailError.textContent = "Invalid email";
-            }
-            emailInput.classList.add("border-red-500");
-            emailError.classList.remove("invisible");
-        }
-        emailWasValid = emailInput.validity.valid;
+  function validateEmail() {
+    if (emailInput.validity.valid) {
+      emailError.textContent = "No error";
+      emailError.classList.add("invisible");
+      emailInput.classList.remove("border-red-500");
+    } else {
+      if (emailInput.validity.valueMissing) {
+        emailError.textContent = "Required";
+      } else if (emailInput.validity.typeMismatch) {
+        emailError.textContent = "Invalid email";
+      }
+      emailInput.classList.add("border-red-500");
+      emailError.classList.remove("invisible");
     }
+    emailWasValid = emailInput.validity.valid;
+  }
 
-    emailInput.addEventListener("blur", () => {
-        validateEmail();
-    });
+  emailInput.addEventListener("blur", () => {
+    validateEmail();
+  });
 
-    emailInput.addEventListener("input", () => {
-        if (!emailWasValid) {
-            validateEmail();
-        }
-    });
-
-    const passwordInput = document.getElementById("{{.PasswordInputId}}");
-    const passwordError = document.getElementById("{{.PasswordErrorId}}");
-    let passwordWasValid = true;
-
-    function validatePassword() {
-        if (passwordInput.validity.valid) {
-            passwordError.textContent = "No error";
-            passwordError.classList.add("invisible");
-            passwordInput.classList.remove("border-red-500");
-        } else {
-            if (passwordInput.validity.valueMissing) {
-                passwordError.textContent = "Required";
-            } else if (passwordInput.validity.tooShort) {
-                passwordError.textContent = "The password is too short";
-            }
-            passwordInput.classList.add("border-red-500");
-            passwordError.classList.remove("invisible");
-        }
-        passwordWasValid = passwordInput.validity.valid;
+  emailInput.addEventListener("input", () => {
+    if (!emailWasValid) {
+      validateEmail();
     }
+  });
 
-    passwordInput.addEventListener("blur", () => {
-        validatePassword();
-    });
+  const passwordInput = document.getElementById("{{.PasswordInputId}}");
+  const passwordError = document.getElementById("{{.PasswordErrorId}}");
+  let passwordWasValid = true;
 
-    passwordInput.addEventListener("input", () => {
-        if (!passwordWasValid) {
-            validatePassword();
-        }
-    });
+  function validatePassword() {
+    if (passwordInput.validity.valid) {
+      passwordError.textContent = "No error";
+      passwordError.classList.add("invisible");
+      passwordInput.classList.remove("border-red-500");
+    } else {
+      if (passwordInput.validity.valueMissing) {
+        passwordError.textContent = "Required";
+      } else if (passwordInput.validity.tooShort) {
+        passwordError.textContent = "The password is too short";
+      }
+      passwordInput.classList.add("border-red-500");
+      passwordError.classList.remove("invisible");
+    }
+    passwordWasValid = passwordInput.validity.valid;
+  }
 
-    const form = document.getElementById("{{.FormId}}");
-    form.addEventListener("submit", event => {
-        validateEmail();
-        validatePassword();
+  passwordInput.addEventListener("blur", () => {
+    validatePassword();
+  });
 
-        if (!emailInput.validity.valid || !passwordInput.validity.valid) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-    });
+  passwordInput.addEventListener("input", () => {
+    if (!passwordWasValid) {
+      validatePassword();
+    }
+  });
+
+  const form = document.getElementById("{{.FormId}}");
+  form.addEventListener("submit", event => {
+    validateEmail();
+    validatePassword();
+
+    if (!emailInput.validity.valid || !passwordInput.validity.valid) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  });
 </script>

@@ -16,250 +16,250 @@
 
   <div class="overflow-wrap-break-word">
     <script>
-        {{if .ClientToken}}
-        // noinspection JSAnnotator
-        let crawlClientToken = "{{.ClientToken}}";
-        {{else}}
-        // noinspection JSAnnotator
-        let crawlClientToken = null;
-        {{end}}
-        let initialTitle = document.getElementsByTagName("title")[0].innerText;
-        let loadingIndicators = [ '⠟', '⠯', '⠷', '⠾', '⠽', '⠻'];
-        let crawlEpoch;
-        let crawlEpochDurations = [];
-        let crawlWasDone = false;
-        let totalReconnectAttempts = 0;
+      {{if .ClientToken}}
+      // noinspection JSAnnotator
+      let crawlClientToken = "{{.ClientToken}}";
+      {{else}}
+      // noinspection JSAnnotator
+      let crawlClientToken = null;
+      {{end}}
+      let initialTitle = document.getElementsByTagName("title")[0].innerText;
+      let loadingIndicators = [ '⠟', '⠯', '⠷', '⠾', '⠽', '⠻'];
+      let crawlEpoch;
+      let crawlEpochDurations = [];
+      let crawlWasDone = false;
+      let totalReconnectAttempts = 0;
 
-        function now() {
-            return Date.now() / 1000;
-        }
+      function now() {
+        return Date.now() / 1000;
+      }
 
-        let pageLoadTimestamp = now();
-        let crawlEpochTimestamp = pageLoadTimestamp;
-        let websocketStartTimestamp;
+      let pageLoadTimestamp = now();
+      let crawlEpochTimestamp = pageLoadTimestamp;
+      let websocketStartTimestamp;
 
-        function createProgressRect(classes) {
-            let rect = document.createElement("div");
-            rect.className = classes;
-            return rect;
-        }
+      function createProgressRect(classes) {
+        let rect = document.createElement("div");
+        rect.className = classes;
+        return rect;
+      }
 
-        let lastStatus;
-        function displayProgress(data) {
-            if (data.hasOwnProperty("epoch") && (!crawlEpoch || data.epoch > crawlEpoch)) {
-                crawlEpoch = data.epoch;
-                let newEpochTimestamp = now();
-                if (crawlEpoch > 0) {
-                    crawlEpochDurations.push(newEpochTimestamp - crawlEpochTimestamp);
-                    crawlEpochTimestamp = newEpochTimestamp;
-                }
-                while (crawlEpochDurations.length < crawlEpoch) {
-                    crawlEpochDurations.push(0);
-                }
-
-                if (crawlEpoch > 0 && data.hasOwnProperty("status") && data.status !== null && data.status != lastStatus) {
-                    let rects = [];
-                    let matches = [...data.status.matchAll(/pP|p|hF\d*|h/g)];
-                    let tokens = matches.map(match => match[0]);
-                    let filledCount = 0;
-
-                    let rectsAreDark = tokens.length > 0 && tokens[tokens.length - 1].startsWith("hF");
-                    let bgClass = rectsAreDark ? "bg-primary-600" : "bg-primary-400";
-                    let needsTrailingLoader = true;
-
-                    for (let index in tokens) {
-                        let token = tokens[index];
-                        if (token === "h") {
-                            rects.push(createProgressRect(`w-5 h-5 rounded-sm ${bgClass}`));
-                            filledCount++;
-                        } else if (token === "p") {
-                            rects.push(createProgressRect("w-[4.25rem] h-5 rounded-sm border border-primary-400 loader-41"));
-                            needsTrailingLoader = false;
-                        } else if (token === "pP") {
-                            rects.push(createProgressRect(`w-[4.25rem] h-5 rounded-sm ${bgClass}`));
-                            filledCount++;
-                        } else if (token.startsWith("hF")) {
-                            rects.push(createProgressRect(`w-5 h-5 rounded-sm ${bgClass}`));
-                            filledCount++;
-                            if (parseInt(index) === tokens.length - 1) {
-                                let remainingCountMatch = token.match(/\d+$/g);
-                                if (remainingCountMatch) {
-                                    needsTrailingLoader = false;
-                                    let remainingCount = parseInt(remainingCountMatch[0]);
-                                    if (remainingCount >= 1) {
-                                        rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-600 loader-41-dark"))
-                                    }
-                                    for (let i = 1; i < remainingCount; i++) {
-                                        rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-600"));
-                                    }
-                                }
-                            }
-                        } else {
-                            console.warn(`Unknown progress token: ${token} (${data})`);
-                        }
-                    }
-                    if (needsTrailingLoader) {
-                        if (rectsAreDark) {
-                            rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-600 loader-41-dark"));
-                        } else {
-                            rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-400 loader-41"));
-                        }
-                    }
-                    document.getElementById("progress_rects").replaceChildren(...rects);
-                    let indicator = loadingIndicators[filledCount % loadingIndicators.length];
-                    document.getElementsByTagName("title")[0].innerText = `${indicator} ${initialTitle}`;
-                    lastStatus = data.status;
-                } else if (crawlEpoch === 0) {
-                    document
-                        .getElementById("progress_rects")
-                        .replaceChildren(createProgressRect("w-5 h-5 rounded-sm border border-primary-400 loader-41"));
-                    document.getElementsByTagName("title")[0].innerText = `${loadingIndicators[0]} ${initialTitle}`;
-                }
-
-                if (data.hasOwnProperty("count")) {
-                    if (data.count) {
-                        document.getElementById("progress_count").innerHTML = `Discovering posts: ${data.count}`;
-                    } else {
-                        document.getElementById("progress_count").innerHTML = "Discovering posts...";
-                    }
-                }
+      let lastStatus;
+      function displayProgress(data) {
+        if (data.hasOwnProperty("epoch") && (!crawlEpoch || data.epoch > crawlEpoch)) {
+            crawlEpoch = data.epoch;
+            let newEpochTimestamp = now();
+            if (crawlEpoch > 0) {
+              crawlEpochDurations.push(newEpochTimestamp - crawlEpochTimestamp);
+              crawlEpochTimestamp = newEpochTimestamp;
+            }
+            while (crawlEpochDurations.length < crawlEpoch) {
+              crawlEpochDurations.push(0);
             }
 
-            if (data.done) {
-                if (crawlWasDone) return;
+            if (crawlEpoch > 0 && data.hasOwnProperty("status") && data.status !== null && data.status != lastStatus) {
+              let rects = [];
+              let matches = [...data.status.matchAll(/pP|p|hF\d*|h/g)];
+              let tokens = matches.map(match => match[0]);
+              let filledCount = 0;
 
-                crawlWasDone = true;
-                let epochDurationsStr = crawlEpochDurations
-                    .map(t => t.toFixed(3))
-                    .join(";");
-                let websocketWaitDuration;
-                if (websocketStartTimestamp) {
-                    websocketWaitDuration = websocketStartTimestamp - pageLoadTimestamp;
+              let rectsAreDark = tokens.length > 0 && tokens[tokens.length - 1].startsWith("hF");
+              let bgClass = rectsAreDark ? "bg-primary-600" : "bg-primary-400";
+              let needsTrailingLoader = true;
+
+              for (let index in tokens) {
+                let token = tokens[index];
+                if (token === "h") {
+                  rects.push(createProgressRect(`w-5 h-5 rounded-sm ${bgClass}`));
+                  filledCount++;
+                } else if (token === "p") {
+                  rects.push(createProgressRect("w-[4.25rem] h-5 rounded-sm border border-primary-400 loader-41"));
+                  needsTrailingLoader = false;
+                } else if (token === "pP") {
+                  rects.push(createProgressRect(`w-[4.25rem] h-5 rounded-sm ${bgClass}`));
+                  filledCount++;
+                } else if (token.startsWith("hF")) {
+                  rects.push(createProgressRect(`w-5 h-5 rounded-sm ${bgClass}`));
+                  filledCount++;
+                  if (parseInt(index) === tokens.length - 1) {
+                    let remainingCountMatch = token.match(/\d+$/g);
+                    if (remainingCountMatch) {
+                      needsTrailingLoader = false;
+                      let remainingCount = parseInt(remainingCountMatch[0]);
+                      if (remainingCount >= 1) {
+                        rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-600 loader-41-dark"))
+                      }
+                      for (let i = 1; i < remainingCount; i++) {
+                        rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-600"));
+                      }
+                    }
+                  }
                 } else {
-                    websocketWaitDuration = Infinity
+                  console.warn(`Unknown progress token: ${token} (${data})`);
                 }
-                let body = new URLSearchParams();
-                body.append("client_token", crawlClientToken);
-                body.append("epoch_durations", epochDurationsStr);
-                body.append("websocket_wait_duration", websocketWaitDuration.toString());
-                body.append("total_reconnect_attempts", totalReconnectAttempts);
-                fetch(
-                    "./submit_progress_times", {
-                        method: "POST",
-                        headers: {
-                            "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
-                        },
-                        body: body
-                    }
-                );
-
-                window.location.reload();
-            }
-        }
-
-        let shouldPollProgress = true;
-        let lastPingedAt;
-        let disconnectedAt;
-        let disconnected = true;
-        let reconnectAttempts = 0;
-        function initWebsocket() {
-            let websocket = new WebSocket("{{.SubscriptionProgressStreamUrl}}");
-            websocket.onopen = () => {
-                disconnected = false;
-                lastPingedAt = now();
-                reconnectAttempts = 0;
-            };
-            websocket.onmessage = (event) => {
-                if (!websocketStartTimestamp) {
-                    websocketStartTimestamp = now();
-                }
-                shouldPollProgress = false;
-                let data = JSON.parse(event.data);
-                if (data.type === "ping") {
-                    lastPingedAt = now();
+              }
+              if (needsTrailingLoader) {
+                if (rectsAreDark) {
+                  rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-600 loader-41-dark"));
                 } else {
-                    displayProgress(data);
+                  rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-400 loader-41"));
                 }
-            };
-            websocket.onerror = (event) => {
-                console.error("Websocket error:", event);
-            };
-            websocket.onclose = () => {
-                if (disconnected) {
-                    return;
-                }
-                disconnected = true;
-                disconnectedAt = now();
-            };
-            return websocket;
-        }
-        function uninitWebsocket(websocket) {
-            if (!websocket) {
-                return;
+              }
+              document.getElementById("progress_rects").replaceChildren(...rects);
+              let indicator = loadingIndicators[filledCount % loadingIndicators.length];
+              document.getElementsByTagName("title")[0].innerText = `${indicator} ${initialTitle}`;
+              lastStatus = data.status;
+            } else if (crawlEpoch === 0) {
+              document
+                .getElementById("progress_rects")
+                .replaceChildren(createProgressRect("w-5 h-5 rounded-sm border border-primary-400 loader-41"));
+              document.getElementsByTagName("title")[0].innerText = `${loadingIndicators[0]} ${initialTitle}`;
             }
 
-            websocket.onopen = () => {};
-            websocket.onmessage = () => {};
-            websocket.onerror = () => {};
-            websocket.onclose = () => {};
-        }
-        function reinitWebsocket() {
-            uninitWebsocket(websocket);
-            websocket = initWebsocket();
-        }
-        let websocket = initWebsocket();
-
-        function secondsSince(time) {
-            return now() - time;
-        }
-
-        function checkWebsocketStale() {
-            const staleThreshold = 6;
-            if (lastPingedAt && secondsSince(lastPingedAt) >= staleThreshold &&
-                !(disconnectedAt && secondsSince(disconnectedAt) < staleThreshold)) {
-
-                websocketHiccup = true;
-                reconnectAttempts++;
-                totalReconnectAttempts++;
-                if (reconnectAttempts >= 5) {
-                    showRefreshPopup("Connection was lost. Please refresh the page.");
-                    return;
-                } else if (websocket.readyState <= 1) { // CONNECTING or OPEN
-                    try {
-                        disconnectedAt = now();
-                        websocket.close();
-                    } catch (error) {
-                        console.log("Failed to open websocket:", error);
-                    } finally {
-                        setTimeout(() => reinitWebsocket(), 500);
-                    }
-                } else {
-                    reinitWebsocket();
-                }
+            if (data.hasOwnProperty("count")) {
+              if (data.count) {
+                document.getElementById("progress_count").innerHTML = `Discovering posts: ${data.count}`;
+              } else {
+                document.getElementById("progress_count").innerHTML = "Discovering posts...";
+              }
             }
-
-            staleTimeoutId = setTimeout(() => checkWebsocketStale(), 1000);
         }
-        checkWebsocketStale();
 
-        async function pollProgressTillWebsocketStarts() {
-            if (!shouldPollProgress) return;
+        if (data.done) {
+            if (crawlWasDone) return;
 
-            const response = await fetch(
-                "{{.SubscriptionProgressPath}}",
-                {
-                    method: "post",
-                    headers: {
-                        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
-                    }
-                }
+            crawlWasDone = true;
+            let epochDurationsStr = crawlEpochDurations
+              .map(t => t.toFixed(3))
+              .join(";");
+            let websocketWaitDuration;
+            if (websocketStartTimestamp) {
+              websocketWaitDuration = websocketStartTimestamp - pageLoadTimestamp;
+            } else {
+              websocketWaitDuration = Infinity
+            }
+            let body = new URLSearchParams();
+            body.append("client_token", crawlClientToken);
+            body.append("epoch_durations", epochDurationsStr);
+            body.append("websocket_wait_duration", websocketWaitDuration.toString());
+            body.append("total_reconnect_attempts", totalReconnectAttempts);
+            fetch(
+              "./submit_progress_times", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: body
+              }
             );
-            const body = await response.json();
-            displayProgress(body);
 
-            setTimeout(() => pollProgressTillWebsocketStarts(), 500);
+            window.location.reload();
         }
-        pollProgressTillWebsocketStarts();
+      }
+
+      let shouldPollProgress = true;
+      let lastPingedAt;
+      let disconnectedAt;
+      let disconnected = true;
+      let reconnectAttempts = 0;
+      function initWebsocket() {
+        let websocket = new WebSocket("{{.SubscriptionProgressStreamUrl}}");
+        websocket.onopen = () => {
+          disconnected = false;
+          lastPingedAt = now();
+          reconnectAttempts = 0;
+        };
+        websocket.onmessage = (event) => {
+          if (!websocketStartTimestamp) {
+            websocketStartTimestamp = now();
+          }
+          shouldPollProgress = false;
+          let data = JSON.parse(event.data);
+          if (data.type === "ping") {
+            lastPingedAt = now();
+          } else {
+            displayProgress(data);
+          }
+        };
+        websocket.onerror = (event) => {
+          console.error("Websocket error:", event);
+        };
+        websocket.onclose = () => {
+          if (disconnected) {
+            return;
+          }
+          disconnected = true;
+          disconnectedAt = now();
+        };
+        return websocket;
+      }
+      function uninitWebsocket(websocket) {
+        if (!websocket) {
+          return;
+        }
+
+        websocket.onopen = () => {};
+        websocket.onmessage = () => {};
+        websocket.onerror = () => {};
+        websocket.onclose = () => {};
+      }
+      function reinitWebsocket() {
+        uninitWebsocket(websocket);
+        websocket = initWebsocket();
+      }
+      let websocket = initWebsocket();
+
+      function secondsSince(time) {
+        return now() - time;
+      }
+
+      function checkWebsocketStale() {
+        const staleThreshold = 6;
+        if (lastPingedAt && secondsSince(lastPingedAt) >= staleThreshold &&
+          !(disconnectedAt && secondsSince(disconnectedAt) < staleThreshold)) {
+
+          websocketHiccup = true;
+          reconnectAttempts++;
+          totalReconnectAttempts++;
+          if (reconnectAttempts >= 5) {
+            showRefreshPopup("Connection was lost. Please refresh the page.");
+            return;
+          } else if (websocket.readyState <= 1) { // CONNECTING or OPEN
+            try {
+                disconnectedAt = now();
+                websocket.close();
+            } catch (error) {
+                console.log("Failed to open websocket:", error);
+            } finally {
+                setTimeout(() => reinitWebsocket(), 500);
+            }
+          } else {
+            reinitWebsocket();
+          }
+        }
+
+        staleTimeoutId = setTimeout(() => checkWebsocketStale(), 1000);
+      }
+      checkWebsocketStale();
+
+      async function pollProgressTillWebsocketStarts() {
+        if (!shouldPollProgress) return;
+
+        const response = await fetch(
+          "{{.SubscriptionProgressPath}}",
+          {
+            method: "post",
+            headers: {
+              "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+            }
+          }
+        );
+        const body = await response.json();
+        displayProgress(body);
+
+        setTimeout(() => pollProgressTillWebsocketStarts(), 500);
+      }
+      pollProgressTillWebsocketStarts();
     </script>
 
     <div class="flex flex-col gap-8">
@@ -274,15 +274,15 @@
       </div>
 
       <script>
-          displayProgress({
-              {{if .BlogCrawlProgress.Count}}
-              count: "{{.BlogCrawlProgress.Count}}",
-              {{end}}
-              {{if not .BlogCrawlProgress.Progress}}
-              status: "{{.BlogCrawlProgress.Progress}}",
-              {{end}}
-              epoch: {{.BlogCrawlProgress.Epoch}}
-          })
+        displayProgress({
+          {{if .BlogCrawlProgress.Count}}
+          count: "{{.BlogCrawlProgress.Count}}",
+          {{end}}
+          {{if not .BlogCrawlProgress.Progress}}
+          status: "{{.BlogCrawlProgress.Progress}}",
+          {{end}}
+          epoch: {{.BlogCrawlProgress.Epoch}}
+        })
       </script>
 
       <div>
@@ -291,12 +291,12 @@
         </button>
 
         <script>
-            document.getElementById("cancel_button").addEventListener("click", () => {
-                showDeleteSubscriptionPopup(
-                    "Cancel adding ", "{{.SubscriptionName}}", "?",
-                    "{{.SubscriptionDeletePath}}", "Keep", "Cancel"
-                );
-            })
+          document.getElementById("cancel_button").addEventListener("click", () => {
+            showDeleteSubscriptionPopup(
+              "Cancel adding ", "{{.SubscriptionName}}", "?",
+              "{{.SubscriptionDeletePath}}", "Keep", "Cancel"
+            );
+          })
         </script>
       </div>
     </div>

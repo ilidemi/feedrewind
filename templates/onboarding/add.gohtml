@@ -44,215 +44,215 @@
         </div>
       </button>
       <script>
-          function showSpinner() {
-              const label = document.getElementById("discover_go_label");
-              label.classList.add("invisible");
-              const spinner = document.getElementById("discover_spinner");
-              spinner.classList.remove("hidden");
-              void spinner.offsetWidth; // trigger reflow
+        function showSpinner() {
+          const label = document.getElementById("discover_go_label");
+          label.classList.add("invisible");
+          const spinner = document.getElementById("discover_spinner");
+          spinner.classList.remove("hidden");
+          void spinner.offsetWidth; // trigger reflow
+        }
+
+        function hideSpinner() {
+          const label = document.getElementById("discover_go_label");
+          label.classList.remove("invisible");
+          const spinner = document.getElementById("discover_spinner");
+          spinner.classList.add("hidden");
+        }
+
+        function disableFeedButton(button) {
+          button.disabled = true;
+          if (button.classList.contains("feeds-choose-btn")) {
+            button.classList.add("opacity-50");
+          } else {
+            button.classList.remove("text-black");
+            button.classList.remove("link");
+            button.classList.add("text-gray-500");
+          }
+        }
+
+        const discoverButton = document.getElementById("discover_go");
+
+        discoverButton.addEventListener("click", async (event) => {
+          event.preventDefault();
+          if (discoverButton.disabled) {
+            return;
           }
 
-          function hideSpinner() {
-              const label = document.getElementById("discover_go_label");
-              label.classList.remove("invisible");
-              const spinner = document.getElementById("discover_spinner");
-              spinner.classList.add("hidden");
+          discoverButton.disabled = true;
+          showSpinner();
+          document.getElementById("feeds").innerHTML = "";
+          let suggestions = document.getElementById("suggestions");
+          if (suggestions) {
+            suggestions.innerHTML = "";
           }
 
-          function disableFeedButton(button) {
-              button.disabled = true;
-              if (button.classList.contains("feeds-choose-btn")) {
-                  button.classList.add("opacity-50");
+          try {
+            const abortController = new AbortController();
+            const timeoutId = setTimeout(() => abortController.abort(), 30000);
+            const form = document.getElementById("discover_form");
+            const body = new URLSearchParams(new FormData(form));
+            const response = await fetch(
+              form.action,
+              {
+                method: "post",
+                headers: {
+                  "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: body,
+                signal: abortController.signal
+              }
+            );
+
+            if (response.status === 200) {
+              const text = await response.text();
+              clearTimeout(timeoutId);
+              if (text.startsWith("http") || text.startsWith("/")) {
+                // No need to hide spinner as we're navigating away
+                // fetch api doesn't expose redirects so doing a manual one
+                window.location = text;
               } else {
-                  button.classList.remove("text-black");
-                  button.classList.remove("link");
-                  button.classList.add("text-gray-500");
+                hideSpinner();
+                discoverButton.disabled = false;
+                document.getElementById("feeds").innerHTML = text;
+                // Javascript doesn't get executed upon setting feeds.innerHTML, so setting up
+                // events here in the parent
+                setUpFeedsCallbacks();
               }
+            } else {
+              clearTimeout(timeoutId);
+              hideSpinner();
+              discoverButton.disabled = false;
+              showInfoPopup("Something went wrong");
+            }
+          } catch (err) {
+            // Timeout
+            hideSpinner();
+            discoverButton.disabled = false;
+            showInfoPopup("Something went wrong");
           }
-
-          const discoverButton = document.getElementById("discover_go");
-
-          discoverButton.addEventListener("click", async (event) => {
-              event.preventDefault();
-              if (discoverButton.disabled) {
-                  return;
-              }
-
-              discoverButton.disabled = true;
-              showSpinner();
-              document.getElementById("feeds").innerHTML = "";
-              let suggestions = document.getElementById("suggestions");
-              if (suggestions) {
-                  suggestions.innerHTML = "";
-              }
-
-              try {
-                  const abortController = new AbortController();
-                  const timeoutId = setTimeout(() => abortController.abort(), 30000);
-                  const form = document.getElementById("discover_form");
-                  const body = new URLSearchParams(new FormData(form));
-                  const response = await fetch(
-                      form.action,
-                      {
-                          method: "post",
-                          headers: {
-                              "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
-                          },
-                          body: body,
-                          signal: abortController.signal
-                      }
-                  );
-
-                  if (response.status === 200) {
-                      const text = await response.text();
-                      clearTimeout(timeoutId);
-                      if (text.startsWith("http") || text.startsWith("/")) {
-                          // No need to hide spinner as we're navigating away
-                          // fetch api doesn't expose redirects so doing a manual one
-                          window.location = text;
-                      } else {
-                          hideSpinner();
-                          discoverButton.disabled = false;
-                          document.getElementById("feeds").innerHTML = text;
-                          // Javascript doesn't get executed upon setting feeds.innerHTML, so setting up
-                          // events here in the parent
-                          setUpFeedsCallbacks();
-                      }
-                  } else {
-                      clearTimeout(timeoutId);
-                      hideSpinner();
-                      discoverButton.disabled = false;
-                      showInfoPopup("Something went wrong");
-                  }
-              } catch (err) {
-                  // Timeout
-                  hideSpinner();
-                  discoverButton.disabled = false;
-                  showInfoPopup("Something went wrong");
-              }
-          });
+        });
       </script>
     </div>
   </form>
 
   <script>
       function setUpFeedsCallbacks() {
-          function showFeedSpinner(button) {
-              if (button.classList.contains("feeds-choose-btn")) {
-                  const label = button.getElementsByClassName("feeds-choose-label")[0];
-                  label.classList.add("invisible");
-                  const spinner = button.getElementsByClassName("feeds-choose-spinner")[0];
-                  spinner.classList.remove("hidden");
-                  void spinner.offsetWidth; // trigger reflow
-              } else {
-                  const spinner = button.parentElement.getElementsByClassName("feeds-choose-spinner")[0];
-                  spinner.classList.remove("hidden");
-                  void spinner.offsetWidth; // trigger reflow
-              }
+        function showFeedSpinner(button) {
+          if (button.classList.contains("feeds-choose-btn")) {
+            const label = button.getElementsByClassName("feeds-choose-label")[0];
+            label.classList.add("invisible");
+            const spinner = button.getElementsByClassName("feeds-choose-spinner")[0];
+            spinner.classList.remove("hidden");
+            void spinner.offsetWidth; // trigger reflow
+          } else {
+            const spinner = button.parentElement.getElementsByClassName("feeds-choose-spinner")[0];
+            spinner.classList.remove("hidden");
+            void spinner.offsetWidth; // trigger reflow
           }
+        }
 
-          function hideFeedSpinner(button) {
-              if (button.classList.contains("feeds-choose-btn")) {
-                  const label = button.getElementsByClassName("feeds-choose-label")[0];
-                  label.classList.remove("invisible");
-                  const spinner = button.getElementsByClassName("feeds-choose-spinner")[0];
-                  spinner.classList.add("hidden");
-              } else {
-                  const spinner = button.parentElement.getElementsByClassName("feeds-choose-spinner")[0];
-                  spinner.classList.add("hidden");
-              }
+        function hideFeedSpinner(button) {
+          if (button.classList.contains("feeds-choose-btn")) {
+            const label = button.getElementsByClassName("feeds-choose-label")[0];
+            label.classList.remove("invisible");
+            const spinner = button.getElementsByClassName("feeds-choose-spinner")[0];
+            spinner.classList.add("hidden");
+          } else {
+            const spinner = button.parentElement.getElementsByClassName("feeds-choose-spinner")[0];
+            spinner.classList.add("hidden");
           }
+        }
 
-          function enableFeedButton(button) {
-              button.disabled = false;
-              if (button.classList.contains("feeds-choose-btn")) {
-                  button.classList.remove("opacity-50");
-              } else {
-                  button.classList.add("text-black");
-                  button.classList.add("link");
-                  button.classList.remove("text-gray-500");
-              }
+        function enableFeedButton(button) {
+          button.disabled = false;
+          if (button.classList.contains("feeds-choose-btn")) {
+            button.classList.remove("opacity-50");
+          } else {
+            button.classList.add("text-black");
+            button.classList.add("link");
+            button.classList.remove("text-gray-500");
           }
+        }
 
-          let buttons = document.getElementsByClassName("feeds-choose");
-          for (let button of buttons) {
-              button.addEventListener("click", async () => {
-                  discoverButton.disabled = true;
-                  discoverButton.classList.add("opacity-50");
-                  for (let button2 of buttons) {
-                      if (button2 === button && button2.classList.contains("feeds-choose-btn")) {
-                          // Disable for clicking but without visuals
-                          button2.disabled = true;
-                      } else {
-                          // Disable fully
-                          disableFeedButton(button2);
-                      }
+        let buttons = document.getElementsByClassName("feeds-choose");
+        for (let button of buttons) {
+          button.addEventListener("click", async () => {
+            discoverButton.disabled = true;
+            discoverButton.classList.add("opacity-50");
+            for (let button2 of buttons) {
+              if (button2 === button && button2.classList.contains("feeds-choose-btn")) {
+                // Disable for clicking but without visuals
+                button2.disabled = true;
+              } else {
+                // Disable fully
+                disableFeedButton(button2);
+              }
+            }
+            showFeedSpinner(button);
+
+            try {
+              const abortController = new AbortController();
+              const timeoutId = setTimeout(() => abortController.abort(), 30000);
+              let formData = new FormData();
+              formData.set("start_feed_id", button.dataset.start_feed_id);
+              const body = new URLSearchParams(formData);
+              const response = await fetch(
+                "/subscriptions",
+                {
+                  method: "post",
+                  headers: {
+                    "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                  },
+                  body: body,
+                  signal: abortController.signal
+                }
+              );
+
+              if (response.status === 200) {
+                const text = await response.text();
+                clearTimeout(timeoutId);
+                // No need to hide spinner as we're navigating away
+                // fetch api doesn't expose redirects so doing a manual one
+                window.location = text;
+              } else if (response.status === 415) {
+                clearTimeout(timeoutId);
+                hideFeedSpinner(button);
+
+                const errorMessage =
+                  document.getElementById(`bad_feed_${button.dataset.start_feed_id}`);
+                errorMessage.classList.remove("hidden");
+
+                discoverButton.disabled = false;
+                discoverButton.classList.remove("opacity-50");
+                for (let button2 of buttons) {
+                  if (button2.dataset.start_feed_id === button.dataset.start_feed_id) {
+                    disableFeedButton(button2);
+                  } else {
+                    enableFeedButton(button2);
                   }
-                  showFeedSpinner(button);
-
-                  try {
-                      const abortController = new AbortController();
-                      const timeoutId = setTimeout(() => abortController.abort(), 30000);
-                      let formData = new FormData();
-                      formData.set("start_feed_id", button.dataset.start_feed_id);
-                      const body = new URLSearchParams(formData);
-                      const response = await fetch(
-                          "/subscriptions",
-                          {
-                              method: "post",
-                              headers: {
-                                  "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
-                              },
-                              body: body,
-                              signal: abortController.signal
-                          }
-                      );
-
-                      if (response.status === 200) {
-                          const text = await response.text();
-                          clearTimeout(timeoutId);
-                          // No need to hide spinner as we're navigating away
-                          // fetch api doesn't expose redirects so doing a manual one
-                          window.location = text;
-                      } else if (response.status === 415) {
-                          clearTimeout(timeoutId);
-                          hideFeedSpinner(button);
-
-                          const errorMessage =
-                              document.getElementById(`bad_feed_${button.dataset.start_feed_id}`);
-                          errorMessage.classList.remove("hidden");
-
-                          discoverButton.disabled = false;
-                          discoverButton.classList.remove("opacity-50");
-                          for (let button2 of buttons) {
-                              if (button2.dataset.start_feed_id === button.dataset.start_feed_id) {
-                                  disableFeedButton(button2);
-                              } else {
-                                  enableFeedButton(button2);
-                              }
-                          }
-                      } else {
-                          clearTimeout(timeoutId);
-                          discoverButton.disabled = false;
-                          discoverButton.classList.remove("opacity-50");
-                          hideFeedSpinner(button);
-                          for (let button2 of buttons) {
-                              enableFeedButton(button2);
-                          }
-                          showInfoPopup("Something went wrong");
-                      }
-                  } catch (err) {
-                      // Timeout
-                      discoverButton.disabled = false;
-                      discoverButton.classList.remove("opacity-50");
-                      hideFeedSpinner(button);
-                      for (let button2 of buttons) {
-                          enableFeedButton(button2);
-                      }
-                      showInfoPopup("Something went wrong");
-                  }
-              })
-          }
+                }
+              } else {
+                clearTimeout(timeoutId);
+                discoverButton.disabled = false;
+                discoverButton.classList.remove("opacity-50");
+                hideFeedSpinner(button);
+                for (let button2 of buttons) {
+                  enableFeedButton(button2);
+                }
+                showInfoPopup("Something went wrong");
+              }
+            } catch (err) {
+              // Timeout
+              discoverButton.disabled = false;
+              discoverButton.classList.remove("opacity-50");
+              hideFeedSpinner(button);
+              for (let button2 of buttons) {
+                enableFeedButton(button2);
+              }
+              showInfoPopup("Something went wrong");
+            }
+          })
+        }
       }
   </script>
 
@@ -283,24 +283,24 @@
       </div>
 
       <script>
-          document.getElementById("suggestions_toggle").addEventListener("click", () => {
-              const suggestionsToggleIcon = document.getElementById("suggestions_toggle_icon");
-              suggestionsToggleIcon.classList.toggle("rotate-180");
+        document.getElementById("suggestions_toggle").addEventListener("click", () => {
+          const suggestionsToggleIcon = document.getElementById("suggestions_toggle_icon");
+          suggestionsToggleIcon.classList.toggle("rotate-180");
 
-              const suggestionsBody = document.getElementById("suggestions_body");
-              if (suggestionsBody.style.maxHeight) {
-                  suggestionsBody.style.maxHeight = null;
-              } else {
-                  suggestionsBody.style.maxHeight = suggestionsBody.scrollHeight + "px";
-              }
-          });
+          const suggestionsBody = document.getElementById("suggestions_body");
+          if (suggestionsBody.style.maxHeight) {
+            suggestionsBody.style.maxHeight = null;
+          } else {
+            suggestionsBody.style.maxHeight = suggestionsBody.scrollHeight + "px";
+          }
+        });
 
-          document.getElementById("suggestions_body").addEventListener("transitionend", () => {
-              const suggestionsBody = document.getElementById("suggestions_body");
-              if (suggestionsBody.style.maxHeight) {
-                  suggestionsBody.style.maxHeight = "fit-content";
-              }
-          });
+        document.getElementById("suggestions_body").addEventListener("transitionend", () => {
+          const suggestionsBody = document.getElementById("suggestions_body");
+          if (suggestionsBody.style.maxHeight) {
+            suggestionsBody.style.maxHeight = "fit-content";
+          }
+        });
       </script>
     </div>
   {{end}}

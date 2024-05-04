@@ -55,136 +55,134 @@
 </div>
 
 <script>
-    const scheduleDayOfWeekFormat = new Intl.DateTimeFormat("en-US", {weekday: "short", timeZone: "UTC"});
-    const scheduleDateFormat = new Intl.DateTimeFormat("en-US", {
-        weekday: "short",
-        month: "long",
-        day: "numeric",
-        timeZone: "UTC"
-    });
-    const scheduleDateShortFormat = new Intl.DateTimeFormat("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        timeZone: "UTC"
-    });
-    const scheduleLongAgoDateFormat = new Intl.DateTimeFormat("en-US", {
-        weekday: "short",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-        timeZone: "UTC"
-    });
-    const scheduleLongAgoDateShortFormat = new Intl.DateTimeFormat("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        timeZone: "UTC"
-    });
+  const scheduleDayOfWeekFormat = new Intl.DateTimeFormat("en-US", {weekday: "short", timeZone: "UTC"});
+  const scheduleDateFormat = new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC"
+  });
+  const scheduleDateShortFormat = new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC"
+  });
+  const scheduleLongAgoDateFormat = new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC"
+  });
+  const scheduleLongAgoDateShortFormat = new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC"
+  });
 
-    function advanceDate(date) {
-        date.setDate(date.getDate() + 1);
+  function advanceDate(date) {
+    date.setDate(date.getDate() + 1);
+  }
+
+  const todayDate = new Date("{{.TodayDate}}");
+  const tomorrowDate = new Date(todayDate);
+  advanceDate(tomorrowDate);
+  const yesterdayDate = new Date(todayDate);
+  yesterdayDate.setDate(todayDate.getDate() - 1);
+  const yearAgoDate = new Date(todayDate);
+  yearAgoDate.setFullYear(todayDate.getFullYear() - 1);
+  const nextScheduleDate = new Date("{{.NextScheduleDate}}");
+  const prevPostPublishedDates = {{.PrevPostDatesJS}};
+  const prevPostDates = document.getElementsByClassName("prev-post-date");
+  const prevPostShortDates = document.getElementsByClassName("prev-post-short-date");
+  const nextPostDates = document.getElementsByClassName("next-post-date");
+  const nextPostShortDates = document.getElementsByClassName("next-post-short-date");
+
+  for (let prevPostIndex = 0; prevPostIndex < prevPostDates.length; prevPostIndex++) {
+    let prevPostDate = prevPostDates[prevPostIndex];
+    let prevPostShortDate = prevPostShortDates[prevPostIndex];
+    let postPublishedDate = prevPostPublishedDates[prevPostIndex];
+
+    if (postPublishedDate.getTime() === yesterdayDate.getTime()) {
+      prevPostDate.innerText = prevPostShortDate.innerText = "Yesterday";
+    } else if (postPublishedDate.getTime() === todayDate.getTime()) {
+      prevPostDate.innerText = prevPostShortDate.innerText = "Today";
+    } else {
+      // Could've done formatting on the backend as the data is static but want to be 100% uniform with
+      // next posts
+      if (postPublishedDate >= yearAgoDate) {
+        prevPostDate.innerText = scheduleDateFormat.format(postPublishedDate);
+        prevPostShortDate.innerText = scheduleDateShortFormat.format(postPublishedDate);
+      } else {
+        prevPostDate.innerText = scheduleLongAgoDateFormat.format(postPublishedDate);
+        prevPostShortDate.innerText = scheduleLongAgoDateShortFormat.format(postPublishedDate);
+      }
+    }
+  }
+
+  function updateNextPosts(countsByDay) {
+    function advanceUntilScheduled(date) {
+      while (!countsByDay.get(getDayOfWeek(date))) {
+        advanceDate(date);
+      }
     }
 
-    const todayDate = new Date("{{.TodayDate}}");
-    const tomorrowDate = new Date(todayDate);
-    advanceDate(tomorrowDate);
-    const yesterdayDate = new Date(todayDate);
-    yesterdayDate.setDate(todayDate.getDate() - 1);
-    const yearAgoDate = new Date(todayDate);
-    yearAgoDate.setFullYear(todayDate.getFullYear() - 1);
-    const nextScheduleDate = new Date("{{.NextScheduleDate}}");
-    const prevPostPublishedDates = {{.PrevPostDatesJS}};
-    const prevPostDates = document.getElementsByClassName("prev-post-date");
-    const prevPostShortDates = document.getElementsByClassName("prev-post-short-date");
-    const nextPostDates = document.getElementsByClassName("next-post-date");
-    const nextPostShortDates = document.getElementsByClassName("next-post-short-date");
+    function getDayOfWeek(date) {
+      return scheduleDayOfWeekFormat.format(date).toLowerCase();
+    }
 
-    for (let prevPostIndex = 0; prevPostIndex < prevPostDates.length; prevPostIndex++) {
-        let prevPostDate = prevPostDates[prevPostIndex];
-        let prevPostShortDate = prevPostShortDates[prevPostIndex];
-        let postPublishedDate = prevPostPublishedDates[prevPostIndex];
+    if (countsByDay) {
+      const date = new Date(nextScheduleDate);
+      advanceUntilScheduled(date);
+      let postsLeft = countsByDay.get(getDayOfWeek(date));
 
-        if (postPublishedDate.getTime() === yesterdayDate.getTime()) {
-            prevPostDate.innerText = prevPostShortDate.innerText = "Yesterday";
-        } else if (postPublishedDate.getTime() === todayDate.getTime()) {
-            prevPostDate.innerText = prevPostShortDate.innerText = "Today";
+      for (let nextPostIndex = 0; nextPostIndex < nextPostDates.length; nextPostIndex++) {
+        let nextPostDate = nextPostDates[nextPostIndex];
+        let nextPostShortDate = nextPostShortDates[nextPostIndex];
+
+        if (date.getTime() === todayDate.getTime()) {
+          nextPostDate.innerText = nextPostShortDate.innerText = "Today";
+        } else if (date.getTime() === tomorrowDate.getTime()) {
+          nextPostDate.innerText = nextPostShortDate.innerText = "Tomorrow";
         } else {
-            // Could've done formatting on the backend as the data is static but want to be 100% uniform with
-            // next posts
-            if (postPublishedDate >= yearAgoDate) {
-                prevPostDate.innerText = scheduleDateFormat.format(postPublishedDate);
-                prevPostShortDate.innerText = scheduleDateShortFormat.format(postPublishedDate);
-            } else {
-                prevPostDate.innerText = scheduleLongAgoDateFormat.format(postPublishedDate);
-                prevPostShortDate.innerText = scheduleLongAgoDateShortFormat.format(postPublishedDate);
-            }
+          nextPostDate.innerText = scheduleDateFormat.format(date);
+          nextPostShortDate.innerText = scheduleDateShortFormat.format(date);
         }
+
+        postsLeft--;
+        if (postsLeft === 0) {
+          advanceDate(date);
+          advanceUntilScheduled(date);
+          postsLeft = countsByDay.get(getDayOfWeek(date));
+        }
+      }
+    } else {
+      for (let nextPostDate of nextPostDates) {
+        nextPostDate.innerText = "…";
+      }
+      for (let nextPostShortDate of nextPostShortDates) {
+        nextPostShortDate.innerText = "…";
+      }
     }
+  }
 
-    function updateNextPosts(countsByDay) {
-        function advanceUntilScheduled(date) {
-            while (!countsByDay.get(getDayOfWeek(date))) {
-                advanceDate(date);
-            }
-        }
+  const shortFriendlySuffixNameByGroupId = {{.ShortFriendlySuffixNameByGroupIdJson}};
+  const groupIdByTimezoneId = {{.GroupIdByTimezoneIdJson}};
+  const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const serverTimezone = "{{.Timezone}}";
 
-        function getDayOfWeek(date) {
-            return scheduleDayOfWeekFormat.format(date).toLowerCase();
-        }
-
-        if (countsByDay) {
-            const date = new Date(nextScheduleDate);
-            advanceUntilScheduled(date);
-            let postsLeft = countsByDay.get(getDayOfWeek(date));
-
-            for (let nextPostIndex = 0; nextPostIndex < nextPostDates.length; nextPostIndex++) {
-                let nextPostDate = nextPostDates[nextPostIndex];
-                let nextPostShortDate = nextPostShortDates[nextPostIndex];
-
-                if (date.getTime() === todayDate.getTime()) {
-                    nextPostDate.innerText = nextPostShortDate.innerText = "Today";
-                } else if (date.getTime() === tomorrowDate.getTime()) {
-                    nextPostDate.innerText = nextPostShortDate.innerText = "Tomorrow";
-                } else {
-                    nextPostDate.innerText = scheduleDateFormat.format(date);
-                    nextPostShortDate.innerText = scheduleDateShortFormat.format(date);
-                }
-
-                postsLeft--;
-                if (postsLeft === 0) {
-                    advanceDate(date);
-                    advanceUntilScheduled(date);
-                    postsLeft = countsByDay.get(getDayOfWeek(date));
-                }
-            }
-        } else {
-            for (let nextPostDate of nextPostDates) {
-                nextPostDate.innerText = "…";
-            }
-            for (let nextPostShortDate of nextPostShortDates) {
-                nextPostShortDate.innerText = "…";
-            }
-        }
-    }
-
-    const shortFriendlySuffixNameByGroupId = {{.ShortFriendlySuffixNameByGroupIdJson}};
-    const groupIdByTimezoneId = {{.GroupIdByTimezoneIdJson}};
-    const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const serverTimezone = "{{.Timezone}}";
-
-    if (groupIdByTimezoneId.hasOwnProperty(clientTimezone) &&
-        groupIdByTimezoneId.hasOwnProperty(serverTimezone) &&
-        groupIdByTimezoneId[clientTimezone] !== groupIdByTimezoneId[serverTimezone]
-    ) {
-        const clientGroupId = groupIdByTimezoneId[clientTimezone];
-        const serverGroupId = groupIdByTimezoneId[serverTimezone];
-        document.getElementById("client_timezone").innerText =
-            shortFriendlySuffixNameByGroupId[clientGroupId];
-        document.getElementById("server_timezone").innerText =
-            shortFriendlySuffixNameByGroupId[serverGroupId];
-        document.getElementById("tz_mismatch_asterisk").classList.remove("hidden");
-        document.getElementById("tz_mismatch_message").classList.remove("hidden");
-    }
+  if (groupIdByTimezoneId.hasOwnProperty(clientTimezone) &&
+    groupIdByTimezoneId.hasOwnProperty(serverTimezone) &&
+    groupIdByTimezoneId[clientTimezone] !== groupIdByTimezoneId[serverTimezone]
+  ) {
+    const clientGroupId = groupIdByTimezoneId[clientTimezone];
+    const serverGroupId = groupIdByTimezoneId[serverTimezone];
+    document.getElementById("client_timezone").innerText = shortFriendlySuffixNameByGroupId[clientGroupId];
+    document.getElementById("server_timezone").innerText = shortFriendlySuffixNameByGroupId[serverGroupId];
+    document.getElementById("tz_mismatch_asterisk").classList.remove("hidden");
+    document.getElementById("tz_mismatch_message").classList.remove("hidden");
+  }
 </script>

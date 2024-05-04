@@ -81,48 +81,48 @@
           </div>
         </div>
         <script>
-            const logo = document.getElementById("logo");
-            const userButton = document.getElementById("user_button");
-            const userMenu = document.getElementById("user_menu");
-            const userMenuBackground = document.getElementById("user_menu_background");
+          const logo = document.getElementById("logo");
+          const userButton = document.getElementById("user_button");
+          const userMenu = document.getElementById("user_menu");
+          const userMenuBackground = document.getElementById("user_menu_background");
 
-            function updateUserMenuPosition() {
-                const logoRect = logo.getBoundingClientRect();
-                const userButtonRect = userButton.getBoundingClientRect();
-                if (userButtonRect.x === logoRect.x) {
-                    if (userMenu.classList.contains("right-0")) {
-                        userMenu.classList.remove("right-0");
-                        userMenu.classList.add("left-0");
-                    }
-                } else {
-                    if (userMenu.classList.contains("left-0")) {
-                        userMenu.classList.remove("left-0");
-                        userMenu.classList.add("right-0");
-                    }
-                }
+          function updateUserMenuPosition() {
+            const logoRect = logo.getBoundingClientRect();
+            const userButtonRect = userButton.getBoundingClientRect();
+            if (userButtonRect.x === logoRect.x) {
+              if (userMenu.classList.contains("right-0")) {
+                userMenu.classList.remove("right-0");
+                userMenu.classList.add("left-0");
+              }
+            } else {
+              if (userMenu.classList.contains("left-0")) {
+                userMenu.classList.remove("left-0");
+                userMenu.classList.add("right-0");
+              }
             }
+          }
 
-            updateUserMenuPosition();
-            window.addEventListener("resize", () => updateUserMenuPosition());
+          updateUserMenuPosition();
+          window.addEventListener("resize", () => updateUserMenuPosition());
 
-            userButton.addEventListener("click", () => {
-                userMenu.classList.remove("dropdown-disappear");
-                userMenu.classList.remove("hidden");
-                userMenu.classList.add("dropdown-appear");
-                userMenuBackground.classList.remove("hidden");
-            });
+          userButton.addEventListener("click", () => {
+            userMenu.classList.remove("dropdown-disappear");
+            userMenu.classList.remove("hidden");
+            userMenu.classList.add("dropdown-appear");
+            userMenuBackground.classList.remove("hidden");
+          });
 
-            userMenuBackground.addEventListener("click", () => {
-                userMenu.classList.remove("dropdown-appear");
-                userMenu.classList.add("dropdown-disappear");
-                userMenuBackground.classList.add("hidden");
-            });
+          userMenuBackground.addEventListener("click", () => {
+            userMenu.classList.remove("dropdown-appear");
+            userMenu.classList.add("dropdown-disappear");
+            userMenuBackground.classList.add("hidden");
+          });
 
-            userMenu.addEventListener("animationend", (event) => {
-                if (event.animationName === "dropdown-disappear") {
-                    userMenu.classList.add("hidden");
-                }
-            });
+          userMenu.addEventListener("animationend", (event) => {
+            if (event.animationName === "dropdown-disappear") {
+              userMenu.classList.add("hidden");
+            }
+          });
         </script>
       {{end}}
     </header>

@@ -41,23 +41,23 @@
 
 <script>
     document
-        .getElementById("looks_wrong_button_{{.Suffix}}")
-        .addEventListener("click", () => {
-            // Fire and forget
-            fetch(
-                "{{.SubscriptionMarkWrongPath}}",
-                {
-                    method: "post",
-                    headers: {
-                        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
-                    }
-                }
-            );
+      .getElementById("looks_wrong_button_{{.Suffix}}")
+      .addEventListener("click", () => {
+        // Fire and forget
+        fetch(
+          "{{.SubscriptionMarkWrongPath}}",
+          {
+            method: "post",
+            headers: {
+              "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+            }
+          }
+        );
 
-            {{.MarkWrongFuncJS}}("{{.Suffix}}");
-            const confirmSection = document.getElementById("confirm_section_{{.Suffix}}");
-            confirmSection.classList.add("hidden");
-            const looksWrongSection = document.getElementById("looks_wrong_section_{{.Suffix}}");
-            looksWrongSection.classList.remove("hidden");
-        });
+        {{.MarkWrongFuncJS}}("{{.Suffix}}");
+        const confirmSection = document.getElementById("confirm_section_{{.Suffix}}");
+        confirmSection.classList.add("hidden");
+        const looksWrongSection = document.getElementById("looks_wrong_section_{{.Suffix}}");
+        looksWrongSection.classList.remove("hidden");
+      });
 </script>
