@@ -19,12 +19,11 @@ func GetPostmarkClientAndMaybeMetadata(tx pgw.Queryable) (*postmark.Client, *str
 	if config.Cfg.Env.IsDevOrTest() {
 		var err error
 		maybeTestMetadata, err = models.TestSingleton_GetValue(tx, "email_metadata")
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
+		if errors.Is(err, pgx.ErrNoRows) {
 			apiToken = config.Cfg.PostmarkApiSandboxToken
-		case err != nil:
+		} else if err != nil {
 			panic(err)
-		default:
+		} else {
 			apiToken = config.Cfg.PostmarkApiToken
 		}
 	} else {
