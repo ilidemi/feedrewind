@@ -8,6 +8,7 @@ import (
 	"feedrewind/oops"
 	"feedrewind/util"
 	"fmt"
+	"strings"
 )
 
 func MustInit(tx pgw.Queryable) {
@@ -47,6 +48,29 @@ func MustInit(tx pgw.Queryable) {
 	}
 	if err := rows.Err(); err != nil {
 		panic(err)
+	}
+
+	rows, err = tx.Query(`select id, plan_id from pricing_offers`)
+	if err != nil {
+		panic(err)
+	}
+	foundBadOffers := false
+	for rows.Next() {
+		var offerId OfferId
+		var planId PlanId
+		err := rows.Scan(&offerId, &planId)
+		if err != nil {
+			panic(err)
+		}
+		if !PricingOffer_ValidateId(offerId, planId) {
+			logger.Error().Msgf(
+				"Bad id for pricing offer %s: expected to start with \"%s_\"", offerId, planId,
+			)
+			foundBadOffers = true
+		}
+	}
+	if foundBadOffers {
+		panic("Found bad pricing offer ids")
 	}
 }
 
@@ -234,9 +258,18 @@ type PlanId string
 const (
 	PlanIdFree      PlanId = "free"
 	PlanIdSupporter PlanId = "supporter"
+	PlanIdPatron    PlanId = "patron"
 )
 
 type OfferId string
+
+func PricingOffer_ValidateId(offerId OfferId, planId PlanId) bool {
+	return strings.Split(string(offerId), "_")[0] == string(planId)
+}
+
+func PricingPlan_IdFromOfferId(offerId OfferId) PlanId {
+	return PlanId(strings.Split(string(offerId), "_")[0])
+}
 
 type BillingInterval string
 
@@ -267,6 +300,13 @@ func BillingInterval_GetByOffer(
 		return "", oops.Newf("Unknown price id for stripe product %s: %s", stripeProductId, stripePriceId)
 	}
 }
+
+const PatronCreditsMonthly = 1
+const PatronCreditsYearly = 12
+const PatronCreditsMonthlyCap = 3 * PatronCreditsMonthly
+const PatronCreditsYearlyCap = 3 * PatronCreditsYearly
+
+type CustomBlogRequestId int64
 
 // AdminTelemetry
 

@@ -29,7 +29,7 @@ func TestUpdateFromFeedAndDelete(t *testing.T) {
 	page.MustWaitLoad()
 
 	page = visitAdmin(browser, "destroy_user_subscriptions")
-	require.Equal(t, "OK", pageText(page))
+	require.Equal(t, "OK", mustPageText(page))
 
 	page = visitDev(browser, "admin/add_blog")
 	page.MustElement("#name").MustInput("1man")
@@ -100,7 +100,7 @@ func TestSubscriptionDeleteSettingUp(t *testing.T) {
 	page.MustWaitLoad()
 
 	page = visitAdmin(browser, "destroy_user_subscriptions")
-	require.Equal(t, "OK", pageText(page))
+	require.Equal(t, "OK", mustPageText(page))
 
 	page = visitDev(browser, "subscriptions/add")
 	page.MustElement("#start_url").MustInput("https://ilidemi.github.io/dummy-blogs/1man/rss.xml")
@@ -108,7 +108,7 @@ func TestSubscriptionDeleteSettingUp(t *testing.T) {
 
 	page.MustElementR("input", "Continue").MustClick()
 
-	subscriptionId := parseSubscriptionId(page)
+	subscriptionId := mustParseSubscriptionId(page)
 	page = visitDev(browser, "subscriptions")
 	page.MustElement("#delete_button_" + subscriptionId).MustClick()
 	page.MustElement("#delete_popup_keep_button").MustClick()

@@ -1,0 +1,15 @@
+{{template "layouts/application" .}}
+
+{{define "content"}}
+<div class="flex flex-col gap-6 mb-6">
+  <div class="flex flex-col gap-1">
+    <div>
+      <a href="/subscriptions" class="text-sm link-secondary">← Dashboard</a>
+    </div>
+    <h2 class="break-word">{{.SubscriptionName}}</h2>
+  </div>
+
+  <div id="request_ack">TODO_WE_GOT_YOUR_REQUEST</div>
+  TODO_WE_LL_EMAIL_YOU
+</div>
+{{end}}

@@ -116,13 +116,13 @@ func TestRssSchedule(t *testing.T) {
 		page.MustWaitLoad()
 
 		page = visitAdmin(browser, "destroy_user_subscriptions")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		creationTimestampStr := creationTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", creationTimestampStr)
-		require.Equal(t, creationTimestampStr, pageText(page), description)
+		require.Equal(t, creationTimestampStr, mustPageText(page), description)
 		page = visitAdmin(browser, "reschedule_user_job")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		page = visitDev(browser, "subscriptions/add")
 		page.MustElement("#start_url").MustInput("https://ilidemi.github.io/dummy-blogs/1a/rss.xml")
@@ -206,7 +206,7 @@ func TestRssSchedule(t *testing.T) {
 
 		arrivalMsg := page.MustElement("#arrival_msg").MustText()
 		require.Equal(t, expectedArrivalMsg.String(), arrivalMsg, description)
-		subscriptionId := parseSubscriptionId(page)
+		subscriptionId := mustParseSubscriptionId(page)
 		subscriptionPath := fmt.Sprintf("subscriptions/%s", subscriptionId)
 
 		// Assert published at creation
@@ -220,9 +220,9 @@ func TestRssSchedule(t *testing.T) {
 		// Assert published late
 		lateTimestampStr := lateTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", lateTimestampStr)
-		require.Equal(t, lateTimestampStr, pageText(page), description)
+		require.Equal(t, lateTimestampStr, mustPageText(page), description)
 		page = visitAdmin(browser, "wait_for_publish_posts_job")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		page = visitDev(browser, subscriptionPath)
 		publishedCountLate := parsePublishedCount(page)
 		require.Equal(t, outputCountLate, publishedCountLate, description)
@@ -233,16 +233,16 @@ func TestRssSchedule(t *testing.T) {
 		// Assert preview at midnight
 		midnightTimestampStr := midnightTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", midnightTimestampStr)
-		require.Equal(t, midnightTimestampStr, pageText(page), description)
+		require.Equal(t, midnightTimestampStr, mustPageText(page), description)
 		page = visitDev(browser, subscriptionPath)
 		assertSchedulePreview(t, page, outputAtMidnight, description)
 
 		// Assert published tomorrow
 		tomorrowTimestampStr := tomorrowTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", tomorrowTimestampStr)
-		require.Equal(t, tomorrowTimestampStr, pageText(page), description)
+		require.Equal(t, tomorrowTimestampStr, mustPageText(page), description)
 		page = visitAdmin(browser, "wait_for_publish_posts_job")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		page = visitDev(browser, subscriptionPath)
 		publishedCountTomorrow := parsePublishedCount(page)
 		require.Equal(t, outputCountTomorrow, publishedCountTomorrow, description)
@@ -252,12 +252,12 @@ func TestRssSchedule(t *testing.T) {
 
 		// Cleanup
 		page = visitAdmin(browser, "travel_back")
-		serverTimeStr := pageText(page)
+		serverTimeStr := mustPageText(page)
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60, description)
 		page = visitAdmin(browser, "reschedule_user_job")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		visitDev(browser, "logout")
 
 		browser.MustClose()

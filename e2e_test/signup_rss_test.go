@@ -59,7 +59,7 @@ func TestSignupRss(t *testing.T) {
 		browser := rod.New().ControlURL(browserUrl).MustConnect()
 
 		page := visitAdminf(browser, "destroy_user?email=%s", tc.Email)
-		require.Contains(t, []string{"OK", "NotFound"}, pageText(page), description)
+		require.Contains(t, []string{"OK", "NotFound"}, mustPageText(page), description)
 
 		todayUtc := schedule.NewTime(2022, 6, 1, 0, 0, 0, 0, time.UTC)
 		var todayLocal schedule.Time
@@ -76,7 +76,7 @@ func TestSignupRss(t *testing.T) {
 
 		signupTimestampStr := signupTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", signupTimestampStr)
-		require.Equal(t, signupTimestampStr, pageText(page), description)
+		require.Equal(t, signupTimestampStr, mustPageText(page), description)
 
 		// Create user
 		page = visitDev(browser, "signup")
@@ -115,26 +115,26 @@ func TestSignupRss(t *testing.T) {
 
 		page.MustElement("#save_button").MustClick()
 		page.MustElement("#arrival_msg")
-		subscriptionId := parseSubscriptionId(page)
+		subscriptionId := mustParseSubscriptionId(page)
 
 		// Assert published count
 		rssPublishTimestampStr := rssPublishTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", rssPublishTimestampStr)
-		require.Equal(t, rssPublishTimestampStr, pageText(page), description)
+		require.Equal(t, rssPublishTimestampStr, mustPageText(page), description)
 		page = visitAdmin(browser, "wait_for_publish_posts_job")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		page = visitDevf(browser, "subscriptions/%s", subscriptionId)
 		publishedCount := parsePublishedCount(page)
 		require.Equal(t, "1", publishedCount)
 
 		// Cleanup
 		page = visitAdmin(browser, "travel_back")
-		serverTimeStr := pageText(page)
+		serverTimeStr := mustPageText(page)
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60)
 		page = visitAdminf(browser, "destroy_user?email=%s", tc.Email)
-		require.Equal(t, "OK", pageText(page))
+		require.Equal(t, "OK", mustPageText(page))
 
 		browser.MustClose()
 		l.Cleanup()

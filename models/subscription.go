@@ -18,9 +18,10 @@ type SubscriptionId int64
 type SubscriptionStatus string
 
 const (
-	SubscriptionStatusWaitingForBlog = "waiting_for_blog"
-	SubscriptionStatusSetup          = "setup"
-	SubscriptionStatusLive           = "live"
+	SubscriptionStatusWaitingForBlog      = "waiting_for_blog"
+	SubscriptionStatusCustomBlogRequested = "custom_blog_requested"
+	SubscriptionStatusSetup               = "setup"
+	SubscriptionStatusLive                = "live"
 )
 
 func Subscription_Exists(tx pgw.Queryable, id SubscriptionId) (bool, error) {
@@ -242,28 +243,22 @@ type SubscriptionCreateResult struct {
 	BlogStatus  BlogStatus
 }
 
-var ErrBlogFailed = errors.New("blog has failed status")
-
 func Subscription_CreateForBlog(
 	tx pgw.Queryable, blog *Blog, currentUser *User, productUserId ProductUserId,
 ) (*SubscriptionCreateResult, error) {
-	if BlogFailedStatuses[blog.Status] {
-		return nil, ErrBlogFailed
+	var userId *UserId
+	var anonProductUserId *ProductUserId
+	if currentUser != nil {
+		userId = &currentUser.Id
+		anonProductUserId = nil
 	} else {
-		var userId *UserId
-		var anonProductUserId *ProductUserId
-		if currentUser != nil {
-			userId = &currentUser.Id
-			anonProductUserId = nil
-		} else {
-			userId = nil
-			anonProductUserId = &productUserId
-		}
-
-		return Subscription_Create(
-			tx, userId, anonProductUserId, blog, SubscriptionStatusWaitingForBlog, false, 0,
-		)
+		userId = nil
+		anonProductUserId = &productUserId
 	}
+
+	return Subscription_Create(
+		tx, userId, anonProductUserId, blog, SubscriptionStatusWaitingForBlog, false, 0,
+	)
 }
 
 func Subscription_Create(

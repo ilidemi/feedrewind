@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/pkg/errors"
 	"github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/billingportal/session"
 )
@@ -70,24 +72,43 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		currentPlan = "Free"
 	case models.PlanIdSupporter:
 		currentPlan = "Supporter"
+	case models.PlanIdPatron:
+		currentPlan = "Patron"
 	default:
 		panic(fmt.Errorf("Unknown plan: %s", planId))
 	}
 	isPaid := planId != models.PlanIdFree
 
 	cancelAtStr := ""
+	renewsOnStr := ""
 	if isPaid {
-		row = conn.QueryRow(`
-			select stripe_cancel_at from users_without_discarded where id = $1
+		row := conn.QueryRow(`
+			select stripe_cancel_at, stripe_current_period_end from users_without_discarded where id = $1
 		`, currentUser.Id)
-		var cancelAt *time.Time
-		err := row.Scan(&cancelAt)
+		var cancelAt, currentPeriodEnd *time.Time
+		err := row.Scan(&cancelAt, &currentPeriodEnd)
 		if err != nil {
 			panic(err)
 		}
 		if cancelAt != nil {
 			timezone := tzdata.LocationByName[userSettings.Timezone]
 			cancelAtStr = cancelAt.In(timezone).Format("Jan 2, 2006")
+		}
+		if currentPeriodEnd != nil {
+			timezone := tzdata.LocationByName[userSettings.Timezone]
+			renewsOnStr = currentPeriodEnd.In(timezone).Format("Jan 2, 2006")
+		}
+	}
+
+	isPatron := planId == models.PlanIdPatron
+	patronCredits := 0
+	if isPatron {
+		row := conn.QueryRow(`select count from patron_credits where user_id = $1`, currentUser.Id)
+		err := row.Scan(&patronCredits)
+		if errors.Is(err, pgx.ErrNoRows) {
+			logger.Warn().Msgf("Displaying 0 credits to user %d who upgraded to paid", currentUser.Id)
+		} else if err != nil {
+			panic(err)
 		}
 	}
 
@@ -124,7 +145,10 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		ShortFriendlyPrefixNameByGroupIdJson template.JS
 		GroupIdByTimezoneIdJson              template.JS
 		CurrentPlan                          string
+		IsPatron                             bool
+		PatronCredits                        int
 		CancelAt                             string
+		RenewsOn                             string
 		IsPaid                               bool
 	}
 	templates.MustWrite(w, "settings/settings", SettingsResult{
@@ -136,7 +160,10 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		ShortFriendlyPrefixNameByGroupIdJson: util.ShortFriendlyPrefixNameByGroupIdJson,
 		GroupIdByTimezoneIdJson:              util.GroupIdByTimezoneIdJson,
 		CurrentPlan:                          currentPlan,
+		IsPatron:                             planId == models.PlanIdPatron,
+		PatronCredits:                        patronCredits,
 		CancelAt:                             cancelAtStr,
+		RenewsOn:                             renewsOnStr,
 		IsPaid:                               isPaid,
 	})
 }
@@ -383,6 +410,48 @@ func UserSettings_Billing(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+
+	var billingPortalConfigurationId string
+	switch planId {
+	case models.PlanIdFree:
+		http.Redirect(w, r, "/settings", http.StatusSeeOther)
+		return
+	case models.PlanIdSupporter:
+		billingPortalConfigurationId = config.Cfg.StripeSupporterConfigId
+	case models.PlanIdPatron:
+		billingPortalConfigurationId = config.Cfg.StripePatronConfigId
+	default:
+		panic(fmt.Errorf("Unknown plan id: %s", planId))
+	}
+
+	//nolint:exhaustruct
+	params := &stripe.BillingPortalSessionParams{
+		Customer:      stripe.String(stripeCustomerId),
+		ReturnURL:     stripe.String(config.Cfg.RootUrl + "/settings"),
+		Configuration: stripe.String(billingPortalConfigurationId),
+	}
+	portalSession, err := session.New(params)
+	if err != nil {
+		panic(err)
+	}
+	http.Redirect(w, r, portalSession.URL, http.StatusSeeOther)
+}
+
+func UserSettings_BillingFull(w http.ResponseWriter, r *http.Request) {
+	currentUserId := rutil.CurrentUserId(r)
+	conn := rutil.DBConn(r)
+	row := conn.QueryRow(`
+		select stripe_customer_id, (select plan_id from pricing_offers where id = offer_id)
+		from users_without_discarded
+		where id = $1
+	`, currentUserId)
+	var stripeCustomerId string
+	var planId models.PlanId
+	err := row.Scan(&stripeCustomerId, &planId)
+	if err != nil {
+		panic(err)
+	}
+
 	if planId == models.PlanIdFree {
 		http.Redirect(w, r, "/settings", http.StatusSeeOther)
 		return
@@ -391,7 +460,7 @@ func UserSettings_Billing(w http.ResponseWriter, r *http.Request) {
 	//nolint:exhaustruct
 	params := &stripe.BillingPortalSessionParams{
 		Customer:  stripe.String(stripeCustomerId),
-		ReturnURL: stripe.String(config.Cfg.RootUrl + "/settings"),
+		ReturnURL: stripe.String(config.Cfg.RootUrl + "/pricing"),
 	}
 	portalSession, err := session.New(params)
 	if err != nil {

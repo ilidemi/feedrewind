@@ -60,7 +60,7 @@ func TestSignupEmail(t *testing.T) {
 		browser := rod.New().ControlURL(browserUrl).MustConnect()
 
 		page := visitAdminf(browser, "destroy_user?email=%s", tc.Email)
-		require.Contains(t, []string{"OK", "NotFound"}, pageText(page), description)
+		require.Contains(t, []string{"OK", "NotFound"}, mustPageText(page), description)
 
 		todayUtc := schedule.NewTime(2022, 6, 1, 0, 0, 0, 0, time.UTC)
 		var todayLocal schedule.Time
@@ -77,12 +77,12 @@ func TestSignupEmail(t *testing.T) {
 
 		signupTimestampStr := signupTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", signupTimestampStr)
-		require.Equal(t, signupTimestampStr, pageText(page), description)
+		require.Equal(t, signupTimestampStr, mustPageText(page), description)
 
 		emailMetadata, err := util.RandomInt63()
 		oops.RequireNoError(t, err, description)
 		page = visitAdminf(browser, "set_test_singleton?key=email_metadata&value=%d", emailMetadata)
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		// Create user
 		page = visitDev(browser, "signup")
@@ -125,29 +125,29 @@ func TestSignupEmail(t *testing.T) {
 		// Assert published count
 		emailTimestampStr := emailTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", emailTimestampStr)
-		require.Equal(t, emailTimestampStr, pageText(page), description)
+		require.Equal(t, emailTimestampStr, mustPageText(page), description)
 		page = visitAdmin(browser, "wait_for_publish_posts_job")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		emailTimestampUTCStr := emailTimestamp.MustUTCString()
 		page = visitAdminf(
 			browser,
 			"assert_email_count_with_metadata?value=%d&count=2&last_timestamp=%s&last_tag=subscription_post",
 			emailMetadata, emailTimestampUTCStr,
 		)
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		// Cleanup
 		page = visitAdmin(browser, "travel_back")
-		serverTimeStr := pageText(page)
+		serverTimeStr := mustPageText(page)
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60, description)
 		page = visitAdmin(browser, "reschedule_user_job")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		page = visitAdmin(browser, "delete_test_singleton?key=email_metadata")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		page = visitAdminf(browser, "destroy_user?email=%s", tc.Email)
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		browser.MustClose()
 		l.Cleanup()

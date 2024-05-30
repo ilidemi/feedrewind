@@ -115,18 +115,18 @@ func TestEmailSchedule(t *testing.T) {
 		page.MustWaitLoad()
 
 		page = visitAdmin(browser, "destroy_user_subscriptions")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		creationTimestampStr := creationTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", creationTimestampStr)
-		require.Equal(t, creationTimestampStr, pageText(page), description)
+		require.Equal(t, creationTimestampStr, mustPageText(page), description)
 		page = visitAdmin(browser, "reschedule_user_job")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		emailMetadata, err := util.RandomInt63()
 		oops.RequireNoError(t, err, description)
 		page = visitAdminf(browser, "set_test_singleton?key=email_metadata&value=%d", emailMetadata)
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		page = visitDev(browser, "subscriptions/add")
 		page.MustElement("#start_url").MustInput("https://ilidemi.github.io/dummy-blogs/1a/rss.xml")
@@ -203,7 +203,7 @@ func TestEmailSchedule(t *testing.T) {
 
 		arrivalMsg := page.MustElement("#arrival_msg").MustText()
 		require.Equal(t, expectedArrivalMsg.String(), arrivalMsg, description)
-		subscriptionId := parseSubscriptionId(page)
+		subscriptionId := mustParseSubscriptionId(page)
 		subscriptionPath := fmt.Sprintf("subscriptions/%s", subscriptionId)
 
 		// Assert published at creation
@@ -213,7 +213,7 @@ func TestEmailSchedule(t *testing.T) {
 			"assert_email_count_with_metadata?value=%d&count=%s&last_timestamp=%s&last_tag=subscription_initial",
 			emailMetadata, outputCountAtCreation, creationTimestampUTCStr,
 		)
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		// Assert preview at creation
 		page = visitDev(browser, subscriptionPath)
@@ -222,9 +222,9 @@ func TestEmailSchedule(t *testing.T) {
 		// Assert published late
 		lateTimestampStr := lateTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", lateTimestampStr)
-		require.Equal(t, lateTimestampStr, pageText(page), description)
+		require.Equal(t, lateTimestampStr, mustPageText(page), description)
 		page = visitAdmin(browser, "wait_for_publish_posts_job")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		var lastTimestampLate schedule.Time
 		var lastTagLate string
 		switch outputLastTimestampLate {
@@ -243,7 +243,7 @@ func TestEmailSchedule(t *testing.T) {
 			"assert_email_count_with_metadata?value=%d&count=%s&last_timestamp=%s&last_tag=%s",
 			emailMetadata, outputCountLate, lastTimestampLateStr, lastTagLate,
 		)
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		// Assert preview late
 		page = visitDev(browser, subscriptionPath)
@@ -252,16 +252,16 @@ func TestEmailSchedule(t *testing.T) {
 		// Assert preview at midhight
 		midnightTimestampStr := midnightTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", midnightTimestampStr)
-		require.Equal(t, midnightTimestampStr, pageText(page), description)
+		require.Equal(t, midnightTimestampStr, mustPageText(page), description)
 		page = visitDev(browser, subscriptionPath)
 		assertSchedulePreview(t, page, outputAtMidnight, description)
 
 		// Assert published tomorrow
 		tomorrowTimestampStr := tomorrowTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", tomorrowTimestampStr)
-		require.Equal(t, tomorrowTimestampStr, pageText(page), description)
+		require.Equal(t, tomorrowTimestampStr, mustPageText(page), description)
 		page = visitAdmin(browser, "wait_for_publish_posts_job")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		var lastTimestampTomorrow schedule.Time
 		var lastTagTomorrow string
 		switch outputLastTimestampTomorrow {
@@ -285,7 +285,7 @@ func TestEmailSchedule(t *testing.T) {
 			"assert_email_count_with_metadata?value=%d&count=%s&last_timestamp=%s&last_tag=%s",
 			emailMetadata, outputCountTomorrow, lastTimestampTomorrowStr, lastTagTomorrow,
 		)
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		// Assert preview tomorrow
 		page = visitDev(browser, subscriptionPath)
@@ -293,16 +293,16 @@ func TestEmailSchedule(t *testing.T) {
 
 		// Cleanup
 		page = visitAdmin(browser, "travel_back")
-		serverTimeStr := pageText(page)
+		serverTimeStr := mustPageText(page)
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60, description)
 		page = visitAdmin(browser, "reschedule_user_job")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		page = visitAdmin(browser, "delete_test_singleton?key=email_metadata")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		page = visitAdmin(browser, "destroy_user_subscriptions")
-		require.Equal(t, "OK", pageText(page), description)
+		require.Equal(t, "OK", mustPageText(page), description)
 		visitDev(browser, "logout")
 
 		browser.MustClose()

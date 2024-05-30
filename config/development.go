@@ -4,8 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-
-	"github.com/stripe/stripe-go/v78"
 )
 
 func DevelopmentDBConfig() DBConfig {
@@ -62,21 +60,25 @@ func developmentConfig() Config {
 		panic(err)
 	}
 
-	stripe.Key = "REDACTED_DEV_STRIPE_API_KEY"
 	return Config{
-		Env:                     EnvDevelopment,
-		Dyno:                    dyno,
-		DB:                      dbConfig,
-		IsHeroku:                false,
-		RootUrl:                 "http://localhost:3000",
-		SessionHashKey:          sessionHashKey,
-		SessionBlockKey:         sessionBlockKey,
-		AmplitudeApiKey:         "REDACTED_DEV_AMPLITUDE_API_KEY",
-		PostmarkApiSandboxToken: "REDACTED_DEV_POSTMARK_API_SANDBOX_TOKEN",
-		PostmarkApiToken:        "REDACTED_DEV_POSTMARK_API_TOKEN", // FeedRewindDevelopment
-		PostmarkWebhookSecret:   "REDACTED_DEV_POSTMARK_WEBHOOK_SECRET",
-		SlackWebhook:            "REDACTED_DEV_SLACK_WEBHOOK",
-		StripeWebhookSecret:     "REDACTED_DEV_STRIPE_WEBHOOK_SECRET",
-		AdminUserIds:            nil,
+		Env:                       EnvDevelopment,
+		Dyno:                      dyno,
+		DB:                        dbConfig,
+		IsHeroku:                  false,
+		RootUrl:                   "http://localhost:3000",
+		SessionHashKey:            sessionHashKey,
+		SessionBlockKey:           sessionBlockKey,
+		AmplitudeApiKey:           "REDACTED_DEV_AMPLITUDE_API_KEY",
+		PostmarkApiSandboxToken:   "REDACTED_DEV_POSTMARK_API_SANDBOX_TOKEN",
+		PostmarkApiToken:          "REDACTED_DEV_POSTMARK_API_TOKEN", // FeedRewindDevelopment
+		PostmarkWebhookSecret:     "REDACTED_DEV_POSTMARK_WEBHOOK_SECRET",
+		SlackWebhook:              "REDACTED_DEV_SLACK_WEBHOOK",
+		StripeApiKey:              "REDACTED_DEV_STRIPE_API_KEY",
+		StripeWebhookSecret:       "REDACTED_DEV_STRIPE_WEBHOOK_SECRET",
+		StripeSupporterConfigId:   "REDACTED_DEV_STRIPE_SUPPORTER_CONFIG_ID",
+		StripePatronConfigId:      "bpc_1PF0oO04wuefaPiWs2MOPJ3F",
+		StripeCustomBlogProductId: "REDACTED_DEV_STRIPE_CUSTOM_BLOG_PRODUCT_ID",
+		StripeCustomBlogPriceId:   "REDACTED_DEV_STRIPE_CUSTOM_BLOG_PRICE_ID",
+		AdminUserIds:              nil,
 	}
 }

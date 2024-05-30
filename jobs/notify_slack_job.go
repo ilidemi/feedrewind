@@ -5,6 +5,7 @@ import (
 	"context"
 	"feedrewind/config"
 	"feedrewind/db/pgw"
+	"feedrewind/models"
 	"feedrewind/oops"
 	"io"
 	"net/http"
@@ -60,6 +61,19 @@ func NotifySlackJob_Perform(ctx context.Context, conn *pgw.Conn, text string) er
 			logger.Error().Err(err).Msg("Error while reading Slack response body")
 		}
 		return oops.Newf("Slack webhook failed: %d %s", resp.StatusCode, string(respBody))
+	}
+
+	if config.Cfg.Env.IsDevOrTest() {
+		maybeSlackDump, err := models.TestSingleton_GetValue(conn, "slack_dump")
+		if err != nil {
+			return err
+		}
+		if maybeSlackDump != nil && *maybeSlackDump == "yes" {
+			err = models.TestSingleton_SetValue(conn, "slack_last_message", text)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

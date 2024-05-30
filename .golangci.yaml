@@ -16,3 +16,5 @@ linters-settings:
     settings:
       ruleguard:
         rules: "lint\\gorules.go"
+      ifElseChain:
+        minThreshold: 3

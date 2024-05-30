@@ -15,6 +15,8 @@ import (
 	"feedrewind/util/schedule"
 	"fmt"
 	"net/http"
+	"os"
+	"os/exec"
 	"time"
 
 	_ "net/http/pprof"
@@ -23,6 +25,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/heroku/x/hmetrics"
 	"github.com/spf13/cobra"
+	"github.com/stripe/stripe-go/v78"
+	"github.com/stripe/stripe-go/v78/billingportal/configuration"
 )
 
 //go:generate go run cmd/timezones/main.go
@@ -52,6 +56,123 @@ func main() {
 		Use: "log-stalled-jobs",
 		Run: func(_ *cobra.Command, _ []string) {
 			logStalledJobs()
+		},
+	})
+	rootCmd.AddCommand(&cobra.Command{
+		Use: "stripe-listen",
+		Run: func(_ *cobra.Command, _ []string) {
+			stripeCmd := exec.Command("stripe", "listen", "--forward-to", "localhost:3000/stripe/webhook")
+			stripeCmd.Stdout = os.Stdout
+			stripeCmd.Stderr = os.Stderr
+			if err := stripeCmd.Run(); err != nil {
+				panic(err)
+			}
+		},
+	})
+	rootCmd.AddCommand(&cobra.Command{
+		Use: "stripe-configure-portal",
+		Run: func(_ *cobra.Command, _ []string) {
+			conn, err := db.Pool.AcquireBackground()
+			if err != nil {
+				panic(err)
+			}
+			models.MustInit(conn)
+			defer conn.Release()
+
+			//nolint:exhaustruct
+			params := &stripe.BillingPortalConfigurationParams{
+				BusinessProfile: &stripe.BillingPortalConfigurationBusinessProfileParams{
+					Headline:          stripe.String("FeedRewind partners with Stripe for simplified billing."),
+					PrivacyPolicyURL:  stripe.String("https://feedrewind.com/privacy"),
+					TermsOfServiceURL: stripe.String("https://feedrewind.com/terms"),
+				},
+				Features: &stripe.BillingPortalConfigurationFeaturesParams{
+					CustomerUpdate: &stripe.BillingPortalConfigurationFeaturesCustomerUpdateParams{
+						AllowedUpdates: []*string{
+							stripe.String(string(stripe.BillingPortalConfigurationFeaturesCustomerUpdateAllowedUpdateName)),
+							stripe.String(string(stripe.BillingPortalConfigurationFeaturesCustomerUpdateAllowedUpdateEmail)),
+							stripe.String(string(stripe.BillingPortalConfigurationFeaturesCustomerUpdateAllowedUpdateAddress)),
+							stripe.String(string(stripe.BillingPortalConfigurationFeaturesCustomerUpdateAllowedUpdatePhone)),
+						},
+						Enabled: stripe.Bool(true),
+					},
+					InvoiceHistory: &stripe.BillingPortalConfigurationFeaturesInvoiceHistoryParams{
+						Enabled: stripe.Bool(true),
+					},
+					PaymentMethodUpdate: &stripe.BillingPortalConfigurationFeaturesPaymentMethodUpdateParams{
+						Enabled: stripe.Bool(true),
+					},
+					SubscriptionCancel: &stripe.BillingPortalConfigurationFeaturesSubscriptionCancelParams{
+						CancellationReason: &stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonParams{
+							Enabled: stripe.Bool(true),
+							Options: []*string{
+								stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonOptionTooExpensive)),
+								stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonOptionMissingFeatures)),
+								stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonOptionSwitchedService)),
+								stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonOptionUnused)),
+								stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonOptionOther)),
+							},
+						},
+						Enabled:           stripe.Bool(true),
+						Mode:              stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelModeAtPeriodEnd)),
+						ProrationBehavior: stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelProrationBehaviorNone)),
+					},
+					SubscriptionUpdate: &stripe.BillingPortalConfigurationFeaturesSubscriptionUpdateParams{
+						DefaultAllowedUpdates: []*string{
+							stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionUpdateDefaultAllowedUpdatePrice)),
+						},
+						Enabled:           stripe.Bool(true),
+						ProrationBehavior: stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionUpdateProrationBehaviorAlwaysInvoice)),
+					},
+				},
+			}
+
+			row := conn.QueryRow(`
+				select stripe_product_id, stripe_monthly_price_id, stripe_yearly_price_id
+				from product_offers
+				where id = (select default_offer_id from product_plans where id = 'supporter')
+			`)
+			var stripeProductId, stripeMonthlyPriceId, stripeYearlyPriceId string
+			err = row.Scan(&stripeProductId, &stripeMonthlyPriceId, &stripeYearlyPriceId)
+			if err != nil {
+				panic(err)
+			}
+			params.Features.SubscriptionUpdate.Products =
+				[]*stripe.BillingPortalConfigurationFeaturesSubscriptionUpdateProductParams{{
+					Product: stripe.String(stripeProductId),
+					Prices: []*string{
+						stripe.String(stripeMonthlyPriceId),
+						stripe.String(stripeYearlyPriceId),
+					},
+				}}
+			supporterResult, err := configuration.New(params)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("Supporter", supporterResult.ID)
+
+			row = conn.QueryRow(`
+				select stripe_product_id, stripe_monthly_price_id, stripe_yearly_price_id
+				from product_offers
+				where id = (select default_offer_id from product_plans where id = 'patron')
+			`)
+			err = row.Scan(&stripeProductId, &stripeMonthlyPriceId, &stripeYearlyPriceId)
+			if err != nil {
+				panic(err)
+			}
+			params.Features.SubscriptionUpdate.Products =
+				[]*stripe.BillingPortalConfigurationFeaturesSubscriptionUpdateProductParams{{
+					Product: stripe.String(stripeProductId),
+					Prices: []*string{
+						stripe.String(stripeMonthlyPriceId),
+						stripe.String(stripeYearlyPriceId),
+					},
+				}}
+			patronResult, err := configuration.New(params)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("Patron", patronResult.ID)
 		},
 	})
 
@@ -96,6 +217,9 @@ func runServer(port int) {
 	models.MustInit(conn)
 	conn.Release()
 
+	stripe.Key = config.Cfg.StripeApiKey
+	stripe.DefaultLeveledLogger = &log.StripeLogger{Logger: logger}
+
 	staticR := chi.NewRouter()
 	staticR.Use(frmiddleware.Logger)
 	staticR.Use(middleware.Compress(3))
@@ -137,8 +261,6 @@ func runServer(port int) {
 		r.Post("/subscriptions/{id:\\d+}/delete", routes.Subscriptions_Delete)
 		r.Get("/subscriptions/{id:\\d+}/progress_stream", routes.Subscriptions_ProgressStream)
 
-		r.Get("/blogs/{id}/unsupported", routes.Blogs_Unsupported)
-
 		r.Get("/terms", routes.Misc_Terms)
 		r.Get("/privacy", routes.Misc_Privacy)
 		r.Get("/subprocessors", routes.Misc_Subprocessors)
@@ -152,11 +274,22 @@ func runServer(port int) {
 			authorized.Post("/subscriptions/{id:\\d+}", routes.Subscriptions_Update)
 			authorized.Post("/subscriptions/{id:\\d+}/pause", routes.Subscriptions_Pause)
 			authorized.Post("/subscriptions/{id:\\d+}/unpause", routes.Subscriptions_Unpause)
+			authorized.Get("/subscriptions/{id:\\d+}/request", routes.Subscriptions_RequestCustomBlogPage)
+			authorized.Post(
+				"/subscriptions/{id:\\d+}/checkout", routes.Subscriptions_CheckoutCustomBlogRequest,
+			)
+			authorized.Get(
+				"/subscriptions/{id:\\d+}/submit_request", routes.Subscriptions_SubmitCustomBlogRequest,
+			)
+			authorized.Post(
+				"/subscriptions/{id:\\d+}/submit_request", routes.Subscriptions_SubmitCustomBlogRequest,
+			)
 
 			authorized.Get("/settings", routes.UserSettings_Page)
 			authorized.Post("/settings/save_timezone", routes.UserSettings_SaveTimezone)
 			authorized.Post("/settings/save_delivery_channel", routes.UserSettings_SaveDeliveryChannel)
-			authorized.Post("/billing", routes.UserSettings_Billing)
+			authorized.Get("/billing", routes.UserSettings_Billing)
+			authorized.Get("/billing_full", routes.UserSettings_BillingFull)
 			authorized.Get("/upgrade", routes.Users_Upgrade)
 			authorized.Post("/delete_account", routes.Users_DeleteAccount)
 		})
@@ -175,6 +308,7 @@ func runServer(port int) {
 			r.Get("/test/run_reset_failed_blogs_job", routes.AdminTest_RunResetFailedBlogsJob)
 			r.Get("/test/destroy_user_subscriptions", routes.AdminTest_DestroyUserSubscriptions)
 			r.Get("/test/destroy_user", routes.AdminTest_DestroyUser)
+			r.Get("/test/get_test_singleton", routes.AdminTest_GetTestSingleton)
 			r.Get("/test/set_test_singleton", routes.AdminTest_SetTestSingleton)
 			r.Get("/test/delete_test_singleton", routes.AdminTest_DeleteTestSingleton)
 			r.Get("/test/assert_email_count_with_metadata", routes.AdminTest_AssertEmailCountWithMetadata)
@@ -184,7 +318,7 @@ func runServer(port int) {
 			r.Get("/test/execute_sql", routes.AdminTest_ExecuteSql)
 			r.Get("/test/ensure_stripe_listen", routes.AdminTest_EnsureStripeListen)
 			r.Get("/test/delete_stripe_subscription", routes.AdminTest_DeleteStripeSubscription)
-			r.Get("/test/forward_stripe_customer_45_days", routes.AdminTest_ForwardStripeCustomer45Days)
+			r.Get("/test/forward_stripe_customer", routes.AdminTest_ForwardStripeCustomer)
 			r.Get("/test/delete_stripe_clocks", routes.AdminTest_DeleteStripeClocks)
 		}
 	})

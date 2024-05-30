@@ -11,8 +11,6 @@ import (
 	"net/http"
 
 	"github.com/goccy/go-json"
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/mrz1836/postmark"
 	"github.com/pkg/errors"
 	"github.com/stripe/stripe-go/v78"
@@ -78,21 +76,21 @@ func Webhooks_Stripe(w http.ResponseWriter, r *http.Request) {
 
 	logger := rutil.Logger(r)
 	logger.Info().Msgf(
-		"Event:%s id:%s object:%s", string(event.Type), event.ID, event.Data.Object["id"].(string),
+		"Event:%s id:%s object:%v", string(event.Type), event.ID, event.Data.Object["id"],
 	)
 	switch event.Type {
 	case stripe.EventTypeCustomerSubscriptionCreated,
 		stripe.EventTypeCustomerSubscriptionUpdated,
 		stripe.EventTypeCustomerSubscriptionDeleted,
-		stripe.EventTypeCheckoutSessionCompleted:
+		stripe.EventTypeCheckoutSessionCompleted,
+		stripe.EventTypeInvoiceCreated,
+		stripe.EventTypeInvoicePaid:
 
 		conn := rutil.DBConn(r)
 		_, err := conn.Exec(`
 			insert into stripe_webhook_events (id, payload) values ($1, $2)
 		`, event.ID, payload)
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
-			pgErr.ConstraintName == "stripe_webhook_events_pkey" {
+		if util.ViolatesUnique(err, "stripe_webhook_events_pkey") {
 			logger.Info().Msgf("Duplicate event: %s", event.ID)
 			break
 		} else if err != nil {

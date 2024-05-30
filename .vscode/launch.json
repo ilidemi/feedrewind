@@ -50,8 +50,17 @@
             "request": "launch",
             "mode": "test",
             "program": "${relativeFileDirname}",
-            "buildFlags": "-tags testing,e2etesting",
+            "buildFlags": "-tags testing,e2etesting,stripetesting",
             "args": ["-test.run", ".*"]
+        },
+        {
+            "name": "Run selected test",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${relativeFileDirname}",
+            "buildFlags": "-tags testing,e2etesting,stripetesting",
+            "args": ["-test.run", "${selectedText}"]
         }
     ]
 }

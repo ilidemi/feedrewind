@@ -8,10 +8,10 @@ import (
 	"feedrewind/db/pgw"
 	"feedrewind/models/mutil"
 	"feedrewind/oops"
+	"feedrewind/util"
+	"time"
 
-	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -91,7 +91,7 @@ func User_GetProductUserId(tx pgw.Queryable, userId UserId) (ProductUserId, erro
 	return productUserId, nil
 }
 
-type FullUser struct {
+type UserWithPassword struct {
 	Id             UserId
 	Email          string
 	PasswordDigest string
@@ -100,13 +100,13 @@ type FullUser struct {
 	ProductUserId  ProductUserId
 }
 
-func FullUser_FindByEmail(tx pgw.Queryable, email string) (*FullUser, error) {
+func UserWithPassword_FindByEmail(tx pgw.Queryable, email string) (*UserWithPassword, error) {
 	row := tx.QueryRow(`
 		select id, email, password_digest, auth_token, name, product_user_id
 		from users_without_discarded
 		where email = $1
 	`, email)
-	var user FullUser
+	var user UserWithPassword
 	err := row.Scan(
 		&user.Id, &user.Email, &user.PasswordDigest, &user.AuthToken, &user.Name, &user.ProductUserId,
 	)
@@ -119,7 +119,7 @@ func FullUser_FindByEmail(tx pgw.Queryable, email string) (*FullUser, error) {
 	return &user, nil
 }
 
-func FullUser_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*FullUser, error) {
+func UserWithPassword_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*UserWithPassword, error) {
 	passwordDigest, err := generatePasswordDigest(password)
 	if err != nil {
 		return nil, err
@@ -135,7 +135,7 @@ func FullUser_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*Ful
 		set password_digest = $1, auth_token = $2 where id = $3
 		returning id, email, password_digest, auth_token, name, product_user_id
 	`, passwordDigest, authToken, id)
-	var user FullUser
+	var user UserWithPassword
 	err = row.Scan(
 		&user.Id, &user.Email, &user.PasswordDigest, &user.AuthToken, &user.Name, &user.ProductUserId,
 	)
@@ -145,11 +145,11 @@ func FullUser_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*Ful
 	return &user, nil
 }
 
-func FullUser_Create(
+func UserWithPassword_Create(
 	tx pgw.Queryable, email string, password string, name string, productUserId ProductUserId,
 	offerId OfferId, maybeStripeSubscriptionId *string, maybeStripeCustomerId *string,
-	maybeBillingInterval *string,
-) (*FullUser, error) {
+	maybeBillingInterval *BillingInterval, maybeStripeCurrentPeriodEnd *time.Time,
+) (*UserWithPassword, error) {
 	passwordDigest, err := generatePasswordDigest(password)
 	if err != nil {
 		return nil, err
@@ -169,21 +169,19 @@ func FullUser_Create(
 	_, err = tx.Exec(`
 		insert into users_without_discarded(
 			id, email, password_digest, auth_token, name, product_user_id, offer_id,
-			stripe_subscription_id, stripe_customer_id, billing_interval
+			stripe_subscription_id, stripe_customer_id, billing_interval, stripe_current_period_end
 		)
-		values($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		values($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`, id, email, passwordDigest, authToken, name, productUserId, offerId, maybeStripeSubscriptionId,
-		maybeStripeCustomerId, maybeBillingInterval,
+		maybeStripeCustomerId, maybeBillingInterval, maybeStripeCurrentPeriodEnd,
 	)
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
-		pgErr.ConstraintName == "users_email_without_discarded" {
+	if util.ViolatesUnique(err, "users_email_without_discarded") {
 		return nil, ErrUserAlreadyExists
 	} else if err != nil {
 		return nil, err
 	}
 
-	return &FullUser{
+	return &UserWithPassword{
 		Id:             id,
 		Email:          email,
 		PasswordDigest: passwordDigest,

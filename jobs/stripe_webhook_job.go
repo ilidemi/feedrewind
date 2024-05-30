@@ -15,6 +15,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/jackc/pgx/v5"
 	"github.com/stripe/stripe-go/v78"
+	"github.com/stripe/stripe-go/v78/checkout/session"
 	"github.com/stripe/stripe-go/v78/subscription"
 )
 
@@ -45,7 +46,10 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 	var payload []byte
 	row := conn.QueryRow(`select payload from stripe_webhook_events where id = $1`, eventId)
 	err := row.Scan(&payload)
-	if err != nil {
+	if errors.Is(err, pgx.ErrNoRows) {
+		logger.Error().Msgf("Couldn't find event: %s", eventId)
+		return nil
+	} else if err != nil {
 		return err
 	}
 
@@ -60,7 +64,30 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 	// When adding new cases, update the webhook handler too
 	switch event.Type {
 	case stripe.EventTypeCustomerSubscriptionCreated:
-		err := NotifySlackJob_PerformNow(conn, "💰 New Stripe subscription")
+		var sub stripe.Subscription
+		err := json.Unmarshal(event.Data.Raw, &sub)
+		if err != nil {
+			return oops.Wrap(err)
+		}
+		row := conn.QueryRow(`
+			select plan_id from pricing_offers
+			where stripe_monthly_price_id = $1 or stripe_yearly_price_id = $1
+		`, sub.Items.Data[0].Price.ID)
+		var planId models.PlanId
+		err = row.Scan(&planId)
+		if err != nil {
+			return err
+		}
+		var slackMessage string
+		switch planId {
+		case models.PlanIdSupporter:
+			slackMessage = "💰 New Supporter"
+		case models.PlanIdPatron:
+			slackMessage = "💰💰💰 New Patron"
+		default:
+			panic(fmt.Errorf("Unknown plan id: %s", planId))
+		}
+		err = NotifySlackJob_PerformNow(conn, slackMessage)
 		if err != nil {
 			return err
 		}
@@ -70,15 +97,15 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 		if err != nil {
 			return oops.Wrap(err)
 		}
-		sub, err := subscription.Get(sesh.Subscription.ID, nil)
-		if err != nil {
-			return oops.Wrap(err)
-		}
 		userIdStr, ok := sesh.Metadata["user_id"]
 		if !ok {
 			break
 		}
 		userId, err := strconv.ParseInt(userIdStr, 10, 64)
+		if err != nil {
+			return oops.Wrap(err)
+		}
+		sub, err := subscription.Get(sesh.Subscription.ID, nil)
 		if err != nil {
 			return oops.Wrap(err)
 		}
@@ -210,29 +237,76 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 					}
 				}
 
-				if prevInterval, ok := getPreviousValue(
-					&event, "items", "data", "0", "price", "recurring", "interval",
-				); ok {
-					newInterval := sub.Items.Data[0].Price.Recurring.Interval
-					if newInterval != prevInterval {
-						var newBillingInterval models.BillingInterval
-						switch newInterval {
-						case "month":
-							newBillingInterval = models.BillingIntervalMonthly
-						case "year":
-							newBillingInterval = models.BillingIntervalYearly
-						default:
-							return oops.Newf("Unknown plan interval: %s", newInterval)
-						}
+				if _, ok := getPreviousValue(&event, "items", "data", "0", "price", "id"); ok {
+					newProductId := sub.Items.Data[0].Price.Product.ID
+					row := tx.QueryRow(`
+						select id, plan_id from pricing_offers where stripe_product_id = $1
+					`, newProductId)
+					var newOfferId models.OfferId
+					var newPlanId models.PlanId
+					err := row.Scan(&newOfferId, &newPlanId)
+					if err != nil {
+						return err
+					}
 
-						row = tx.QueryRow(`
+					row = tx.QueryRow(`
+						select
+							id, product_user_id, billing_interval,
+							(select plan_id from pricing_offers where id = offer_id)
+						from users_without_discarded
+						where stripe_subscription_id = $1
+					`, sub.ID)
+					var userId models.UserId
+					var productUserId models.ProductUserId
+					var oldBillingInterval models.BillingInterval
+					var oldPlanId models.PlanId
+					err = row.Scan(&userId, &productUserId, &oldBillingInterval, &oldPlanId)
+					if err != nil {
+						return err
+					}
+
+					newInterval := sub.Items.Data[0].Price.Recurring.Interval
+					var newBillingInterval models.BillingInterval
+					switch newInterval {
+					case stripe.PriceRecurringIntervalMonth:
+						newBillingInterval = models.BillingIntervalMonthly
+					case stripe.PriceRecurringIntervalYear:
+						newBillingInterval = models.BillingIntervalYearly
+					default:
+						return oops.Newf("Unknown plan interval: %s", newInterval)
+					}
+
+					_, err = tx.Exec(`
+						update users_without_discarded
+						set billing_interval = $1, offer_id = $2 where id = $3
+					`, newBillingInterval, newOfferId, userId)
+					if err != nil {
+						return err
+					}
+
+					if newPlanId != oldPlanId {
+						err := models.ProductEvent_Emit(
+							tx, productUserId, "update stripe subscription", map[string]any{
+								"pricing_plan":  newPlanId,
+								"pricing_offer": newOfferId,
+							}, map[string]any{
+								"pricing_plan":  newPlanId,
+								"pricing_offer": newOfferId,
+							},
+						)
+						if err != nil {
+							return err
+						}
+						logger.Info().Msgf(
+							"Updated plan from %s to %s for user %d", oldPlanId, newPlanId, userId,
+						)
+					}
+
+					if newBillingInterval != oldBillingInterval {
+						_, err = tx.Exec(`
 							update users_without_discarded
-							set billing_interval = $1 where stripe_subscription_id = $2
-							returning id, product_user_id
-						`, newBillingInterval, sub.ID)
-						var userId models.UserId
-						var productUserId models.ProductUserId
-						err = row.Scan(&userId, &productUserId)
+							set billing_interval = $1 where id = $2
+						`, newBillingInterval, userId)
 						if err != nil {
 							return err
 						}
@@ -250,7 +324,6 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 							"Updated billing interval to %s for user %d", newBillingInterval, userId,
 						)
 					}
-
 				}
 
 				return nil
@@ -321,6 +394,190 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 		if err != nil {
 			return err
 		}
+	case stripe.EventTypeInvoiceCreated:
+		var invoice stripe.Invoice
+		err := json.Unmarshal(event.Data.Raw, &invoice)
+		if err != nil {
+			return oops.Wrap(err)
+		}
+		sub, err := subscription.Get(invoice.Subscription.ID, nil)
+		if err != nil {
+			return oops.Wrap(err)
+		}
+		currentPeriodEnd := time.Unix(sub.CurrentPeriodEnd, 0).UTC()
+		result, err := conn.Exec(`
+			update users_with_discarded set stripe_current_period_end = $1 where stripe_subscription_id = $2
+		`, currentPeriodEnd, sub.ID)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() > 0 {
+			logger.Info().Msgf("Updated current period end to %v for Stripe sub %s", currentPeriodEnd, sub.ID)
+		} else {
+			logger.Info().Msgf(
+				"Couldn't find the user for Stripe sub %s, assuming the sign-up hasn't gone through yet",
+				sub.ID,
+			)
+		}
+	case stripe.EventTypeInvoicePaid:
+		var invoice stripe.Invoice
+		err := json.Unmarshal(event.Data.Raw, &invoice)
+		if err != nil {
+			return oops.Wrap(err)
+		}
+		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+			var priceId string
+			for _, lineItem := range invoice.Lines.Data {
+				if lineItem.Amount > 0 {
+					priceId = lineItem.Price.ID
+				}
+			}
+			if priceId == "" {
+				return oops.Newf("Couldn't find the line item that was actually paid: %s", eventId)
+			}
+			row := tx.QueryRow(`
+				select $1::int, $2::int from pricing_offers
+				where stripe_monthly_price_id = $5 and plan_id = $6
+				union
+				select $3::int, $4::int from pricing_offers
+				where stripe_yearly_price_id = $5 and plan_id = $6
+			`, models.PatronCreditsMonthly, models.PatronCreditsMonthlyCap,
+				models.PatronCreditsYearly, models.PatronCreditsYearlyCap,
+				priceId, models.PlanIdPatron)
+			var creditsBump, creditsCap int
+			err := row.Scan(&creditsBump, &creditsCap)
+			if errors.Is(err, pgx.ErrNoRows) {
+				// Not a patron invoice
+				return nil
+			} else if err != nil {
+				return err
+			}
+
+			row = tx.QueryRow(`
+				select id from users_with_discarded where stripe_subscription_id = $1
+			`, invoice.Subscription.ID)
+			var userId models.UserId
+			err = row.Scan(&userId)
+			if errors.Is(err, pgx.ErrNoRows) {
+				// Special handling for a free user upgrading. The /upgrade wasn't called yet but we need to
+				// bump the credits
+
+				//nolint:exhaustruct
+				sessionIter := session.List(&stripe.CheckoutSessionListParams{
+					Customer: stripe.String(invoice.Customer.ID),
+				})
+				found := false
+				for sessionIter.Next() {
+					sesh := sessionIter.CheckoutSession()
+					if userIdStr, ok := sesh.Metadata["user_id"]; ok {
+						userIdInt, err := strconv.ParseInt(userIdStr, 10, 64)
+						if err != nil {
+							return oops.Wrap(err)
+						}
+						userId = models.UserId(userIdInt)
+						found = true
+					}
+				}
+				if err := sessionIter.Err(); err != nil {
+					return oops.Wrap(err)
+				}
+				if !found {
+					logger.Info().Msgf(
+						"Couldn't find the user for Stripe sub %s, assuming the sign-up hasn't gone through yet",
+						invoice.Subscription.ID,
+					)
+					return nil
+				}
+
+				stripeProductId := invoice.Lines.Data[0].Price.Product.ID
+				row := tx.QueryRow(`
+					select id, plan_id from pricing_offers where stripe_product_id = $1
+				`, stripeProductId)
+				var offerId models.OfferId
+				var planId models.PlanId
+				err = row.Scan(&offerId, &planId)
+				if err != nil {
+					return err
+				}
+				stripePriceId := invoice.Lines.Data[0].Price.ID
+				billingInterval, err := models.BillingInterval_GetByOffer(tx, stripeProductId, stripePriceId)
+				if err != nil {
+					return err
+				}
+				_, err = tx.Exec(`
+					update users_without_discarded
+					set offer_id = $1,
+						stripe_subscription_id = $2,
+						stripe_customer_id = $3,
+						billing_interval = $4
+					where id = $5
+				`, offerId, invoice.Subscription.ID, invoice.Customer.ID, billingInterval, userId)
+				if err != nil {
+					return err
+				}
+				logger.Info().Msgf("Initialized Stripe fields for user %d", userId)
+			} else if err != nil {
+				return err
+			}
+
+			result, err := tx.Exec(`
+				insert into patron_credits (user_id, count, cap) values ($1, 0, $2)
+				on conflict do nothing
+			`, userId, creditsCap)
+			if err != nil {
+				return err
+			}
+			if result.RowsAffected() > 0 {
+				logger.Info().Msgf("Initialized patron_credits for user %d", userId)
+			}
+
+			row = tx.QueryRow(`select count, cap from patron_credits where user_id = $1`, userId)
+			var oldCreditsCount, oldCreditsCap int
+			err = row.Scan(&oldCreditsCount, &oldCreditsCap)
+			if err != nil {
+				return err
+			}
+
+			_, err = tx.Exec(`insert into patron_invoices (id) values ($1)`, invoice.ID)
+			if util.ViolatesUnique(err, "patron_invoices_pkey") {
+				logger.Info().Msgf("Invoice already processed, bailing: %s", invoice.ID)
+				return nil
+			} else if err != nil {
+				return err
+			}
+
+			if oldCreditsCap != creditsCap {
+				if oldCreditsCap < creditsCap {
+					_, err := tx.Exec(`
+						update patron_credits set cap = $1 where user_id = $2
+					`, creditsCap, userId)
+					if err != nil {
+						return err
+					}
+					logger.Info().Msgf("Bumped patron credit cap to %d for user %d", creditsCap, userId)
+				}
+				logger.Warn().Msg("Proration is not implemented, please do that promptly")
+			}
+
+			row = tx.QueryRow(`
+				update patron_credits set count = least(count + $1, cap) where user_id = $2 returning count
+			`, creditsBump, userId)
+			var newCreditCount int
+			err = row.Scan(&newCreditCount)
+			if err != nil {
+				return err
+			}
+
+			logger.Info().Msgf(
+				"Bumped the credits from %d to %d for user %d", oldCreditsCount, newCreditCount, userId,
+			)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	default:
+		return oops.Newf("Unknown event type: %v", event.Type)
 	}
 
 	_, err = conn.Exec(`delete from stripe_webhook_events where id = $1`, eventId)
