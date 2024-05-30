@@ -65,3 +65,12 @@ func (tx *Tx) MustUpdateDiscardedViews(tableName string, checkTableUsage *bool) 
 	`)
 	*checkTableUsage = true
 }
+
+var DeleteJobByName func(pgw.Queryable, string) error
+
+func (tx *Tx) MustDeleteJobByName(name string) {
+	err := DeleteJobByName(tx.impl, name)
+	if err != nil {
+		panic(err)
+	}
+}

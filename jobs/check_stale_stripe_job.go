@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"feedrewind/db/migrations"
 	"feedrewind/db/pgw"
 	"feedrewind/oops"
@@ -9,7 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/stripe/stripe-go/v78"
+	"github.com/stripe/stripe-go/v78/checkout/session"
 	"github.com/stripe/stripe-go/v78/subscription"
 )
 
@@ -37,18 +40,18 @@ func CheckStaleStripeJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	subscriptionCutoff := utcNow.Add(-24 * time.Hour)
 	var subscriptionIds []string
 	//nolint:exhaustruct
-	iter := subscription.List(&stripe.SubscriptionListParams{
+	subscriptionIter := subscription.List(&stripe.SubscriptionListParams{
 		ListParams: stripe.ListParams{
 			Context: ctx,
 		},
 		Status:       stripe.String("active"),
 		CreatedRange: &stripe.RangeQueryParams{LesserThan: subscriptionCutoff.Unix()},
 	})
-	for iter.Next() {
-		sub := iter.Subscription()
+	for subscriptionIter.Next() {
+		sub := subscriptionIter.Subscription()
 		subscriptionIds = append(subscriptionIds, sub.ID)
 	}
-	if err := iter.Err(); err != nil {
+	if err := subscriptionIter.Err(); err != nil {
 		return oops.Wrap(err)
 	}
 
@@ -102,6 +105,48 @@ func CheckStaleStripeJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	}
 	if staleCount > 0 {
 		logger.Warn().Msgf("Found %d stale stripe_subscription_tokens", staleCount)
+	}
+
+	session.List(&stripe.CheckoutSessionListParams{}) //nolint:exhaustruct
+
+	customBlogSessionCutoff := utcNow.Add(-7 * 24 * time.Hour)
+	customBlogSessionTooRecent := utcNow.Add(-1 * time.Hour)
+	//nolint:exhaustruct
+	customBlogSessionIter := session.List(&stripe.CheckoutSessionListParams{
+		CreatedRange: &stripe.RangeQueryParams{
+			GreaterThanOrEqual: *stripe.Int64(customBlogSessionCutoff.Unix()),
+		},
+		Status: stripe.String(string(stripe.CheckoutSessionStatusComplete)),
+	})
+	var hangingCustomBlogSessionIds []string
+	for customBlogSessionIter.Next() {
+		sesh := customBlogSessionIter.CheckoutSession()
+		if sesh.Created > customBlogSessionTooRecent.Unix() {
+			continue
+		}
+		if _, ok := sesh.Metadata["subscription_id"]; !ok {
+			continue
+		}
+		row := conn.QueryRow(`
+			select 1 from custom_blog_requests
+			where stripe_payment_intent_id = $1
+		`, sesh.PaymentIntent.ID)
+		var one int
+		err := row.Scan(&one)
+		if errors.Is(err, pgx.ErrNoRows) {
+			hangingCustomBlogSessionIds = append(hangingCustomBlogSessionIds, sesh.ID)
+		} else if err != nil {
+			return err
+		}
+	}
+	if err := customBlogSessionIter.Err(); err != nil {
+		return oops.Wrap(err)
+	}
+	if len(hangingCustomBlogSessionIds) > 0 {
+		logger.Warn().Msgf(
+			"Found %d hanging custom blog request sessions: %v",
+			len(hangingCustomBlogSessionIds), hangingCustomBlogSessionIds,
+		)
 	}
 
 	hourFromNow := utcNow.Add(time.Hour)

@@ -102,13 +102,12 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 		}
 		switch discoverResult := discoverFeedsResult.(type) {
 		case *discoveredSubscription:
-			models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
+			if !models.BlogFailedStatuses[discoverResult.subscription.BlogStatus] {
+				models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
+			}
 			http.Redirect(
 				w, r, rutil.SubscriptionSetupPath(discoverResult.subscription.Id), http.StatusSeeOther,
 			)
-			return
-		case *discoveredUnsupportedBlog:
-			http.Redirect(w, r, rutil.BlogUnsupportedPath(discoverResult.blog.Id), http.StatusSeeOther)
 			return
 		case *discoveredFeeds:
 			result = OnboardingResult{
@@ -181,12 +180,10 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 	}
 	switch discoverResult := discoverFeedsResult.(type) {
 	case *discoveredSubscription:
-		models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
+		if !models.BlogFailedStatuses[discoverResult.subscription.BlogStatus] {
+			models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
+		}
 		redirectPath := rutil.SubscriptionSetupPath(discoverResult.subscription.Id)
-		http.Redirect(w, r, redirectPath, http.StatusSeeOther)
-		return
-	case *discoveredUnsupportedBlog:
-		redirectPath := rutil.BlogUnsupportedPath(discoverResult.blog.Id)
 		http.Redirect(w, r, redirectPath, http.StatusSeeOther)
 		return
 	case *discoveredFeeds:
@@ -241,11 +238,10 @@ func Onboarding_DiscoverFeeds(w http.ResponseWriter, r *http.Request) {
 	}
 	switch discoverResult := discoverFeedsResult.(type) {
 	case *discoveredSubscription:
-		models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
+		if !models.BlogFailedStatuses[discoverResult.subscription.BlogStatus] {
+			models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
+		}
 		util.MustWrite(w, rutil.SubscriptionSetupPath(discoverResult.subscription.Id))
-		return
-	case *discoveredUnsupportedBlog:
-		util.MustWrite(w, rutil.BlogUnsupportedPath(discoverResult.blog.Id))
 		return
 	case *discoveredFeeds:
 		result = feedsData{ //nolint:exhaustruct
@@ -287,10 +283,6 @@ type discoveredSubscription struct {
 	subscription *models.SubscriptionCreateResult
 }
 
-type discoveredUnsupportedBlog struct {
-	blog *models.Blog
-}
-
 type discoveredFeeds struct {
 	feeds []*models.StartFeed
 }
@@ -301,10 +293,9 @@ type discoverResult interface {
 	discoverResultTag()
 }
 
-func (*discoveredSubscription) discoverResultTag()    {}
-func (*discoveredUnsupportedBlog) discoverResultTag() {}
-func (*discoveredFeeds) discoverResultTag()           {}
-func (*discoverError) discoverResultTag()             {}
+func (*discoveredSubscription) discoverResultTag() {}
+func (*discoveredFeeds) discoverResultTag()        {}
+func (*discoverError) discoverResultTag()          {}
 
 func onboarding_MustDiscoverFeeds(
 	tx pgw.Queryable, startUrl string, currentUser *models.User, productUserId models.ProductUserId,
@@ -318,16 +309,11 @@ func onboarding_MustDiscoverFeeds(
 			panic(err)
 		}
 		subscription, err := models.Subscription_CreateForBlog(tx, blog, currentUser, productUserId)
-		switch {
-		case errors.Is(err, models.ErrBlogFailed):
-			logger.Info().Msgf("Discover feeds for %s - unsupported blog", startUrl)
-			return &discoveredUnsupportedBlog{blog: blog}, models.TypedBlogUrlResultHardcoded
-		case err != nil:
+		if err != nil {
 			panic(err)
-		default:
-			logger.Info().Msgf("Discover feeds for %s - created subscription", startUrl)
-			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultHardcoded
 		}
+		logger.Info().Msgf("Discover feeds for %s - created subscription", startUrl)
+		return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultHardcoded
 	}
 
 	httpClient := crawler.NewHttpClientImpl(tx.Context(), false)
@@ -355,16 +341,11 @@ func onboarding_MustDiscoverFeeds(
 			panic(err)
 		}
 		subscription, err := models.Subscription_CreateForBlog(tx, updatedBlog, currentUser, productUserId)
-		switch {
-		case errors.Is(err, models.ErrBlogFailed):
-			logger.Info().Msgf("Discover feeds at %s - unsupported blog", startUrl)
-			return &discoveredUnsupportedBlog{blog: updatedBlog}, models.TypedBlogUrlResultKnownUnsupported
-		case err != nil:
+		if err != nil {
 			panic(err)
-		default:
-			logger.Info().Msgf("Discover feeds at %s - created subscription", startUrl)
-			return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultFeed
 		}
+		logger.Info().Msgf("Discover feeds at %s - created subscription", startUrl)
+		return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultFeed
 	case *crawler.DiscoveredMultipleFeeds:
 		logger.Info().Msgf("Discover feeds at %s - found %d feeds", startUrl, len(result.Feeds))
 		startPageId, err := models.StartPage_Create(tx, result.StartPage)
@@ -402,6 +383,7 @@ func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
 	isOnFreePlan := false
 	isOnSupporterPlan := false
+	isOnPatronPlan := false
 	if currentUser != nil {
 		row := conn.QueryRow(`
 			select plan_id from pricing_offers
@@ -418,16 +400,29 @@ func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
 			isOnFreePlan = true
 		case models.PlanIdSupporter:
 			isOnSupporterPlan = true
+		case models.PlanIdPatron:
+			isOnPatronPlan = true
 		default:
 			panic(fmt.Errorf("Unknown plan id: %s", currentPlanId))
 		}
 	}
 	row := conn.QueryRow(`
-		select id, monthly_rate, yearly_rate from pricing_offers
-		where id = (select default_offer_id from pricing_plans where id = $1)
-	`, models.PlanIdSupporter)
-	var offerId, supporterMonthlyRate, supporterYearlyRate string
-	err := row.Scan(&offerId, &supporterMonthlyRate, &supporterYearlyRate)
+		select * from (
+			select id, monthly_rate, yearly_rate from pricing_offers
+			where id = (select default_offer_id from pricing_plans where id = $1)
+		) s
+		left join lateral (
+			select id, monthly_rate, yearly_rate from pricing_offers
+			where id = (select default_offer_id from pricing_plans where id = $2)
+		) p
+		on 1=1
+	`, models.PlanIdSupporter, models.PlanIdPatron)
+	var supporterOfferId, supporterMonthlyRate, supporterYearlyRate string
+	var patronOfferId, patronMonthlyRate, patronYearlyRate string
+	err := row.Scan(
+		&supporterOfferId, &supporterMonthlyRate, &supporterYearlyRate,
+		&patronOfferId, &patronMonthlyRate, &patronYearlyRate,
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -435,24 +430,36 @@ func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
 	type PricingResult struct {
 		Title                string
 		Session              *util.Session
+		IsNewUser            bool
 		IsOnFreePlan         bool
+		IsOnPaidPlan         bool
 		IsOnSupporterPlan    bool
-		OfferId              string
+		IsOnPatronPlan       bool
+		SupporterOfferId     string
+		PatronOfferId        string
 		MonthlyIntervalName  models.BillingInterval
 		YearlyIntervalName   models.BillingInterval
 		SupporterMonthlyRate string
 		SupporterYearlyRate  string
+		PatronMonthlyRate    string
+		PatronYearlyRate     string
 	}
 	templates.MustWrite(w, "onboarding/pricing", PricingResult{
 		Title:                util.DecorateTitle("Pricing"),
 		Session:              rutil.Session(r),
+		IsNewUser:            currentUser == nil,
 		IsOnFreePlan:         isOnFreePlan,
+		IsOnPaidPlan:         isOnSupporterPlan || isOnPatronPlan,
 		IsOnSupporterPlan:    isOnSupporterPlan,
-		OfferId:              offerId,
+		IsOnPatronPlan:       isOnPatronPlan,
+		SupporterOfferId:     supporterOfferId,
+		PatronOfferId:        patronOfferId,
 		MonthlyIntervalName:  models.BillingIntervalMonthly,
 		YearlyIntervalName:   models.BillingIntervalYearly,
 		SupporterMonthlyRate: strings.TrimSuffix(supporterMonthlyRate, ".00"),
 		SupporterYearlyRate:  strings.TrimSuffix(supporterYearlyRate, ".00"),
+		PatronMonthlyRate:    strings.TrimSuffix(patronMonthlyRate, ".00"),
+		PatronYearlyRate:     strings.TrimSuffix(patronYearlyRate, ".00"),
 	})
 }
 
@@ -478,7 +485,7 @@ func Onboarding_Checkout(w http.ResponseWriter, r *http.Request) {
 			maybeCustomerEmail = stripe.String(currentUser.Email)
 			maybeMetadata = map[string]string{"user_id": fmt.Sprint(currentUser.Id)}
 			successPath = "/upgrade"
-		case models.PlanIdSupporter:
+		case models.PlanIdSupporter, models.PlanIdPatron:
 			http.Redirect(w, r, "/subscriptions", http.StatusSeeOther)
 			return
 		default:
@@ -501,6 +508,7 @@ func Onboarding_Checkout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var maybeCustomerId *string
+	var maybeCustomerUpdate *stripe.CheckoutSessionCustomerUpdateParams
 	if config.Cfg.Env.IsDevOrTest() {
 		maybeTestClock, err := models.TestSingleton_GetValue(conn, "test_clock")
 		if err != nil {
@@ -522,6 +530,10 @@ func Onboarding_Checkout(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 			maybeCustomerId = &cus.ID
+			//nolint:exhaustruct
+			maybeCustomerUpdate = &stripe.CheckoutSessionCustomerUpdateParams{
+				Address: stripe.String(string(stripe.CheckoutSessionBillingAddressCollectionAuto)),
+			}
 		}
 	}
 
@@ -538,7 +550,11 @@ func Onboarding_Checkout(w http.ResponseWriter, r *http.Request) {
 			Price:    stripe.String(priceId),
 			Quantity: stripe.Int64(1),
 		}},
-		Metadata: maybeMetadata,
+		AutomaticTax: &stripe.CheckoutSessionAutomaticTaxParams{
+			Enabled: stripe.Bool(true),
+		},
+		CustomerUpdate: maybeCustomerUpdate,
+		Metadata:       maybeMetadata,
 	}
 
 	sesh, err := session.New(params)

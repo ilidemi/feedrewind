@@ -2,7 +2,9 @@ package jobs
 
 import (
 	"bytes"
+	"feedrewind/db/migrations"
 	"feedrewind/db/pgw"
+	"feedrewind/oops"
 	"feedrewind/util/schedule"
 	"fmt"
 	"strings"
@@ -109,4 +111,19 @@ job_data:
 		}
 	}
 	return err
+}
+
+func init() {
+	migrations.DeleteJobByName = DeleteByName
+}
+
+func DeleteByName(tx pgw.Queryable, name string) error {
+	result, err := tx.Exec(`delete from delayed_jobs where handler like E'%job_class: ` + name + `\n%'`)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return oops.Newf("No rows deleted for job %s", name)
+	}
+	return nil
 }

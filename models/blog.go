@@ -461,9 +461,7 @@ func blog_CreateWithCrawling(
 		)
 		values ($1, $2, $3, null, $4, utc_now(), $5, $6, $7)
 	`, blogId, startFeed.Title, startFeed.Url, status, BlogLatestVersion, updateAction, startFeed.Id)
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
-		pgErr.ConstraintName == "index_blogs_on_feed_url_and_version" {
+	if util.ViolatesUnique(err, "index_blogs_on_feed_url_and_version") {
 		return nil, errBlogAlreadyExists
 	} else if err != nil {
 		return nil, err
@@ -713,9 +711,7 @@ func BlogCrawlClientToken_Create(tx pgw.Queryable, blogId BlogId) (BlogCrawlClie
 	_, err = tx.Exec(`
 		insert into blog_crawl_client_tokens (blog_id, value) values ($1, $2)
 	`, blogId, value)
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
-		pgErr.ConstraintName == "blog_crawl_client_tokens_pkey" {
+	if util.ViolatesUnique(err, "blog_crawl_client_tokens_pkey") {
 		return "", nil
 	} else if err != nil {
 		return "", err

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"errors"
 	"feedrewind/db/pgw"
 	"feedrewind/oops"
 	"fmt"
@@ -11,6 +12,9 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 const LoginPath = "/login"
@@ -108,6 +112,12 @@ func TxReturn[T any](parentTx pgw.Queryable, f func(*pgw.Tx, Clobber) (T, error)
 	}
 
 	return result, nil
+}
+
+func ViolatesUnique(err error, constraintName string) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation &&
+		pgErr.ConstraintName == constraintName
 }
 
 func Ordinal(number int) string {

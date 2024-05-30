@@ -46,12 +46,34 @@
       <div class="flex flex-col gap-6">
         <div class="flex flex-col gap-1.5">
           <div class="font-semibold">Subscription</div>
-          <div id="current_plan">Current plan: {{.CurrentPlan}}{{if .CancelAt}} (ends on {{.CancelAt}}){{end}}</div>
+          <div>
+            <div id="current_plan">
+              Current plan: {{.CurrentPlan}}
+            </div>
+            {{if .IsPatron}}
+            <div id="patron_credits">
+              Credits available: {{.PatronCredits}}
+            </div>
+            {{end}}
+            {{if .IsPaid}}
+            <div id="plan_timestamp">
+              {{if .CancelAt}}
+                Ends on: {{.CancelAt}}
+              {{else if .RenewsOn}}
+                Renews on: {{.RenewsOn}}
+              {{end}}
+            </div>
+            {{end}}
+          </div>
           {{if .IsPaid}}
-          <form action="/billing" method="POST">
-            {{.Session.CSRFField}}
-            <button id="manage_billing" type="submit" class="btn">Manage billing</button>
-          </form>
+          <div class="flex flex-row gap-1.5">
+            <div class="shrink-0">
+              <a id="manage_billing" href="/billing" class="btn inline-block">Manage billing</a>
+            </div>
+            <div class="shrink-0">
+              <a id="change_plan" href="/pricing" class="btn inline-block">Change plan</a>
+            </div>
+          </div>
           {{else}}
           <div class="shrink-0">
             <a id="upgrade" href="/pricing" class="btn inline-block">Upgrade</a>

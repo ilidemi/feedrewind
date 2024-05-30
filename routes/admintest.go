@@ -13,6 +13,7 @@ import (
 	"math"
 	"net/http"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -92,6 +93,14 @@ func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	_, err = conn.Exec(`
+		delete from custom_blog_requests
+		where user_id in (select id from users_with_discarded where email = $1)
+	`, email)
+	if err != nil {
+		panic(err)
+	}
+
 	logger := rutil.Logger(r)
 	rows, err := conn.Query(`delete from users_with_discarded where email = $1 returning id`, email)
 	if err != nil {
@@ -121,6 +130,22 @@ func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	util.MustWrite(w, "OK")
+}
+
+func AdminTest_GetTestSingleton(w http.ResponseWriter, r *http.Request) {
+	key := util.EnsureParamStr(r, "key")
+	conn := rutil.DBConn(r)
+	row := conn.QueryRow(`select value from test_singletons where key = $1`, key)
+	var maybeValue *string
+	err := row.Scan(&maybeValue)
+	if err != nil {
+		panic(err)
+	}
+	value := "<nil>"
+	if maybeValue != nil {
+		value = *maybeValue
+	}
+	util.MustWrite(w, value)
 }
 
 func AdminTest_SetTestSingleton(w http.ResponseWriter, r *http.Request) {
@@ -282,7 +307,7 @@ func AdminTest_ExecuteSql(w http.ResponseWriter, r *http.Request) {
 	var result *string
 	err := row.Scan(&result)
 	if err != nil {
-		panic(err)
+		util.MustWrite(w, fmt.Sprintf("ERROR: %v", err))
 	}
 	if result != nil {
 		util.MustWrite(w, *result)
@@ -385,12 +410,17 @@ func AdminTest_DeleteStripeSubscription(w http.ResponseWriter, r *http.Request) 
 	util.MustWrite(w, "OK")
 }
 
-func AdminTest_ForwardStripeCustomer45Days(w http.ResponseWriter, r *http.Request) {
+func AdminTest_ForwardStripeCustomer(w http.ResponseWriter, r *http.Request) {
 	email := util.EnsureParamStr(r, "email")
+	daysStr := util.EnsureParamStr(r, "days")
+	days, err := strconv.Atoi(daysStr)
+	if err != nil {
+		panic(err)
+	}
 	conn := rutil.DBConn(r)
 	row := conn.QueryRow(`select stripe_customer_id from users_without_discarded where email = $1`, email)
 	var stripeCustomerId string
-	err := row.Scan(&stripeCustomerId)
+	err = row.Scan(&stripeCustomerId)
 	if err != nil {
 		panic(err)
 	}
@@ -398,9 +428,13 @@ func AdminTest_ForwardStripeCustomer45Days(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		panic(err)
 	}
+	clock, err := testclock.Get(cus.TestClock.ID, nil)
+	if err != nil {
+		panic(err)
+	}
 	//nolint:exhaustruct
 	_, err = testclock.Advance(cus.TestClock.ID, &stripe.TestHelpersTestClockAdvanceParams{
-		FrozenTime: stripe.Int64(time.Now().AddDate(0, 0, 45).Unix()),
+		FrozenTime: stripe.Int64(time.Unix(clock.FrozenTime, 0).AddDate(0, 0, days).Unix()),
 	})
 	if err != nil {
 		panic(err)
@@ -410,15 +444,20 @@ func AdminTest_ForwardStripeCustomer45Days(w http.ResponseWriter, r *http.Reques
 
 func AdminTest_DeleteStripeClocks(w http.ResponseWriter, r *http.Request) {
 	it := testclock.List(nil)
+	var clockIds []string
 	for it.Next() {
 		clock := it.TestHelpersTestClock()
-		_, err := testclock.Del(clock.ID, nil)
-		if err != nil {
-			panic(err)
-		}
+		clockIds = append(clockIds, clock.ID)
 	}
 	if err := it.Err(); err != nil {
 		panic(err)
+	}
+
+	for _, clockId := range clockIds {
+		_, err := testclock.Del(clockId, nil)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	util.MustWrite(w, "OK")

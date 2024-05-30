@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/stripe/stripe-go/v78"
 	"gopkg.in/yaml.v3"
 )
 
@@ -59,6 +60,9 @@ func init() {
 				availableWorkers[i] = true
 			}
 			finishedJobs := make(chan jobResult, workerCount)
+
+			stripe.Key = config.Cfg.StripeApiKey
+			stripe.DefaultLeveledLogger = &log.StripeLogger{Logger: logger}
 
 			err = startWorker(conn, dynoId, availableWorkers, finishedJobs, logger)
 			if errors.Is(err, context.Canceled) {

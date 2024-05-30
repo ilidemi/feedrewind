@@ -8,6 +8,41 @@
 
   {{if .HasSubscriptions}}
     <div class="flex flex-col gap-7">
+      {{ if .CustomBlogRequestedSubscriptions }}
+        <div class="flex flex-col gap-1">
+          <div class="flex flex-col gap-0.5">
+            <div class="text-lg font-semibold">
+              Custom Blog Requested
+            </div>
+            <div class="w-full h-px bg-primary-300"></div>
+          </div>
+          <div class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 items-baseline">
+            {{range .CustomBlogRequestedSubscriptions}}
+              <a
+                href="{{.SetupPath}}"
+                class="justify-self-start break-word text-base py-0.5 underline hover:text-blue-900"
+              >
+                {{.Name}}
+              </a>
+              <button id="delete_button_{{.Id}}" class="justify-self-end btn-secondary-red">
+                Delete
+              </button>
+
+              <script>
+                document
+                  .getElementById("delete_button_{{.Id}}")
+                  .addEventListener("click", () => {
+                    showDeleteSubscriptionPopup(
+                      "Delete ", "{{.Name}}", "? This cannot be undone.", "{{.DeletePath}}",
+                      "Keep", "Delete"
+                    );
+                  })
+              </script>
+            {{end}}
+          </div>
+        </div>
+      {{end}}
+
       {{ if .SettingUpSubscriptions }}
         <div class="flex flex-col gap-1">
           <div class="flex flex-col gap-0.5">

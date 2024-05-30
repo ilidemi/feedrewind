@@ -132,3 +132,23 @@ func marshalStack(err error) interface{} {
 
 	return out
 }
+
+type StripeLogger struct {
+	Logger Logger
+}
+
+func (l *StripeLogger) Debugf(format string, v ...interface{}) {
+	// no-op
+}
+
+func (l *StripeLogger) Errorf(format string, v ...interface{}) {
+	l.Logger.Error().Msgf(format, v...)
+}
+
+func (l *StripeLogger) Infof(format string, v ...interface{}) {
+	l.Logger.Info().Msgf(format, v...)
+}
+
+func (l *StripeLogger) Warnf(format string, v ...interface{}) {
+	l.Logger.Warn().Msgf(format, v...)
+}

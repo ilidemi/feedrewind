@@ -6,20 +6,25 @@ import (
 )
 
 type Config struct {
-	Env                     Env
-	Dyno                    string
-	DB                      DBConfig
-	IsHeroku                bool
-	RootUrl                 string
-	SessionHashKey          []byte
-	SessionBlockKey         []byte
-	AmplitudeApiKey         string
-	PostmarkApiSandboxToken string
-	PostmarkApiToken        string
-	PostmarkWebhookSecret   string
-	SlackWebhook            string
-	StripeWebhookSecret     string
-	AdminUserIds            map[int64]bool
+	Env                       Env
+	Dyno                      string
+	DB                        DBConfig
+	IsHeroku                  bool
+	RootUrl                   string
+	SessionHashKey            []byte
+	SessionBlockKey           []byte
+	AmplitudeApiKey           string
+	PostmarkApiSandboxToken   string
+	PostmarkApiToken          string
+	PostmarkWebhookSecret     string
+	SlackWebhook              string
+	StripeApiKey              string
+	StripeWebhookSecret       string
+	StripeSupporterConfigId   string
+	StripePatronConfigId      string
+	StripeCustomBlogProductId string
+	StripeCustomBlogPriceId   string
+	AdminUserIds              map[int64]bool
 }
 
 type Env int

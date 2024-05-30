@@ -2,6 +2,7 @@ package routes
 
 import (
 	"bytes"
+	"feedrewind/config"
 	"feedrewind/crawler"
 	"feedrewind/db"
 	"feedrewind/db/pgw"
@@ -28,6 +29,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pkg/errors"
+	"github.com/stripe/stripe-go/v78"
+	"github.com/stripe/stripe-go/v78/checkout/session"
 )
 
 func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
@@ -83,11 +86,14 @@ func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
+	var customBlogRequestedSubscriptions []Subscription
 	var settingUpSubscriptions []Subscription
 	var activeSubscriptions []Subscription
 	var finishedSubscriptions []Subscription
 	for _, subscription := range subscriptions {
 		switch {
+		case subscription.Status == models.SubscriptionStatusCustomBlogRequested:
+			customBlogRequestedSubscriptions = append(customBlogRequestedSubscriptions, subscription)
 		case subscription.Status != models.SubscriptionStatusLive:
 			settingUpSubscriptions = append(settingUpSubscriptions, subscription)
 		case subscription.PublishedCount < subscription.TotalCount:
@@ -97,7 +103,22 @@ func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	type DashboardSubscription struct {
+	type DashboardSetupSubscription struct {
+		Id         models.SubscriptionId
+		Name       string
+		SetupPath  string
+		DeletePath string
+	}
+	createDashboardSetupSubscription := func(s Subscription) DashboardSetupSubscription {
+		return DashboardSetupSubscription{
+			Id:         s.Id,
+			Name:       s.Name,
+			SetupPath:  rutil.SubscriptionSetupPath(s.Id),
+			DeletePath: rutil.SubscriptionDeletePath(s.Id),
+		}
+	}
+
+	type DashboardLiveSubscription struct {
 		Id             models.SubscriptionId
 		Name           string
 		IsPaused       bool
@@ -107,9 +128,8 @@ func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 		PublishedCount int
 		TotalCount     int
 	}
-
-	createDashboardSubscription := func(s Subscription) DashboardSubscription {
-		return DashboardSubscription{
+	createDashboardLiveSubscription := func(s Subscription) DashboardLiveSubscription {
+		return DashboardLiveSubscription{
 			Id:             s.Id,
 			Name:           s.Name,
 			IsPaused:       s.IsPaused,
@@ -122,32 +142,38 @@ func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type DashboardResult struct {
-		Title                  string
-		Session                *util.Session
-		HasSubscriptions       bool
-		SettingUpSubscriptions []DashboardSubscription
-		ActiveSubscriptions    []DashboardSubscription
-		FinishedSubscriptions  []DashboardSubscription
+		Title                            string
+		Session                          *util.Session
+		HasSubscriptions                 bool
+		CustomBlogRequestedSubscriptions []DashboardSetupSubscription
+		SettingUpSubscriptions           []DashboardSetupSubscription
+		ActiveSubscriptions              []DashboardLiveSubscription
+		FinishedSubscriptions            []DashboardLiveSubscription
 	}
 	result := DashboardResult{
-		Title:                  util.DecorateTitle("Dashboard"),
-		Session:                rutil.Session(r),
-		HasSubscriptions:       len(subscriptions) > 0,
-		SettingUpSubscriptions: nil,
-		ActiveSubscriptions:    nil,
-		FinishedSubscriptions:  nil,
+		Title:                            util.DecorateTitle("Dashboard"),
+		Session:                          rutil.Session(r),
+		HasSubscriptions:                 len(subscriptions) > 0,
+		CustomBlogRequestedSubscriptions: nil,
+		SettingUpSubscriptions:           nil,
+		ActiveSubscriptions:              nil,
+		FinishedSubscriptions:            nil,
+	}
+	for _, subscription := range customBlogRequestedSubscriptions {
+		result.CustomBlogRequestedSubscriptions =
+			append(result.CustomBlogRequestedSubscriptions, createDashboardSetupSubscription(subscription))
 	}
 	for _, subscription := range settingUpSubscriptions {
 		result.SettingUpSubscriptions =
-			append(result.SettingUpSubscriptions, createDashboardSubscription(subscription))
+			append(result.SettingUpSubscriptions, createDashboardSetupSubscription(subscription))
 	}
 	for _, subscription := range activeSubscriptions {
 		result.ActiveSubscriptions =
-			append(result.ActiveSubscriptions, createDashboardSubscription(subscription))
+			append(result.ActiveSubscriptions, createDashboardLiveSubscription(subscription))
 	}
 	for _, subscription := range finishedSubscriptions {
 		result.FinishedSubscriptions =
-			append(result.FinishedSubscriptions, createDashboardSubscription(subscription))
+			append(result.FinishedSubscriptions, createDashboardLiveSubscription(subscription))
 	}
 
 	templates.MustWrite(w, "subscriptions/index", result)
@@ -178,16 +204,33 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
 	currentUser := rutil.CurrentUser(r)
 
+	var status models.SubscriptionStatus
+	row := conn.QueryRow(`
+		select status from subscriptions_without_discarded
+		where id = $1 and user_id = $2
+	`, subscriptionId, currentUser.Id)
+	err := row.Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		subscriptions_RedirectNotFound(w, r)
+		return
+	} else if err != nil {
+		panic(err)
+	}
+
+	if status != models.SubscriptionStatusLive {
+		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
+		return
+	}
+
 	var name string
 	var isPaused bool
-	var status models.SubscriptionStatus
 	var scheduleVersion int64
 	var isAddedPastMidnight bool
 	var url string
 	var publishedCount int
 	var totalCount int
-	row := conn.QueryRow(`
-		select name, is_paused, status, schedule_version, is_added_past_midnight,
+	row = conn.QueryRow(`
+		select name, is_paused, schedule_version, is_added_past_midnight,
 			(select url from blogs where id = blog_id) as url,
 			(
 				select count(published_at) from subscription_posts
@@ -200,19 +243,11 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 		from subscriptions_without_discarded
 		where id = $1 and user_id = $2
 	`, subscriptionId, currentUser.Id)
-	err := row.Scan(
-		&name, &isPaused, &status, &scheduleVersion, &isAddedPastMidnight, &url, &publishedCount, &totalCount,
+	err = row.Scan(
+		&name, &isPaused, &scheduleVersion, &isAddedPastMidnight, &url, &publishedCount, &totalCount,
 	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		subscriptions_RedirectNotFound(w, r)
-		return
-	} else if err != nil {
+	if err != nil {
 		panic(err)
-	}
-
-	if status != models.SubscriptionStatusLive {
-		http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
-		return
 	}
 
 	userSettings, err := models.UserSettings_Get(conn, currentUser.Id)
@@ -323,23 +358,23 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
+
 		subscriptionCreateResult, err := models.Subscription_CreateForBlog(
 			conn, updatedBlog, currentUser, productUserId,
 		)
-		if errors.Is(err, models.ErrBlogFailed) {
+		if err != nil {
+			panic(err)
+		}
+		if models.BlogFailedStatuses[subscriptionCreateResult.BlogStatus] {
 			models.ProductEvent_MustEmitDiscoverFeeds(
 				pc, startFeed.Url, models.TypedBlogUrlResultKnownUnsupported, userIsAnonymous,
 			)
-			util.MustWrite(w, rutil.BlogUnsupportedPath(updatedBlog.Id))
-			return
-		} else if err != nil {
-			panic(err)
+		} else {
+			models.ProductEvent_MustEmitDiscoverFeeds(
+				pc, startFeed.Url, models.TypedBlogUrlResultFeed, userIsAnonymous,
+			)
+			models.ProductEvent_MustEmitCreateSubscription(pc, subscriptionCreateResult, userIsAnonymous)
 		}
-
-		models.ProductEvent_MustEmitDiscoverFeeds(
-			pc, startFeed.Url, models.TypedBlogUrlResultFeed, userIsAnonymous,
-		)
-		models.ProductEvent_MustEmitCreateSubscription(pc, subscriptionCreateResult, userIsAnonymous)
 		util.MustWrite(w, rutil.SubscriptionSetupPath(subscriptionCreateResult.Id))
 		return
 	case *crawler.FetchFeedErrorBadFeed:
@@ -708,22 +743,57 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			return
 		case models.BlogStatusCrawlFailed,
 			models.BlogStatusUpdateFromFeedFailed:
+			hasCredits := false
+			if currentUser != nil {
+				row := conn.QueryRow(`
+					select 1 from patron_credits
+					where
+						user_id = $1 and
+						count > 0 and
+						(
+							select plan_id from pricing_offers
+							where id = (select offer_id from users_without_discarded where id = $1)
+						) = $2
+				`, currentUser.Id, models.PlanIdPatron)
+				var one int
+				err := row.Scan(&one)
+				if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+					panic(err)
+				} else if err == nil {
+					hasCredits = true
+				}
+			}
 			type FailedResult struct {
-				Title                  string
-				Session                *util.Session
-				SubscriptionName       string
-				SubscriptionDeletePath string
+				Title                             string
+				Session                           *util.Session
+				HasCredits                        bool
+				SubscriptionName                  string
+				SubscriptionDeletePath            string
+				SubscriptionRequestCustomBlogPath string
 			}
 			templates.MustWrite(w, "subscriptions/setup_blog_failed", FailedResult{
-				Title:                  util.DecorateTitle("Blog not supported"),
-				Session:                rutil.Session(r),
-				SubscriptionName:       subscriptionName,
-				SubscriptionDeletePath: rutil.SubscriptionDeletePath(subscriptionId),
+				Title:                             util.DecorateTitle("Blog not supported"),
+				Session:                           rutil.Session(r),
+				HasCredits:                        hasCredits,
+				SubscriptionName:                  subscriptionName,
+				SubscriptionDeletePath:            rutil.SubscriptionDeletePath(subscriptionId),
+				SubscriptionRequestCustomBlogPath: rutil.SubscriptionRequestCustomBlogPath(subscriptionId),
 			})
 			return
 		default:
 			panic(fmt.Errorf("Unknown blog status: %s", blogStatus))
 		}
+	case models.SubscriptionStatusCustomBlogRequested:
+		type CustomBlogRequestedResult struct {
+			Title            string
+			Session          *util.Session
+			SubscriptionName string
+		}
+		templates.MustWrite(w, "subscriptions/setup_custom_blog_requested", CustomBlogRequestedResult{
+			Title:            util.DecorateTitle(subscriptionName),
+			Session:          rutil.Session(r),
+			SubscriptionName: subscriptionName,
+		})
 	case models.SubscriptionStatusSetup:
 		otherSubNamesByDay, err := models.Subscription_GetOtherNamesByDay(
 			conn, subscriptionId, currentUser.Id,
@@ -1639,6 +1709,7 @@ func Subscriptions_Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
 	conn := rutil.DBConn(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
@@ -1648,14 +1719,18 @@ func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
 	var maybeSubscriptionUserId *models.UserId
+	var status models.SubscriptionStatus
 	var blogBestUrl string
 	row := conn.QueryRow(`
-		select user_id, (
-			select coalesce(url, feed_url) from blogs
-			where blogs.id = subscriptions_without_discarded.blog_id
-		) from subscriptions_without_discarded where id = $1
+		select
+			user_id, status,
+			(
+				select coalesce(url, feed_url) from blogs
+				where blogs.id = subscriptions_without_discarded.blog_id
+			)
+		from subscriptions_without_discarded where id = $1
 	`, subscriptionId)
-	err := row.Scan(&maybeSubscriptionUserId, &blogBestUrl)
+	err := row.Scan(&maybeSubscriptionUserId, &status, &blogBestUrl)
 	if errors.Is(err, pgx.ErrNoRows) {
 		subscriptions_RedirectNotFound(w, r)
 	} else if err != nil {
@@ -1664,6 +1739,17 @@ func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
 
 	if subscriptions_RedirectIfUserMismatch(w, r, maybeSubscriptionUserId) {
 		return
+	}
+
+	if status == models.SubscriptionStatusCustomBlogRequested {
+		message := fmt.Sprintf(
+			"Subscription %d with a custom blog requested got deleted, look into this asap!", subscriptionId,
+		)
+		logger.Warn().Msg(message)
+		err := jobs.NotifySlackJob_PerformNow(conn, message)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	err = models.Subscription_Delete(conn, subscriptionId)
@@ -1907,6 +1993,320 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
+
+func Subscriptions_RequestCustomBlogPage(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
+	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
+	if !ok {
+		subscriptions_RedirectNotFound(w, r)
+		return
+	}
+
+	subscriptionId := models.SubscriptionId(subscriptionIdInt)
+	var maybeSubscriptionUserId *models.UserId
+	var subscriptionName string
+	var blogStatus models.BlogStatus
+	var maybePatronCredits *int
+	row := conn.QueryRow(`
+		select
+			user_id, name,
+			(select status from blogs where id = blog_id),
+			(
+				select count from patron_credits
+				where
+					patron_credits.user_id = subscriptions_without_discarded.user_id and
+					(
+						select plan_id from pricing_offers
+						where id = (select offer_id from users_without_discarded where id = user_id)
+					) = $2
+			)
+		from subscriptions_without_discarded
+		where id = $1
+	`, subscriptionId, models.PlanIdPatron)
+	err := row.Scan(&maybeSubscriptionUserId, &subscriptionName, &blogStatus, &maybePatronCredits)
+	if errors.Is(err, pgx.ErrNoRows) {
+		subscriptions_RedirectNotFound(w, r)
+		return
+	} else if err != nil {
+		panic(err)
+	}
+
+	if subscriptions_RedirectIfUserMismatch(w, r, maybeSubscriptionUserId) {
+		return
+	}
+
+	if !models.BlogFailedStatuses[blogStatus] {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	isPatron := false
+	patronCredits := 0
+	creditsRenewOn := ""
+	if maybePatronCredits != nil {
+		isPatron = true
+		patronCredits = *maybePatronCredits
+		if patronCredits == 0 {
+			row := conn.QueryRow(`
+				select
+					stripe_cancel_at, stripe_current_period_end,
+					(select timezone from user_settings where user_id = $1)
+				from users_without_discarded
+				where id = $1
+			`, *maybeSubscriptionUserId)
+			var cancelAt, currentPeriodEnd *time.Time
+			var timezoneStr string
+			err := row.Scan(&cancelAt, &currentPeriodEnd, &timezoneStr)
+			if err != nil {
+				panic(err)
+			}
+			if cancelAt == nil && currentPeriodEnd != nil {
+				timezone := tzdata.LocationByName[timezoneStr]
+				creditsRenewOn = currentPeriodEnd.In(timezone).Format("Jan 2, 2006")
+			}
+		}
+	}
+
+	type Result struct {
+		Title            string
+		Session          *util.Session
+		SubscriptionName string
+		IsPatron         bool
+		PatronCredits    int
+		CreditsRenewOn   string
+		SubmitPath       string
+		CheckoutPath     string
+	}
+	templates.MustWrite(w, "subscriptions/request_custom_blog", Result{
+		Title:            util.DecorateTitle(fmt.Sprintf("Request support for %s", subscriptionName)),
+		Session:          rutil.Session(r),
+		SubscriptionName: subscriptionName,
+		IsPatron:         isPatron,
+		PatronCredits:    patronCredits,
+		CreditsRenewOn:   creditsRenewOn,
+		SubmitPath:       rutil.SubscriptionRequestCustomBlogSubmitPath(subscriptionId),
+		CheckoutPath:     rutil.SubscriptionRequestCustomBlogCheckoutPath(subscriptionId),
+	})
+}
+
+func Subscriptions_CheckoutCustomBlogRequest(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
+	currentUser := rutil.CurrentUser(r)
+	logger := rutil.Logger(r)
+	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
+	if !ok {
+		subscriptions_RedirectNotFound(w, r)
+		return
+	}
+
+	why := util.EnsureParamStr(r, "why")
+	if len(why) > 500 {
+		logger.Info().Msgf("Truncated the why to fit in metadata: %s", why)
+		why = why[:500]
+	}
+
+	subscriptionId := models.SubscriptionId(subscriptionIdInt)
+	var maybeSubscriptionUserId *models.UserId
+	row := conn.QueryRow(`select user_id from subscriptions_without_discarded where id = $1`, subscriptionId)
+	err := row.Scan(&maybeSubscriptionUserId)
+	if errors.Is(err, pgx.ErrNoRows) {
+		subscriptions_RedirectNotFound(w, r)
+		return
+	} else if err != nil {
+		panic(err)
+	}
+
+	if subscriptions_RedirectIfUserMismatch(w, r, maybeSubscriptionUserId) {
+		return
+	}
+
+	var maybeCustomerEmail *string
+	var maybeStripeCustomerId *string
+	row = conn.QueryRow(`
+		select stripe_customer_id from users_without_discarded
+		where id = $1
+	`, *maybeSubscriptionUserId)
+	err = row.Scan(&maybeStripeCustomerId)
+	if errors.Is(err, pgx.ErrNoRows) {
+		maybeCustomerEmail = &currentUser.Email
+	} else if err != nil {
+		panic(err)
+	} else if maybeStripeCustomerId == nil {
+		maybeCustomerEmail = &currentUser.Email
+	}
+
+	var maybeCustomerUpdate *stripe.CheckoutSessionCustomerUpdateParams
+	if maybeStripeCustomerId != nil {
+		//nolint:exhaustruct
+		maybeCustomerUpdate = &stripe.CheckoutSessionCustomerUpdateParams{
+			Address: stripe.String("auto"),
+		}
+	}
+
+	successUrl := fmt.Sprintf(
+		"%s%s?session_id={CHECKOUT_SESSION_ID}",
+		config.Cfg.RootUrl, rutil.SubscriptionRequestCustomBlogSubmitPath(subscriptionId),
+	)
+	cancelUrl := fmt.Sprintf(
+		"%s%s",
+		config.Cfg.RootUrl, rutil.SubscriptionRequestCustomBlogPath(subscriptionId),
+	)
+	//nolint:exhaustruct
+	params := &stripe.CheckoutSessionParams{
+		CustomerEmail: maybeCustomerEmail,
+		Customer:      maybeStripeCustomerId,
+		SuccessURL:    stripe.String(successUrl),
+		CancelURL:     stripe.String(cancelUrl),
+		Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
+		LineItems: []*stripe.CheckoutSessionLineItemParams{{
+			Price:    stripe.String(config.Cfg.StripeCustomBlogPriceId),
+			Quantity: stripe.Int64(1),
+		}},
+		AutomaticTax: &stripe.CheckoutSessionAutomaticTaxParams{
+			Enabled: stripe.Bool(true),
+		},
+		CustomerUpdate: maybeCustomerUpdate,
+		Metadata: map[string]string{
+			"subscription_id": fmt.Sprint(subscriptionId),
+			"why":             why,
+		},
+	}
+
+	sesh, err := session.New(params)
+	if err != nil {
+		panic(err)
+	}
+
+	http.Redirect(w, r, sesh.URL, http.StatusSeeOther)
+}
+
+func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
+	conn := rutil.DBConn(r)
+	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
+	if !ok {
+		subscriptions_RedirectNotFound(w, r)
+		return
+	}
+	why, _ := util.MaybeParamStr(r, "why")
+
+	var maybeStripePaymentIntentId *string
+	if stripeSessionId, ok := util.MaybeParamStr(r, "session_id"); ok {
+		sesh, err := session.Get(stripeSessionId, nil)
+		if err != nil {
+			panic(err)
+		}
+		maybeStripePaymentIntentId = &sesh.PaymentIntent.ID
+		why = sesh.Metadata["why"]
+	}
+
+	subscriptionId := models.SubscriptionId(subscriptionIdInt)
+	var maybeSubscriptionUserId *models.UserId
+	var name string
+	var blogId models.BlogId
+	var blogStatus models.BlogStatus
+	row := conn.QueryRow(`
+		select user_id, name, blog_id, (select status from blogs where id = blog_id)
+		from subscriptions_without_discarded
+		where id = $1
+	`, subscriptionId)
+	err := row.Scan(&maybeSubscriptionUserId, &name, &blogId, &blogStatus)
+	if errors.Is(err, pgx.ErrNoRows) {
+		subscriptions_RedirectNotFound(w, r)
+		return
+	} else if err != nil {
+		panic(err)
+	}
+
+	if subscriptions_RedirectIfUserMismatch(w, r, maybeSubscriptionUserId) {
+		return
+	}
+
+	if !models.BlogFailedStatuses[blogStatus] {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		row := tx.QueryRow(`select status from subscriptions_without_discarded where id = $1`, subscriptionId)
+		var subscriptionStatus models.SubscriptionStatus
+		err := row.Scan(&subscriptionStatus)
+		if err != nil {
+			return err
+		}
+		if subscriptionStatus != models.SubscriptionStatusWaitingForBlog {
+			if maybeStripePaymentIntentId != nil {
+				row := tx.QueryRow(`
+					select stripe_payment_intent_id from custom_blog_requests where subscription_id = $1
+				`, subscriptionId)
+				var existingPaymentIntentId string
+				err := row.Scan(&existingPaymentIntentId)
+				if err != nil {
+					return err
+				}
+				if *maybeStripePaymentIntentId != existingPaymentIntentId {
+					message := fmt.Sprintf(
+						"Double payment for the same custom blog request, contact customer asap: %s %s",
+						*maybeStripePaymentIntentId, existingPaymentIntentId,
+					)
+					logger.Warn().Msg(message)
+					err := jobs.NotifySlackJob_PerformNow(tx, message)
+					if err != nil {
+						return err
+					}
+				}
+			}
+
+			http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
+			return nil
+		}
+
+		message := fmt.Sprintf("Custom blog requested for subscription %d", subscriptionId)
+		logger.Warn().Msg(message)
+		err = jobs.NotifySlackJob_PerformNow(tx, message)
+		if err != nil {
+			return err
+		}
+
+		if maybeStripePaymentIntentId == nil {
+			_, err = tx.Exec(`
+				update patron_credits set count = count - 1 where user_id = $1
+			`, *maybeSubscriptionUserId)
+			if err != nil {
+				return err
+			}
+		}
+		_, err = tx.Exec(`
+			update subscriptions_without_discarded set status = 'custom_blog_requested' where id = $1
+		`, subscriptionId)
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(`
+			insert into custom_blog_requests
+			(blog_url, feed_url, stripe_payment_intent_id, user_id, subscription_id, blog_id, why)
+			values
+			(
+				(select url from blogs where id = $1),
+				(select feed_url from blogs where id = $1),
+				$2,
+				$3,
+				$4,
+				$1,
+				$5
+			)
+		`, blogId, maybeStripePaymentIntentId, *maybeSubscriptionUserId, subscriptionId, why)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
 }
 
 func subscriptions_RedirectNotFound(w http.ResponseWriter, r *http.Request) {

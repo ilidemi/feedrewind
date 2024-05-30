@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
@@ -78,7 +79,7 @@ func Users_Login(w http.ResponseWriter, r *http.Request) {
 	redirect := util.EnsureParamStr(r, "redirect")
 
 	conn := rutil.DBConn(r)
-	user, err := models.FullUser_FindByEmail(conn, email)
+	user, err := models.UserWithPassword_FindByEmail(conn, email)
 	switch {
 	case errors.Is(err, models.ErrUserNotFound):
 		logger.Info().Msg("User not found")
@@ -186,20 +187,36 @@ func Users_SignUpPage(w http.ResponseWriter, r *http.Request) {
 				}
 				stripeProductId := sub.Items.Data[0].Price.Product.ID
 				stripePriceId := sub.Items.Data[0].Price.ID
+				currentPeriodEnd := time.Unix(sub.CurrentPeriodEnd, 0).UTC()
 				billingInterval, err := models.BillingInterval_GetByOffer(tx, stripeProductId, stripePriceId)
 				if err != nil {
 					return "", err
 				}
-				_, err = tx.Exec(`
+				row := tx.QueryRow(`
 					insert into stripe_subscription_tokens (
-						id, offer_id, stripe_subscription_id, stripe_customer_id, billing_interval
+						id, offer_id, stripe_subscription_id, stripe_customer_id, billing_interval,
+						current_period_end
 					)
-					values ($1,	(select id from pricing_offers where stripe_product_id = $2), $3, $4, $5)
-				`, randomId, stripeProductId, sub.ID, sub.Customer.ID, billingInterval,
+					values ($1,	(select id from pricing_offers where stripe_product_id = $2), $3, $4, $5, $6)
+					returning offer_id
+				`, randomId, stripeProductId, sub.ID, sub.Customer.ID, billingInterval, currentPeriodEnd,
 				)
+				var offerId models.OfferId
+				err = row.Scan(&offerId)
 				if err != nil {
 					return "", err
 				}
+
+				planId := models.PricingPlan_IdFromOfferId(offerId)
+				if planId == models.PlanIdPatron {
+					// The first invoice is handled within the sign-up flow and the webhook event needs
+					// to be blocked
+					_, err = tx.Exec(`insert into patron_invoices (id) values ($1)`, sesh.Invoice.ID)
+					if err != nil {
+						return "", err
+					}
+				}
+
 				return fmt.Sprint(randomId), nil
 			},
 		)
@@ -247,7 +264,7 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 
 	const passwordTooShort = "Password is too short (minimum is 8 characters)"
 	const userAlreadyExists = "We already have an account registered with that email address"
-	existingUser, err := models.FullUser_FindByEmail(tx, email)
+	existingUser, err := models.UserWithPassword_FindByEmail(tx, email)
 	userExists := true
 	if errors.Is(err, models.ErrUserNotFound) {
 		userExists = false
@@ -255,9 +272,9 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	var user *models.FullUser
+	var user *models.UserWithPassword
 	if userExists && existingUser.PasswordDigest == "" {
-		user, err = models.FullUser_UpdatePassword(tx, existingUser.Id, password)
+		user, err = models.UserWithPassword_UpdatePassword(tx, existingUser.Id, password)
 		if errors.Is(err, models.ErrPasswordTooShort) {
 			result := signUpResult{
 				Session:                 rutil.Session(r),
@@ -291,20 +308,25 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 		}
 		var planId models.PlanId
 		var offerId models.OfferId
-		var maybeStripeSubscriptionId, maybeStripeCustomerId, maybeBillingInterval *string
+		var maybeStripeSubscriptionId, maybeStripeCustomerId *string
+		var maybeBillingInterval *models.BillingInterval
+		var maybeStripeCurrentPeriodEnd *time.Time
 		if stripeSubscriptionTokenOk {
-			planId = models.PlanIdSupporter
 			row := tx.QueryRow(`
-				select offer_id, stripe_subscription_id, stripe_customer_id, billing_interval
+				select
+					offer_id, stripe_subscription_id, stripe_customer_id, billing_interval,
+					current_period_end
 				from stripe_subscription_tokens
 				where id = $1
 			`, stripeSubscriptionTokenId)
 			err = row.Scan(
 				&offerId, &maybeStripeSubscriptionId, &maybeStripeCustomerId, &maybeBillingInterval,
+				&maybeStripeCurrentPeriodEnd,
 			)
 			if err != nil {
 				panic(err)
 			}
+			planId = models.PricingPlan_IdFromOfferId(offerId)
 		} else {
 			planId = models.PlanIdFree
 			row := tx.QueryRow(`select default_offer_id from pricing_plans where id = $1`, models.PlanIdFree)
@@ -313,9 +335,9 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 		}
-		user, err = models.FullUser_Create(
+		user, err = models.UserWithPassword_Create(
 			tx, email, password, name, productUserId, offerId, maybeStripeSubscriptionId,
-			maybeStripeCustomerId, maybeBillingInterval,
+			maybeStripeCustomerId, maybeBillingInterval, maybeStripeCurrentPeriodEnd,
 		)
 		switch {
 		case errors.Is(err, models.ErrUserAlreadyExists):
@@ -340,6 +362,27 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 			return
 		case err != nil:
 			panic(err)
+		}
+
+		if planId == models.PlanIdPatron {
+			var creditCount, creditCap int
+			switch *maybeBillingInterval {
+			case models.BillingIntervalMonthly:
+				creditCount = models.PatronCreditsMonthly
+				creditCap = models.PatronCreditsMonthlyCap
+			case models.BillingIntervalYearly:
+				creditCount = models.PatronCreditsYearly
+				creditCap = models.PatronCreditsYearlyCap
+			default:
+				panic(fmt.Errorf("Unknown billing interval: %s", *maybeBillingInterval))
+			}
+			_, err := tx.Exec(`
+				insert into patron_credits (user_id, count, cap) values ($1, $2, $3)
+			`, user.Id, creditCount, creditCap)
+			if err != nil {
+				panic(err)
+			}
+			logger.Info().Msgf("Initialized user %d with %d credits", user.Id, creditCount)
 		}
 
 		if stripeSubscriptionTokenOk {
