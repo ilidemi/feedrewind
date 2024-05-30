@@ -173,20 +173,19 @@ func (l *FeedEntryLinks) sequenceMatchExceptFirst(
 	}
 
 	firstBucket := l.LinkBuckets[0]
-	switch {
-	case len(firstBucket) == 1:
+	if len(firstBucket) == 1 {
 		_, isMatch := l.subsequenceMatch(seqCuris, 1, curiEqCfg)
 		if isMatch {
 			return true, &firstBucket[0].maybeTitledLink
 		} else {
 			return false, nil
 		}
-	case len(seqCuris) < len(firstBucket)-1:
+	} else if len(seqCuris) < len(firstBucket)-1 {
 		// Feed starts with so many entries of the same date that we run out of sequence and don't know
 		// which of the remaining links in the first bucket is the first link
 		// We could return several first link candidates but let's keep things simple
 		return false, nil
-	default:
+	} else {
 		// Compare first bucket separately to see which link is not matching
 		firstBucketRemaining := slices.Clone(firstBucket)
 		for _, seqCuri := range seqCuris[:len(firstBucket)-1] {

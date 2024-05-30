@@ -1685,18 +1685,17 @@ func fetchMissingTitles(
 		}
 
 		arePrefixSuffixValid := false
-		switch {
-		case len(pageTitles) == len(links):
+		if len(pageTitles) == len(links) {
 			logger.Info(
 				"All links needed title fetching, can't validate prefix/suffix but proceeding with it",
 			)
 			arePrefixSuffixValid = true
-		case len(pageTitles) >= 15:
+		} else if len(pageTitles) >= 15 {
 			logger.Info(
 				"%d titles is enough to use prefix/suffix without an extra fetch", len(pageTitles),
 			)
 			arePrefixSuffixValid = true
-		default:
+		} else {
 			progressLogger.LogAndSavePostprocessingCounts(feedPresentTitlesCount+fetchedTitlesCount+1, 1)
 			page, err := crawlHtmlPage(&testLink, crawlCtx, logger)
 			progressLogger.LogAndSavePostprocessingCounts(feedPresentTitlesCount+fetchedTitlesCount+1, 0)
@@ -1704,12 +1703,11 @@ func fetchMissingTitles(
 				logger.Info("Couldn't fetch first link title: %s (%v)", testLink.Uri, err)
 			} else {
 				testPageTitle := getPageTitle(page, feedGenerator, logger)
-				switch {
-				case !strings.HasPrefix(testPageTitle, prefix):
+				if !strings.HasPrefix(testPageTitle, prefix) {
 					logger.Info("Test link prefix doesn't check out: %q, %q", testPageTitle, prefix)
-				case !strings.HasSuffix(testPageTitle, suffix):
+				} else if !strings.HasSuffix(testPageTitle, suffix) {
 					logger.Info("Test link suffix doesn't check out: %q, %q", testPageTitle, suffix)
-				default:
+				} else {
 					logger.Info("Title prefix and suffix check out with the test link")
 					arePrefixSuffixValid = true
 				}

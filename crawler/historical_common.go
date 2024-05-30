@@ -460,12 +460,11 @@ func groupLinksByMaskedXPath(
 	}
 	slices.SortStableFunc(maskedXPathLinkGroupings, func(a, b maskedXPathLinksGrouping) int {
 		diff := sortKey(a) - sortKey(b)
-		switch {
-		case diff < 0:
+		if diff < 0 {
 			return -1
-		case diff > 0:
+		} else if diff > 0 {
 			return 1
-		default:
+		} else {
 			return 0
 		}
 	})
@@ -698,8 +697,7 @@ func getMaskedXPathExtraction(
 			lastLink := collapsedLinks[len(collapsedLinks)-1]
 			link := links[linkIdx]
 			var newMaybeTitle *LinkTitle
-			switch {
-			case lastLink.MaybeTitle != nil && link.MaybeTitle != nil:
+			if lastLink.MaybeTitle != nil && link.MaybeTitle != nil {
 				newTitleValue := lastLink.MaybeTitle.Value + link.MaybeTitle.Value
 				var newTitleSource linkTitleSource
 				if lastLink.MaybeTitle.Source == link.MaybeTitle.Source {
@@ -709,9 +707,9 @@ func getMaskedXPathExtraction(
 				}
 				newTitle := NewLinkTitle(newTitleValue, newTitleSource, nil)
 				newMaybeTitle = &newTitle
-			case lastLink.MaybeTitle != nil:
+			} else if lastLink.MaybeTitle != nil {
 				newMaybeTitle = lastLink.MaybeTitle
-			default:
+			} else {
 				newMaybeTitle = link.MaybeTitle
 			}
 

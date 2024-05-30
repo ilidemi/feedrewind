@@ -80,12 +80,11 @@ func Users_Login(w http.ResponseWriter, r *http.Request) {
 
 	conn := rutil.DBConn(r)
 	user, err := models.UserWithPassword_FindByEmail(conn, email)
-	switch {
-	case errors.Is(err, models.ErrUserNotFound):
+	if errors.Is(err, models.ErrUserNotFound) {
 		logger.Info().Msg("User not found")
-	case err != nil:
+	} else if err != nil {
 		panic(err)
-	default:
+	} else {
 		err := bcrypt.CompareHashAndPassword([]byte(user.PasswordDigest), []byte(password))
 		if err == nil {
 			middleware.MustSetSessionAuthToken(w, r, user.AuthToken)
@@ -339,8 +338,7 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 			tx, email, password, name, productUserId, offerId, maybeStripeSubscriptionId,
 			maybeStripeCustomerId, maybeBillingInterval, maybeStripeCurrentPeriodEnd,
 		)
-		switch {
-		case errors.Is(err, models.ErrUserAlreadyExists):
+		if errors.Is(err, models.ErrUserAlreadyExists) {
 			result := signUpResult{
 				Session:                 rutil.Session(r),
 				Error:                   userAlreadyExists,
@@ -350,7 +348,7 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 			}
 			templates.MustWrite(w, "users/signup", result)
 			return
-		case errors.Is(err, models.ErrPasswordTooShort):
+		} else if errors.Is(err, models.ErrPasswordTooShort) {
 			result := signUpResult{
 				Session:                 rutil.Session(r),
 				Error:                   passwordTooShort,
@@ -360,7 +358,7 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 			}
 			templates.MustWrite(w, "users/signup", result)
 			return
-		case err != nil:
+		} else if err != nil {
 			panic(err)
 		}
 

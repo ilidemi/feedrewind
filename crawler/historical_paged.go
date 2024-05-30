@@ -624,18 +624,17 @@ func tryExtractPage2(
 		postCategories := postCategoriesMap.flatten()
 		postTags := postTagsMap.flatten()
 		var postCategoriesExtra []string
-		switch {
-		case !(len(postCategories) == 1 && postCategories[0].Name == uncategorized):
+		if !(len(postCategories) == 1 && postCategories[0].Name == uncategorized) {
 			postCategoriesOrTags = postCategories
 			postCategoriesStr := categoryCountsString(postCategories)
 			logger.Info("Categories: %s", postCategoriesStr)
 			appendLogLinef(&postCategoriesExtra, "categories: %s", postCategoriesStr)
-		case !(len(postTags) == 1 && postTags[0].Name == uncategorized):
+		} else if !(len(postTags) == 1 && postTags[0].Name == uncategorized) {
 			postCategoriesOrTags = postTags
 			postCategoriesStr := categoryCountsString(postTags)
 			logger.Info("Categories from tags: %s", postCategoriesStr)
 			appendLogLinef(&postCategoriesExtra, "categories from tags: %s", postCategoriesStr)
-		default:
+		} else {
 			logger.Info("No categories")
 		}
 

@@ -223,12 +223,11 @@ func runGuidedCrawl(
 		`, startLinkId)
 		var issue, severity string
 		err := commentRow.Scan(&severity, &issue)
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
+		if errors.Is(err, pgx.ErrNoRows) {
 			// Do nothing
-		case err != nil:
+		} else if err != nil {
 			return &result, newError(err, result)
-		default:
+		} else {
 			result.Comment = issue
 			if severity == "fail" {
 				result.CommentStatus = crawler.StatusFailure
@@ -257,12 +256,11 @@ tables:
 			&gtPattern, &gtEntriesCount, &gtBlogCanonicalUrl, &gtMainPageCanonicalUrl,
 			&gtOldestEntryCanonicalUrl, &gtTitleStrs, &gtLinks,
 		)
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
+		if errors.Is(err, pgx.ErrNoRows) {
 			gtKnown = false
-		case err != nil:
+		} else if err != nil {
 			return &result, newError(err, result)
-		default:
+		} else {
 			gtKnown = true
 			result.GroundTruthPattern = gtPattern
 			break tables
@@ -335,12 +333,11 @@ tables:
 	pastSuccessRow := conn.QueryRow(`select 1 from guided_successes where start_link_id = $1`, startLinkId)
 	var one int
 	err = pastSuccessRow.Scan(&one)
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
+	if errors.Is(err, pgx.ErrNoRows) {
 		hasGuidedSucceededBefore = false
-	case err != nil:
+	} else if err != nil {
 		return &result, newError(err, result)
-	default:
+	} else {
 		hasGuidedSucceededBefore = true
 	}
 
@@ -506,12 +503,11 @@ tables:
 				)
 			}
 		}
-		switch {
-		case len(gtTitles) == 0:
+		if len(gtTitles) == 0 {
 			logger.Info("Ground truth titles not present")
 			result.HistoricalLinksTitlesPartiallyMatchingStatus = crawler.StatusNeutral
 			result.HistoricalLinksTitlesExactlyMatchingStatus = crawler.StatusNeutral
-		case entriesCount == len(gtTitles):
+		} else if entriesCount == len(gtTitles) {
 			type TitleMismatch struct {
 				Title   crawler.LinkTitle
 				GTTitle crawler.LinkTitle
@@ -570,7 +566,7 @@ tables:
 					)
 				}
 			}
-		default:
+		} else {
 			gtTitleEqValues := make(map[string]bool)
 			for _, title := range gtTitles {
 				gtTitleEqValues[title.EqualizedValue] = true
