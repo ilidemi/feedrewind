@@ -67,11 +67,11 @@ func init() {
 			err = startWorker(conn, dynoId, availableWorkers, finishedJobs, logger)
 			if errors.Is(err, context.Canceled) {
 				logger.Info().Msg("Context canceled, shutting down")
-				waitForJobs(conn, dynoId, availableWorkers, finishedJobs, logger)
+				waitForJobs(conn, availableWorkers, finishedJobs, logger)
 				os.Exit(0)
 			} else if err != nil {
 				logger.Error().Err(err).Msg("Error occurred in the worker, shutting down")
-				waitForJobs(conn, dynoId, availableWorkers, finishedJobs, logger)
+				waitForJobs(conn, availableWorkers, finishedJobs, logger)
 				os.Exit(1)
 			}
 		},
@@ -199,7 +199,7 @@ mainLoop:
 		for {
 			select {
 			case jobResult := <-finishedJobs:
-				err := finishJob(conn, dynoId, jobResult, availableWorkers, logger)
+				err := finishJob(conn, jobResult, availableWorkers, logger)
 				if err != nil {
 					return err
 				}
@@ -293,7 +293,7 @@ mainLoop:
 					}
 				}
 			}()
-			status, err := runJob(signalCtx, j, jobFuncsByClassName, assignedWorkerId, assignedWorkerName)
+			status, err := runJob(signalCtx, j, jobFuncsByClassName, assignedWorkerName)
 			finishedJobs <- jobResult{
 				WorkerId: assignedWorkerId,
 				Id:       j.Id,
@@ -313,7 +313,7 @@ const (
 )
 
 func runJob(
-	signalCtx context.Context, j job, jobFuncsByClassName map[string]jobFunc, workerId int, workerName string,
+	signalCtx context.Context, j job, jobFuncsByClassName map[string]jobFunc, workerName string,
 ) (jobStatus, error) {
 	jobLogger := &JobLogger{
 		WorkerName: workerName,
@@ -413,7 +413,7 @@ func failJob(conn *pgw.Conn, j job, jobErr error) error {
 }
 
 func waitForJobs(
-	conn *pgw.Conn, dynoId int, availableWorkers []bool, finishedJobs chan jobResult, logger log.Logger,
+	conn *pgw.Conn, availableWorkers []bool, finishedJobs chan jobResult, logger log.Logger,
 ) {
 	allFinished := true
 	for _, isAvailable := range availableWorkers {
@@ -434,7 +434,7 @@ checkFinished:
 	for {
 		select {
 		case jobResult := <-finishedJobs:
-			err := finishJob(conn, dynoId, jobResult, availableWorkers, logger)
+			err := finishJob(conn, jobResult, availableWorkers, logger)
 			if err != nil {
 				logger.Error().Err(err).Msgf("Error while finishing job %d", jobResult.Id)
 			}
@@ -454,7 +454,7 @@ checkFinished:
 }
 
 func finishJob(
-	conn *pgw.Conn, dynoId int, jobResult jobResult, availableWorkers []bool, logger log.Logger,
+	conn *pgw.Conn, jobResult jobResult, availableWorkers []bool, logger log.Logger,
 ) error {
 	switch jobResult.Status {
 	case jobStatusFatal:
