@@ -303,8 +303,6 @@ func BillingInterval_GetByOffer(
 
 const PatronCreditsMonthly = 1
 const PatronCreditsYearly = 12
-const PatronCreditsMonthlyCap = 3 * PatronCreditsMonthly
-const PatronCreditsYearlyCap = 3 * PatronCreditsYearly
 
 type CustomBlogRequestId int64
 

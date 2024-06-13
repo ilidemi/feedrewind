@@ -443,7 +443,12 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			blogStatus == models.BlogStatusCrawlFailed {
 			util.DeleteCookie(w, rutil.AnonymousSubscription)
 		} else {
-			util.SetSessionCookie(w, rutil.AnonymousSubscription, fmt.Sprint(subscriptionId))
+			http.SetCookie(w, &http.Cookie{
+				Name:    rutil.AnonymousSubscription,
+				Value:   fmt.Sprint(subscriptionId),
+				Path:    "/",
+				Expires: time.Now().AddDate(0, 0, 3),
+			})
 		}
 	}
 
@@ -2075,6 +2080,7 @@ func Subscriptions_RequestCustomBlogPage(w http.ResponseWriter, r *http.Request)
 		IsPatron         bool
 		PatronCredits    int
 		CreditsRenewOn   string
+		Price            string
 		SubmitPath       string
 		CheckoutPath     string
 	}
@@ -2085,6 +2091,7 @@ func Subscriptions_RequestCustomBlogPage(w http.ResponseWriter, r *http.Request)
 		IsPatron:         isPatron,
 		PatronCredits:    patronCredits,
 		CreditsRenewOn:   creditsRenewOn,
+		Price:            config.Cfg.StripeCustomBlogPrice,
 		SubmitPath:       rutil.SubscriptionRequestCustomBlogSubmitPath(subscriptionId),
 		CheckoutPath:     rutil.SubscriptionRequestCustomBlogCheckoutPath(subscriptionId),
 	})

@@ -160,7 +160,7 @@ func TestRssSchedule(t *testing.T) {
 		outputPreviewTomorrow := outputTokens[8]
 
 		// Assert preview before
-		assertSchedulePreview(t, page, outputPreviewBefore, description)
+		requireSchedulePreview(t, page, outputPreviewBefore, description)
 
 		page.MustElement("#save_button").MustClick()
 
@@ -215,7 +215,7 @@ func TestRssSchedule(t *testing.T) {
 		require.Equal(t, outputCountAtCreation, publishedCountAtCreation, description)
 
 		// Assert preview at creation
-		assertSchedulePreview(t, page, outputPreviewAtCreation, description)
+		requireSchedulePreview(t, page, outputPreviewAtCreation, description)
 
 		// Assert published late
 		lateTimestampStr := lateTimestamp.Format(time.RFC3339)
@@ -228,14 +228,14 @@ func TestRssSchedule(t *testing.T) {
 		require.Equal(t, outputCountLate, publishedCountLate, description)
 
 		// Assert preview late
-		assertSchedulePreview(t, page, outputPreviewLate, description)
+		requireSchedulePreview(t, page, outputPreviewLate, description)
 
 		// Assert preview at midnight
 		midnightTimestampStr := midnightTimestamp.Format(time.RFC3339)
 		page = visitAdminf(browser, "travel_to?timestamp=%s", midnightTimestampStr)
 		require.Equal(t, midnightTimestampStr, mustPageText(page), description)
 		page = visitDev(browser, subscriptionPath)
-		assertSchedulePreview(t, page, outputAtMidnight, description)
+		requireSchedulePreview(t, page, outputAtMidnight, description)
 
 		// Assert published tomorrow
 		tomorrowTimestampStr := tomorrowTimestamp.Format(time.RFC3339)
@@ -248,7 +248,7 @@ func TestRssSchedule(t *testing.T) {
 		require.Equal(t, outputCountTomorrow, publishedCountTomorrow, description)
 
 		// Assert preview tomorrow
-		assertSchedulePreview(t, page, outputPreviewTomorrow, description)
+		requireSchedulePreview(t, page, outputPreviewTomorrow, description)
 
 		// Cleanup
 		page = visitAdmin(browser, "travel_back")

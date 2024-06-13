@@ -1,76 +1,423 @@
 {{template "layouts/application" .}}
 
 {{define "content"}}
-<div class="flex flex-col gap-6 max-w-lg items-center">
-  <div class="flex flex-row justify-center align-center gap-6">
-    <div class="flex flex-col gap-3">
-      <div class="font-semibold">Free</div>
+<div class="flex flex-col gap-6 items-center">
+  <div class="font-semibold text-xl md:text-[30px] md:leading-10 my-9">
+    {{if .OnboardingBlogName}}
+    Go through blogs like
+    <div class="font-bold bg-indigo-50 px-2 py-1.5 rounded-md mt-1 w-fit">{{.OnboardingBlogName}}</div>
+    <div class="mt-1">without staying up all night.</div>
+    {{else}}
+    Go through your favorite blog<br>without staying up all night.
+    {{end}}
+  </div>
+  <div class="flex flex-row gap-2">
+    <div class="font-semibold">Monthly</div>
+    <label class="inline-flex items-center cursor-pointer">
+      <input type="checkbox" id="billing_interval_checkbox" value="" class="sr-only peer">
+      <div id="billing_interval_toggle" class="relative w-9 h-5 bg-gray-200 peer-focus:show-ring rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-[0.125rem] after:left-[0.125rem] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-700"></div>
+    </label>
+    <div class="font-semibold">Yearly</div>
+    <script>
+      document.getElementById("billing_interval_checkbox").addEventListener("change", function(e) {
+        let freeMonthlyPrice = document.getElementById("free_monthly_price");
+        let freeYearlyPrice = document.getElementById("free_yearly_price");
+        let supporterMonthlyPrice = document.getElementById("supporter_monthly_price");
+        let supporterYearlyPrice = document.getElementById("supporter_yearly_price");
+        let patronMonthlyPrice = document.getElementById("patron_monthly_price");
+        let patronYearlyPrice = document.getElementById("patron_yearly_price");
+        let supporterInterval = document.getElementById("supporter_interval");
+        let patronInterval = document.getElementById("patron_interval");
+        if (this.checked) {
+          freeMonthlyPrice.classList.add("hidden");
+          supporterMonthlyPrice.classList.add("hidden");
+          patronMonthlyPrice.classList.add("hidden");
+          freeYearlyPrice.classList.remove("hidden");
+          supporterYearlyPrice.classList.remove("hidden");
+          patronYearlyPrice.classList.remove("hidden");
+          supporterInterval.value = "{{.YearlyIntervalName}}";
+          patronInterval.value = "{{.YearlyIntervalName}}";
+        } else {
+          freeMonthlyPrice.classList.remove("hidden");
+          supporterMonthlyPrice.classList.remove("hidden");
+          patronMonthlyPrice.classList.remove("hidden");
+          freeYearlyPrice.classList.add("hidden");
+          supporterYearlyPrice.classList.add("hidden");
+          patronYearlyPrice.classList.add("hidden");
+          supporterInterval.value = "{{.MonthlyIntervalName}}";
+          patronInterval.value = "{{.MonthlyIntervalName}}";
+        }
+      });
+    </script>
+  </div>
+  <ul class="md:hidden flex flex-row gap-3" align="center">
+    <script>
       {{if .IsOnFreePlan}}
-      <div id="current_free" class="border rounded-md px-3 py-2 text-gray-500 border-gray-300">Current plan</div>
+      let activeSuffix = "free";
+      {{else if .IsOnPatronPlan}}
+      let activeSuffix = "patron";
+      {{else}}
+      let activeSuffix = "supporter";
+      {{end}}
+      let activateTab = (suffix) => {
+        if (suffix === activeSuffix) return;
+        let currentTab = document.getElementById(`tab_${activeSuffix}`);
+        let newTab = document.getElementById(`tab_${suffix}`);
+        currentTab.classList.remove("pricing-active-tab");
+        currentTab.classList.add("pricing-tab");
+        currentTab.setAttribute("aria-selected", "false");
+        newTab.classList.remove("pricing-tab");
+        newTab.classList.add("pricing-active-tab");
+        newTab.setAttribute("aria-selected", "true");
+        let currentPlanCard = document.getElementById(`plan_card_${activeSuffix}`);
+        if ((suffix === "supporter" && activeSuffix === "free") || suffix === "patron") {
+          currentPlanCard.classList.add("tab-out-left");
+        } else {
+          currentPlanCard.classList.add("tab-out-right");
+        }
+        activeSuffix = suffix;
+      };
+    </script>
+    <li role="presentation">
+      <button id="tab_free" 
+              role="tab" 
+              {{if .IsOnFreePlan}}
+              aria-selected="true"
+              class="pricing-active-tab"
+              {{else}}
+              aria-selected="false"
+              class="pricing-tab"
+              {{end}}
+      >
+        Free
+      </button>
+    </li>
+    <li role="presentation">
+      <button id="tab_supporter" 
+              role="tab" 
+              {{if or .IsNewUser .IsOnSupporterPlan}}
+              aria-selected="true" 
+              class="pricing-active-tab"
+              {{else}}
+              aria-selected="false"
+              class="pricing-tab"
+              {{end}}
+      >
+        Supporter
+      </button>
+    </li>
+    <li role="presentation">
+      <button id="tab_patron" 
+              role="tab" 
+              {{if .IsOnPatronPlan}}
+              aria-selected="true"
+              class="pricing-active-tab"
+              {{else}}
+              aria-selected="false" 
+              class="pricing-tab"
+              {{end}}
+      >
+        Patron
+      </button>
+    </li>
+    <script>
+      document.getElementById("tab_free").addEventListener("click", () => activateTab("free"));
+      document.getElementById("tab_supporter").addEventListener("click", () => activateTab("supporter"));
+      document.getElementById("tab_patron").addEventListener("click", () => activateTab("patron"));
+    </script>
+  </ul>
+  <div class="flex flex-row justify-center align-center">
+    <section id="plan_card_free"
+             role="tabpanel"
+             aria-labelledby="tab_free"
+             class="px-5 py-5 basis-full max-w-[240px] md:block rounded-2xl border-gray-300 border {{if .IsOnFreePlan}}border-indigo-300 md:border-solid{{else}}hidden md:border-none{{end}}"
+    >
+      <div class="font-semibold text-lg {{if .IsOnFreePlan}}text-indigo-700{{end}}" align="center">Free</div>
+      <div id="free_monthly_price" class="font-bold mt-2.5 {{if .IsOnFreePlan}}text-indigo-700{{end}}" align="center">
+        <span class="text-3xl">$0</span> <span class="text-lg">/month</span>
+      </div>
+      <div id="free_yearly_price" class="font-bold mt-2.5 hidden {{if .IsOnFreePlan}}text-indigo-700{{end}}" align="center">
+        <span class="text-3xl">$0</span> <span class="text-lg">/year</span>
+      </div>
+      {{if .IsOnFreePlan}}
+        <div id="current_free"
+             class="mt-5 font-semibold border border-gray-300 rounded-md px-5 py-1.5 block"
+             align="center"
+        >
+          Current plan
+        </div>
       {{else if .IsNewUser}}
-      <a id="signup_free" class="btn inline-block" href="/signup">Free</a>
-      {{end}}
-    </div>
-    <div class="flex flex-col gap-3">
-      <div class="font-semibold">Supporter</div>
-      {{if .IsOnSupporterPlan}}
-      <div id="current_supporter" class="border rounded-md px-3 py-2 text-gray-500 border-gray-300">Current plan</div>
+        <a id="signup_free"
+           class="mt-5 text-indigo-700 font-semibold border border-indigo-300 hover:bg-indigo-100 rounded-md px-5 py-1.5 hover:cursor-pointer block"
+           href="/signup"
+           align="center"
+        >
+          Sign up
+        </a>
       {{else}}
+        <a id="downgrade_to_free"
+           href="/billing_full"
+           class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 hover:cursor-pointer w-full inline-block"
+           align="center"
+        >
+          Cancel via<br>Billing Portal
+        </a>
+      {{end}}
+      <div class="mt-5 grid grid-cols-[auto_auto] gap-2">
+        <div>
+          <!-- check -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-700 mt-[0.1875rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Unlimited blogs</div>
+        <div>
+          <!-- check -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-700 mt-[0.1875rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Your schedule</div>
+        <div>
+          <!-- check -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-700 mt-[0.1875rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Receive via RSS or email</div>
+        <div>
+          <!-- check -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-700 mt-[0.1875rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Enjoy FeedRewind at no cost</div>
+      </div>
+    </section>
+    <section id="plan_card_supporter"
+             role="tabpanel"
+             aria-labelledby="tab_supporter"
+             class="{{if .IsNewUser}}border border-indigo-500{{else if .IsOnSupporterPlan}}border border-indigo-300{{else}}hidden border border-gray-300 md:border-none{{end}} rounded-2xl px-5 py-5 basis-full max-w-[240px] md:block"
+    >
+      <div class="font-semibold text-lg {{if or .IsNewUser .IsOnSupporterPlan}}text-indigo-700{{end}}" align="center">Supporter</div>
       <form action="/checkout" method="POST">
         {{.Session.CSRFField}}
         <input class="hidden" name="offer_id" value="{{.SupporterOfferId}}">
-        <input class="hidden" name="interval" value="{{.MonthlyIntervalName}}">
-        {{if .IsOnFreePlan}}
-        <button id="upgrade_supporter_monthly" class="btn" type="submit">Upgrade for {{.SupporterMonthlyRate}}/mo</button>
-        {{else if .IsNewUser}}
-        <button id="signup_supporter_monthly" class="btn" type="submit">{{.SupporterMonthlyRate}}/mo</button>
+        <div id="supporter_monthly_price" class="font-bold {{if or .IsNewUser .IsOnSupporterPlan}}text-indigo-700{{end}} pt-2.5" align="center">
+          <span class="text-3xl">${{.SupporterMonthlyRate}}</span> <span class="text-lg">/month</span>
+        </div>
+        <div id="supporter_yearly_price" class="font-bold {{if or .IsNewUser .IsOnSupporterPlan}}text-indigo-700{{end}} pt-2.5 hidden" align="center">
+          <span class="text-3xl">${{.SupporterYearlyRate}}</span> <span class="text-lg">/year</span>
+        </div>
+        <input id="supporter_interval" class="hidden" name="interval" value="{{.MonthlyIntervalName}}">
+        {{if .IsNewUser}}
+          <button id="signup_supporter"
+                  type="submit"
+                  class="mt-5 text-white font-semibold bg-indigo-700 border border-indigo-700 hover:bg-indigo-900 hover:border-indigo-900 rounded-md px-5 py-1.5 hover:cursor-pointer w-full"
+                  align="center"
+          >
+            Get started
+          </button>
+        {{else if .IsOnSupporterPlan}}
+          <div id="current_supporter"
+               class="mt-5 font-semibold border border-gray-300 rounded-md px-5 py-1.5 block"
+          >
+            <div class="h-12 flex flex-row items-center justify-center">Current plan</div>
+          </div>
+        {{else if .IsOnFreePlan}}
+          <button id="upgrade_to_supporter"
+                  type="submit"
+                  class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 hover:cursor-pointer w-full"
+                  align="center"
+          >
+            Upgrade
+          </button>
+        {{else if .IsOnPatronPlan}}
+          <a id="downgrade_to_supporter"
+             href="/billing_full"
+             class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 hover:cursor-pointer w-full inline-block"
+             align="center"
+          >
+            Switch via<br>Billing Portal
+          </a>
         {{end}}
       </form>
-      <form action="/checkout" method="POST">
-        {{.Session.CSRFField}}
-        <input class="hidden" name="offer_id" value="{{.SupporterOfferId}}">
-        <input class="hidden" name="interval" value="{{.YearlyIntervalName}}">
-        {{if .IsOnFreePlan}}
-        <button id="upgrade_supporter_yearly" class="btn" type="submit">Upgrade for {{.SupporterYearlyRate}}/yr</button>
-        {{else if .IsNewUser}}
-        <button id="signup_supporter_yearly" class="btn" type="submit">{{.SupporterYearlyRate}}/yr</button>
-        {{end}}
-      </form>
-      {{end}}
-    </div>
-    <div class="flex flex-col gap-3">
-      <div class="font-semibold">Patron</div>
-      {{if .IsOnPatronPlan}}
-      <div id="current_patron" class="border rounded-md px-3 py-2 text-gray-500 border-gray-300">Current plan</div>
-      {{else}}
+      <div class="mt-5 grid grid-cols-[auto_auto] gap-2">
+        <div>
+          <!-- check -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-700 mt-[0.1875rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Unlimited blogs</div>
+        <div>
+          <!-- check -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-700 mt-[0.1875rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Your schedule</div>
+        <div>
+          <!-- check -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-700 mt-[0.1875rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Receive via RSS or email</div>
+        <div>
+          <!-- check -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-700 mt-[0.1875rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Keep FeedRewind sustainable</div>
+      </div>
+    </section>
+    <section id="plan_card_patron"
+             class="px-5 py-5 basis-full max-w-[240px] md:block rounded-2xl border-gray-300 border {{if .IsOnPatronPlan}}border-indigo-300 {{else}}hidden md:border-none{{end}}"
+             role="tabpanel"
+             aria-labelledby="tab_patron"
+    >
+      <div class="font-semibold text-lg {{if .IsOnPatronPlan}}text-indigo-700{{end}}" align="center">Patron</div>
       <form action="/checkout" method="POST">
         {{.Session.CSRFField}}
         <input class="hidden" name="offer_id" value="{{.PatronOfferId}}">
-        <input class="hidden" name="interval" value="{{.MonthlyIntervalName}}">
-        {{if .IsOnFreePlan}}
-        <button id="upgrade_patron_monthly" class="btn" type="submit">Upgrade for {{.PatronMonthlyRate}}/mo</button>
-        {{else if .IsNewUser}}
-        <button id="signup_patron_monthly" class="btn" type="submit">{{.PatronMonthlyRate}}/mo</button>
+        <div id="patron_monthly_price" class="font-bold pt-2.5 {{if .IsOnPatronPlan}}text-indigo-700{{end}}" align="center">
+          <span class="text-3xl">${{.PatronMonthlyRate}}</span> <span class="text-lg">/month</span>
+        </div>
+        <div id="patron_yearly_price" class="font-bold pt-2.5 hidden {{if .IsOnPatronPlan}}text-indigo-700{{end}}" align="center">
+          <span class="text-3xl">${{.PatronYearlyRate}}</span> <span class="text-lg">/year</span>
+        </div>
+        <input id="patron_interval" class="hidden" name="interval" value="{{.MonthlyIntervalName}}">
+        {{if .IsNewUser}}
+          <button id="signup_patron"
+                  type="submit"
+                  class="mt-5 text-indigo-700 font-semibold border border-indigo-300 hover:bg-indigo-100 rounded-md px-5 py-1.5 hover:cursor-pointer w-full"
+                  align="center"
+          >
+            Get started
+          </button>
+        {{else if .IsOnPatronPlan}}
+          <div id="current_patron"
+               class="mt-5 font-semibold border border-gray-300 rounded-md px-5 py-1.5 block"
+          >
+            <div class="h-12 flex flex-row items-center justify-center">Current plan</div>
+          </div>
+        {{else if .IsOnFreePlan}}
+          <button id="upgrade_to_patron"
+                  type="submit"
+                  class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 hover:cursor-pointer w-full"
+                  align="center"
+          >
+            Upgrade
+          </button>
+        {{else}}
+          <a id="upgrade_to_patron"
+             href="/billing_full"
+             class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 hover:cursor-pointer w-full inline-block"
+             align="center"
+          >
+            Upgrade via<br>Billing Portal
+          </a>
         {{end}}
       </form>
-      <form action="/checkout" method="POST">
-        {{.Session.CSRFField}}
-        <input class="hidden" name="offer_id" value="{{.PatronOfferId}}">
-        <input class="hidden" name="interval" value="{{.YearlyIntervalName}}">
-        {{if .IsOnFreePlan}}
-        <button id="upgrade_patron_yearly" class="btn" type="submit">Upgrade for {{.PatronYearlyRate}}/yr</button>
-        {{else if .IsNewUser}}
-        <button id="signup_patron_yearly" class="btn" type="submit">{{.PatronYearlyRate}}/yr</button>
-        {{end}}
-      </form>
-      {{end}}
-    </div>
+      <div class="mt-5 grid grid-cols-[auto_auto] gap-2">
+        <div>
+          <!-- check (cropped) -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-700 mt-[0.375rem]" fill="none" viewBox="4 4 20 20" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Unlimited blogs</div>
+        <div>
+          <!-- check (cropped) -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-700 mt-[0.375rem]" fill="none" viewBox="4 4 20 20" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Your schedule</div>
+        <div>
+          <!-- check (cropped) -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-700 mt-[0.375rem]" fill="none" viewBox="4 4 20 20" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Receive via RSS or email</div>
+        <div>
+          <!-- check (cropped) -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-700 mt-[0.375rem]" fill="none" viewBox="4 4 20 20" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>Enable FeedRewind for others</div>
+        <div>
+          <!-- check (cropped) -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-700 mt-[0.375rem]" fill="none" viewBox="4 4 20 20" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <span class="group relative cursor-pointer underline decoration-dashed decoration-gray-400 decoration-1 underline-offset-[3px] hover:text-gray-700 duration-50 transition-all">
+            <div id="patron_tooltip" class="invisible group-hover:visible z-10 absolute top-0 -left-6 -translate-y-full">
+              <div class="mb-2 px-3 py-2 text-sm font-medium border border-gray-300 text-gray-700 bg-white rounded-lg shadow-sm">
+                If FeedRewind doesn't support a blog you like, just press a button and we’ll add it within 3 business days.
+                <br><br>
+                Each month paid comes with one blog request.
+                <br><br>
+                The blog becomes available for all users (unless you'd prefer otherwise).
+              </div>
+            </div>
+            Have blogs supported on&#8288;-&#8288;demand
+          </span>
+          <script>
+            {
+              // Size the tooltip with the card contents, including when it's first hidden on mobile
+              let recalcTooltipWidth = () => {
+                let tooltip = document.getElementById("patron_tooltip");
+                let tooltipWidth = tooltip.parentElement.parentElement.parentElement.offsetWidth;
+                tooltip.setAttribute("style", `width: ${tooltipWidth}px;`);
+              };
+              const observer = new MutationObserver(recalcTooltipWidth);
+              let patronPlanCard = document.getElementById("plan_card_patron");
+              observer.observe(patronPlanCard, { attributes: true });
+              recalcTooltipWidth();
+            }
+          </script>
+        </div>
+      </div>
+    </section>
+    <script>
+      let planCards = [
+        document.getElementById("plan_card_free"),
+        document.getElementById("plan_card_supporter"),
+        document.getElementById("plan_card_patron")
+      ];
+      for (let planCard of planCards) {
+        planCard.addEventListener("animationend", (event) => {
+          let newPlanCard = document.getElementById(`plan_card_${activeSuffix}`);
+          switch (event.animationName) {
+            case "tab-out-left":
+              event.target.classList.remove("tab-out-left");
+              event.target.classList.add("hidden");
+              newPlanCard.classList.remove("hidden");
+              newPlanCard.classList.add("tab-in-left");
+              break;
+            case "tab-out-right":
+              event.target.classList.remove("tab-out-right");
+              event.target.classList.add("hidden");
+              newPlanCard.classList.remove("hidden");
+              newPlanCard.classList.add("tab-in-right");
+              break;
+            case "tab-in-left":
+              event.target.classList.remove("tab-in-left");
+              break;
+            case "tab-in-right":
+              event.target.classList.remove("tab-in-right");
+              break;
+          }
+        });
+      }
+    </script>
   </div>
-  {{if .IsOnPaidPlan}}
-  <div class="flex flex-col items-center">
-    <div>You can update your plan in the</div>
-    <a id="change_plan" href="/billing_full" class="inline-block btn">Billing portal</a>
-  </div>
-  {{end}}
 </div>
 {{end}}

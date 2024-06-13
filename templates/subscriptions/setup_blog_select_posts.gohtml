@@ -23,7 +23,6 @@
       </style>
       <ul id="category_tabs" role="tablist" class="flex flex-row flex-wrap">
         <script>
-          let prevSuffix = "0";
           let activeSuffix = "0";
           let activateTab = (suffix) => {
             if (suffix === activeSuffix) return;
@@ -42,7 +41,6 @@
               currentPosts.classList.add("tab-out-right");
             }
             document.getElementById("select_posts").classList.add("overflow-hidden");
-            prevSuffix = activeSuffix;
             activeSuffix = suffix;
           };
         </script>
@@ -471,7 +469,6 @@
                   {{range $customCategory.Posts}}
                     <div class="flex flex-row gap-2 items-top ml-[3.25rem] hidden">
                       <div class="h-6 flex flex-row items-center">
-                        <!--suppress HtmlFormInputWithoutLabel -->
                         <input type="checkbox"
                                class="rounded w-4 h-4"
                                id="post_{{$categoryIndex}}_{{.Id}}"
@@ -491,49 +488,49 @@
                 {{end}}
 
                 <script>
-                    {{range $categoryIndex, $customCategory := .CustomCategories}}
-                      {
-                        document
-                          .getElementById("category_{{$categoryIndex}}_right")
-                          .addEventListener("click", () => {
-                            toggleCategory({{$categoryIndex}});
-                          });
-                        document
-                          .getElementById("category_{{$categoryIndex}}_down")
-                          .addEventListener("click", () => {
-                            toggleCategory({{$categoryIndex}});
-                          });
-                        document
-                          .getElementById("category_{{$categoryIndex}}_label")
-                          .addEventListener("click", (event) => {
-                            toggleCategory({{$categoryIndex}});
-                            // Expanding the category is less "destructive" than toggling the checkbox
-                            event.preventDefault();
-                          });
+                  {{range $categoryIndex, $customCategory := .CustomCategories}}
+                    {
+                      document
+                        .getElementById("category_{{$categoryIndex}}_right")
+                        .addEventListener("click", () => {
+                          toggleCategory({{$categoryIndex}});
+                        });
+                      document
+                        .getElementById("category_{{$categoryIndex}}_down")
+                        .addEventListener("click", () => {
+                          toggleCategory({{$categoryIndex}});
+                        });
+                      document
+                        .getElementById("category_{{$categoryIndex}}_label")
+                        .addEventListener("click", (event) => {
+                          toggleCategory({{$categoryIndex}});
+                          // Expanding the category is less "destructive" than toggling the checkbox
+                          event.preventDefault();
+                        });
 
-                        let categoryCheckbox = document.getElementById("category_{{$categoryIndex}}");
-                        {{if $customCategory.IsIndeterminate}}
-                        categoryCheckbox.indeterminate = true;
-                        {{end}}
-                        categoryCheckbox.addEventListener("change", handleCategoryChange);
-
-                        allCategoryCheckboxes.push(categoryCheckbox);
-                        postCheckboxesByCategoryIndex[{{$categoryIndex}}] = [];
-                      }
-                      {{range $customCategory.Posts}}
-                        {
-                          let postCheckbox = document
-                            .getElementById("post_{{$categoryIndex}}_{{.Id}}");
-                          postCheckbox.addEventListener("change", handlePostChange);
-                          allPostCheckboxes.push(postCheckbox);
-                          postCheckboxesByCategoryIndex[{{$categoryIndex}}].push(postCheckbox);
-                          if (!postCheckboxesByPostId.has({{.Id}})) {
-                            postCheckboxesByPostId.set({{.Id}}, []);
-                          }
-                          postCheckboxesByPostId.get({{.Id}}).push(postCheckbox);
-                        }
+                      let categoryCheckbox = document.getElementById("category_{{$categoryIndex}}");
+                      {{if $customCategory.IsIndeterminate}}
+                      categoryCheckbox.indeterminate = true;
                       {{end}}
+                      categoryCheckbox.addEventListener("change", handleCategoryChange);
+
+                      allCategoryCheckboxes.push(categoryCheckbox);
+                      postCheckboxesByCategoryIndex[{{$categoryIndex}}] = [];
+                    }
+                    {{range $customCategory.Posts}}
+                      {
+                        let postCheckbox = document
+                          .getElementById("post_{{$categoryIndex}}_{{.Id}}");
+                        postCheckbox.addEventListener("change", handlePostChange);
+                        allPostCheckboxes.push(postCheckbox);
+                        postCheckboxesByCategoryIndex[{{$categoryIndex}}].push(postCheckbox);
+                        if (!postCheckboxesByPostId.has({{.Id}})) {
+                          postCheckboxesByPostId.set({{.Id}}, []);
+                        }
+                        postCheckboxesByPostId.get({{.Id}}).push(postCheckbox);
+                      }
                     {{end}}
+                  {{end}}
                 </script>
               </div>
 

@@ -31,6 +31,7 @@ func testingConfig() Config {
 		StripePatronConfigId:      devCfg.StripePatronConfigId,
 		StripeCustomBlogProductId: devCfg.StripeCustomBlogProductId,
 		StripeCustomBlogPriceId:   devCfg.StripeCustomBlogPriceId,
+		StripeCustomBlogPrice:     devCfg.StripeCustomBlogPrice,
 		AdminUserIds:              nil,
 	}
 }

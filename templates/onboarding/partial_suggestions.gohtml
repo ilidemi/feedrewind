@@ -14,7 +14,7 @@
               <a href="{{.Url}}" target="_blank" class="external-link"><span class="link text-black">{{.Name}}</span></a>
             </span>
 
-            <form action="{{.AddFeedPath}}" class="self-center" method="post">
+            <form action="{{.AddFeedPath}}" class="self-start" method="post">
               {{$session.CSRFField}}
               <button type="submit" name="submit" class="block text-white bg-primary-700 hover:bg-primary-900 rounded-md px-1 py-1 hover:cursor-pointer">
                 <!-- plus-sm icon -->
@@ -41,7 +41,7 @@
 
           <div class="rounded-full bg-primary-100 text-sm px-2">{{.NonBreakingTag}}</div>
 
-          <form action="{{.AddFeedPath}}" class="self-center" method="post">
+          <form action="{{.AddFeedPath}}" class="self-start" method="post">
             {{$session.CSRFField}}
             <button type="submit" name="submit" class="block text-white bg-primary-700 hover:bg-primary-900 rounded-md px-1 py-1 hover:cursor-pointer">
               <!-- plus-sm icon -->

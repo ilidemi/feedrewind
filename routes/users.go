@@ -110,7 +110,10 @@ func Users_Login(w http.ResponseWriter, r *http.Request) {
 					if err != nil {
 						panic(err)
 					}
+					util.DeleteCookie(w, rutil.AnonymousSubscription)
 					http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
+				} else {
+					util.DeleteCookie(w, rutil.AnonymousSubscription)
 				}
 			}
 
@@ -363,20 +366,18 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if planId == models.PlanIdPatron {
-			var creditCount, creditCap int
+			var creditCount int
 			switch *maybeBillingInterval {
 			case models.BillingIntervalMonthly:
 				creditCount = models.PatronCreditsMonthly
-				creditCap = models.PatronCreditsMonthlyCap
 			case models.BillingIntervalYearly:
 				creditCount = models.PatronCreditsYearly
-				creditCap = models.PatronCreditsYearlyCap
 			default:
 				panic(fmt.Errorf("Unknown billing interval: %s", *maybeBillingInterval))
 			}
 			_, err := tx.Exec(`
-				insert into patron_credits (user_id, count, cap) values ($1, $2, $3)
-			`, user.Id, creditCount, creditCap)
+				insert into patron_credits (user_id, count) values ($1, $2)
+			`, user.Id, creditCount)
 			if err != nil {
 				panic(err)
 			}
@@ -471,9 +472,11 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
+			util.DeleteCookie(w, rutil.AnonymousSubscription)
 			http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
 			return
 		} else {
+			util.DeleteCookie(w, rutil.AnonymousSubscription)
 			http.Redirect(w, r, "/subscriptions", http.StatusSeeOther)
 			return
 		}

@@ -289,6 +289,14 @@
         @apply px-5 py-3 text-sm font-semibold cursor-pointer border-b-2 border-blue-600 text-blue-600
     }
 
+    .pricing-tab {
+        @apply font-semibold text-gray-500 rounded-md px-2 py-1.5 hover:bg-gray-100 cursor-pointer
+    }
+
+    .pricing-active-tab {
+        @apply font-semibold text-indigo-700 bg-indigo-100 rounded-md px-2 py-1.5 cursor-pointer
+    }
+
     .tab-out-left {
         animation-name: tab-out-left;
         animation-duration: 75ms;

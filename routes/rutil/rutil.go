@@ -17,7 +17,6 @@ func MustExtractAnonymousSubscriptionId(w http.ResponseWriter, r *http.Request) 
 	if subscriptionIdStr, ok := util.FindCookie(r, AnonymousSubscription); ok {
 		subscriptionIdInt, _ := strconv.ParseInt(subscriptionIdStr, 10, 64)
 		subscriptionId = models.SubscriptionId(subscriptionIdInt)
-		util.DeleteCookie(w, AnonymousSubscription)
 	}
 	return subscriptionId
 }

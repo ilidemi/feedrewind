@@ -79,6 +79,8 @@ func main() {
 			models.MustInit(conn)
 			defer conn.Release()
 
+			stripe.Key = config.Cfg.StripeApiKey
+
 			//nolint:exhaustruct
 			params := &stripe.BillingPortalConfigurationParams{
 				BusinessProfile: &stripe.BillingPortalConfigurationBusinessProfileParams{
@@ -129,8 +131,8 @@ func main() {
 
 			row := conn.QueryRow(`
 				select stripe_product_id, stripe_monthly_price_id, stripe_yearly_price_id
-				from product_offers
-				where id = (select default_offer_id from product_plans where id = 'supporter')
+				from pricing_offers
+				where id = (select default_offer_id from pricing_plans where id = 'supporter')
 			`)
 			var stripeProductId, stripeMonthlyPriceId, stripeYearlyPriceId string
 			err = row.Scan(&stripeProductId, &stripeMonthlyPriceId, &stripeYearlyPriceId)
@@ -153,8 +155,8 @@ func main() {
 
 			row = conn.QueryRow(`
 				select stripe_product_id, stripe_monthly_price_id, stripe_yearly_price_id
-				from product_offers
-				where id = (select default_offer_id from product_plans where id = 'patron')
+				from pricing_offers
+				where id = (select default_offer_id from pricing_plans where id = 'patron')
 			`)
 			err = row.Scan(&stripeProductId, &stripeMonthlyPriceId, &stripeYearlyPriceId)
 			if err != nil {
