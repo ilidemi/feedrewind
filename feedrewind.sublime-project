@@ -38,11 +38,11 @@
                 },
                 {
                     "name": "golangci-lint",
-                    "shell_cmd": "golangci-lint cache clean && golangci-lint run --build-tags testing,e2etesting,emailtesting",
+                    "shell_cmd": "golangci-lint cache clean && golangci-lint run --build-tags testing,e2etesting,emailtesting,stripetesting",
                 },
                 {
                     "name": "golangci-lint (with cache)",
-                    "shell_cmd": "golangci-lint run --build-tags testing,e2etesting,emailtesting",
+                    "shell_cmd": "golangci-lint run --build-tags testing,e2etesting,emailtesting,stripetesting",
                 },
                 {
                     "name": "tailwind",

@@ -150,15 +150,6 @@ func FindCookie(r *http.Request, name string) (string, bool) {
 
 	return "", false
 }
-
-func SetSessionCookie(w http.ResponseWriter, name string, value string) {
-	http.SetCookie(w, &http.Cookie{
-		Name:  name,
-		Value: value,
-		Path:  "/",
-	})
-}
-
 func DeleteCookie(w http.ResponseWriter, name string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:    name,

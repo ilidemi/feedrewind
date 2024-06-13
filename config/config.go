@@ -24,6 +24,7 @@ type Config struct {
 	StripePatronConfigId      string
 	StripeCustomBlogProductId string
 	StripeCustomBlogPriceId   string
+	StripeCustomBlogPrice     string
 	AdminUserIds              map[int64]bool
 }
 

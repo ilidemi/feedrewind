@@ -6,10 +6,19 @@
     <div>
       <a href="/subscriptions" class="text-sm link-secondary">← Dashboard</a>
     </div>
-    <h2 class="break-word">{{.SubscriptionName}}</h2>
+    <h2 class="break-word">Requested: {{.SubscriptionName}}</h2>
   </div>
 
-  <div id="request_ack">TODO_WE_GOT_YOUR_REQUEST</div>
-  TODO_WE_LL_EMAIL_YOU
+  <div id="request_ack">We're on it! You'll receive an email when this blog becomes available.</div>
+
+  <div>
+    <a href="/subscriptions" class="btn-secondary bg-gray-50  inline-flex flex-row gap-1 items-center">
+      <!-- arrow-left icon -->
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 mt-0.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Dashboard
+    </a>
+  </div>
 </div>
 {{end}}

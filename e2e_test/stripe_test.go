@@ -4,6 +4,7 @@ package e2etest
 
 import (
 	"feedrewind/config"
+	"feedrewind/oops"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -52,8 +53,7 @@ func TestStripeFree(t *testing.T) {
 	// Settings
 	currentPlanText := page.MustElement("#current_plan").MustText()
 	require.Equal(t, "Current plan: Free", currentPlanText)
-	planTimestamps := page.MustElements("#plan_timestamp")
-	require.True(t, planTimestamps.Empty())
+	mustRequireNoElement(t, page, "#plan_timestamp")
 
 	// DB
 	userProperties := visitAdminSql(browser, `
@@ -92,7 +92,10 @@ func TestStripeSupporter(t *testing.T) {
 
 		// Pricing
 		page = visitDev(browser, "pricing")
-		page.MustElement("#signup_supporter_" + interval).MustClick()
+		if interval == "yearly" {
+			page.MustElement("#billing_interval_toggle").MustClick()
+		}
+		page.MustElement("#signup_supporter").MustClick()
 
 		// Stripe checkout
 		page.MustElement("#email").MustInput(email)
@@ -258,7 +261,7 @@ func TestStripeSupporterCancelRenew(t *testing.T) {
 	require.True(t, strings.HasPrefix(userProperties[0]["stripe_customer_id"].(string), "cus_"))
 	require.Equal(t, "monthly", userProperties[0]["billing_interval"])
 	stripeCancelAt, err := time.Parse("2006-01-02T15:04:05", userProperties[0]["stripe_cancel_at"].(string))
-	require.NoError(t, err)
+	oops.RequireNoError(t, err)
 	require.WithinRange(t, stripeCancelAt, time.Now(), time.Now().AddDate(0, 2, 0))
 
 	// Settings
@@ -348,7 +351,7 @@ func TestStripeSupporterDeleteCanceledOnBackend(t *testing.T) {
 	// Pricing
 	page := visitDev(browser, "pricing")
 	page.MustElement("#current_supporter")
-	page.MustElement("#change_plan").MustClick()
+	page.MustElement("#downgrade_to_free").MustClick()
 
 	// Billing portal
 	page.MustElement("a[data-test='cancel-subscription']").MustClick()
@@ -481,7 +484,8 @@ func TestStripeFreeUpgradeToYearlySupporter(t *testing.T) {
 	page.MustElement("#upgrade").MustClick()
 
 	// Pricing
-	page.MustElement("#upgrade_supporter_yearly").MustClick()
+	page.MustElement("#billing_interval_toggle").MustClick()
+	page.MustElement("#upgrade_to_supporter").MustClick()
 
 	// Stripe checkout
 	page.MustElement("#cardNumber").MustInput("4242424242424242")
@@ -538,7 +542,10 @@ func TestStripePatron(t *testing.T) {
 
 		// Pricing
 		page = visitDev(browser, "pricing")
-		page.MustElement("#signup_patron_" + interval).MustClick()
+		if interval == "yearly" {
+			page.MustElement("#billing_interval_toggle").MustClick()
+		}
+		page.MustElement("#signup_patron").MustClick()
 
 		// Stripe checkout
 		page.MustElement("#email").MustInput(email)
@@ -680,7 +687,7 @@ func TestStripePatronChangeBillingInterval(t *testing.T) {
 	l.Cleanup()
 }
 
-func TestStripePatronCreditsCap(t *testing.T) {
+func TestStripePatronNoCreditsCap(t *testing.T) {
 	email := "test_onboarding@feedrewind.com"
 	l, browser := mustSetupStripeBrowser()
 	stripe.Key = config.Cfg.StripeApiKey
@@ -690,8 +697,8 @@ func TestStripePatronCreditsCap(t *testing.T) {
 		"yearly":  367,
 	}
 	expectCreditsByInterval := map[string][]string{
-		"monthly": {"2", "3", "3"},
-		"yearly":  {"24", "36", "36"},
+		"monthly": {"2", "3", "4"},
+		"yearly":  {"24", "36", "48"},
 	}
 
 	for _, interval := range []string{"monthly", "yearly"} {
@@ -702,12 +709,11 @@ func TestStripePatronCreditsCap(t *testing.T) {
 		page := visitAdmin(browser, "set_test_singleton?key=test_clock&value=yes")
 		require.Equal(t, "OK", mustPageText(page))
 
-		mustSetupPaidUser(t, browser, email, "#signup_patron_"+interval)
+		mustSetupPaidUser(t, browser, email, "#signup_patron", interval == "yearly")
 
 		// Pricing, tacked on
 		page = visitDev(browser, "pricing")
 		page.MustElement("#current_patron")
-		page.MustElement("#change_plan")
 
 		// Forward time
 		page = visitAdminf(browser, "forward_stripe_customer?email=%s&days=%d", email, advanceDays)
@@ -723,6 +729,7 @@ func TestStripePatronCreditsCap(t *testing.T) {
 		pollCount := 0
 	pollInvoice1:
 		for {
+			//nolint:exhaustruct
 			invoiceIter := invoice.List(&stripe.InvoiceListParams{
 				Customer: stripe.String(stripeCustomerId),
 				Status:   stripe.String(string(stripe.InvoiceStatusDraft)),
@@ -730,10 +737,10 @@ func TestStripePatronCreditsCap(t *testing.T) {
 			for invoiceIter.Next() {
 				inv := invoiceIter.Invoice()
 				_, err := invoice.Pay(inv.ID, nil)
-				require.NoError(t, err)
+				oops.RequireNoError(t, err)
 				break pollInvoice1
 			}
-			require.NoError(t, invoiceIter.Err())
+			oops.RequireNoError(t, invoiceIter.Err())
 
 			time.Sleep(time.Second)
 			pollCount++
@@ -781,13 +788,14 @@ func TestStripePatronCreditsCap(t *testing.T) {
 		pollCount = 0
 		for {
 			stripeInvoiceIds = nil
+			//nolint:exhaustruct
 			invoiceIter := invoice.List(&stripe.InvoiceListParams{
 				Customer: stripe.String(stripeCustomerId),
 			})
 			for invoiceIter.Next() {
 				stripeInvoiceIds = append(stripeInvoiceIds, invoiceIter.Invoice().ID)
 			}
-			require.NoError(t, invoiceIter.Err())
+			oops.RequireNoError(t, invoiceIter.Err())
 			if len(stripeInvoiceIds) == 4 {
 				break
 			}
@@ -821,7 +829,7 @@ func TestStripePatronCreditsCap(t *testing.T) {
 			require.Less(t, pollCount, 10)
 		}
 
-		// Settings, still 3 credits
+		// Settings, 4x credits
 		page = visitDev(browser, "settings")
 		patronCreditsText := page.MustElement("#patron_credits").MustText()
 		require.Equal(t, "Credits available: "+expectCredits[2], patronCreditsText)
@@ -867,7 +875,10 @@ func TestStripeFreeUpgrade(t *testing.T) {
 
 			// Pricing
 			page.MustElement("#current_free")
-			upgradeSelector := fmt.Sprintf("#upgrade_%s_%s", paidPlan, interval)
+			if interval == "yearly" {
+				page.MustElement("#billing_interval_toggle").MustClick()
+			}
+			upgradeSelector := fmt.Sprintf("#upgrade_to_%s", paidPlan)
 			page.MustElement(upgradeSelector).MustClick()
 
 			// Stripe checkout
@@ -944,7 +955,7 @@ func TestStripePaidCancelExpire(t *testing.T) {
 		page := visitAdmin(browser, "set_test_singleton?key=test_clock&value=yes")
 		require.Equal(t, "OK", mustPageText(page))
 
-		mustSetupPaidUser(t, browser, email, "#signup_"+paidPlan+"_monthly")
+		mustSetupPaidUser(t, browser, email, "#signup_"+paidPlan, false)
 
 		// Prepare stale settings
 		staleSettingsPage := visitDev(browser, "settings")
@@ -1008,7 +1019,7 @@ func TestStripePaidCancelExpire(t *testing.T) {
 		require.Equal(t, "Current plan: Free", currentPlanText)
 
 		// Stale settings, link to the billing portal doesn't do anything
-		staleSettingsPage.Activate()
+		staleSettingsPage.MustActivate()
 		staleSettingsPage.MustElement("#manage_billing").MustClick()
 		staleSettingsPage.MustWaitLoad()
 		require.Equal(t, "http://localhost:3000/settings", staleSettingsPage.MustInfo().URL)
@@ -1035,7 +1046,7 @@ func TestStripeSupporterToPatronAndBack(t *testing.T) {
 
 	// Pricing
 	page := visitDev(browser, "pricing")
-	page.MustElement("#change_plan").MustClick()
+	page.MustElement("#upgrade_to_patron").MustClick()
 
 	// Billing portal, upgrade to patron
 	page.MustElement("a[data-test='update-subscription']").MustClick()
@@ -1063,7 +1074,7 @@ func TestStripeSupporterToPatronAndBack(t *testing.T) {
 
 	// Pricing
 	page = visitDev(browser, "pricing")
-	page.MustElement("#change_plan").MustClick()
+	page.MustElement("#downgrade_to_supporter").MustClick()
 
 	// Billing portal, downgrade to supporter
 	page.MustElement("a[data-test='update-subscription']").MustClick()
@@ -1089,7 +1100,7 @@ func TestStripeSupporterToPatronAndBack(t *testing.T) {
 
 	// Pricing
 	page = visitDev(browser, "pricing")
-	page.MustElement("#change_plan").MustClick()
+	page.MustElement("#upgrade_to_patron").MustClick()
 
 	// Billing portal, upgrade to patron
 	page.MustElement("a[data-test='update-subscription']").MustClick()
@@ -1147,6 +1158,7 @@ func TestStripePatronWithCreditsCustomBlogRequest(t *testing.T) {
 	page.MustElement("#why").MustInput(why)
 	creditsAvailableText := page.MustElement("#credits_available").MustText()
 	require.Equal(t, "Credits available: 1", creditsAvailableText)
+	mustRequireNoElement(t, page, "#credits_renew_on")
 	page.MustElement("#submit").MustClick()
 
 	// Ensure ack
@@ -1219,13 +1231,14 @@ func TestStripePatronWithoutCreditsCustomBlogRequest(t *testing.T) {
 	page.MustElement("#request_button").MustClick()
 	why := fmt.Sprintf("why_%x", rand.Uint64())
 	page.MustElement("#why").MustInput(why)
-	creditsAvailableText := page.MustElement("#credits_available").MustText()
-	require.True(t, strings.HasPrefix(creditsAvailableText, "Credits available: 0 (renew on "))
+	mustRequireNoElement(t, page, "#credits_available")
+	creditsRenewOnText := page.MustElement("#credits_renew_on").MustText()
+	require.True(t, strings.HasPrefix(creditsRenewOnText, "Your patron credits will renew on "))
 	require.True(t,
-		strings.HasSuffix(creditsAvailableText, fmt.Sprintf(", %d)", time.Now().Year())) ||
+		strings.HasSuffix(creditsRenewOnText, fmt.Sprintf(", %d", time.Now().Year())) ||
 			(time.Now().Month() == time.December &&
-				strings.Contains(creditsAvailableText, "Jan") &&
-				strings.HasSuffix(creditsAvailableText, fmt.Sprintf(", %d)", time.Now().Year()+1))),
+				strings.Contains(creditsRenewOnText, "Jan") &&
+				strings.HasSuffix(creditsRenewOnText, fmt.Sprintf(", %d", time.Now().Year()+1))),
 	)
 	page.MustElement("#submit").MustClick()
 
@@ -1299,8 +1312,8 @@ func TestStripeSupporterCustomBlogRequest(t *testing.T) {
 	page.MustElement("#request_button").MustClick()
 	why := fmt.Sprintf("why_%x", rand.Uint64())
 	page.MustElement("#why").MustInput(why)
-	creditsAvailable := page.MustElements("#credits_available")
-	require.True(t, creditsAvailable.Empty())
+	mustRequireNoElement(t, page, "#credits_available")
+	mustRequireNoElement(t, page, "#credits_renew_on")
 	page.MustElement("#submit").MustClick()
 
 	// Stripe checkout
@@ -1383,8 +1396,8 @@ func TestStripeFreeCustomBlogRequest(t *testing.T) {
 	page.MustElement("#request_button").MustClick()
 	why := fmt.Sprintf("why_%x", rand.Uint64())
 	page.MustElement("#why").MustInput(why)
-	creditsAvailable := page.MustElements("#credits_available")
-	require.True(t, creditsAvailable.Empty())
+	mustRequireNoElement(t, page, "#credits_available")
+	mustRequireNoElement(t, page, "#credits_renew_on")
 	page.MustElement("#submit").MustClick()
 
 	// Stripe checkout
@@ -1446,7 +1459,7 @@ func TestStripeSupporterDoubleCheckout(t *testing.T) {
 
 	// Stale pricing page
 	stalePricingPage.MustActivate()
-	stalePricingPage.MustElement("#signup_supporter_monthly").MustClick()
+	stalePricingPage.MustElement("#signup_supporter").MustClick()
 	stalePricingPage.MustWaitLoad()
 
 	// Checkout
@@ -1601,7 +1614,7 @@ func TestStripeRequestCustomBlogDoubleRedirectAfterCheckout(t *testing.T) {
 		}
 		h.MustLoadResponse()
 	})
-	require.NoError(t, err)
+	oops.RequireNoError(t, err)
 	go hijackRouter.Run()
 
 	// Submit the form
@@ -1617,7 +1630,7 @@ func TestStripeRequestCustomBlogDoubleRedirectAfterCheckout(t *testing.T) {
 
 	// Cleanup
 	err = hijackRouter.Stop()
-	require.NoError(t, err)
+	oops.RequireNoError(t, err)
 	page = visitAdminf(browser, "destroy_user?email=%s", email)
 	require.Equal(t, "OK", mustPageText(page))
 
@@ -1734,14 +1747,16 @@ func mustSetupStripeBrowser() (*launcher.Launcher, *rod.Browser) {
 }
 
 func mustSetupMonthlySupporter(t *testing.T, browser *rod.Browser, email string) {
-	mustSetupPaidUser(t, browser, email, "#signup_supporter_monthly")
+	mustSetupPaidUser(t, browser, email, "#signup_supporter", false)
 }
 
 func mustSetupMonthlyPatron(t *testing.T, browser *rod.Browser, email string) {
-	mustSetupPaidUser(t, browser, email, "#signup_patron_monthly")
+	mustSetupPaidUser(t, browser, email, "#signup_patron", false)
 }
 
-func mustSetupPaidUser(t *testing.T, browser *rod.Browser, email string, checkoutButtonSelector string) {
+func mustSetupPaidUser(
+	t *testing.T, browser *rod.Browser, email string, checkoutButtonSelector string, yearly bool,
+) {
 	page := visitAdminf(browser, "destroy_user?email=%s", email)
 	require.Contains(t, []string{"OK", "NotFound"}, mustPageText(page))
 
@@ -1750,6 +1765,9 @@ func mustSetupPaidUser(t *testing.T, browser *rod.Browser, email string, checkou
 
 	// Pricing
 	page = visitDev(browser, "pricing")
+	if yearly {
+		page.MustElement("#billing_interval_toggle").MustClick()
+	}
 	page.MustElement(checkoutButtonSelector).MustClick()
 
 	// Stripe checkout

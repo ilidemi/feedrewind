@@ -15,37 +15,38 @@
     {{else}}
     action="{{.CheckoutPath}}"
     {{end}}
-    class="flex flex-col gap-6"
   >
     {{.Session.CSRFField}}
-    TODO_EXPLAIN_THE_SITUATION
 
-    {{if (not .PatronCredits)}}
-    TODO_EXPLAIN_PRICING
+    <p>Glad you liked this blog!</p>
+
+    {{if .IsPatron}}
+      {{if .PatronCredits}}
+      <p>As a patron, you can just press a button and we’ll add it within 3&nbsp;business days.</p>
+      
+      <p id="credits_available" class="mt-0.5 text-sm text-gray-500">Credits available: {{.PatronCredits}}</p>
+      {{else}}
+      <p>We can get it supported within 3&nbsp;business days, for a one-time payment of {{.Price}}.</p>
+
+      <p id="credits_renew_on" class="mt-0.5 text-sm text-gray-500">Your patron credits will renew on {{.CreditsRenewOn}}</p>
+      {{end}}
+    {{else}}
+    <p>We can get it supported within 3&nbsp;business days, for a one-time payment of {{.Price}}.</p>
     {{end}}
 
-    <div class="flex flex-col gap-1">
-      <label for="why">TODO_WHY</label>
-      <textarea id="why" name="why" rows="3" class="resize-y max-w-lg rounded-md border-gray-300"></textarea>
+    <div class="flex flex-col gap-1 mt-6">
+      <label for="why">What makes this blog special for you? <span class="text-gray-500">(optional)</span></label>
+      <textarea id="why" name="why" rows="2" class="resize-y max-w-lg rounded-md border-gray-300"></textarea>
     </div>
-    <div class="flex flex-col gap-1">
-      {{if .IsPatron}}
-      <span id="credits_available">
-        Credits available: {{.PatronCredits}}
-        {{if .CreditsRenewOn}}
-        <span class="text-sm">(renew on {{.CreditsRenewOn}})</span>
+
+    <div class="mt-6">
+      <input id="submit" type="submit" class="btn inline-block"
+        {{if .PatronCredits}}
+        value="Submit"
+        {{else}}
+        value="Checkout"
         {{end}}
-      </span>
-      {{end}}
-      <div>
-        <input id="submit" type="submit" class="btn inline-block"
-          {{if .PatronCredits}}
-          value="Submit"
-          {{else}}
-          value="Checkout"
-          {{end}}
-        >
-      </div>
+      >
     </div>
   </form>
 </div>

@@ -61,6 +61,7 @@ func productionConfig() Config {
 		StripePatronConfigId:      "TODO",
 		StripeCustomBlogProductId: "TODO",
 		StripeCustomBlogPriceId:   "TODO",
+		StripeCustomBlogPrice:     "TODO",
 		AdminUserIds: map[int64]bool{
 			6835322936850076956: true, // belk94@gmail.com
 			6862710086337347875: true, // test@test.com

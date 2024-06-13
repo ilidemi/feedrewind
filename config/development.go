@@ -76,9 +76,10 @@ func developmentConfig() Config {
 		StripeApiKey:              "REDACTED_DEV_STRIPE_API_KEY",
 		StripeWebhookSecret:       "REDACTED_DEV_STRIPE_WEBHOOK_SECRET",
 		StripeSupporterConfigId:   "REDACTED_DEV_STRIPE_SUPPORTER_CONFIG_ID",
-		StripePatronConfigId:      "bpc_1PF0oO04wuefaPiWs2MOPJ3F",
+		StripePatronConfigId:      "REDACTED_DEV_STRIPE_PATRON_CONFIG_ID",
 		StripeCustomBlogProductId: "REDACTED_DEV_STRIPE_CUSTOM_BLOG_PRODUCT_ID",
 		StripeCustomBlogPriceId:   "REDACTED_DEV_STRIPE_CUSTOM_BLOG_PRICE_ID",
+		StripeCustomBlogPrice:     "REDACTED_STRIPE_CUSTOM_BLOG_PRICE",
 		AdminUserIds:              nil,
 	}
 }

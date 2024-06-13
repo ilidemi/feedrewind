@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	"github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/checkout/session"
@@ -384,6 +385,7 @@ func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
 	isOnFreePlan := false
 	isOnSupporterPlan := false
 	isOnPatronPlan := false
+	onboardingBlogName := ""
 	if currentUser != nil {
 		row := conn.QueryRow(`
 			select plan_id from pricing_offers
@@ -405,20 +407,35 @@ func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
 		default:
 			panic(fmt.Errorf("Unknown plan id: %s", currentPlanId))
 		}
+	} else {
+		subscriptionId := rutil.MustExtractAnonymousSubscriptionId(w, r)
+		if subscriptionId != 0 {
+			row := conn.QueryRow(`
+				select name from subscriptions_without_discarded where id = $1 and user_id is null
+			`, subscriptionId)
+			err := row.Scan(&onboardingBlogName)
+			if errors.Is(err, pgx.ErrNoRows) {
+				// no-op
+			} else if err != nil {
+				panic(err)
+			}
+		}
 	}
+
 	row := conn.QueryRow(`
 		select * from (
-			select id, monthly_rate, yearly_rate from pricing_offers
+			select id, monthly_rate::numeric, yearly_rate::numeric from pricing_offers
 			where id = (select default_offer_id from pricing_plans where id = $1)
 		) s
 		left join lateral (
-			select id, monthly_rate, yearly_rate from pricing_offers
+			select id, monthly_rate::numeric, yearly_rate::numeric from pricing_offers
 			where id = (select default_offer_id from pricing_plans where id = $2)
 		) p
 		on 1=1
 	`, models.PlanIdSupporter, models.PlanIdPatron)
-	var supporterOfferId, supporterMonthlyRate, supporterYearlyRate string
-	var patronOfferId, patronMonthlyRate, patronYearlyRate string
+	var supporterOfferId, patronOfferId string
+	var supporterMonthlyRate, supporterYearlyRate int
+	var patronMonthlyRate, patronYearlyRate int
 	err := row.Scan(
 		&supporterOfferId, &supporterMonthlyRate, &supporterYearlyRate,
 		&patronOfferId, &patronMonthlyRate, &patronYearlyRate,
@@ -435,14 +452,15 @@ func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
 		IsOnPaidPlan         bool
 		IsOnSupporterPlan    bool
 		IsOnPatronPlan       bool
+		OnboardingBlogName   string
 		SupporterOfferId     string
 		PatronOfferId        string
 		MonthlyIntervalName  models.BillingInterval
 		YearlyIntervalName   models.BillingInterval
-		SupporterMonthlyRate string
-		SupporterYearlyRate  string
-		PatronMonthlyRate    string
-		PatronYearlyRate     string
+		SupporterMonthlyRate int
+		SupporterYearlyRate  int
+		PatronMonthlyRate    int
+		PatronYearlyRate     int
 	}
 	templates.MustWrite(w, "onboarding/pricing", PricingResult{
 		Title:                util.DecorateTitle("Pricing"),
@@ -452,14 +470,15 @@ func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
 		IsOnPaidPlan:         isOnSupporterPlan || isOnPatronPlan,
 		IsOnSupporterPlan:    isOnSupporterPlan,
 		IsOnPatronPlan:       isOnPatronPlan,
+		OnboardingBlogName:   onboardingBlogName,
 		SupporterOfferId:     supporterOfferId,
 		PatronOfferId:        patronOfferId,
 		MonthlyIntervalName:  models.BillingIntervalMonthly,
 		YearlyIntervalName:   models.BillingIntervalYearly,
-		SupporterMonthlyRate: strings.TrimSuffix(supporterMonthlyRate, ".00"),
-		SupporterYearlyRate:  strings.TrimSuffix(supporterYearlyRate, ".00"),
-		PatronMonthlyRate:    strings.TrimSuffix(patronMonthlyRate, ".00"),
-		PatronYearlyRate:     strings.TrimSuffix(patronYearlyRate, ".00"),
+		SupporterMonthlyRate: supporterMonthlyRate,
+		SupporterYearlyRate:  supporterYearlyRate,
+		PatronMonthlyRate:    patronMonthlyRate,
+		PatronYearlyRate:     patronYearlyRate,
 	})
 }
 
@@ -524,11 +543,13 @@ func Onboarding_Checkout(w http.ResponseWriter, r *http.Request) {
 			}
 			//nolint:exhaustruct
 			cus, err := customer.New(&stripe.CustomerParams{
+				Email:     maybeCustomerEmail,
 				TestClock: &clock.ID,
 			})
 			if err != nil {
 				panic(err)
 			}
+			maybeCustomerEmail = nil
 			maybeCustomerId = &cus.ID
 			//nolint:exhaustruct
 			maybeCustomerUpdate = &stripe.CheckoutSessionCustomerUpdateParams{

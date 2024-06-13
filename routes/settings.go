@@ -85,18 +85,18 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		row := conn.QueryRow(`
 			select stripe_cancel_at, stripe_current_period_end from users_without_discarded where id = $1
 		`, currentUser.Id)
-		var cancelAt, currentPeriodEnd *time.Time
-		err := row.Scan(&cancelAt, &currentPeriodEnd)
+		var maybeCancelAt, maybeCurrentPeriodEnd *time.Time
+		err := row.Scan(&maybeCancelAt, &maybeCurrentPeriodEnd)
 		if err != nil {
 			panic(err)
 		}
-		if cancelAt != nil {
+		if maybeCancelAt != nil {
 			timezone := tzdata.LocationByName[userSettings.Timezone]
-			cancelAtStr = cancelAt.In(timezone).Format("Jan 2, 2006")
+			cancelAtStr = maybeCancelAt.In(timezone).Format("Jan 2, 2006")
 		}
-		if currentPeriodEnd != nil {
+		if maybeCurrentPeriodEnd != nil {
 			timezone := tzdata.LocationByName[userSettings.Timezone]
-			renewsOnStr = currentPeriodEnd.In(timezone).Format("Jan 2, 2006")
+			renewsOnStr = maybeCurrentPeriodEnd.In(timezone).Format("Jan 2, 2006")
 		}
 	}
 
@@ -439,6 +439,7 @@ func UserSettings_Billing(w http.ResponseWriter, r *http.Request) {
 
 func UserSettings_BillingFull(w http.ResponseWriter, r *http.Request) {
 	currentUserId := rutil.CurrentUserId(r)
+	logger := rutil.Logger(r)
 	conn := rutil.DBConn(r)
 	row := conn.QueryRow(`
 		select stripe_customer_id, (select plan_id from pricing_offers where id = offer_id)
@@ -456,6 +457,8 @@ func UserSettings_BillingFull(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/settings", http.StatusSeeOther)
 		return
 	}
+
+	logger.Warn().Msgf("User %d has visited billing_full portal, consider Stripe flows?", currentUserId)
 
 	//nolint:exhaustruct
 	params := &stripe.BillingPortalSessionParams{

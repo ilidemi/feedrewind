@@ -597,7 +597,6 @@ ALTER SEQUENCE public.delayed_jobs_id_seq OWNED BY public.delayed_jobs.id;
 CREATE TABLE public.patron_credits (
     user_id bigint NOT NULL,
     count integer NOT NULL,
-    cap integer NOT NULL,
     created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     CONSTRAINT count_non_negative CHECK ((count >= 0))
@@ -2378,4 +2377,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20240517194027'),
 ('20240520160130'),
 ('20240520192018'),
-('20240528135354');
+('20240528135354'),
+('20240607185817');

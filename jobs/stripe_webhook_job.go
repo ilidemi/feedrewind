@@ -323,6 +323,11 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 						logger.Info().Msgf(
 							"Updated billing interval to %s for user %d", newBillingInterval, userId,
 						)
+						if newPlanId == models.PlanIdPatron {
+							logger.Warn().Msg(
+								"Proration for patrons is not implemented, please do that promptly",
+							)
+						}
 					}
 				}
 
@@ -436,16 +441,14 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 				return oops.Newf("Couldn't find the line item that was actually paid: %s", eventId)
 			}
 			row := tx.QueryRow(`
-				select $1::int, $2::int from pricing_offers
-				where stripe_monthly_price_id = $5 and plan_id = $6
+				select $1::int from pricing_offers
+				where stripe_monthly_price_id = $3 and plan_id = $4
 				union
-				select $3::int, $4::int from pricing_offers
-				where stripe_yearly_price_id = $5 and plan_id = $6
-			`, models.PatronCreditsMonthly, models.PatronCreditsMonthlyCap,
-				models.PatronCreditsYearly, models.PatronCreditsYearlyCap,
-				priceId, models.PlanIdPatron)
-			var creditsBump, creditsCap int
-			err := row.Scan(&creditsBump, &creditsCap)
+				select $2::int from pricing_offers
+				where stripe_yearly_price_id = $3 and plan_id = $4
+			`, models.PatronCreditsMonthly, models.PatronCreditsYearly, priceId, models.PlanIdPatron)
+			var creditsBump int
+			err := row.Scan(&creditsBump)
 			if errors.Is(err, pgx.ErrNoRows) {
 				// Not a patron invoice
 				return nil
@@ -521,9 +524,9 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 			}
 
 			result, err := tx.Exec(`
-				insert into patron_credits (user_id, count, cap) values ($1, 0, $2)
+				insert into patron_credits (user_id, count) values ($1, 0)
 				on conflict do nothing
-			`, userId, creditsCap)
+			`, userId)
 			if err != nil {
 				return err
 			}
@@ -531,9 +534,9 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 				logger.Info().Msgf("Initialized patron_credits for user %d", userId)
 			}
 
-			row = tx.QueryRow(`select count, cap from patron_credits where user_id = $1`, userId)
-			var oldCreditsCount, oldCreditsCap int
-			err = row.Scan(&oldCreditsCount, &oldCreditsCap)
+			row = tx.QueryRow(`select count from patron_credits where user_id = $1`, userId)
+			var oldCreditsCount int
+			err = row.Scan(&oldCreditsCount)
 			if err != nil {
 				return err
 			}
@@ -546,21 +549,8 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 				return err
 			}
 
-			if oldCreditsCap != creditsCap {
-				if oldCreditsCap < creditsCap {
-					_, err := tx.Exec(`
-						update patron_credits set cap = $1 where user_id = $2
-					`, creditsCap, userId)
-					if err != nil {
-						return err
-					}
-					logger.Info().Msgf("Bumped patron credit cap to %d for user %d", creditsCap, userId)
-				}
-				logger.Warn().Msg("Proration is not implemented, please do that promptly")
-			}
-
 			row = tx.QueryRow(`
-				update patron_credits set count = least(count + $1, cap) where user_id = $2 returning count
+				update patron_credits set count = count + $1 where user_id = $2 returning count
 			`, creditsBump, userId)
 			var newCreditCount int
 			err = row.Scan(&newCreditCount)
