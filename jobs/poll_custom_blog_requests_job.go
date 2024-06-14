@@ -49,11 +49,13 @@ func PollCustomBlogRequestsJob_Perform(ctx context.Context, conn *pgw.Conn) erro
 		return err
 	}
 
-	message := fmt.Sprintf("Found unfulfilled custom blog requests: %d %v", len(ids), ids)
-	logger.Warn().Msg(message)
-	err = NotifySlackJob_PerformNow(conn, message)
-	if err != nil {
-		return err
+	if len(ids) > 0 {
+		message := fmt.Sprintf("Found unfulfilled custom blog requests: %d %v", len(ids), ids)
+		logger.Warn().Msg(message)
+		err = NotifySlackJob_PerformNow(conn, message)
+		if err != nil {
+			return err
+		}
 	}
 
 	tomorrow := schedule.UTCNow().Add(24 * time.Hour)
