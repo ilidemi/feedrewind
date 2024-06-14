@@ -13,7 +13,7 @@ func (m *AddPatron) Version() string {
 func (m *AddPatron) Up(tx *Tx) {
 	tx.MustExec(`
 		insert into pricing_offers (id, monthly_rate, yearly_rate, plan_id)
-		values ('patron_2024-04-16', '150.00', '1500.00', 'free')
+		values ('patron_2024-04-16', '160.00', '1600.00', 'free')
 	`)
 	tx.MustExec(`
 		insert into pricing_plans (id, default_offer_id)

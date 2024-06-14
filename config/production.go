@@ -57,11 +57,11 @@ func productionConfig() Config {
 		SlackWebhook:              mustLookupEnv("SLACK_WEBHOOK"),
 		StripeApiKey:              mustLookupEnv("STRIPE_KEY"),
 		StripeWebhookSecret:       mustLookupEnv("STRIPE_WEBHOOK_SECRET"),
-		StripeSupporterConfigId:   "TODO",
-		StripePatronConfigId:      "TODO",
-		StripeCustomBlogProductId: "TODO",
-		StripeCustomBlogPriceId:   "TODO",
-		StripeCustomBlogPrice:     "TODO",
+		StripeSupporterConfigId:   "REDACTED_STRIPE_SUPPORTER_CONFIG_ID",
+		StripePatronConfigId:      "REDACTED_STRIPE_PATRON_CONFIG_ID",
+		StripeCustomBlogProductId: "REDACTED_STRIPE_CUSTOM_BLOG_PRODUCT_ID",
+		StripeCustomBlogPriceId:   "REDACTED_STRIPE_CUSTOM_BLOG_PRICE_ID",
+		StripeCustomBlogPrice:     "REDACTED_STRIPE_CUSTOM_BLOG_PRICE",
 		AdminUserIds: map[int64]bool{
 			6835322936850076956: true, // belk94@gmail.com
 			6862710086337347875: true, // test@test.com
