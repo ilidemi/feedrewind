@@ -10,6 +10,8 @@ import (
 // When adding more lists besides ScreenshotLinks, SuggestedCategories and MiscellaneousBlogs,
 // also add them to RefreshSuggestionsJob
 
+var SuggestionFeedUrls = map[string]bool{}
+
 type ScreenshotLink struct {
 	Url         string
 	TitleStr    string
@@ -108,6 +110,7 @@ func init() {
 		link.PreviewPath = fmt.Sprintf("/preview/%s", link.Slug)
 
 		ScreenshotLinksBySlug[link.Slug] = link
+		SuggestionFeedUrls[link.FeedUrl] = true
 	}
 	ScreenshotLinks[0].IsEarliest = true
 	ScreenshotLinks[len(ScreenshotLinks)-1].IsNewest = true
@@ -270,6 +273,7 @@ func init() {
 		for i := range category.Blogs {
 			blog := &category.Blogs[i]
 			blog.AddFeedPath = SubscriptionAddFeedPath(blog.FeedUrl)
+			SuggestionFeedUrls[blog.FeedUrl] = true
 		}
 	}
 }
@@ -341,5 +345,6 @@ func init() {
 		blog := &MiscellaneousBlogs[i]
 		blog.AddFeedPath = SubscriptionAddFeedPath(blog.FeedUrl)
 		blog.NonBreakingTag = strings.ReplaceAll(blog.Tag, " ", "\u00A0")
+		SuggestionFeedUrls[blog.FeedUrl] = true
 	}
 }

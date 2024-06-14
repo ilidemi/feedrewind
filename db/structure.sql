@@ -591,6 +591,17 @@ ALTER SEQUENCE public.delayed_jobs_id_seq OWNED BY public.delayed_jobs.id;
 
 
 --
+-- Name: ignored_suggestion_feeds; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ignored_suggestion_feeds (
+    feed_url text NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
+);
+
+
+--
 -- Name: patron_credits; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1372,6 +1383,14 @@ ALTER TABLE ONLY public.delayed_jobs
 
 
 --
+-- Name: ignored_suggestion_feeds ignored_suggestion_feeds_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ignored_suggestion_feeds
+    ADD CONSTRAINT ignored_suggestion_feeds_pkey PRIMARY KEY (feed_url);
+
+
+--
 -- Name: patron_credits patron_credits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1757,6 +1776,13 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.custom_blog_requests FOR 
 --
 
 CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.delayed_jobs FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
+
+
+--
+-- Name: ignored_suggestion_feeds bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.ignored_suggestion_feeds FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
 
 
 --
@@ -2378,4 +2404,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20240520160130'),
 ('20240520192018'),
 ('20240528135354'),
-('20240607185817');
+('20240607185817'),
+('20240613152252');

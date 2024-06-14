@@ -49,6 +49,34 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	for _, miscBlog := range util.MiscellaneousBlogs {
 		feedUrlsSet[miscBlog.FeedUrl] = true
 	}
+
+	result, err := conn.Exec(`
+		delete from ignored_suggestion_feeds where created_at < (utc_now() - interval '23:30')
+	`)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() > 0 {
+		logger.Info().Msgf("Expired %d previously ignored feed(s)", result.RowsAffected())
+	}
+
+	rows, err := conn.Query(`select feed_url from ignored_suggestion_feeds`)
+	if err != nil {
+		return err
+	}
+	ignoredFeedUrls := map[string]bool{}
+	for rows.Next() {
+		var ignoredFeedUrl string
+		err := rows.Scan(&ignoredFeedUrl)
+		if err != nil {
+			return err
+		}
+		ignoredFeedUrls[ignoredFeedUrl] = true
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
 	var feedUrls []string
 	for feedUrl := range feedUrlsSet {
 		if feedUrl == crawler.HardcodedOurMachinery || feedUrl == crawler.HardcodedSequences {
@@ -79,7 +107,21 @@ feeds:
 				maxAttempts = 2
 			}
 			if attempt >= maxAttempts {
-				logger.Error().Msgf("Couldn't reach feed: %s, attempts exhausted", feedUrl)
+				if ignoredFeedUrls[feedUrl] {
+					logger.Info().Msgf(
+						"Couldn't reach feed: %s, attempts exhausted (failure already reported).", feedUrl,
+					)
+				} else {
+					logger.Error().Msgf(
+						"Couldn't reach feed: %s, attempts exhausted. Silencing further failures", feedUrl,
+					)
+					_, err := conn.Exec(`
+						insert into ignored_suggestion_feeds (feed_url) values ($1)
+					`, feedUrl)
+					if err != nil {
+						return err
+					}
+				}
 				continue feeds
 			} else {
 				delay := time.Duration(math.Pow(5, float64(attempt-1))) * time.Second
@@ -202,7 +244,7 @@ feeds:
 	}
 
 	runAt := schedule.UTCNow().Add(time.Hour).BeginningOfHour().Add(30 * time.Minute)
-	err := RefreshSuggestionsJob_PerformAt(conn, runAt)
+	err = RefreshSuggestionsJob_PerformAt(conn, runAt)
 	if err != nil {
 		return err
 	}
