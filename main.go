@@ -247,7 +247,6 @@ func runServer(port int) {
 
 		r.Get("/subscriptions/add", routes.Onboarding_Add)
 		r.Post("/subscriptions/add/{start_url}", routes.Onboarding_Add)
-		r.Post("/subscriptions/add", routes.Onboarding_AddLanding)
 		r.Post("/subscriptions/discover_feeds", routes.Onboarding_DiscoverFeeds)
 		r.Get("/preview/{slug}", routes.Onboarding_Preview)
 		r.Get("/pricing", routes.Onboarding_Pricing)
