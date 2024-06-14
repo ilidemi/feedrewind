@@ -39,6 +39,18 @@
       <textarea id="why" name="why" rows="2" class="resize-y max-w-lg rounded-md border-gray-300"></textarea>
     </div>
 
+    <div class="flex flex-row gap-1 items-top mt-6">
+      <div class="h-6 flex flex-row items-center">
+        <input type="checkbox"
+               class="rounded w-4 h-4"
+               id="enable_for_others"
+               name="enable_for_others"
+               checked
+        >
+      </div>
+      <label for="enable_for_others">Enable for other users</label>
+    </div>
+
     <div class="mt-6">
       <input id="submit" type="submit" class="btn inline-block"
         {{if .PatronCredits}}

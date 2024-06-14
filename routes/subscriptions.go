@@ -2112,6 +2112,7 @@ func Subscriptions_CheckoutCustomBlogRequest(w http.ResponseWriter, r *http.Requ
 		logger.Info().Msgf("Truncated the why to fit in metadata: %s", why)
 		why = why[:500]
 	}
+	enableForOthersStr, _ := util.MaybeParamStr(r, "enable_for_others")
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
 	var maybeSubscriptionUserId *models.UserId
@@ -2175,8 +2176,9 @@ func Subscriptions_CheckoutCustomBlogRequest(w http.ResponseWriter, r *http.Requ
 		},
 		CustomerUpdate: maybeCustomerUpdate,
 		Metadata: map[string]string{
-			"subscription_id": fmt.Sprint(subscriptionId),
-			"why":             why,
+			"subscription_id":   fmt.Sprint(subscriptionId),
+			"why":               why,
+			"enable_for_others": enableForOthersStr,
 		},
 	}
 
@@ -2197,6 +2199,7 @@ func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	why, _ := util.MaybeParamStr(r, "why")
+	enableForOthersStr, _ := util.MaybeParamStr(r, "enable_for_others")
 
 	var maybeStripePaymentIntentId *string
 	if stripeSessionId, ok := util.MaybeParamStr(r, "session_id"); ok {
@@ -2206,6 +2209,7 @@ func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Reques
 		}
 		maybeStripePaymentIntentId = &sesh.PaymentIntent.ID
 		why = sesh.Metadata["why"]
+		enableForOthersStr = sesh.Metadata["enable_for_others"]
 	}
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
@@ -2269,7 +2273,12 @@ func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Reques
 			return nil
 		}
 
-		message := fmt.Sprintf("Custom blog requested for subscription %d", subscriptionId)
+		enableForOthers := enableForOthersStr == "on"
+		othersStr := "no others"
+		if enableForOthers {
+			othersStr = "yes others"
+		}
+		message := fmt.Sprintf("Custom blog requested for subscription %d (%s)", subscriptionId, othersStr)
 		logger.Warn().Msg(message)
 		err = jobs.NotifySlackJob_PerformNow(tx, message)
 		if err != nil {
@@ -2292,7 +2301,10 @@ func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Reques
 		}
 		_, err = tx.Exec(`
 			insert into custom_blog_requests
-			(blog_url, feed_url, stripe_payment_intent_id, user_id, subscription_id, blog_id, why)
+			(
+				blog_url, feed_url, stripe_payment_intent_id, user_id, subscription_id, blog_id, why,
+				enable_for_others
+			)
 			values
 			(
 				(select url from blogs where id = $1),
@@ -2301,9 +2313,10 @@ func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Reques
 				$3,
 				$4,
 				$1,
-				$5
+				$5,
+				$6
 			)
-		`, blogId, maybeStripePaymentIntentId, *maybeSubscriptionUserId, subscriptionId, why)
+		`, blogId, maybeStripePaymentIntentId, *maybeSubscriptionUserId, subscriptionId, why, enableForOthers)
 		if err != nil {
 			return err
 		}
