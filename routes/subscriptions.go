@@ -2208,7 +2208,11 @@ func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Reques
 		if err != nil {
 			panic(err)
 		}
-		maybeStripePaymentIntentId = &sesh.PaymentIntent.ID
+		if sesh.PaymentIntent != nil {
+			maybeStripePaymentIntentId = &sesh.PaymentIntent.ID
+		} else {
+			logger.Warn().Msg("Custom blog request without payment intent, assuming 100% coupon")
+		}
 		why = sesh.Metadata["why"]
 		enableForOthersStr = sesh.Metadata["enable_for_others"]
 	}
