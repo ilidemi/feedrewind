@@ -438,7 +438,9 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 				}
 			}
 			if priceId == "" {
-				return oops.Newf("Couldn't find the line item that was actually paid: %s", eventId)
+				logger.Warn().Msgf(
+					"Couldn't find the line item that was actually paid (%s), bailing", eventId,
+				)
 			}
 			row := tx.QueryRow(`
 				select $1::int from pricing_offers
