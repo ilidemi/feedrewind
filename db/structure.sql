@@ -521,7 +521,8 @@ CREATE TABLE public.custom_blog_requests (
     fulfilled_at timestamp without time zone,
     created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    why text NOT NULL
+    why text NOT NULL,
+    enable_for_others boolean NOT NULL
 );
 
 
@@ -2405,4 +2406,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20240520192018'),
 ('20240528135354'),
 ('20240607185817'),
-('20240613152252');
+('20240613152252'),
+('20240613175615');

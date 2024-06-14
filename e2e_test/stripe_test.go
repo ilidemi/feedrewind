@@ -1171,9 +1171,11 @@ func TestStripePatronWithCreditsCustomBlogRequest(t *testing.T) {
 
 	// Ensure makes it into db
 	customBlogRequest := visitAdminSql(browser, `
-		select feed_url, why from custom_blog_requests where subscription_id = `+subscriptionId)
+		select feed_url, why, enable_for_others from custom_blog_requests
+		where subscription_id = `+subscriptionId)
 	require.Equal(t, "https://ilidemi.github.io/dummy-blogs/1fa/rss.xml", customBlogRequest[0]["feed_url"])
 	require.Equal(t, why, customBlogRequest[0]["why"])
+	require.Equal(t, true, customBlogRequest[0]["enable_for_others"])
 
 	// Ensure credits reduced
 	page = visitDev(browser, "settings")
@@ -1182,7 +1184,9 @@ func TestStripePatronWithCreditsCustomBlogRequest(t *testing.T) {
 
 	// Ensure slack message
 	page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
-	require.Equal(t, "Custom blog requested for subscription "+subscriptionId, mustPageText(page))
+	require.Equal(
+		t, "Custom blog requested for subscription "+subscriptionId+" (yes others)", mustPageText(page),
+	)
 
 	// Ensure the subscription can't be deleted while the request is there
 	page = visitAdmin(browser, `
@@ -1266,11 +1270,12 @@ func TestStripePatronWithoutCreditsCustomBlogRequest(t *testing.T) {
 
 	// Ensure makes it into db
 	customBlogRequest := visitAdminSql(browser, `
-		select feed_url, why, stripe_payment_intent_id from custom_blog_requests
+		select feed_url, why, enable_for_others, stripe_payment_intent_id from custom_blog_requests
 		where subscription_id = `+subscriptionId+`
 	`)
 	require.Equal(t, "https://ilidemi.github.io/dummy-blogs/1fa/rss.xml", customBlogRequest[0]["feed_url"])
 	require.Equal(t, why, customBlogRequest[0]["why"])
+	require.Equal(t, true, customBlogRequest[0]["enable_for_others"])
 	require.True(t, strings.HasPrefix(customBlogRequest[0]["stripe_payment_intent_id"].(string), "pi_"))
 
 	// Ensure credits still at 0
@@ -1280,7 +1285,9 @@ func TestStripePatronWithoutCreditsCustomBlogRequest(t *testing.T) {
 
 	// Ensure slack message
 	page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
-	require.Equal(t, "Custom blog requested for subscription "+subscriptionId, mustPageText(page))
+	require.Equal(
+		t, "Custom blog requested for subscription "+subscriptionId+" (yes others)", mustPageText(page),
+	)
 
 	// Cleanup
 	page = visitAdmin(browser, "delete_test_singleton?key=slack_dump")
@@ -1340,16 +1347,19 @@ func TestStripeSupporterCustomBlogRequest(t *testing.T) {
 
 	// Ensure makes it into db
 	customBlogRequest := visitAdminSql(browser, `
-		select feed_url, why, stripe_payment_intent_id from custom_blog_requests
+		select feed_url, why, enable_for_others, stripe_payment_intent_id from custom_blog_requests
 		where subscription_id = `+subscriptionId+`
 	`)
 	require.Equal(t, "https://ilidemi.github.io/dummy-blogs/1fa/rss.xml", customBlogRequest[0]["feed_url"])
 	require.Equal(t, why, customBlogRequest[0]["why"])
+	require.Equal(t, true, customBlogRequest[0]["enable_for_others"])
 	require.True(t, strings.HasPrefix(customBlogRequest[0]["stripe_payment_intent_id"].(string), "pi_"))
 
 	// Ensure slack message
 	page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
-	require.Equal(t, "Custom blog requested for subscription "+subscriptionId, mustPageText(page))
+	require.Equal(
+		t, "Custom blog requested for subscription "+subscriptionId+" (yes others)", mustPageText(page),
+	)
 
 	// Cleanup
 	page = visitAdmin(browser, "delete_test_singleton?key=slack_dump")
@@ -1398,6 +1408,7 @@ func TestStripeFreeCustomBlogRequest(t *testing.T) {
 	page.MustElement("#why").MustInput(why)
 	mustRequireNoElement(t, page, "#credits_available")
 	mustRequireNoElement(t, page, "#credits_renew_on")
+	page.MustElement("#enable_for_others").MustClick()
 	page.MustElement("#submit").MustClick()
 
 	// Stripe checkout
@@ -1424,16 +1435,19 @@ func TestStripeFreeCustomBlogRequest(t *testing.T) {
 
 	// Ensure makes it into db
 	customBlogRequest := visitAdminSql(browser, `
-		select feed_url, why, stripe_payment_intent_id from custom_blog_requests
+		select feed_url, why, enable_for_others, stripe_payment_intent_id from custom_blog_requests
 		where subscription_id = `+subscriptionId+`
 	`)
 	require.Equal(t, "https://ilidemi.github.io/dummy-blogs/1fa/rss.xml", customBlogRequest[0]["feed_url"])
 	require.Equal(t, why, customBlogRequest[0]["why"])
+	require.Equal(t, false, customBlogRequest[0]["enable_for_others"])
 	require.True(t, strings.HasPrefix(customBlogRequest[0]["stripe_payment_intent_id"].(string), "pi_"))
 
 	// Ensure slack message
 	page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
-	require.Equal(t, "Custom blog requested for subscription "+subscriptionId, mustPageText(page))
+	require.Equal(
+		t, "Custom blog requested for subscription "+subscriptionId+" (no others)", mustPageText(page),
+	)
 
 	// Cleanup
 	page = visitAdmin(browser, "delete_test_singleton?key=slack_dump")
