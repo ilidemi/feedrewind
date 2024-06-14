@@ -127,6 +127,9 @@ func CheckStaleStripeJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		if _, ok := sesh.Metadata["subscription_id"]; !ok {
 			continue
 		}
+		if sesh.PaymentIntent == nil {
+			continue
+		}
 		row := conn.QueryRow(`
 			select 1 from custom_blog_requests
 			where stripe_payment_intent_id = $1
