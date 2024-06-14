@@ -441,6 +441,7 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 				logger.Warn().Msgf(
 					"Couldn't find the line item that was actually paid (%s), bailing", eventId,
 				)
+				return nil
 			}
 			row := tx.QueryRow(`
 				select $1::int from pricing_offers
