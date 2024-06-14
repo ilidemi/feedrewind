@@ -2162,11 +2162,12 @@ func Subscriptions_CheckoutCustomBlogRequest(w http.ResponseWriter, r *http.Requ
 	)
 	//nolint:exhaustruct
 	params := &stripe.CheckoutSessionParams{
-		CustomerEmail: maybeCustomerEmail,
-		Customer:      maybeStripeCustomerId,
-		SuccessURL:    stripe.String(successUrl),
-		CancelURL:     stripe.String(cancelUrl),
-		Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
+		AllowPromotionCodes: stripe.Bool(true),
+		CustomerEmail:       maybeCustomerEmail,
+		Customer:            maybeStripeCustomerId,
+		SuccessURL:          stripe.String(successUrl),
+		CancelURL:           stripe.String(cancelUrl),
+		Mode:                stripe.String(string(stripe.CheckoutSessionModePayment)),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{{
 			Price:    stripe.String(config.Cfg.StripeCustomBlogPriceId),
 			Quantity: stripe.Int64(1),
