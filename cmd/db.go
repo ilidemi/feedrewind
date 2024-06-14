@@ -242,8 +242,7 @@ func migrate() {
 
 		migration.Up(migrations.WrapTx(tx))
 		if !checkIncompleteTables(tx) {
-			fmt.Println("Found incomplete tables")
-			// panic("Found incomplete tables")
+			panic("Found incomplete tables")
 		}
 		_, err = tx.Exec("insert into schema_migrations (version) values ($1)", version)
 		if err != nil {
@@ -296,8 +295,7 @@ func rollback() {
 
 		migration.Down(migrations.WrapTx(tx))
 		if !checkIncompleteTables(tx) {
-			fmt.Println("Found incomplete tables")
-			// panic("Found incomplete tables")
+			panic("Found incomplete tables")
 		}
 		tag, err := tx.Exec("delete from schema_migrations where version = $1", maxVersion)
 		if err != nil {
