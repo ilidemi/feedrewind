@@ -22,6 +22,7 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/stripe/stripe-go/v78"
@@ -246,6 +247,12 @@ mainLoop:
 			time.Sleep(sleepDelay)
 			continue mainLoop
 		} else if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "25006" {
+				// ERROR: cannot execute UPDATE in a read-only transaction (SQLSTATE 25006)
+				return err
+			}
+
 			pollFailures++
 			logger.Error().Err(err).Msgf("Poll failures: %d", pollFailures)
 			if pollFailures >= maxPollFailures {
