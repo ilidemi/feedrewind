@@ -109,9 +109,8 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 					pc, discoverResult.subscription, userIsAnonymous,
 				)
 			}
-			http.Redirect(
-				w, r, rutil.SubscriptionSetupPath(discoverResult.subscription.Id), http.StatusSeeOther,
-			)
+			redirectPath := rutil.SubscriptionSetupPath(discoverResult.subscription.Id)
+			http.Redirect(w, r, redirectPath, http.StatusSeeOther)
 			return
 		case *discoveredFeeds:
 			result = OnboardingResult{
@@ -175,6 +174,98 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 				WidthClass:          "max-w-full",
 			},
 		}
+	}
+
+	templates.MustWrite(w, "onboarding/add", result)
+}
+
+func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
+	conn := rutil.DBConn(r)
+	currentUser := rutil.CurrentUser(r)
+	productUserId := rutil.CurrentProductUserId(r)
+	pc := models.NewProductEventContext(conn, r, productUserId)
+	userIsAnonymous := currentUser == nil
+
+	type OnboardingResult struct {
+		Title            string
+		Session          *util.Session
+		MaybeFeedsData   *feedsData
+		MaybeSuggestions *util.Suggestions
+	}
+	var result OnboardingResult
+	title := util.DecorateTitle("Add blog")
+
+	typedUrl := util.EnsureParamStr(r, "start_url")
+	startUrl := strings.TrimSpace(typedUrl)
+	discoverFeedsResult, typedResult := onboarding_MustDiscoverFeeds(
+		conn, startUrl, currentUser, productUserId,
+	)
+	models.ProductEvent_MustEmitDiscoverFeeds(pc, startUrl, typedResult, userIsAnonymous)
+	var maybeUserId *models.UserId
+	if currentUser != nil {
+		maybeUserId = &currentUser.Id
+	}
+	err := models.TypedBlogUrl_Create(conn, typedUrl, startUrl, "/", typedResult, maybeUserId)
+	if err != nil {
+		panic(err)
+	}
+	switch discoverResult := discoverFeedsResult.(type) {
+	case *discoveredSubscription:
+		if !models.BlogFailedStatuses[discoverResult.subscription.BlogStatus] {
+			models.ProductEvent_MustEmitCreateSubscription(pc, discoverResult.subscription, userIsAnonymous)
+		}
+		redirectPath := rutil.SubscriptionSetupPath(discoverResult.subscription.Id)
+		http.Redirect(w, r, redirectPath, http.StatusSeeOther)
+		return
+	case *discoveredFeeds:
+		result = OnboardingResult{
+			Title:   title,
+			Session: rutil.Session(r),
+			MaybeFeedsData: &feedsData{ //nolint:exhaustruct
+				StartUrl: startUrl,
+				Feeds:    discoverResult.feeds,
+			},
+			MaybeSuggestions: nil,
+		}
+	case *discoverError:
+		if util.SuggestionFeedUrls[startUrl] {
+			blog, err := models.Blog_GetLatestByFeedUrl(conn, startUrl)
+			if errors.Is(err, models.ErrBlogNotFound) {
+				logger.Info().Msgf(
+					"Tried to use a cached suggestion but could not find any: %s", startUrl,
+				)
+			} else if err != nil {
+				panic(err)
+			} else if blog.Status == models.BlogStatusCrawlInProgress ||
+				models.BlogCrawledStatuses[blog.Status] {
+
+				subscription, err := models.Subscription_CreateForBlog(
+					conn, blog, currentUser, productUserId,
+				)
+				if err != nil {
+					panic(err)
+				}
+				logger.Info().Msgf("Using a cached suggestion: %s", startUrl)
+				models.ProductEvent_MustEmitCreateSubscription(pc, subscription, userIsAnonymous)
+				http.Redirect(w, r, rutil.SubscriptionSetupPath(subscription.Id), http.StatusSeeOther)
+				return
+			} else {
+				logger.Info().Msgf(
+					"Tried to use a cached suggestion but its status was bad: %s (%s)",
+					startUrl, blog.Status,
+				)
+			}
+		}
+		feeds := feedsDataFromTypedResult(startUrl, typedResult)
+		result = OnboardingResult{
+			Title:            title,
+			Session:          rutil.Session(r),
+			MaybeFeedsData:   &feeds,
+			MaybeSuggestions: nil,
+		}
+	default:
+		panic("Unknown discover feeds result type")
 	}
 
 	templates.MustWrite(w, "onboarding/add", result)
