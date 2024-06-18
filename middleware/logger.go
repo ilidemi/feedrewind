@@ -125,22 +125,11 @@ func Logger(next http.Handler) http.Handler {
 
 		defer func() {
 			status := ww.Status()
-			switch {
-			case errorWrapper.err != nil && errors.Is(errorWrapper.err, csrfValidationFailed):
-				event := logger.
-					Warn().
-					Func(commonFields)
-				if errorWrapper.err != nil {
-					event.Err(errorWrapper.err)
-				}
-				event.
-					Int("status", status).
-					TimeDiff("duration", time.Now(), t1).
-					Dur("db_duration", pgw.DbDuration(r.Context())).
-					Msg("failed")
-			case (status/100 == 4 || status/100 == 5) &&
+			isCsrfError := errorWrapper.err != nil && errors.Is(errorWrapper.err, csrfValidationFailed)
+			if (status/100 == 4 || status/100 == 5) &&
 				status != http.StatusMethodNotAllowed &&
-				status != http.StatusNotFound:
+				status != http.StatusNotFound &&
+				!isCsrfError {
 
 				event := logger.
 					Error().
@@ -153,14 +142,17 @@ func Logger(next http.Handler) http.Handler {
 					TimeDiff("duration", time.Now(), t1).
 					Dur("db_duration", pgw.DbDuration(r.Context())).
 					Msg("failed")
-			case !isStaticFile:
-				logger.
+			} else if !isStaticFile {
+				event := logger.
 					Info().
 					Func(commonFields).
 					Int("status", status).
 					TimeDiff("duration", time.Now(), t1).
-					Dur("db_duration", pgw.DbDuration(r.Context())).
-					Msg("completed")
+					Dur("db_duration", pgw.DbDuration(r.Context()))
+				if isCsrfError {
+					event = event.Str("omitted_error", csrfValidationFailed.Error())
+				}
+				event.Msg("completed")
 			}
 		}()
 		next.ServeHTTP(ww, r)
