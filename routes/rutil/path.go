@@ -40,6 +40,10 @@ func SubscriptionDeletePath(subscriptionId models.SubscriptionId) string {
 	return fmt.Sprintf("/subscriptions/%d/delete", subscriptionId)
 }
 
+func SubscriptionNotifyWhenSupportedPath(subscriptionId models.SubscriptionId) string {
+	return fmt.Sprintf("/subscriptions/%d/notify_when_supported", subscriptionId)
+}
+
 func SubscriptionRequestCustomBlogPath(subscriptionId models.SubscriptionId) string {
 	return fmt.Sprintf("/subscriptions/%d/request", subscriptionId)
 }

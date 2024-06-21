@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -168,4 +169,11 @@ func MustWrite(w http.ResponseWriter, plainText string) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+var userIpRegex = regexp.MustCompile(`.\d+.\d+$`)
+
+func AnonUserIp(r *http.Request) string {
+	userIp := UserIp(r)
+	return userIpRegex.ReplaceAllString(userIp, ".0.1")
 }

@@ -262,6 +262,7 @@ func runServer(port int) {
 		r.Post("/subscriptions/{id:\\d+}/schedule", routes.Subscriptions_Schedule)
 		r.Post("/subscriptions/{id:\\d+}/delete", routes.Subscriptions_Delete)
 		r.Get("/subscriptions/{id:\\d+}/progress_stream", routes.Subscriptions_ProgressStream)
+		r.Post("/subscriptions/{id:\\d+}/notify_when_supported", routes.Subscriptions_NotifyWhenSupported)
 
 		r.Get("/terms", routes.Misc_Terms)
 		r.Get("/privacy", routes.Misc_Privacy)

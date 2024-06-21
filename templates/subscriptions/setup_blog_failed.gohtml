@@ -15,47 +15,265 @@
   </div>
 
   <div class="overflow-wrap-break-word">
-    <div class="flex flex-col gap-6">
-      <p>
-        FeedRewind couldn't discover posts in this blog. We support over 80% of blogs, but unfortunately not this one.
-      </p>
-      {{if .HasCredits}}
-      <div class="inline-flex flex-row flex-wrap gap-2">
-        <form method="post" action="{{.SubscriptionDeletePath}}">
-          <input id="try_another_button" class="btn" type="submit" value="Try another">
-          {{.Session.CSRFField}}
-          <input type="hidden" name="redirect" value="add">
-        </form>
-        <a id="request_button" class="btn" href="{{.SubscriptionRequestCustomBlogPath}}">
-          Have it supported
-        </a>
+    <p>
+      FeedRewind couldn't discover posts in this blog. We support over 80% of blogs, but not this one—yet.
+    </p>
+    {{if .IsAnonymousUser}}
+    <div class="mt-6">
+      <div>Get notified once it's available:</div>
+      <div class="flex flex-row max-w-full mt-1">
+        <input id="notify_when_supported_email"
+               type="email"
+               class="border border-gray-300 text-gray-700 placeholder:text-gray-400 rounded-l-md px-2 py-1 text-sm focus-visible:outline-0 w-48"
+               placeholder="your@email.com"
+        >
+        <button id="notify_when_supported_button"
+                class="relative rounded-r-md border-y border-r border-gray-300 text-gray-700 bg-gray-50 hover:bg-gray-100 cursor-pointer px-2 py-1 text-sm font-semibold"
+        >
+          <div id="notify_when_supported_label" class="">Submit</div>
+          <div id="notify_when_supported_spinner" class="absolute-center hidden">
+            <div class="spinner spinner-dark w-4 h-4"></div>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" id="notify_when_supported_check" class="absolute-center h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </button>
       </div>
-      <form method="post" action="{{.SubscriptionDeletePath}}">
-        <input id="discard_button" class="btn-red text-base px-3 py-2" type="submit" value="Discard">
-        {{.Session.CSRFField}}
-      </form>
-      {{else}}
-      <div class="inline-flex flex-row gap-2">
-        <form method="post" action="{{.SubscriptionDeletePath}}">
-          <input id="try_another_button" class="btn" type="submit" value="Try another">
-          {{.Session.CSRFField}}
-          <input type="hidden" name="redirect" value="add">
-        </form>
-        <form method="post" action="{{.SubscriptionDeletePath}}">
-          <input id="discard_button" class="btn-red text-base px-3 py-2" type="submit" value="Discard">
-          {{.Session.CSRFField}}
-        </form>
-      </div>
-      <div class="shrink-0">
-        <a id="request_button" class="btn-secondary inline-flex flex-row gap-1 items-center" href="{{.SubscriptionRequestCustomBlogPath}}">
-          <!-- credit-card -->
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-          </svg> Have it supported ›
-        </a>
-      </div>
-      {{end}}
+      <div id="notify_when_supported_email_error" class="invisible text-sm font-semibold text-red-600" aria-live="polite">No error</div>
+      <script>
+        {
+          let emailInput = document.getElementById("notify_when_supported_email");
+          let emailError = document.getElementById("notify_when_supported_email_error");
+          let button = document.getElementById("notify_when_supported_button");
+          let label = document.getElementById("notify_when_supported_label");
+          let spinner = document.getElementById("notify_when_supported_spinner");
+          let check = document.getElementById("notify_when_supported_check");
+          let emailWasValid = true;
+
+          function validateEmail() {
+            if (emailInput.validity.valid || emailInput.validity.valueMissing) {
+              emailError.textContent = "No error";
+              emailError.classList.add("invisible");
+              emailInput.classList.remove("border-red-500");
+            } else {
+              emailError.textContent = "Invalid email";
+              emailInput.classList.add("border-red-500");
+              emailError.classList.remove("invisible");
+            }
+            emailWasValid = emailInput.validity.valid;
+          }
+
+          emailInput.addEventListener("blur", () => {
+            validateEmail();
+          });
+
+          emailInput.addEventListener("input", () => {
+            if (!emailWasValid) {
+              validateEmail();
+            }
+          });
+
+          const showSpinner = () => {
+            label.classList.add("invisible");
+            check.classList.add("hidden");
+            spinner.classList.remove("hidden")
+            button.classList.remove("hover:bg-gray-100");
+            button.classList.remove("cursor-pointer");
+            button.classList.add("cursor-default");
+          };
+
+          const hideSpinner = () => {
+            spinner.classList.add("hidden");
+            check.classList.remove("hidden");
+          };
+
+          let clicked = false;
+          button.addEventListener("click", async (event) => {
+            if (!emailInput.validity.valid) {
+              event.preventDefault();
+              event.stopPropagation();
+              return;
+            }
+
+            if (clicked) {
+              event.preventDefault();
+              event.stopPropagation();
+              return;
+            }
+            clicked = true;
+
+            showSpinner();
+
+            try {
+              const abortController = new AbortController();
+              const timeoutId = setTimeout(() => abortController.abort(), 30000);
+              let formData = new FormData();
+              formData.set("email", emailInput.value);
+              formData.set("notify", true);
+              formData.set("version", -1);
+              const body = new URLSearchParams(formData);
+              const response = await fetch(
+                "{{.SubscriptionNotifyWhenSupportedPath}}",
+                {
+                  method: "post",
+                  headers: {
+                    "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                  },
+                  body: body,
+                  signal: abortController.signal
+                }
+              );
+
+              if (response.status === 200) {
+                clearTimeout(timeoutId);
+                hideSpinner();
+              } else {
+                clearTimeout(timeoutId);
+                // Don't hide the spinner
+                showRefreshPopup("Something went wrong. Please refresh the page.");
+              }
+            } catch (err) {
+              // Timeout
+              // Don't hide the spinner
+              showRefreshPopup("Something went wrong. Please refresh the page.");
+            }
+          });
+        }
+      </script>
     </div>
+    <div class="mt-4">
+      <form method="post" action="{{.SubscriptionDeletePath}}">
+        <input id="try_another_button" class="btn" type="submit" value="← Go back">
+        {{.Session.CSRFField}}
+        <input type="hidden" name="redirect" value="add">
+      </form>
+    </div>
+    {{else}}
+      <div class="inline-flex flex-row flex-wrap gap-2 items-bottom mt-3">
+        <button id="notify_when_supported_button"
+                class="relative btn-secondary"
+                role="checkbox"
+                aria-labelledby="notify_when_supported_label"
+                aria-checked="{{.NotifyWhenSupportedChecked}}"
+        >
+          <div class="flex flex-row gap-[0.3125rem] items-center">
+            <input id="notify_when_supported_unchecked"
+                   type="checkbox"
+                   class="rounded-sm w-[0.8125rem] h-[0.8125rem] {{if .NotifyWhenSupportedChecked}}hidden{{end}}"
+                   tabindex="-1"
+                   aria-hidden="true"
+            >
+            <div id="notify_when_supported_spinner"
+                 class="spinner spinner-dark w-[0.8125rem] h-[0.8125rem] mt-0.25 hidden"
+            ></div>
+            <input id="notify_when_supported_checked"
+                   type="checkbox"
+                   class="rounded-sm w-[0.8125rem] h-[0.8125rem] {{if not .NotifyWhenSupportedChecked}}hidden{{end}}"
+                   tabindex="-1"
+                   aria-hidden="true"
+                   checked
+            >
+            <label id="notify_when_supported_label" class="cursor-pointer">Email me once it's available</label>
+          </div>
+          <div class="absolute top-0 left-0 w-full h-full z-10">
+            <!-- protect the checkboxes from interaction -->
+          </div>
+        </button>
+        <div class="mt-[0.1875rem]">or</div>
+        <div class="shrink-0">
+          <a id="request_button" class="btn-secondary inline-flex flex-row gap-1 items-center" href="{{.SubscriptionRequestCustomBlogPath}}">
+            {{if .HasCredits}}
+            Have it supported ›
+            {{else}}
+            <!-- credit-card -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg> Get it supported ›
+            {{end}}
+          </a>
+        </div>
+      </div>
+      <div class="mt-9">
+        <form method="post" action="{{.SubscriptionDeletePath}}">
+          <input id="try_another_button" class="btn" type="submit" value="← Go back">
+          {{.Session.CSRFField}}
+          <input type="hidden" name="redirect" value="add">
+        </form>
+      </div>
+      <script>
+        {
+          let isButtonChecked = {{.NotifyWhenSupportedChecked}};
+          let maxSeenVersion = {{.NotifyWhenSupportedVersion}};
+          let requestsInFlight = 0;
+          let button = document.getElementById("notify_when_supported_button");
+          let unchecked = document.getElementById("notify_when_supported_unchecked");
+          let spinner = document.getElementById("notify_when_supported_spinner");
+          let checked = document.getElementById("notify_when_supported_checked");
+          const showSpinner = () => {
+            requestsInFlight++;
+            unchecked.classList.add("hidden");
+            checked.classList.add("hidden");
+            spinner.classList.remove("hidden")
+          };
+          const maybeHideSpinner = () => {
+            requestsInFlight--;
+            if (requestsInFlight === 0) {
+              spinner.classList.add("hidden");
+              if (isButtonChecked) {
+                checked.classList.remove("hidden");
+                button.ariaChecked = true;
+              } else {
+                unchecked.classList.remove("hidden");
+                button.ariaChecked = false;
+              }
+            }
+          };
+
+          button.addEventListener("click", async () => {
+            showSpinner();
+            isButtonChecked = !isButtonChecked;
+            maxSeenVersion += 1;
+            const requestVersion = maxSeenVersion;
+
+            try {
+              const abortController = new AbortController();
+              const timeoutId = setTimeout(() => abortController.abort(), 30000);
+              let formData = new FormData();
+              formData.set("notify", isButtonChecked);
+              formData.set("version", requestVersion);
+              const body = new URLSearchParams(formData);
+              const response = await fetch(
+                "{{.SubscriptionNotifyWhenSupportedPath}}",
+                {
+                  method: "post",
+                  headers: {
+                    "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
+                  },
+                  body: body,
+                  signal: abortController.signal
+                }
+              );
+
+              if (response.status === 200) {
+                clearTimeout(timeoutId);
+                maybeHideSpinner();
+              } else {
+                clearTimeout(timeoutId);
+                maybeHideSpinner();
+                if (requestVersion === maxSeenVersion) {
+                  showRefreshPopup("Something went wrong. Please refresh the page.");
+                }
+                // If the version is older, we're expecting some other request to succeed
+              }
+            } catch (err) {
+              // Timeout
+              maybeHideSpinner();
+              showRefreshPopup("Something went wrong. Please refresh the page.");
+            }
+          });
+        }
+      </script>
+    {{end}}
   </div>
 </div>
 {{end}}
