@@ -148,7 +148,7 @@
         </div>
       {{else if .IsNewUser}}
         <a id="signup_free"
-           class="mt-5 text-indigo-700 font-semibold border border-indigo-300 hover:bg-indigo-100 rounded-md px-5 py-1.5 hover:cursor-pointer block"
+           class="mt-5 text-indigo-700 font-semibold border border-indigo-300 hover:bg-indigo-100 rounded-md px-5 py-1.5 cursor-pointer block"
            href="/signup"
            align="center"
         >
@@ -157,7 +157,7 @@
       {{else}}
         <a id="downgrade_to_free"
            href="/billing_full"
-           class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 hover:cursor-pointer w-full inline-block"
+           class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 cursor-pointer w-full inline-block"
            align="center"
         >
           Cancel via<br>Billing Portal
@@ -213,7 +213,7 @@
         {{if .IsNewUser}}
           <button id="signup_supporter"
                   type="submit"
-                  class="mt-5 text-white font-semibold bg-indigo-700 border border-indigo-700 hover:bg-indigo-900 hover:border-indigo-900 rounded-md px-5 py-1.5 hover:cursor-pointer w-full"
+                  class="mt-5 text-white font-semibold bg-indigo-700 border border-indigo-700 hover:bg-indigo-900 hover:border-indigo-900 rounded-md px-5 py-1.5 cursor-pointer w-full"
                   align="center"
           >
             Get started
@@ -227,7 +227,7 @@
         {{else if .IsOnFreePlan}}
           <button id="upgrade_to_supporter"
                   type="submit"
-                  class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 hover:cursor-pointer w-full"
+                  class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 cursor-pointer w-full"
                   align="center"
           >
             Upgrade
@@ -235,7 +235,7 @@
         {{else if .IsOnPatronPlan}}
           <a id="downgrade_to_supporter"
              href="/billing_full"
-             class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 hover:cursor-pointer w-full inline-block"
+             class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 cursor-pointer w-full inline-block"
              align="center"
           >
             Switch via<br>Billing Portal
@@ -292,7 +292,7 @@
         {{if .IsNewUser}}
           <button id="signup_patron"
                   type="submit"
-                  class="mt-5 text-indigo-700 font-semibold border border-indigo-300 hover:bg-indigo-100 rounded-md px-5 py-1.5 hover:cursor-pointer w-full"
+                  class="mt-5 text-indigo-700 font-semibold border border-indigo-300 hover:bg-indigo-100 rounded-md px-5 py-1.5 cursor-pointer w-full"
                   align="center"
           >
             Get started
@@ -306,7 +306,7 @@
         {{else if .IsOnFreePlan}}
           <button id="upgrade_to_patron"
                   type="submit"
-                  class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 hover:cursor-pointer w-full"
+                  class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 cursor-pointer w-full"
                   align="center"
           >
             Upgrade
@@ -314,7 +314,7 @@
         {{else}}
           <a id="upgrade_to_patron"
              href="/billing_full"
-             class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 hover:cursor-pointer w-full inline-block"
+             class="mt-5 text-indigo-700 font-semibold bg-white border border-indigo-300 hover:bg-indigo-50 rounded-md px-5 py-1.5 cursor-pointer w-full inline-block"
              align="center"
           >
             Upgrade via<br>Billing Portal
