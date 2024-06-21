@@ -749,7 +749,10 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 		case models.BlogStatusCrawlFailed,
 			models.BlogStatusUpdateFromFeedFailed:
 			hasCredits := false
-			if currentUser != nil {
+			notifyWhenSupportedChecked := false
+			notifyWhenSupportedVersion := 0
+			isAnonymousUser := currentUser == nil
+			if !isAnonymousUser {
 				row := conn.QueryRow(`
 					select 1 from patron_credits
 					where
@@ -767,22 +770,42 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				} else if err == nil {
 					hasCredits = true
 				}
+
+				// Could be any user, if the current user owns the email they can tick the checkbox
+				row = conn.QueryRow(`
+					select notify, version from feed_waitlist_emails where email = $1 and feed_url = $2
+				`, currentUser.Email, feedUrl)
+				err = row.Scan(&notifyWhenSupportedChecked, &notifyWhenSupportedVersion)
+				if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+					panic(err)
+				}
 			}
 			type FailedResult struct {
-				Title                             string
-				Session                           *util.Session
-				HasCredits                        bool
-				SubscriptionName                  string
-				SubscriptionDeletePath            string
-				SubscriptionRequestCustomBlogPath string
+				Title                               string
+				Session                             *util.Session
+				IsAnonymousUser                     bool
+				HasCredits                          bool
+				SubscriptionName                    string
+				SubscriptionDeletePath              string
+				SubscriptionNotifyWhenSupportedPath string
+				SubscriptionRequestCustomBlogPath   string
+				NotifyWhenSupportedChecked          bool
+				NotifyWhenSupportedVersion          int
 			}
+			deletePath := rutil.SubscriptionDeletePath(subscriptionId)
+			notifyWhenSupportedPath := rutil.SubscriptionNotifyWhenSupportedPath(subscriptionId)
+			requestCustomBlogPath := rutil.SubscriptionRequestCustomBlogPath(subscriptionId)
 			templates.MustWrite(w, "subscriptions/setup_blog_failed", FailedResult{
-				Title:                             util.DecorateTitle("Blog not supported"),
-				Session:                           rutil.Session(r),
-				HasCredits:                        hasCredits,
-				SubscriptionName:                  subscriptionName,
-				SubscriptionDeletePath:            rutil.SubscriptionDeletePath(subscriptionId),
-				SubscriptionRequestCustomBlogPath: rutil.SubscriptionRequestCustomBlogPath(subscriptionId),
+				Title:                               util.DecorateTitle("Blog not supported"),
+				Session:                             rutil.Session(r),
+				IsAnonymousUser:                     isAnonymousUser,
+				HasCredits:                          hasCredits,
+				SubscriptionName:                    subscriptionName,
+				SubscriptionDeletePath:              deletePath,
+				SubscriptionNotifyWhenSupportedPath: notifyWhenSupportedPath,
+				SubscriptionRequestCustomBlogPath:   requestCustomBlogPath,
+				NotifyWhenSupportedChecked:          notifyWhenSupportedChecked,
+				NotifyWhenSupportedVersion:          notifyWhenSupportedVersion,
 			})
 			return
 		default:
@@ -1538,9 +1561,8 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 
 		slackBlogUrl := jobs.NotifySlackJob_Escape(blogBestUrl)
 		slackBlogName := jobs.NotifySlackJob_Escape(blogName)
-		err = jobs.NotifySlackJob_PerformNow(
-			tx, fmt.Sprintf("Someone subscribed to *<%s|%s>*", slackBlogUrl, slackBlogName),
-		)
+		slackMessage := fmt.Sprintf("Someone subscribed to *<%s|%s>*", slackBlogUrl, slackBlogName)
+		err = jobs.NotifySlackJob_PerformNow(tx, slackMessage)
 		if err != nil {
 			logger.Error().Err(err).Msg("Error while submitting a NotifySlackJob")
 		}
@@ -2332,6 +2354,118 @@ func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Reques
 	}
 
 	http.Redirect(w, r, rutil.SubscriptionSetupPath(subscriptionId), http.StatusSeeOther)
+}
+
+func Subscriptions_NotifyWhenSupported(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
+	conn := rutil.DBConn(r)
+	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
+	if !ok {
+		subscriptions_RedirectNotFound(w, r)
+		return
+	}
+
+	subscriptionId := models.SubscriptionId(subscriptionIdInt)
+	var maybeSubscriptionUserId *models.UserId
+	var feedUrl string
+	var blogName string
+	var blogBestUrl string
+	row := conn.QueryRow(`
+		select
+			user_id,
+			(select feed_url from blogs where id = blog_id),
+			(select name from blogs where id = blog_id),
+			(select coalesce(url, feed_url) from blogs where id = blog_id)
+		from subscriptions_without_discarded
+		where id = $1
+	`, subscriptionId)
+	err := row.Scan(&maybeSubscriptionUserId, &feedUrl, &blogName, &blogBestUrl)
+	if errors.Is(err, pgx.ErrNoRows) {
+		subscriptions_RedirectNotFound(w, r)
+		return
+	} else if err != nil {
+		panic(err)
+	}
+
+	if subscriptions_RedirectIfUserMismatch(w, r, maybeSubscriptionUserId) {
+		return
+	}
+
+	currentUser := rutil.CurrentUser(r)
+	var maybeCurrentUserId *models.UserId
+	var email string
+	if currentUser != nil {
+		maybeCurrentUserId = &currentUser.Id
+		email = currentUser.Email
+	} else {
+		maybeCurrentUserId = nil
+		email = util.EnsureParamStr(r, "email")
+	}
+
+	notify := util.EnsureParamBool(r, "notify")
+	newVersion := util.EnsureParamInt(r, "version")
+	anonIp := util.AnonUserIp(r)
+	if (currentUser != nil && newVersion <= 0) || (currentUser == nil && newVersion != -1) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		row := tx.QueryRow(`
+			select version from feed_waitlist_emails where feed_url = $1 and email = $2
+		`, feedUrl, email)
+		var version int
+		err := row.Scan(&version)
+		if errors.Is(err, pgx.ErrNoRows) {
+			version = 0
+		} else if err != nil {
+			return err
+		}
+
+		if version > 0 {
+			if currentUser != nil && newVersion <= version {
+				logger.Info().Msgf("Not updating the version (%d <= %d)", newVersion, version)
+				w.WriteHeader(http.StatusConflict)
+				return nil
+			}
+			if currentUser == nil {
+				newVersion = version + 1
+			}
+			logger.Info().Msgf("Notify: %t, updating the version from %d to %d", notify, version, newVersion)
+			_, err := tx.Exec(`
+				update feed_waitlist_emails set notify = $1, version = $2, user_id = $3, anon_ip = $4
+				where feed_url = $5 and email = $6
+			`, notify, newVersion, maybeCurrentUserId, anonIp, feedUrl, email)
+			if err != nil {
+				return err
+			}
+		} else {
+			newVersion = 1
+			logger.Info().Msgf("Notify: %t, inserting the waitlist email with version %d", notify, newVersion)
+			_, err := tx.Exec(`
+				insert into feed_waitlist_emails (feed_url, email, user_id, notify, version, anon_ip)
+				values ($1, $2, $3, $4, $5, $6)
+			`, feedUrl, email, maybeCurrentUserId, notify, newVersion, anonIp)
+			if err != nil {
+				return err
+			}
+		}
+
+		slackAction := "doesn't want"
+		if notify {
+			slackAction = "wants"
+		}
+		slackBlogUrl := jobs.NotifySlackJob_Escape(blogBestUrl)
+		slackBlogName := jobs.NotifySlackJob_Escape(blogName)
+		slackMessage := fmt.Sprintf(
+			"A user %s to be notified when *<%s|%s>* becomes supported",
+			slackAction, slackBlogUrl, slackBlogName,
+		)
+		err = jobs.NotifySlackJob_PerformNow(tx, slackMessage)
+		return err
+	})
+	if err != nil {
+		panic(err)
+	}
 }
 
 func subscriptions_RedirectNotFound(w http.ResponseWriter, r *http.Request) {

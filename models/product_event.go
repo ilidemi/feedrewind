@@ -7,7 +7,6 @@ import (
 	"feedrewind/util"
 	"fmt"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -69,7 +68,7 @@ func ProductEvent_DummyEmitOrLog(
 		"bot_is_allowed": allowBots,
 	}
 	platform := resolveUserAgent(request.UserAgent())
-	anonIp := anonymizeUserIp(util.UserIp(request))
+	anonIp := util.AnonUserIp(request)
 	_, err = tx.Exec(`
 		insert into product_events (
 			product_user_id, event_type, event_properties, user_properties, user_ip, browser, os_name,
@@ -110,7 +109,7 @@ func ProductEvent_MustEmitFromRequest(
 	pc ProductEventContext, eventType string, eventProperties map[string]any, userProperties map[string]any,
 ) {
 	platform := resolveUserAgent(pc.Request.UserAgent())
-	anonIp := anonymizeUserIp(util.UserIp(pc.Request))
+	anonIp := util.AnonUserIp(pc.Request)
 	_, err := pc.Tx.Exec(`
 		insert into product_events (
 			event_type, event_properties, user_properties, user_ip, product_user_id, browser, os_name,
@@ -232,12 +231,6 @@ func ProductEvent_MarkAsDispatched(
 		where id = $2
 	`, dispatchedAt, productEventId)
 	return err
-}
-
-var userIpRegex = regexp.MustCompile(`.\d+.\d+$`)
-
-func anonymizeUserIp(userIp string) string {
-	return userIpRegex.ReplaceAllString(userIp, ".0.1")
 }
 
 type userPlatform struct {

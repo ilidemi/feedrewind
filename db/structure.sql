@@ -592,6 +592,22 @@ ALTER SEQUENCE public.delayed_jobs_id_seq OWNED BY public.delayed_jobs.id;
 
 
 --
+-- Name: feed_waitlist_emails; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.feed_waitlist_emails (
+    feed_url text NOT NULL,
+    email text NOT NULL,
+    user_id bigint,
+    notify boolean NOT NULL,
+    version integer,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    anon_ip text NOT NULL
+);
+
+
+--
 -- Name: ignored_suggestion_feeds; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1384,6 +1400,14 @@ ALTER TABLE ONLY public.delayed_jobs
 
 
 --
+-- Name: feed_waitlist_emails feed_waitlist_emails_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feed_waitlist_emails
+    ADD CONSTRAINT feed_waitlist_emails_pkey PRIMARY KEY (feed_url, email);
+
+
+--
 -- Name: ignored_suggestion_feeds ignored_suggestion_feeds_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1780,6 +1804,13 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.delayed_jobs FOR EACH ROW
 
 
 --
+-- Name: feed_waitlist_emails bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.feed_waitlist_emails FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
+
+
+--
 -- Name: ignored_suggestion_feeds bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1969,6 +2000,14 @@ ALTER TABLE ONLY public.custom_blog_requests
 
 ALTER TABLE ONLY public.custom_blog_requests
     ADD CONSTRAINT custom_blog_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: feed_waitlist_emails feed_waitlist_emails_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feed_waitlist_emails
+    ADD CONSTRAINT feed_waitlist_emails_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -2408,4 +2447,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20240607185817'),
 ('20240613152252'),
 ('20240613175615'),
-('20240613193007');
+('20240613193007'),
+('20240619122905'),
+('20240619174345');
