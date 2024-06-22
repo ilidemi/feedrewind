@@ -268,6 +268,7 @@ func runServer(port int) {
 		r.Get("/privacy", routes.Misc_Privacy)
 		r.Get("/subprocessors", routes.Misc_Subprocessors)
 		r.Get("/about", routes.Misc_About)
+		r.Get("/bot", routes.Misc_Bot)
 
 		r.Group(func(authorized chi.Router) {
 			authorized.Use(frmiddleware.Authorize)
