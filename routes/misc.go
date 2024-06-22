@@ -41,6 +41,13 @@ func Misc_About(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func Misc_Bot(w http.ResponseWriter, r *http.Request) {
+	templates.MustWrite(w, "misc/bot", miscResult{
+		Title:   util.DecorateTitle("Bot"),
+		Session: rutil.Session(r),
+	})
+}
+
 func Misc_NotFound(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
 	conn := rutil.DBConn(r)

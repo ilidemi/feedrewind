@@ -79,7 +79,7 @@ func (c *HttpClientImpl) Request(uri *url.URL, shouldThrottle bool, logger Logge
 		logger.Info("HTTP new request error: %v", err)
 		return newHttpResponse("Error"), nil
 	}
-	req.Header.Add("User-Agent", "FeedRewind.com/0.1 (bot)")
+	req.Header.Add("User-Agent", "Mozilla/5.0 (compatible; FeedRewindBot/1.0; +https://feedrewind.com/bot)")
 	resp, err := c.Client.Do(req)
 	var hostnameError x509.HostnameError
 	var unknownAuthorityError x509.UnknownAuthorityError
