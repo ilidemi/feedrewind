@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"feedrewind/jobs"
 	"feedrewind/models"
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
@@ -42,6 +43,12 @@ func Misc_About(w http.ResponseWriter, r *http.Request) {
 }
 
 func Misc_Bot(w http.ResponseWriter, r *http.Request) {
+	logger := rutil.Logger(r)
+	conn := rutil.DBConn(r)
+	err := jobs.NotifySlackJob_PerformNow(conn, "Someone looked at /bot")
+	if err != nil {
+		logger.Error().Err(err).Msgf("Error sending Slack message")
+	}
 	templates.MustWrite(w, "misc/bot", miscResult{
 		Title:   util.DecorateTitle("Bot"),
 		Session: rutil.Session(r),
