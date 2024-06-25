@@ -337,6 +337,9 @@ func extractCaseyHandmerCategories(
 	var spaceMisconceptionsLinks []Link
 	for _, element := range spaceMisconceptionsElements {
 		href := findAttr(element, "href")
+		if strings.HasSuffix(href, ".pdf") {
+			continue
+		}
 		link, ok := ToCanonicalLink(href, logger, spaceMisconceptionsPage.FetchUri)
 		if !ok {
 			return nil, oops.Newf("Casey Handmer categories bad link: %q", href)
@@ -355,6 +358,9 @@ func extractCaseyHandmerCategories(
 	seenFirstLink := false
 	for _, element := range marsTrilogyElements {
 		href := findAttr(element, "href")
+		if strings.HasSuffix(href, ".pdf") {
+			continue
+		}
 		link, ok := ToCanonicalLink(href, logger, marsTrilogyPage.FetchUri)
 		if !ok {
 			return nil, oops.Newf("Casey Handmer categories bad link: %q", href)
@@ -377,6 +383,9 @@ func extractCaseyHandmerCategories(
 	var futureOfEnergyLinks []Link
 	for _, element := range futureOfEnergyElements {
 		href := findAttr(element, "href")
+		if strings.HasSuffix(href, ".pdf") {
+			continue
+		}
 		link, ok := ToCanonicalLink(href, logger, futureOfEnergyPage.FetchUri)
 		if !ok {
 			return nil, oops.Newf("Casey Handmer categories bad link: %q", href)
