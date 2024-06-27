@@ -34,7 +34,7 @@ func GetPostmarkClientAndMaybeMetadata(tx pgw.Queryable) (*postmark.Client, *str
 	return client, maybeTestMetadata
 }
 
-const from = "FeedRewind feedrewind@feedrewind.com"
+const from = "FeedRewind posts@feedrewind.com"
 const replyTo = "support@feedrewind.com"
 const messageStream = "outbound"
 
@@ -42,12 +42,13 @@ func newInitialEmail(
 	userId models.UserId, userEmail string, subscriptionId models.SubscriptionId, subscriptionName string,
 	maybeTestMetadata *string, scheduledFor string,
 ) postmark.Email {
-
 	type TemplateData struct {
-		Url string
+		Url      string
+		BlogName string
 	}
 	templateData := TemplateData{
-		Url: rutil.SubscriptionUrl(subscriptionId),
+		Url:      rutil.SubscriptionUrl(subscriptionId),
+		BlogName: subscriptionName,
 	}
 	htmlBody := templates.MustFormat("email/initial", templateData)
 	textBody := templates.MustFormat("email/initial.txt", templateData)

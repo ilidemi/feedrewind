@@ -176,9 +176,9 @@ func TestEmailSchedule(t *testing.T) {
 		require.Len(t, outputArrivalMsgTokens, 2, description)
 		switch outputArrivalMsgTokens[0] {
 		case "one":
-			expectedArrivalMsg.WriteString("First entry")
+			expectedArrivalMsg.WriteString("The first entry")
 		case "many":
-			expectedArrivalMsg.WriteString("First entries")
+			expectedArrivalMsg.WriteString("The first entries")
 		default:
 			require.FailNowf(
 				t, description, "Unexpected arrival entries count: %s", outputArrivalMsgTokens[0],

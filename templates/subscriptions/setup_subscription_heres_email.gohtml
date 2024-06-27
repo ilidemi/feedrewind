@@ -16,20 +16,31 @@
 
   <div class="overflow-wrap-break-word">
     <div class="flex flex-col gap-6">
-      <span>
-        <span>You're all set!</span>
-        <span id="arrival_msg">
+      <div>
+        <div id="arrival_msg">
           {{if .ArrivedOne}}
-            We've just sent the first entry to <span class="font-semibold">{{.Email}}</span>.
+            You're all set! We've just sent the first entry to <span class="font-semibold">{{.Email}}</span>.
           {{else if .ArrivedMany}}
-            We've just sent the first entries to <span class="font-semibold">{{.Email}}</span>.
+            You're all set! We've just sent the first entries to <span class="font-semibold">{{.Email}}</span>.
           {{else if .WillArriveOne}}
-            First entry will be sent on <span class="font-semibold">{{.WillArriveDate}}</span> to <span class="font-semibold">{{.Email}}</span>.
+            The first entry will be sent on <span class="font-semibold">{{.WillArriveDate}}</span> to <span class="font-semibold">{{.Email}}</span>.
+            <div class="mt-3">
+              We also sent you a confirmation—please check your spam folder to make sure the entries reach you too.
+            </div>
+            <div class="mt-3">
+              You're all set!
+            </div>
           {{else}}
-            First entries will be sent on <span class="font-semibold">{{.WillArriveDate}}</span> to <span class="font-semibold">{{.Email}}</span>.
+            The first entries will be sent on <span class="font-semibold">{{.WillArriveDate}}</span> to <span class="font-semibold">{{.Email}}</span>.
+            <div class="mt-3">
+              We also sent you a confirmation—please check your spam folder to make sure the entries reach you too.
+            </div>
+            <div class="mt-3">
+              You're all set!
+            </div>
           {{end}}
-        </span>
-      </span>
+        </div>
+      </div>
 
       <p class="inline-flex flex-row gap-2">
         <a href="/subscriptions"
