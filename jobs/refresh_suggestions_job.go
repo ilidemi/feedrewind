@@ -243,6 +243,23 @@ feeds:
 		}
 	}
 
+	if config.Cfg.Env.IsDevOrTest() {
+		attempts := 0
+		for schedule.UTCNow().Before(schedule.NewTime(2024, time.January, 1, 0, 0, 0, 0, time.UTC)) {
+			attempts++
+			if attempts > 24 {
+				return oops.Newf(
+					"Time traveling tests have been running for a while, not rescheduling the expensive job",
+				)
+			}
+			logger.Info().Msg("Time travel is active, waiting")
+			err := util.Sleep(ctx, 5*time.Minute)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	runAt := schedule.UTCNow().Add(time.Hour).BeginningOfHour().Add(30 * time.Minute)
 	err = RefreshSuggestionsJob_PerformAt(conn, runAt)
 	if err != nil {
