@@ -1,5 +1,7 @@
 {{template "layouts/email" .}}
 
 {{define "content"}}
+<span style="font-size: 15px;">{{.BlogName}} was added to FeedRewind.</span>
+<br>
 <a href="{{.Url}}" style="color: #6b7280; font-size: 15px;">Manage subscription</a>
 {{end}}
