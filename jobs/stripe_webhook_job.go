@@ -544,11 +544,19 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 				return err
 			}
 
-			_, err = tx.Exec(`insert into patron_invoices (id) values ($1)`, invoice.ID)
-			if util.ViolatesUnique(err, "patron_invoices_pkey") {
+			row = tx.QueryRow(`select count(1) from patron_invoices where id = $1`, invoice.ID)
+			var count int
+			err = row.Scan(&count)
+			if err != nil {
+				return err
+			}
+			if count > 0 {
 				logger.Info().Msgf("Invoice already processed, bailing: %s", invoice.ID)
 				return nil
-			} else if err != nil {
+			}
+
+			_, err = tx.Exec(`insert into patron_invoices (id) values ($1)`, invoice.ID)
+			if err != nil {
 				return err
 			}
 

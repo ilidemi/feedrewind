@@ -1812,11 +1812,11 @@ type schedulePreview struct {
 }
 
 func subscriptions_MustGetSchedulePreview(
-	tx pgw.Queryable, subscriptionId models.SubscriptionId, subscriptionStatus models.SubscriptionStatus,
+	conn *pgw.Conn, subscriptionId models.SubscriptionId, subscriptionStatus models.SubscriptionStatus,
 	userId models.UserId, userSettings *models.UserSettings,
 ) schedulePreview {
-	logger := tx.Logger()
-	preview, err := models.Subscription_GetSchedulePreview(tx, subscriptionId)
+	logger := conn.Logger()
+	preview, err := models.Subscription_GetSchedulePreview(conn, subscriptionId)
 	if err != nil {
 		panic(err)
 	}
@@ -1846,7 +1846,7 @@ func subscriptions_MustGetSchedulePreview(
 		nextScheduleDate = localDate
 	} else {
 		var err error
-		nextScheduleDate, err = subscriptions_GetRealisticScheduleDate(tx, userId, localTime, localDate)
+		nextScheduleDate, err = subscriptions_GetRealisticScheduleDate(conn, userId, localTime, localDate)
 		if err != nil {
 			panic(err)
 		}
@@ -1869,10 +1869,10 @@ func subscriptions_MustGetSchedulePreview(
 }
 
 func subscriptions_GetRealisticScheduleDate(
-	tx pgw.Queryable, userId models.UserId, localTime schedule.Time, localDate schedule.Date,
+	conn *pgw.Conn, userId models.UserId, localTime schedule.Time, localDate schedule.Date,
 ) (schedule.Date, error) {
-	logger := tx.Logger()
-	nextScheduleDate, err := jobs.PublishPostsJob_GetNextScheduledDate(tx, userId)
+	logger := conn.Logger()
+	nextScheduleDate, err := jobs.PublishPostsJob_GetNextScheduledDate(conn, userId)
 	if err != nil {
 		return "", err
 	}
@@ -1885,7 +1885,9 @@ func subscriptions_GetRealisticScheduleDate(
 			return nextDay.Date(), nil
 		}
 	case nextScheduleDate < localDate:
-		logger.Warn().Msgf("Job is scheduled in the past for user %d: %s (today is %s)", userId, nextScheduleDate, localDate)
+		logger.Warn().Msgf(
+			"Job is scheduled in the past for user %d: %s (today is %s)", userId, nextScheduleDate, localDate,
+		)
 		return localDate, nil
 	default:
 		return nextScheduleDate, nil

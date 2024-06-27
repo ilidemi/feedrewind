@@ -217,6 +217,7 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 			rutil.MustWriteJson(w, http.StatusConflict, map[string]any{
 				"version": oldUserSettings.Version,
 			})
+			return true
 		}
 
 		oldTimezone := oldUserSettings.Timezone
@@ -250,6 +251,7 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 			"new_timezone": newTimezone,
 		}, nil)
 
+		w.WriteHeader(http.StatusOK)
 		return true
 	}
 
@@ -262,7 +264,6 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if mustSaveTimezone() {
-			w.WriteHeader(http.StatusOK)
 			break
 		} else {
 			failedLockAttempts++
@@ -328,6 +329,7 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			rutil.MustWriteJson(w, http.StatusConflict, map[string]any{
 				"version": oldUserSettings.Version,
 			})
+			return true
 		}
 
 		oldDeliveryChannel := oldUserSettings.MaybeDeliveryChannel
@@ -376,6 +378,7 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			"delivery_channel": newDeliveryChannel,
 		})
 
+		w.WriteHeader(http.StatusOK)
 		return true
 	}
 
@@ -388,7 +391,6 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if mustSaveDeliveryChannel() {
-			w.WriteHeader(http.StatusOK)
 			break
 		} else {
 			failedLockAttempts++
