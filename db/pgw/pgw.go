@@ -85,9 +85,10 @@ func (conn *Conn) Begin() (*Tx, error) {
 		return nil, oops.Wrap(err)
 	}
 	return &Tx{
-		logger: conn.logger,
-		impl:   tx,
-		ctx:    conn.ctx,
+		logger:    conn.logger,
+		impl:      tx,
+		ctx:       conn.ctx,
+		beginTime: t1,
 	}, nil
 }
 
@@ -176,9 +177,10 @@ func (conn *Conn) WaitForNotification() (*pgconn.Notification, error) {
 }
 
 type Tx struct {
-	logger log.Logger
-	impl   pgx.Tx
-	ctx    context.Context
+	logger    log.Logger
+	impl      pgx.Tx
+	ctx       context.Context
+	beginTime time.Time
 }
 
 // Begin starts a pseudo nested transaction.
@@ -192,11 +194,14 @@ func (tx *Tx) Begin() (*Tx, error) {
 	}
 
 	return &Tx{
-		logger: tx.logger,
-		impl:   nested,
-		ctx:    tx.ctx,
+		logger:    tx.logger,
+		impl:      nested,
+		ctx:       tx.ctx,
+		beginTime: t1,
 	}, nil
 }
+
+const longTransactionThreshold = 10 * time.Second
 
 // Commit commits the transaction if this is a real transaction or releases the savepoint if this is a pseudo nested
 // transaction. Commit will return an error where errors.Is(ErrTxClosed) is true if the Tx is already closed, but is
@@ -207,6 +212,9 @@ func (tx *Tx) Commit() error {
 	defer addDuration(tx.ctx, t1)()
 
 	err := tx.impl.Commit(tx.ctx)
+	if txTime := time.Since(tx.beginTime); txTime >= longTransactionThreshold {
+		tx.logger.Warn().Msgf("Long running transaction: %v", txTime)
+	}
 	return oops.Wrap(err)
 }
 
@@ -220,6 +228,9 @@ func (tx *Tx) Rollback() error {
 	defer addDuration(tx.ctx, t1)()
 
 	err := tx.impl.Rollback(tx.ctx)
+	if txTime := time.Since(tx.beginTime); txTime >= longTransactionThreshold {
+		tx.logger.Warn().Msgf("Long running transaction: %v", txTime)
+	}
 	return oops.Wrap(err)
 }
 

@@ -447,6 +447,18 @@ func blog_CreateWithCrawling(
 	tx pgw.Queryable, startFeed *StartFeed,
 	guidedCrawlingJobScheduleFunc GuidedCrawlingJobScheduleFunc,
 ) (*Blog, error) {
+	row := tx.QueryRow(`
+		select count(1) from blogs where feed_url = $1 and version = $2
+	`, startFeed.Url, BlogLatestVersion)
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		return nil, errBlogAlreadyExists
+	}
+
 	blogIdInt, err := mutil.RandomId(tx, "blogs")
 	if err != nil {
 		return nil, err
@@ -460,9 +472,7 @@ func blog_CreateWithCrawling(
 		)
 		values ($1, $2, $3, null, $4, utc_now(), $5, $6, $7)
 	`, blogId, startFeed.Title, startFeed.Url, status, BlogLatestVersion, updateAction, startFeed.Id)
-	if util.ViolatesUnique(err, "index_blogs_on_feed_url_and_version") {
-		return nil, errBlogAlreadyExists
-	} else if err != nil {
+	if err != nil {
 		return nil, err
 	}
 
@@ -707,12 +717,20 @@ func BlogCrawlClientToken_Create(tx pgw.Queryable, blogId BlogId) (BlogCrawlClie
 		return "", err
 	}
 	value := BlogCrawlClientToken(fmt.Sprintf("%x", valueInt))
+	row := tx.QueryRow(`select count(1) from blog_crawl_client_tokens where value = $1`, value)
+	var count int
+	err = row.Scan(&count)
+	if err != nil {
+		return "", err
+	}
+	if count > 0 {
+		return "", nil
+	}
+
 	_, err = tx.Exec(`
 		insert into blog_crawl_client_tokens (blog_id, value) values ($1, $2)
 	`, blogId, value)
-	if util.ViolatesUnique(err, "blog_crawl_client_tokens_pkey") {
-		return "", nil
-	} else if err != nil {
+	if err != nil {
 		return "", err
 	}
 

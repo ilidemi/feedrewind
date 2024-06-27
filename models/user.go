@@ -8,7 +8,6 @@ import (
 	"feedrewind/db/pgw"
 	"feedrewind/models/mutil"
 	"feedrewind/oops"
-	"feedrewind/util"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -166,6 +165,16 @@ func UserWithPassword_Create(
 	}
 	id := UserId(idInt)
 
+	row := tx.QueryRow(`select count(1) from users_without_discarded where email = $1`, email)
+	var count int
+	err = row.Scan(&count)
+	if err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		return nil, ErrUserAlreadyExists
+	}
+
 	_, err = tx.Exec(`
 		insert into users_without_discarded(
 			id, email, password_digest, auth_token, name, product_user_id, offer_id,
@@ -175,9 +184,7 @@ func UserWithPassword_Create(
 	`, id, email, passwordDigest, authToken, name, productUserId, offerId, maybeStripeSubscriptionId,
 		maybeStripeCustomerId, maybeBillingInterval, maybeStripeCurrentPeriodEnd,
 	)
-	if util.ViolatesUnique(err, "users_email_without_discarded") {
-		return nil, ErrUserAlreadyExists
-	} else if err != nil {
+	if err != nil {
 		return nil, err
 	}
 

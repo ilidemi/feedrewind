@@ -358,17 +358,17 @@ func (*discoveredFeeds) discoverResultTag()        {}
 func (*discoverError) discoverResultTag()          {}
 
 func onboarding_MustDiscoverFeeds(
-	tx pgw.Queryable, startUrl string, currentUser *models.User, productUserId models.ProductUserId,
+	conn *pgw.Conn, startUrl string, currentUser *models.User, productUserId models.ProductUserId,
 ) (discoverResult, models.TypedBlogUrlResult) {
-	logger := tx.Logger()
+	logger := conn.Logger()
 	if startUrl == crawler.HardcodedOurMachinery || startUrl == crawler.HardcodedSequences {
-		blog, err := models.Blog_GetLatestByFeedUrl(tx, startUrl)
+		blog, err := models.Blog_GetLatestByFeedUrl(conn, startUrl)
 		if errors.Is(err, models.ErrBlogNotFound) {
 			panic(fmt.Errorf("Blog not found for %s", startUrl))
 		} else if err != nil {
 			panic(err)
 		}
-		subscription, err := models.Subscription_CreateForBlog(tx, blog, currentUser, productUserId)
+		subscription, err := models.Subscription_CreateForBlog(conn, blog, currentUser, productUserId)
 		if err != nil {
 			panic(err)
 		}
@@ -376,7 +376,7 @@ func onboarding_MustDiscoverFeeds(
 		return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultHardcoded
 	}
 
-	httpClient := crawler.NewHttpClientImpl(tx.Context(), false)
+	httpClient := crawler.NewHttpClientImpl(conn.Context(), false)
 	zlogger := crawler.ZeroLogger{Logger: logger}
 	progressLogger := crawler.NewMockProgressLogger(&zlogger)
 	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
@@ -386,21 +386,21 @@ func onboarding_MustDiscoverFeeds(
 		logger.Info().Msgf("Discover feeds at %s - found single feed", startUrl)
 		var maybeStartPageId *models.StartPageId
 		if result.MaybeStartPage != nil {
-			startPageId, err := models.StartPage_Create(tx, *result.MaybeStartPage)
+			startPageId, err := models.StartPage_Create(conn, *result.MaybeStartPage)
 			if err != nil {
 				panic(err)
 			}
 			maybeStartPageId = &startPageId
 		}
-		startFeed, err := models.StartFeed_CreateFetched(tx, maybeStartPageId, result.Feed)
+		startFeed, err := models.StartFeed_CreateFetched(conn, maybeStartPageId, result.Feed)
 		if err != nil {
 			panic(err)
 		}
-		updatedBlog, err := models.Blog_CreateOrUpdate(tx, startFeed, jobs.GuidedCrawlingJob_PerformNow)
+		updatedBlog, err := models.Blog_CreateOrUpdate(conn, startFeed, jobs.GuidedCrawlingJob_PerformNow)
 		if err != nil {
 			panic(err)
 		}
-		subscription, err := models.Subscription_CreateForBlog(tx, updatedBlog, currentUser, productUserId)
+		subscription, err := models.Subscription_CreateForBlog(conn, updatedBlog, currentUser, productUserId)
 		if err != nil {
 			panic(err)
 		}
@@ -408,13 +408,13 @@ func onboarding_MustDiscoverFeeds(
 		return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultFeed
 	case *crawler.DiscoveredMultipleFeeds:
 		logger.Info().Msgf("Discover feeds at %s - found %d feeds", startUrl, len(result.Feeds))
-		startPageId, err := models.StartPage_Create(tx, result.StartPage)
+		startPageId, err := models.StartPage_Create(conn, result.StartPage)
 		if err != nil {
 			panic(err)
 		}
 		var startFeeds []*models.StartFeed
 		for _, discoveredFeed := range result.Feeds {
-			startFeed, err := models.StartFeed_Create(tx, startPageId, discoveredFeed)
+			startFeed, err := models.StartFeed_Create(conn, startPageId, discoveredFeed)
 			if err != nil {
 				panic(err)
 			}

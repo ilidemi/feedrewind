@@ -56,6 +56,7 @@ Missed:
 	postmark message id can be null
 	http to https upgrade that was a production config option (the only relevant one)
 	enforce db timestamps and updated_at trigger
+	moving contraints from activerecord to db made transactions fail and me need to think about them
 
 
 ## Hours
