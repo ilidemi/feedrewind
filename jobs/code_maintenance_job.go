@@ -2,12 +2,14 @@ package jobs
 
 import (
 	"context"
+	"feedrewind/config"
 	"feedrewind/db/migrations"
 	"feedrewind/db/pgw"
 	"feedrewind/oops"
 	"feedrewind/third_party/tzdata"
 	"feedrewind/util"
 	"feedrewind/util/schedule"
+	"os"
 	"time"
 )
 
@@ -42,6 +44,19 @@ func CodeMaintenanceJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		logger.Warn().Msgf("timezones are from %s, please update", util.TimezonesUpdatedDate)
 	} else {
 		logger.Info().Msgf("timezones are from %s, still fresh", util.TimezonesUpdatedDate)
+	}
+
+	if config.Cfg.IsHeroku {
+		chromeDateCutoff := utcNow.AddDate(0, -2, 0)
+		chromeFileInfo, err := os.Stat("chrome")
+		if err != nil {
+			return oops.Wrap(err)
+		}
+		if chromeFileInfo.ModTime().Before(time.Time(chromeDateCutoff)) {
+			logger.Warn().Msgf("chrome is from %s, please update", chromeFileInfo.ModTime())
+		} else {
+			logger.Info().Msgf("chrome is from %s, still fresh", chromeFileInfo.ModTime())
+		}
 	}
 
 	pst := tzdata.LocationByName["America/Los_Angeles"]
