@@ -28,7 +28,7 @@ type PuppeteerClientImpl struct {
 func NewPuppeteerClientImpl() *PuppeteerClientImpl {
 	launcher := launcher.New()
 	if config.Cfg.IsHeroku {
-		launcher = launcher.Bin("chrome")
+		launcher = launcher.Bin("chrome").NoSandbox(true)
 	}
 	return &PuppeteerClientImpl{
 		Launcher: launcher,
