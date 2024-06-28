@@ -137,18 +137,26 @@ func Logger(next http.Handler) http.Handler {
 				if errorWrapper.err != nil {
 					event.Err(errorWrapper.err)
 				}
+				dbDuration := pgw.DbDuration(r.Context())
+				if dbDuration > time.Second {
+					logger.Warn().Func(commonFields).Msgf("Long db duration: %v", dbDuration)
+				}
 				event.
 					Int("status", status).
 					TimeDiff("duration", time.Now(), t1).
-					Dur("db_duration", pgw.DbDuration(r.Context())).
+					Dur("db_duration", dbDuration).
 					Msg("failed")
 			} else if !isStaticFile {
+				dbDuration := pgw.DbDuration(r.Context())
+				if dbDuration > time.Second {
+					logger.Warn().Func(commonFields).Msgf("Long db duration: %v", dbDuration)
+				}
 				event := logger.
 					Info().
 					Func(commonFields).
 					Int("status", status).
 					TimeDiff("duration", time.Now(), t1).
-					Dur("db_duration", pgw.DbDuration(r.Context()))
+					Dur("db_duration", dbDuration)
 				if isCsrfError {
 					event = event.Str("omitted_error", csrfValidationFailed.Error())
 				}
