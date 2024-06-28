@@ -229,6 +229,7 @@ func runServer(port int) {
 	staticR.Use(frmiddleware.DefaultHeaders)
 	staticR.Use(frmiddleware.RedirectHttpToHttps)
 	staticR.Use(middleware.GetHead)
+	staticR.Use(middleware.RedirectSlashes)
 	staticR.Use(frmiddleware.DB)
 
 	staticR.Group(func(r chi.Router) {
