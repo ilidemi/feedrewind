@@ -30,7 +30,7 @@ import (
 )
 
 //go:generate go run cmd/timezones/main.go
-//go:generate go run third_party/tzdata/generate_zipdata.go
+//go:generate go run third_party/tzdata/date_zipdata.go
 
 func main() {
 	rootCmd := &cobra.Command{
