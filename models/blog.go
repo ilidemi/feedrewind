@@ -623,10 +623,44 @@ func Blog_InitCrawled(
 	}
 
 	_, err = tx.Exec(`
-			update blogs set url = $1, status = $2 where id = $3
-		`, url, BlogStatusCrawledVoting, blogId)
+		update blogs set url = $1, status = $2 where id = $3
+	`, url, BlogStatusCrawledVoting, blogId)
 	if err != nil {
 		return updatedAt, err
+	}
+
+	var sb strings.Builder
+	sb.WriteString("('")
+	isFirst := true
+	for status := range BlogCrawledStatuses {
+		if !isFirst {
+			sb.WriteString("','")
+		}
+		isFirst = false
+		sb.WriteString(string(status))
+	}
+	sb.WriteString("')")
+	row = tx.QueryRow(`
+		select count(1) from blog_posts
+		where blog_id = (
+			select id from blogs
+			where feed_url = (select feed_url from blogs where id = $1) and
+				version != $2 and
+				status in `+sb.String()+`
+			order by version desc
+			limit 1
+		)
+	`, blogId, BlogLatestVersion)
+	var prevPostsCount int
+	err = row.Scan(&prevPostsCount)
+	if err != nil {
+		return updatedAt, err
+	}
+	if len(crawledBlogPosts) < prevPostsCount {
+		tx.Logger().Warn().Msgf(
+			"Blog %d has fewer posts after recrawling: %d -> %d",
+			blogId, prevPostsCount, len(crawledBlogPosts),
+		)
 	}
 
 	row = tx.QueryRow(`select updated_at from blogs where id = $1`, blogId)
