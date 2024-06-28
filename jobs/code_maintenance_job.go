@@ -10,6 +10,7 @@ import (
 	"feedrewind/util"
 	"feedrewind/util/schedule"
 	"os"
+	"os/exec"
 	"time"
 )
 
@@ -48,7 +49,11 @@ func CodeMaintenanceJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 
 	if config.Cfg.IsHeroku {
 		chromeDateCutoff := utcNow.AddDate(0, -2, 0)
-		chromeFileInfo, err := os.Stat("chrome")
+		chromePath, err := exec.LookPath("chrome")
+		if err != nil {
+			return oops.Wrap(err)
+		}
+		chromeFileInfo, err := os.Stat(chromePath)
 		if err != nil {
 			return oops.Wrap(err)
 		}
