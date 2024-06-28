@@ -48,7 +48,7 @@ func CodeMaintenanceJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	}
 
 	if config.Cfg.IsHeroku {
-		chromeDateCutoff := utcNow.AddDate(0, -2, 0)
+		chromeDateCutoff := utcNow.AddDate(0, -2, 0).Format("2006-01-02")
 		chromePath, err := exec.LookPath("chrome")
 		if err != nil {
 			return oops.Wrap(err)
@@ -57,10 +57,11 @@ func CodeMaintenanceJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		if err != nil {
 			return oops.Wrap(err)
 		}
-		if chromeFileInfo.ModTime().Before(time.Time(chromeDateCutoff)) {
-			logger.Warn().Msgf("chrome is from %s, please update", chromeFileInfo.ModTime())
+		chromeModDate := chromeFileInfo.ModTime().Format("2006-01-02")
+		if chromeModDate < chromeDateCutoff {
+			logger.Warn().Msgf("chrome is from %s, please update", chromeModDate)
 		} else {
-			logger.Info().Msgf("chrome is from %s, still fresh", chromeFileInfo.ModTime())
+			logger.Info().Msgf("chrome is from %s, still fresh", chromeModDate)
 		}
 	}
 
