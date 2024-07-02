@@ -335,7 +335,7 @@ func runServer(port int) {
 		anonR.Get("/feeds/single/{id}", routes.Rss_UserFeed)
 		anonR.Get("/feeds/{id}", routes.Rss_SubscriptionFeed)
 
-		anonR.Get("/posts/{slug}/{random_id:[A-Za-z0-9_-]+}/", routes.Posts_Post)
+		anonR.Get("/posts/{slug}/{random_id:[A-Za-z0-9_-]+}", routes.Posts_Post)
 
 		anonR.Post("/postmark/report_bounce", routes.Webhooks_PostmarkReportBounce)
 		anonR.Post("/stripe/webhook", routes.Webhooks_Stripe)
