@@ -13,38 +13,41 @@ import (
 )
 
 func init() {
-	registerJobNameFunc("EmailFinalItemJob", func(ctx context.Context, conn *pgw.Conn, args []any) error {
-		if len(args) != 3 {
-			return oops.Newf("Expected 3 args, got %d: %v", len(args), args)
-		}
-
-		userIdInt64, ok := args[0].(int64)
-		if !ok {
-			userIdInt, ok := args[0].(int)
-			if !ok {
-				return oops.Newf("Failed to parse userId (expected int64 or int): %v", args[0])
+	registerJobNameFunc(
+		"EmailFinalItemJob",
+		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+			if len(args) != 3 {
+				return oops.Newf("Expected 3 args, got %d: %v", len(args), args)
 			}
-			userIdInt64 = int64(userIdInt)
-		}
-		userId := models.UserId(userIdInt64)
 
-		subscriptionIdInt64, ok := args[1].(int64)
-		if !ok {
-			subscriptionIdInt, ok := args[1].(int)
+			userIdInt64, ok := args[0].(int64)
 			if !ok {
-				return oops.Newf("Failed to parse subscriptionId (expected int64 or int): %v", args[1])
+				userIdInt, ok := args[0].(int)
+				if !ok {
+					return oops.Newf("Failed to parse userId (expected int64 or int): %v", args[0])
+				}
+				userIdInt64 = int64(userIdInt)
 			}
-			subscriptionIdInt64 = int64(subscriptionIdInt)
-		}
-		subscriptionId := models.SubscriptionId(subscriptionIdInt64)
+			userId := models.UserId(userIdInt64)
 
-		scheduledFor, ok := args[2].(string)
-		if !ok {
-			return oops.Newf("Failed to parse scheduledFor (expected string): %v", args[2])
-		}
+			subscriptionIdInt64, ok := args[1].(int64)
+			if !ok {
+				subscriptionIdInt, ok := args[1].(int)
+				if !ok {
+					return oops.Newf("Failed to parse subscriptionId (expected int64 or int): %v", args[1])
+				}
+				subscriptionIdInt64 = int64(subscriptionIdInt)
+			}
+			subscriptionId := models.SubscriptionId(subscriptionIdInt64)
 
-		return EmailFinalItemJob_Perform(ctx, conn, userId, subscriptionId, scheduledFor)
-	})
+			scheduledFor, ok := args[2].(string)
+			if !ok {
+				return oops.Newf("Failed to parse scheduledFor (expected string): %v", args[2])
+			}
+
+			return EmailFinalItemJob_Perform(ctx, conn, userId, subscriptionId, scheduledFor)
+		},
+	)
 }
 
 func EmailFinalItemJob_PerformAt(

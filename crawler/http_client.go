@@ -34,18 +34,33 @@ type HttpClient interface {
 	GetRetryDelay(attemptsMade int) float64
 }
 
+type CancellationFunc func() error
+
 type HttpClientImpl struct {
-	Context          context.Context
+	CancellationFunc CancellationFunc
 	EnableThrottling bool
 	PrevTimestamp    time.Time
 	Client           *http.Client
 }
 
-func NewHttpClientImpl(ctx context.Context, enableThrottling bool) *HttpClientImpl {
+func NewHttpClientImplFunc(cancellationFunc CancellationFunc, enableThrottling bool) *HttpClientImpl {
 	var client http.Client
 	client.Timeout = time.Minute
 	return &HttpClientImpl{
-		Context:          ctx,
+		CancellationFunc: cancellationFunc,
+		EnableThrottling: enableThrottling,
+		PrevTimestamp:    time.Time{},
+		Client:           &client,
+	}
+}
+
+func NewHttpClientImplCtx(ctx context.Context, enableThrottling bool) *HttpClientImpl {
+	var client http.Client
+	client.Timeout = time.Minute
+	return &HttpClientImpl{
+		CancellationFunc: func() error {
+			return ctx.Err()
+		},
 		EnableThrottling: enableThrottling,
 		PrevTimestamp:    time.Time{},
 		Client:           &client,
@@ -58,7 +73,7 @@ const codeSSLError = "SSLError"
 const codeResponseBodyTooBig = "ResponseBodyTooBig"
 
 func (c *HttpClientImpl) Request(uri *url.URL, shouldThrottle bool, logger Logger) (*HttpResponse, error) {
-	if err := c.Context.Err(); err != nil {
+	if err := c.CancellationFunc(); err != nil {
 		return nil, err
 	}
 

@@ -15,18 +15,21 @@ import (
 )
 
 func init() {
-	registerJobNameFunc("NotifySlackJob", func(ctx context.Context, conn *pgw.Conn, args []any) error {
-		if len(args) != 1 {
-			return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)
-		}
+	registerJobNameFunc(
+		"NotifySlackJob",
+		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+			if len(args) != 1 {
+				return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)
+			}
 
-		text, ok := args[0].(string)
-		if !ok {
-			return oops.Newf("Failed to parse text (expected string): %v", args[0])
-		}
+			text, ok := args[0].(string)
+			if !ok {
+				return oops.Newf("Failed to parse text (expected string): %v", args[0])
+			}
 
-		return NotifySlackJob_Perform(ctx, conn, text)
-	})
+			return NotifySlackJob_Perform(ctx, conn, text)
+		},
+	)
 }
 
 func NotifySlackJob_PerformNow(tx pgw.Queryable, text string) error {

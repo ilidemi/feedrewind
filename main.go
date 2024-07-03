@@ -306,6 +306,7 @@ func runServer(port int) {
 			admin.Post("/admin/post_blog", routes.Admin_PostBlog)
 
 			admin.Get("/admin/dashboard", routes.Admin_Dashboard)
+			admin.Post("/admin/job/{id:\\d+}/delete", routes.Admin_DeleteJob)
 		})
 
 		if config.Cfg.Env.IsDevOrTest() {

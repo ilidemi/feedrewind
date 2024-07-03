@@ -23,6 +23,7 @@ require (
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
+	github.com/stripe/stripe-go/v78 v78.2.0
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	golang.org/x/crypto v0.14.0
 	golang.org/x/net v0.17.0
@@ -48,7 +49,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stripe/stripe-go/v78 v78.2.0 // indirect
 	github.com/ysmood/fetchup v0.2.3 // indirect
 	github.com/ysmood/goob v0.4.0 // indirect
 	github.com/ysmood/got v0.38.1 // indirect

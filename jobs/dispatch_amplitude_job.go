@@ -17,22 +17,25 @@ import (
 )
 
 func init() {
-	registerJobNameFunc("DispatchAmplitudeJob", func(ctx context.Context, conn *pgw.Conn, args []any) error {
-		if len(args) > 1 {
-			return oops.Newf("Expected 0 or 1 arg, got %d: %v", len(args), args)
-		}
-
-		isManual := false
-		if len(args) == 1 {
-			var ok bool
-			isManual, ok = args[0].(bool)
-			if !ok {
-				return oops.Newf("Failed to parse isManual (expected boolean): %v", args[0])
+	registerJobNameFunc(
+		"DispatchAmplitudeJob",
+		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+			if len(args) > 1 {
+				return oops.Newf("Expected 0 or 1 arg, got %d: %v", len(args), args)
 			}
-		}
 
-		return DispatchAmplitudeJob_Perform(ctx, conn, isManual)
-	})
+			isManual := false
+			if len(args) == 1 {
+				var ok bool
+				isManual, ok = args[0].(bool)
+				if !ok {
+					return oops.Newf("Failed to parse isManual (expected boolean): %v", args[0])
+				}
+			}
+
+			return DispatchAmplitudeJob_Perform(ctx, conn, isManual)
+		},
+	)
 }
 
 func DispatchAmplitudeJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {

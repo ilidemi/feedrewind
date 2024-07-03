@@ -18,43 +18,46 @@ import (
 )
 
 func init() {
-	registerJobNameFunc("PublishPostsJob", func(ctx context.Context, conn *pgw.Conn, args []any) error {
-		if len(args) != 3 && len(args) != 4 {
-			return oops.Newf("Expected 3 or 4 args, got %d: %v", len(args), args)
-		}
-
-		userIdInt64, ok := args[0].(int64)
-		if !ok {
-			userIdInt, ok := args[0].(int)
-			if !ok {
-				return oops.Newf("Failed to parse userId (expected int64 or int): %v", args[0])
+	registerJobNameFunc(
+		"PublishPostsJob",
+		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+			if len(args) != 3 && len(args) != 4 {
+				return oops.Newf("Expected 3 or 4 args, got %d: %v", len(args), args)
 			}
-			userIdInt64 = int64(userIdInt)
-		}
-		userId := models.UserId(userIdInt64)
 
-		dateStr, ok := args[1].(string)
-		if !ok {
-			return oops.Newf("Failed to parse date (expected string): %v", args[1])
-		}
-		date := schedule.Date(dateStr)
-
-		scheduledForStr, ok := args[2].(string)
-		if !ok {
-			return oops.Newf("Failed to parse scheduledForStr (expected string): %v", args[2])
-		}
-
-		isManual := false
-		if len(args) == 4 {
-			var ok bool
-			isManual, ok = args[3].(bool)
+			userIdInt64, ok := args[0].(int64)
 			if !ok {
-				return oops.Newf("Failed to parse isManual (expected boolean): %v", args[3])
+				userIdInt, ok := args[0].(int)
+				if !ok {
+					return oops.Newf("Failed to parse userId (expected int64 or int): %v", args[0])
+				}
+				userIdInt64 = int64(userIdInt)
 			}
-		}
+			userId := models.UserId(userIdInt64)
 
-		return PublishPostsJob_Perform(ctx, conn, userId, date, scheduledForStr, isManual)
-	})
+			dateStr, ok := args[1].(string)
+			if !ok {
+				return oops.Newf("Failed to parse date (expected string): %v", args[1])
+			}
+			date := schedule.Date(dateStr)
+
+			scheduledForStr, ok := args[2].(string)
+			if !ok {
+				return oops.Newf("Failed to parse scheduledForStr (expected string): %v", args[2])
+			}
+
+			isManual := false
+			if len(args) == 4 {
+				var ok bool
+				isManual, ok = args[3].(bool)
+				if !ok {
+					return oops.Newf("Failed to parse isManual (expected boolean): %v", args[3])
+				}
+			}
+
+			return PublishPostsJob_Perform(ctx, conn, userId, date, scheduledForStr, isManual)
+		},
+	)
 }
 
 func PublishPostsJob_PerformAt(

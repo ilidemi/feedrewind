@@ -19,8 +19,9 @@ import (
 )
 
 func init() {
-	registerJobNameFunc("RefreshSuggestionsJob",
-		func(ctx context.Context, conn *pgw.Conn, args []any) error {
+	registerJobNameFunc(
+		"RefreshSuggestionsJob",
+		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
 			if len(args) != 0 {
 				return oops.Newf("Expected 0 args, got %d: %v", len(args), args)
 			}
@@ -86,7 +87,7 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	}
 	slices.Sort(feedUrls)
 
-	httpClient := crawler.NewHttpClientImpl(ctx, false)
+	httpClient := crawler.NewHttpClientImplCtx(ctx, false)
 feeds:
 	for _, feedUrl := range feedUrls {
 		if err := ctx.Err(); err != nil {

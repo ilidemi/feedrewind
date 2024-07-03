@@ -13,19 +13,22 @@ import (
 )
 
 func init() {
-	registerJobNameFunc("RetryBouncedEmailJob", func(ctx context.Context, conn *pgw.Conn, args []any) error {
-		if len(args) != 1 {
-			return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)
-		}
+	registerJobNameFunc(
+		"RetryBouncedEmailJob",
+		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+			if len(args) != 1 {
+				return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)
+			}
 
-		messageIdStr, ok := args[0].(string)
-		if !ok {
-			return oops.Newf("Failed to parse messageId (expected string): %v", args[0])
-		}
-		messageId := models.PostmarkMessageId(messageIdStr)
+			messageIdStr, ok := args[0].(string)
+			if !ok {
+				return oops.Newf("Failed to parse messageId (expected string): %v", args[0])
+			}
+			messageId := models.PostmarkMessageId(messageIdStr)
 
-		return RetryBouncedEmailJob_Perform(ctx, conn, messageId)
-	})
+			return RetryBouncedEmailJob_Perform(ctx, conn, messageId)
+		},
+	)
 }
 
 func RetryBouncedEmailJob_PerformAt(

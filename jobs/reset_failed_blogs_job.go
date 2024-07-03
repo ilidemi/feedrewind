@@ -11,18 +11,21 @@ import (
 )
 
 func init() {
-	registerJobNameFunc("ResetFailedBlogsJob", func(ctx context.Context, conn *pgw.Conn, args []any) error {
-		if len(args) != 1 {
-			return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)
-		}
+	registerJobNameFunc(
+		"ResetFailedBlogsJob",
+		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+			if len(args) != 1 {
+				return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)
+			}
 
-		enqueueNext, ok := args[0].(bool)
-		if !ok {
-			return oops.Newf("Failed to parse enqueueNext (expected boolean): %v", args[0])
-		}
+			enqueueNext, ok := args[0].(bool)
+			if !ok {
+				return oops.Newf("Failed to parse enqueueNext (expected boolean): %v", args[0])
+			}
 
-		return ResetFailedBlogsJob_Perform(ctx, conn, enqueueNext)
-	})
+			return ResetFailedBlogsJob_Perform(ctx, conn, enqueueNext)
+		},
+	)
 }
 
 func ResetFailedBlogsJob_PerformNow(tx pgw.Queryable, enqueueNext bool) error {

@@ -14,55 +14,58 @@ import (
 )
 
 func init() {
-	registerJobNameFunc("EmailPostsJob", func(ctx context.Context, conn *pgw.Conn, args []any) error {
-		if len(args) != 4 {
-			return oops.Newf("Expected 4 args, got %d: %v", len(args), args)
-		}
-
-		userIdInt64, ok := args[0].(int64)
-		if !ok {
-			userIdInt, ok := args[0].(int)
-			if !ok {
-				return oops.Newf("Failed to parse userId (expected int64 or int): %v", args[0])
+	registerJobNameFunc(
+		"EmailPostsJob",
+		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+			if len(args) != 4 {
+				return oops.Newf("Expected 4 args, got %d: %v", len(args), args)
 			}
-			userIdInt64 = int64(userIdInt)
-		}
-		userId := models.UserId(userIdInt64)
 
-		dateStr, ok := args[1].(string)
-		if !ok {
-			return oops.Newf("Failed to parse date (expected string): %v", args[1])
-		}
-		date := schedule.Date(dateStr)
-
-		scheduledFor, ok := args[2].(string)
-		if !ok {
-			return oops.Newf("Failed to parse scheduledFor (expected string): %v", args[2])
-		}
-
-		finalItemSubscriptionIdsAny, ok := args[3].([]any)
-		if !ok {
-			return oops.Newf("Failed to parse finalItemSubscriptionIds (expected a slice): %v", args[3])
-		}
-		var finalItemSubscriptionIds []models.SubscriptionId
-		for i, subIdAny := range finalItemSubscriptionIdsAny {
-			subscriptionIdInt64, ok := subIdAny.(int64)
+			userIdInt64, ok := args[0].(int64)
 			if !ok {
-				subscriptionIdInt, ok := subIdAny.(int)
+				userIdInt, ok := args[0].(int)
 				if !ok {
-					return oops.Newf(
-						"Failed to parse finalItemSubscriptionIds[%d] (expected int64 or int): %v",
-						i, subIdAny,
-					)
+					return oops.Newf("Failed to parse userId (expected int64 or int): %v", args[0])
 				}
-				subscriptionIdInt64 = int64(subscriptionIdInt)
+				userIdInt64 = int64(userIdInt)
 			}
-			finalItemSubscriptionIds =
-				append(finalItemSubscriptionIds, models.SubscriptionId(subscriptionIdInt64))
-		}
+			userId := models.UserId(userIdInt64)
 
-		return EmailPostsJob_Perform(ctx, conn, userId, date, scheduledFor, finalItemSubscriptionIds)
-	})
+			dateStr, ok := args[1].(string)
+			if !ok {
+				return oops.Newf("Failed to parse date (expected string): %v", args[1])
+			}
+			date := schedule.Date(dateStr)
+
+			scheduledFor, ok := args[2].(string)
+			if !ok {
+				return oops.Newf("Failed to parse scheduledFor (expected string): %v", args[2])
+			}
+
+			finalItemSubscriptionIdsAny, ok := args[3].([]any)
+			if !ok {
+				return oops.Newf("Failed to parse finalItemSubscriptionIds (expected a slice): %v", args[3])
+			}
+			var finalItemSubscriptionIds []models.SubscriptionId
+			for i, subIdAny := range finalItemSubscriptionIdsAny {
+				subscriptionIdInt64, ok := subIdAny.(int64)
+				if !ok {
+					subscriptionIdInt, ok := subIdAny.(int)
+					if !ok {
+						return oops.Newf(
+							"Failed to parse finalItemSubscriptionIds[%d] (expected int64 or int): %v",
+							i, subIdAny,
+						)
+					}
+					subscriptionIdInt64 = int64(subscriptionIdInt)
+				}
+				finalItemSubscriptionIds =
+					append(finalItemSubscriptionIds, models.SubscriptionId(subscriptionIdInt64))
+			}
+
+			return EmailPostsJob_Perform(ctx, conn, userId, date, scheduledFor, finalItemSubscriptionIds)
+		},
+	)
 
 	publish.EmailPostsJob_PerformNowFunc = EmailPostsJob_PerformNow
 }
