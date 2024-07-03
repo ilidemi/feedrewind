@@ -1,8 +1,10 @@
 package routes
 
 import (
+	"cmp"
 	"feedrewind/crawler"
 	"feedrewind/db/pgw"
+	"feedrewind/jobs"
 	"feedrewind/models"
 	"feedrewind/models/mutil"
 	"feedrewind/oops"
@@ -17,7 +19,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 )
 
 func Admin_AddBlog(w http.ResponseWriter, r *http.Request) {
@@ -157,7 +161,7 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 		var discardedFromFeedEntryUrls []string
 		var missingFromFeedEntryUrls []string
 		if util.EnsureParamStr(r, "skip_feed_validation") != "1" {
-			httpClient := crawler.NewHttpClientImpl(r.Context(), false)
+			httpClient := crawler.NewHttpClientImplCtx(r.Context(), false)
 			progressLogger := crawler.NewMockProgressLogger(&zlogger)
 			crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
 			feedResult := crawler.FetchFeedAtUrl(feedUrl, false, &crawlCtx, &zlogger)
@@ -442,6 +446,296 @@ func admin_ParseUrlsLabels(text string) ([]urlLabel, error) {
 
 func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 	conn := rutil.DBConn(r)
+
+	type JobItem struct {
+		IsName                bool
+		Name                  string
+		Id                    int64
+		NegativeStartPercent  float64
+		NegativeLengthPercent float64
+		PositiveStartPercent  float64
+		PositiveLengthPercent float64
+		NegativeValue         float64
+		PositiveValue         float64
+		NegativeValueStr      string
+		PositiveValueStr      string
+		Hover                 string
+		ShowDeleteButton      bool
+		DeletePath            string
+	}
+	type JobTick struct {
+		Percent float64
+		Label   string
+		IsZero  bool
+	}
+	row := conn.QueryRow(`
+		select
+			max(utc_now() - locked_at),
+			max(utc_now() - run_at),
+			sum((locked_at is not null)::int),
+			sum((utc_now() > run_at)::int),
+			count(1)
+		from delayed_jobs
+	`)
+	var maybeMaxRunning, maybeMaxWaiting *time.Duration
+	var jobsRunning, jobsWaiting, jobsScheduled int
+	err := row.Scan(&maybeMaxRunning, &maybeMaxWaiting, &jobsRunning, &jobsWaiting, &jobsScheduled)
+	if err != nil {
+		panic(err)
+	}
+	var jobItems []JobItem
+	var jobTicks []JobTick
+	if maybeMaxRunning != nil || maybeMaxWaiting != nil {
+		var maxRunning float64
+		if maybeMaxRunning != nil {
+			maxRunning = maybeMaxRunning.Seconds()
+		}
+		var maxWaiting float64
+		if maybeMaxWaiting != nil {
+			maxWaiting = maybeMaxWaiting.Seconds()
+		}
+		maxDuration := maxRunning
+		if maxWaiting > maxDuration {
+			maxDuration = maxWaiting
+		}
+		var scaleMax float64
+		maxDuration10 := math.Pow10(int(math.Ceil(math.Log10(maxDuration))))
+		switch {
+		case maxDuration10/maxDuration >= 5:
+			scaleMax = maxDuration10 / 5
+		case maxDuration10/maxDuration >= 2:
+			scaleMax = maxDuration10 / 2
+		default:
+			scaleMax = maxDuration10
+		}
+		smallerSide := maxWaiting
+		if maxRunning < maxWaiting {
+			smallerSide = maxRunning
+		}
+		var smallerSideTicks int
+		var smallerSideScale float64
+		switch {
+		case smallerSide == 0:
+			smallerSideScale = 0
+			smallerSideTicks = 0
+		case scaleMax/smallerSide >= 5:
+			smallerSideScale = scaleMax / 5
+			smallerSideTicks = 2
+		case scaleMax/smallerSide >= 2:
+			smallerSideScale = scaleMax / 2
+			smallerSideTicks = 5
+		default:
+			smallerSideScale = scaleMax
+			smallerSideTicks = 10
+		}
+
+		twoSideScale := smallerSideScale + scaleMax
+		var tickCount = 11 + smallerSideTicks
+		minTick, maxTick := -smallerSideScale, scaleMax
+		zeroPercent := smallerSideScale * 100 / twoSideScale
+		zeroTick := smallerSideTicks
+		if maxWaiting > maxRunning {
+			minTick, maxTick = -scaleMax, smallerSideScale
+			zeroPercent = scaleMax * 100 / twoSideScale
+			zeroTick = 10
+		}
+		for i := range tickCount {
+			fraction := float64(i) / float64(tickCount-1)
+			value := maxTick*fraction + minTick*(1.0-fraction)
+			jobTicks = append(jobTicks, JobTick{
+				Percent: fraction * 100,
+				Label:   fmt.Sprintf("%.0f", value),
+				IsZero:  i == zeroTick,
+			})
+		}
+
+		type JobRow struct {
+			Id            int64
+			Handler       string
+			RunAt         time.Time
+			Attempts      int
+			MaybeLockedAt *time.Time
+			MaybeLockedBy *string
+			UtcNow        time.Time
+		}
+		rows, err := conn.Query(`
+			select id, handler, run_at, attempts, locked_at, locked_by, utc_now() from delayed_jobs
+			where locked_at is not null or run_at < utc_now()
+		`)
+		if err != nil {
+			panic(err)
+		}
+		var jobRows []JobRow
+		for rows.Next() {
+			var r JobRow
+			err := rows.Scan(
+				&r.Id, &r.Handler, &r.RunAt, &r.Attempts, &r.MaybeLockedAt, &r.MaybeLockedBy, &r.UtcNow,
+			)
+			if err != nil {
+				panic(err)
+			}
+			jobRows = append(jobRows, r)
+		}
+		if err := rows.Err(); err != nil {
+			panic(err)
+		}
+		for _, jobRow := range jobRows {
+			var handler jobs.Handler
+			err = yaml.Unmarshal([]byte(jobRow.Handler), &handler)
+			if err != nil {
+				panic(err)
+			}
+
+			name := handler.Job_Data.Job_Class
+			waitingTime := jobRow.UtcNow.Sub(jobRow.RunAt)
+			var runningTime time.Duration
+			positiveValue := 0.0
+			positiveLengthPercent := 0.0
+			positiveStartPercent := zeroPercent
+			const minLengthPercent = 5
+			if jobRow.MaybeLockedAt != nil {
+				waitingTime = jobRow.MaybeLockedAt.Sub(jobRow.RunAt)
+				runningTime = jobRow.UtcNow.Sub(*jobRow.MaybeLockedAt)
+				positiveValue = runningTime.Seconds()
+				positiveLengthPercent = positiveValue * 100 / twoSideScale
+				if positiveLengthPercent < minLengthPercent {
+					positiveLengthPercent = minLengthPercent
+				}
+
+			}
+			negativeValue := waitingTime.Seconds()
+			negativeLengthPercent := negativeValue * 100 / twoSideScale
+			negativeStartPercent := zeroPercent - negativeLengthPercent
+			if negativeLengthPercent < minLengthPercent {
+				negativeStartPercent -= (minLengthPercent - negativeLengthPercent)
+				negativeLengthPercent = minLengthPercent
+			}
+
+			var hover strings.Builder
+			fmt.Fprintf(&hover, "%s\n", name)
+			fmt.Fprintf(&hover, "waiting time: %v\n", waitingTime)
+			if runningTime > 0 {
+				fmt.Fprintf(&hover, "running time: %v\n", runningTime)
+			}
+			if jobRow.MaybeLockedBy != nil {
+				fmt.Fprintf(&hover, "locked by: %s\n", *jobRow.MaybeLockedBy)
+			}
+			if name == "GuidedCrawlingJob" {
+				blogId, ok := handler.Job_Data.Arguments[0].(int64)
+				if !ok {
+					blogIdInt, ok := handler.Job_Data.Arguments[0].(int)
+					if !ok {
+						panic(oops.Newf(
+							"Failed to parse blogId (expected int64 or int): %v",
+							handler.Job_Data.Arguments[0],
+						))
+					}
+					blogId = int64(blogIdInt)
+				}
+				row := conn.QueryRow(`select feed_url from blogs where id = $1`, blogId)
+				var feedUrl string
+				err := row.Scan(&feedUrl)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Fprintf(&hover, "feed url: %s\n", feedUrl)
+			}
+			if jobRow.Attempts > 0 {
+				fmt.Fprintf(&hover, "attempts: %d\n", jobRow.Attempts)
+			}
+			fmt.Fprintf(&hover, "id: %d\n", jobRow.Id)
+			fmt.Fprintf(&hover, "\n%s", jobRow.Handler)
+
+			jobItems = append(jobItems, JobItem{
+				IsName:                false,
+				Name:                  name,
+				Id:                    jobRow.Id,
+				NegativeStartPercent:  negativeStartPercent,
+				NegativeLengthPercent: negativeLengthPercent,
+				PositiveStartPercent:  positiveStartPercent,
+				PositiveLengthPercent: positiveLengthPercent,
+				NegativeValue:         negativeValue,
+				PositiveValue:         positiveValue,
+				NegativeValueStr:      fmt.Sprintf("%.1f", negativeValue),
+				PositiveValueStr:      fmt.Sprintf("%.1f", positiveValue),
+				Hover:                 hover.String(),
+				ShowDeleteButton:      name == "GuidedCrawlingJob",
+				DeletePath:            fmt.Sprintf("/admin/job/%d/delete", jobRow.Id),
+			})
+		}
+
+		type NameSortKey struct {
+			MaxPositiveValue float64
+			MaxNegativeValue float64
+			MinId            int64
+		}
+		sortKeysByName := map[string]*NameSortKey{}
+		for _, jobItem := range jobItems {
+			if _, ok := sortKeysByName[jobItem.Name]; !ok {
+				sortKeysByName[jobItem.Name] = &NameSortKey{
+					MaxPositiveValue: 0,
+					MaxNegativeValue: 0,
+					MinId:            math.MaxInt64,
+				}
+			}
+			sortKey := sortKeysByName[jobItem.Name]
+			sortKey.MaxPositiveValue = max(sortKey.MaxPositiveValue, jobItem.PositiveValue)
+			sortKey.MaxNegativeValue = max(sortKey.MaxNegativeValue, jobItem.NegativeValue)
+			sortKey.MinId = max(sortKey.MinId, jobItem.Id)
+		}
+		slices.SortFunc(jobItems, func(a, b JobItem) int {
+			// Name
+			sortKeyA := sortKeysByName[a.Name]
+			sortKeyB := sortKeysByName[b.Name]
+			if n := cmp.Compare(sortKeyA.MaxPositiveValue, sortKeyB.MaxPositiveValue); n != 0 {
+				return -n
+			}
+			if n := cmp.Compare(sortKeyA.MaxNegativeValue, sortKeyB.MaxNegativeValue); n != 0 {
+				return -n
+			}
+			if n := cmp.Compare(sortKeyA.MinId, sortKeyB.MinId); n != 0 {
+				return n
+			}
+			// Running time descending
+			if n := cmp.Compare(a.PositiveValue, b.PositiveValue); n != 0 {
+				return -n
+			}
+			// Waiting time descending
+			if n := cmp.Compare(a.NegativeValue, b.NegativeValue); n != 0 {
+				return -n
+			}
+			// id
+			return cmp.Compare(a.Id, b.Id)
+		})
+
+		itemIdx := 0
+		lastName := ""
+		for itemIdx < len(jobItems) {
+			jobItem := jobItems[itemIdx]
+			if jobItem.Name != lastName {
+				jobItems = slices.Insert(jobItems, itemIdx, JobItem{
+					IsName:                true,
+					Name:                  jobItem.Name,
+					Id:                    0,
+					NegativeStartPercent:  0,
+					NegativeLengthPercent: 0,
+					PositiveStartPercent:  0,
+					PositiveLengthPercent: 0,
+					NegativeValue:         0,
+					PositiveValue:         0,
+					NegativeValueStr:      "",
+					PositiveValueStr:      "",
+					Hover:                 "",
+					ShowDeleteButton:      false,
+					DeletePath:            "",
+				})
+				lastName = jobItem.Name
+				itemIdx++
+			}
+			itemIdx++
+		}
+	}
+
 	type AdminTelemetry struct {
 		Key       string
 		Value     float64
@@ -601,13 +895,105 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Result struct {
-		Title      string
-		Session    *util.Session
-		Dashboards []Dashboard
+		Title         string
+		Session       *util.Session
+		JobItems      []JobItem
+		JobTicks      []JobTick
+		JobsRunning   int
+		JobsWaiting   int
+		JobsScheduled int
+		Dashboards    []Dashboard
 	}
 	templates.MustWrite(w, "admin/dashboard", Result{
-		Title:      "Dashboard",
-		Session:    rutil.Session(r),
-		Dashboards: dashboards,
+		Title:         "Dashboard",
+		Session:       rutil.Session(r),
+		JobItems:      jobItems,
+		JobTicks:      jobTicks,
+		JobsRunning:   jobsRunning,
+		JobsWaiting:   jobsWaiting,
+		JobsScheduled: jobsScheduled,
+		Dashboards:    dashboards,
 	})
+}
+
+func Admin_DeleteJob(w http.ResponseWriter, r *http.Request) {
+	conn := rutil.DBConn(r)
+	logger := rutil.Logger(r)
+	session := rutil.Session(r)
+	jobId, ok := util.URLParamInt64(r, "id")
+	if !ok {
+		panic(oops.Newf("Bad job id: %d", jobId))
+	}
+	type Result struct {
+		Title   string
+		Session *util.Session
+		Message string
+	}
+	result, err := util.TxReturn(conn, func(tx *pgw.Tx, conn util.Clobber) (*Result, error) {
+		row := tx.QueryRow(`select handler from delayed_jobs where id = $1`, jobId)
+		var handlerStr string
+		err := row.Scan(&handlerStr)
+		if errors.Is(err, pgx.ErrNoRows) {
+			logger.Info().Msgf("Job already deleted")
+			return &Result{
+				Title:   "Job already deleted",
+				Session: session,
+				Message: fmt.Sprintf("Job %d is already deleted", jobId),
+			}, nil
+		} else if err != nil {
+			return nil, err
+		}
+
+		var handler jobs.Handler
+		err = yaml.Unmarshal([]byte(handlerStr), &handler)
+		if err != nil {
+			return nil, err
+		}
+
+		if handler.Job_Data.Job_Class != "GuidedCrawlingJob" {
+			return nil, oops.New("Can only delete GuidedCrawlingJobs")
+		}
+
+		_, err = tx.Exec(`delete from delayed_jobs where id = $1`, jobId)
+		if err != nil {
+			return nil, err
+		}
+		logger.Info().Msgf("Deleted job %d", jobId)
+
+		var blogId models.BlogId
+		blogIdInt64, ok := handler.Job_Data.Arguments[0].(int64)
+		if !ok {
+			blogIdInt, ok := handler.Job_Data.Arguments[0].(int)
+			if !ok {
+				return nil, oops.Newf(
+					"Failed to parse blogId (expected int64 or int): %v",
+					handler.Job_Data.Arguments[0],
+				)
+			}
+			blogId = models.BlogId(blogIdInt)
+		} else {
+			blogId = models.BlogId(blogIdInt64)
+		}
+		_, err = tx.Exec(`update blogs set status = $1 where id = $2`, models.BlogStatusCrawlFailed, blogId)
+		if err != nil {
+			return nil, err
+		}
+
+		discoveryChannelName := jobs.DiscoveryChannelName(blogId)
+		_, err = tx.Exec(`select pg_notify($1, '{"done": true}')`, discoveryChannelName)
+		if err != nil {
+			return nil, err
+		}
+
+		return &Result{
+			Title:   "Job deleted",
+			Session: session,
+			Message: fmt.Sprintf("Deleted job %d, marked blog %d as crawl failed", jobId, blogId),
+		}, nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	templates.MustWrite(w, "admin/delete_job", *result)
 }

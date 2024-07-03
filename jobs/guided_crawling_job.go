@@ -17,28 +17,30 @@ import (
 )
 
 func init() {
-	registerJobNameFunc("GuidedCrawlingJob", func(ctx context.Context, conn *pgw.Conn, args []any) error {
-		if len(args) != 2 {
-			return oops.Newf("Expected 2 args, got %d: %v", len(args), args)
-		}
-
-		blogIdInt64, ok := args[0].(int64)
-		if !ok {
-			blogIdInt, ok := args[0].(int)
-			if !ok {
-				return oops.Newf("Failed to parse blogId (expected int64 or int): %v", args[0])
+	registerJobNameFunc("GuidedCrawlingJob",
+		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+			if len(args) != 2 {
+				return oops.Newf("Expected 2 args, got %d: %v", len(args), args)
 			}
-			blogIdInt64 = int64(blogIdInt)
-		}
-		blogId := models.BlogId(blogIdInt64)
 
-		argsJson, ok := args[1].(string)
-		if !ok {
-			return oops.Newf("Failed to parse args (expected string): %v", args[1])
-		}
+			blogIdInt64, ok := args[0].(int64)
+			if !ok {
+				blogIdInt, ok := args[0].(int)
+				if !ok {
+					return oops.Newf("Failed to parse blogId (expected int64 or int): %v", args[0])
+				}
+				blogIdInt64 = int64(blogIdInt)
+			}
+			blogId := models.BlogId(blogIdInt64)
 
-		return GuidedCrawlingJob_Perform(ctx, conn, blogId, argsJson)
-	})
+			argsJson, ok := args[1].(string)
+			if !ok {
+				return oops.Newf("Failed to parse args (expected string): %v", args[1])
+			}
+
+			return GuidedCrawlingJob_Perform(ctx, id, conn, blogId, argsJson)
+		},
+	)
 
 	publish.EmailPostsJob_PerformNowFunc = EmailPostsJob_PerformNow
 }
@@ -63,7 +65,7 @@ func GuidedCrawlingJob_PerformNow(
 }
 
 func GuidedCrawlingJob_Perform(
-	ctx context.Context, conn *pgw.Conn, blogId models.BlogId, argsJson string,
+	ctx context.Context, id JobId, conn *pgw.Conn, blogId models.BlogId, argsJson string,
 ) error {
 	startTime := time.Now().UTC()
 	logger := conn.Logger()
@@ -127,7 +129,20 @@ func GuidedCrawlingJob_Perform(
 		hasPreviouslyFailed = models.BlogFailedStatuses[lastBlogStatus]
 	}
 
-	httpClient := crawler.NewHttpClientImpl(ctx, true)
+	checkCancellationFunc := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		row := conn.QueryRow(`select 1 from delayed_jobs where id = $1`, id)
+		var one int
+		err := row.Scan(&one)
+		if err != nil {
+			// ErrNoRows or otherwise
+			return err
+		}
+		return nil
+	}
+	httpClient := crawler.NewHttpClientImplFunc(checkCancellationFunc, true)
 	puppeteerClient := crawler.NewPuppeteerClientImpl()
 	progressSaver := NewProgressSaver(blogId, blogFeedUrl, conn)
 	progressLogger := crawler.NewProgressLogger(progressSaver)

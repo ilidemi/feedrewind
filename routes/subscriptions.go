@@ -332,7 +332,7 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Feeds that were fetched were handled in onboarding, this one needs to be fetched
-	httpClient := crawler.NewHttpClientImpl(r.Context(), false)
+	httpClient := crawler.NewHttpClientImplCtx(r.Context(), false)
 	zlogger := crawler.ZeroLogger{Logger: logger}
 	progressLogger := crawler.NewMockProgressLogger(&zlogger)
 	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)

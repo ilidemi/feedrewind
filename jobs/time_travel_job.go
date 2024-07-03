@@ -22,45 +22,48 @@ const (
 const TimeTravelFormat = "2006-01-02 15:04:05 MST"
 
 func init() {
-	registerJobNameFunc("TimeTravelJob", func(ctx context.Context, conn *pgw.Conn, args []any) error {
-		if len(args) != 3 {
-			return oops.Newf("Expected 3 args, got %d: %v", len(args), args)
-		}
-
-		commandId, ok := args[0].(int64)
-		if !ok {
-			commandIdInt, ok := args[0].(int)
-			if !ok {
-				return oops.Newf("Failed to parse commandId (expected int64 or int): %v", args[0])
+	registerJobNameFunc(
+		"TimeTravelJob",
+		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+			if len(args) != 3 {
+				return oops.Newf("Expected 3 args, got %d: %v", len(args), args)
 			}
-			commandId = int64(commandIdInt)
-		}
 
-		actionStr, ok := args[1].(string)
-		if !ok {
-			return oops.Newf("Failed to parse action (expected string): %v", args[1])
-		}
-		action := TimeTravelJobAction(actionStr)
+			commandId, ok := args[0].(int64)
+			if !ok {
+				commandIdInt, ok := args[0].(int)
+				if !ok {
+					return oops.Newf("Failed to parse commandId (expected int64 or int): %v", args[0])
+				}
+				commandId = int64(commandIdInt)
+			}
 
-		timestampMap, ok := args[2].(map[string]any)
-		if !ok {
-			return oops.Newf("Failed to parse timestamp (expected map): %v", args[2])
-		}
-		timestampValue, ok := timestampMap["value"]
-		if !ok {
-			return oops.Newf("Failed to get timestamp value: %v", timestampMap)
-		}
-		timestampStr, ok := timestampValue.(string)
-		if !ok {
-			return oops.Newf("Failed to parse timestamp value (expected string): %v", timestampValue)
-		}
-		timestamp, err := time.Parse(yamlTimeFormat, timestampStr)
-		if err != nil {
-			return oops.Wrap(err)
-		}
+			actionStr, ok := args[1].(string)
+			if !ok {
+				return oops.Newf("Failed to parse action (expected string): %v", args[1])
+			}
+			action := TimeTravelJobAction(actionStr)
 
-		return TimeTravelJob_Perform(ctx, conn, commandId, action, timestamp)
-	})
+			timestampMap, ok := args[2].(map[string]any)
+			if !ok {
+				return oops.Newf("Failed to parse timestamp (expected map): %v", args[2])
+			}
+			timestampValue, ok := timestampMap["value"]
+			if !ok {
+				return oops.Newf("Failed to get timestamp value: %v", timestampMap)
+			}
+			timestampStr, ok := timestampValue.(string)
+			if !ok {
+				return oops.Newf("Failed to parse timestamp value (expected string): %v", timestampValue)
+			}
+			timestamp, err := time.Parse(yamlTimeFormat, timestampStr)
+			if err != nil {
+				return oops.Wrap(err)
+			}
+
+			return TimeTravelJob_Perform(ctx, conn, commandId, action, timestamp)
+		},
+	)
 }
 
 func TimeTravelJob_PerformAtEpoch(

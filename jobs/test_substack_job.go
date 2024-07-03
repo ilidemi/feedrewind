@@ -11,8 +11,9 @@ import (
 )
 
 func init() {
-	registerJobNameFunc("TestSubstackJob",
-		func(ctx context.Context, conn *pgw.Conn, args []any) error {
+	registerJobNameFunc(
+		"TestSubstackJob",
+		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
 			if len(args) != 0 {
 				return oops.Newf("Expected 0 args, got %d: %v", len(args), args)
 			}
@@ -29,7 +30,7 @@ func TestSubstackJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
 func TestSubstackJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	logger := conn.Logger()
 
-	httpClient := crawler.NewHttpClientImpl(ctx, false)
+	httpClient := crawler.NewHttpClientImplCtx(ctx, false)
 	dlogger := crawler.NewDummyLogger()
 	progressLogger := crawler.NewMockProgressLogger(dlogger)
 	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)

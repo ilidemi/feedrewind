@@ -79,7 +79,7 @@ func init() {
 	}
 }
 
-type jobFunc func(ctx context.Context, conn *pgw.Conn, args []any) error
+type jobFunc func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error
 
 type jobNameFunc struct {
 	ClassName string
@@ -110,14 +110,14 @@ type job struct {
 	Id         JobId
 	Attempts   int32
 	RawHandler string
-	JobData    jobData
+	JobData    JobData
 }
 
-type handler struct {
-	Job_Data jobData
+type Handler struct {
+	Job_Data JobData
 }
 
-type jobData struct {
+type JobData struct {
 	Job_Class   string
 	Arguments   []any
 	Enqueued_At string
@@ -269,7 +269,7 @@ mainLoop:
 			continue
 		}
 
-		var h handler
+		var h Handler
 		err = yaml.Unmarshal([]byte(j.RawHandler), &h)
 		if err != nil {
 			jobErr := oops.Wrapf(err, "YAML deserialization error")
@@ -355,7 +355,7 @@ func runJob(
 	jobLogger.LogPerforming(j)
 	jobStart := time.Now().UTC()
 	timeoutCtx, timeoutCancel := context.WithTimeout(signalCtx, maxRunTimeTimeout)
-	jobErr := jobFunc(timeoutCtx, jobConn, j.JobData.Arguments)
+	jobErr := jobFunc(timeoutCtx, j.Id, jobConn, j.JobData.Arguments)
 	timeoutCancel()
 	defer jobConn.Release()
 	if jobErr != nil {
