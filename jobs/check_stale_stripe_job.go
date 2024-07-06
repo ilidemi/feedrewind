@@ -3,7 +3,6 @@ package jobs
 import (
 	"context"
 	"errors"
-	"feedrewind/db/migrations"
 	"feedrewind/db/pgw"
 	"feedrewind/oops"
 	"feedrewind/util/schedule"
@@ -27,7 +26,6 @@ func init() {
 			return CheckStaleStripeJob_Perform(ctx, conn)
 		},
 	)
-	migrations.CheckStaleStripeJob_PerformAtFunc = CheckStaleStripeJob_PerformAt
 }
 
 func CheckStaleStripeJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
