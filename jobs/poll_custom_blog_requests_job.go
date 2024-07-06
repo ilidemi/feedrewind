@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"context"
-	"feedrewind/db/migrations"
 	"feedrewind/db/pgw"
 	"feedrewind/models"
 	"feedrewind/oops"
@@ -23,7 +22,6 @@ func init() {
 			return PollCustomBlogRequestsJob_Perform(ctx, conn)
 		},
 	)
-	migrations.PollCustomBlogRequestsJob_PerformAtFunc = PollCustomBlogRequestsJob_PerformAt
 }
 
 func PollCustomBlogRequestsJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
