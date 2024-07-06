@@ -51,6 +51,8 @@ func productionConfig() Config {
 		SessionHashKey:            sessionHashKey,
 		SessionBlockKey:           sessionBlockKey,
 		AmplitudeApiKey:           "REDACTED_AMPLITUDE_API_KEY",
+		AwsAccessKey:              mustLookupEnv("AWS_ACCESS_KEY"),
+		AwsSecretAccessKey:        mustLookupEnv("AWS_SECRET_ACCESS_KEY"),
 		PostmarkApiSandboxToken:   "",
 		PostmarkApiToken:          mustLookupEnv("POSTMARK_API_TOKEN"),
 		PostmarkWebhookSecret:     mustLookupEnv("POSTMARK_WEBHOOK_SECRET"),

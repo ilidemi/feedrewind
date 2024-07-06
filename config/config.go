@@ -14,6 +14,8 @@ type Config struct {
 	SessionHashKey            []byte
 	SessionBlockKey           []byte
 	AmplitudeApiKey           string
+	AwsAccessKey              string
+	AwsSecretAccessKey        string
 	PostmarkApiSandboxToken   string
 	PostmarkApiToken          string
 	PostmarkWebhookSecret     string

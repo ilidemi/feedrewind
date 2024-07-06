@@ -69,6 +69,8 @@ func developmentConfig() Config {
 		SessionHashKey:            sessionHashKey,
 		SessionBlockKey:           sessionBlockKey,
 		AmplitudeApiKey:           "REDACTED_DEV_AMPLITUDE_API_KEY",
+		AwsAccessKey:              "REDACTED_DEV_AWS_ACCESS_KEY",
+		AwsSecretAccessKey:        "REDACTED_DEV_AWS_SECRET_ACCESS_KEY",
 		PostmarkApiSandboxToken:   "REDACTED_DEV_POSTMARK_API_SANDBOX_TOKEN",
 		PostmarkApiToken:          "REDACTED_DEV_POSTMARK_API_TOKEN", // FeedRewindDevelopment
 		PostmarkWebhookSecret:     "REDACTED_DEV_POSTMARK_WEBHOOK_SECRET",

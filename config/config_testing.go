@@ -21,6 +21,8 @@ func testingConfig() Config {
 		SessionHashKey:            devCfg.SessionHashKey,
 		SessionBlockKey:           devCfg.SessionBlockKey,
 		AmplitudeApiKey:           devCfg.AmplitudeApiKey,
+		AwsAccessKey:              devCfg.AwsAccessKey,
+		AwsSecretAccessKey:        devCfg.AwsSecretAccessKey,
 		PostmarkApiSandboxToken:   devCfg.PostmarkApiSandboxToken,
 		PostmarkApiToken:          devCfg.PostmarkApiToken,
 		PostmarkWebhookSecret:     devCfg.PostmarkWebhookSecret,
