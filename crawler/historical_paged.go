@@ -479,6 +479,14 @@ func tryExtractPage2(
 			appendMatches = func(
 				matchingLinks []*maybeTitledHtmlLink, element *html.Node, maskedXPathSuffix string,
 			) []*maybeTitledHtmlLink {
+				if maskedXPathSuffix == "" {
+					if link, ok := linkFromElement(
+						element, page2.FetchUri, page1Extraction.TitleRelativeXPaths, logger,
+					); ok {
+						matchingLinks = append(matchingLinks, link)
+					}
+					return matchingLinks
+				}
 				expectedTag, maybeExpectedClassesStr, expectedIndex, segmentLength :=
 					parseFirstXPathSegment(maskedXPathSuffix)
 				tagCount := 0
