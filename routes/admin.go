@@ -471,7 +471,7 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 	row := conn.QueryRow(`
 		select
 			max(utc_now() - locked_at),
-			max(utc_now() - run_at),
+			max(coalesce(locked_at, utc_now()) - run_at),
 			sum((locked_at is not null)::int),
 			sum((utc_now() > run_at)::int),
 			count(1)
@@ -515,9 +515,9 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 		var smallerSideTicks int
 		var smallerSideScale float64
 		switch {
-		case smallerSide == 0:
-			smallerSideScale = 0
-			smallerSideTicks = 0
+		case smallerSide < 1:
+			smallerSideScale = scaleMax / 10
+			smallerSideTicks = 1
 		case scaleMax/smallerSide >= 5:
 			smallerSideScale = scaleMax / 5
 			smallerSideTicks = 2
