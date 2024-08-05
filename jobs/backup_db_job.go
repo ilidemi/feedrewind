@@ -78,6 +78,7 @@ func BackupDbJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		idsToUpload := map[string]bool{}
 		headerEnded := false
 		for _, line := range backupsSectionLines {
+			line := strings.TrimSpace(line)
 			if strings.HasPrefix(line, "────") {
 				headerEnded = true
 				continue
