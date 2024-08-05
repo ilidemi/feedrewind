@@ -63,7 +63,7 @@ func BackupDbJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		if backupsStart == -1 {
 			return oops.New("Backups section not found")
 		}
-		backupsLength := strings.Index(cmdOutputStr[backupsStart:], "\n\n")
+		backupsLength := strings.Index(cmdOutputStr[backupsStart:], "\n\n=== Restores")
 		if backupsLength == -1 {
 			return oops.New("End of backups section not found")
 		}
