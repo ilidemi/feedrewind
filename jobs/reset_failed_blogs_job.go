@@ -42,7 +42,7 @@ func ResetFailedBlogsJob_Perform(ctx context.Context, conn *pgw.Conn, enqueueNex
 	cutoffTime := utcNow.Add(-30 * 24 * time.Hour)
 
 	var sb strings.Builder
-	for status := range models.BlogFailedStatuses {
+	for status := range models.BlogFailedAutoStatuses {
 		if sb.Len() > 0 {
 			sb.WriteString(", ")
 		}

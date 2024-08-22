@@ -31,6 +31,11 @@ const (
 	BlogStatusUpdateFromFeedFailed BlogStatus = "update_from_feed_failed"
 )
 
+var BlogFailedAutoStatuses = map[BlogStatus]bool{
+	BlogStatusCrawlFailed:       true,
+	BlogStatusCrawledLooksWrong: true,
+}
+
 var BlogFailedStatuses = map[BlogStatus]bool{
 	BlogStatusCrawlFailed:          true,
 	BlogStatusCrawledLooksWrong:    true,
