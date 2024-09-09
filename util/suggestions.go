@@ -202,10 +202,10 @@ var SuggestedCategories = []SuggestedCategory{
 				FeedUrl: "https://distill.pub/rss.xml",
 				Name:    "Distill",
 			},
-			// TODO: reenable
+			// TODO: reenable when/if they fix the 403 from cloudflare
 			// {
-			// 	Url:     "https://openai.com/blog/",
-			// 	FeedUrl: "https://openai.com/blog/rss.xml",
+			// 	Url:     "https://openai.com/news/",
+			// 	FeedUrl: "https://openai.com/news/rss.xml",
 			// 	Name:    "OpenAI",
 			// },
 			{
