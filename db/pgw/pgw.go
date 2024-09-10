@@ -377,7 +377,7 @@ type Batch struct {
 
 func NewBatch(ctx context.Context) *Batch {
 	return &Batch{
-		impl: pgx.Batch{},
+		impl: pgx.Batch{}, // nolint:exhaustruct
 		ctx:  ctx,
 	}
 }

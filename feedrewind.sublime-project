@@ -45,6 +45,10 @@
                     "shell_cmd": "golangci-lint run --build-tags testing,e2etesting,emailtesting,stripetesting",
                 },
                 {
+                    "name": "govulncheck",
+                    "shell_cmd": "govulncheck ./...",
+                },
+                {
                     "name": "tailwind",
                     "shell_cmd": "go run . tailwind",
                 },
