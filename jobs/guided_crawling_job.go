@@ -153,6 +153,14 @@ func GuidedCrawlingJob_Perform(
 			logger.Warn().Err(err).Msg("Couldn't check if the job was deleted")
 			return nil
 		}
+		row = conn.QueryRow(`select 1 from blogs where id = $1`, blogId)
+		err = row.Scan(&one)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return err
+		} else if err != nil {
+			logger.Warn().Err(err).Msg("Couldn't check if the blog was deleted")
+			return nil
+		}
 		return nil
 	}
 	httpClient := crawler.NewHttpClientImplFunc(checkCancellationFunc, true)
