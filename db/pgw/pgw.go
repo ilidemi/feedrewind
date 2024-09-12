@@ -70,6 +70,22 @@ func (pool *Pool) AcquireBackground() (*Conn, error) {
 	}, nil
 }
 
+func (pool *Pool) AcquireBackgroundWithLogger(logger log.Logger) (*Conn, error) {
+	// Do not track duration, as we're not in request context
+
+	ctx := context.Background()
+	conn, err := pool.impl.Acquire(ctx)
+	if err != nil {
+		return nil, oops.Wrap(err)
+	}
+
+	return &Conn{
+		logger: logger,
+		impl:   conn,
+		ctx:    ctx,
+	}, nil
+}
+
 type Conn struct {
 	logger log.Logger
 	impl   *pgxpool.Conn
@@ -166,10 +182,23 @@ func (conn *Conn) Release() {
 	conn.impl.Release()
 }
 
-func (conn *Conn) WaitForNotification() (*pgconn.Notification, error) {
+// Makes the connection a mutable resource, so should be used sparringly.
+// Intended for use in long-running processes, to release the connection for the duration of it, then revive
+// so that the caller can continue using it
+// The codebase needs a refactor to use the pool directly.
+func (conn *Conn) ReviveFrom(pool *Pool) error {
+	newConn, err := pool.Acquire(conn.ctx, conn.logger)
+	if err != nil {
+		return err
+	}
+	conn.impl = newConn.impl
+	return nil
+}
+
+func (conn *Conn) WaitForNotification(ctx context.Context) (*pgconn.Notification, error) {
 	// Do not track duration. We're mostly waiting here and it's by design.
 
-	notification, err := conn.impl.Conn().WaitForNotification(conn.ctx)
+	notification, err := conn.impl.Conn().WaitForNotification(ctx)
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}

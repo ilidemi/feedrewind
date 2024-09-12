@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -979,8 +980,15 @@ func Admin_DeleteJob(w http.ResponseWriter, r *http.Request) {
 			return nil, err
 		}
 
-		discoveryChannelName := jobs.DiscoveryChannelName(blogId)
-		_, err = tx.Exec(`select pg_notify($1, '{"done": true}')`, discoveryChannelName)
+		payload := map[string]any{
+			"blog_id": fmt.Sprint(blogId),
+			"done":    true,
+		}
+		payloadBytes, err := json.Marshal(&payload)
+		if err != nil {
+			return nil, oops.Wrap(err)
+		}
+		_, err = tx.Exec(`select pg_notify($1, $2)`, jobs.CrawlProgressChannelName, string(payloadBytes))
 		if err != nil {
 			return nil, err
 		}

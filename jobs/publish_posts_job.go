@@ -20,6 +20,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"PublishPostsJob",
+		false,
 		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
 			if len(args) != 3 && len(args) != 4 {
 				return oops.Newf("Expected 3 or 4 args, got %d: %v", len(args), args)

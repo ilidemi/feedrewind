@@ -22,6 +22,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"StripeWebhookJob",
+		false,
 		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
 			if len(args) != 1 {
 				return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)

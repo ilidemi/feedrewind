@@ -16,6 +16,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"EmailPostsJob",
+		false,
 		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
 			if len(args) != 4 {
 				return oops.Newf("Expected 4 args, got %d: %v", len(args), args)

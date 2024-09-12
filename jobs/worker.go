@@ -81,23 +81,26 @@ func init() {
 
 type jobFunc func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error
 
-type jobNameFunc struct {
+type jobDesc struct {
 	ClassName string
-	Func      jobFunc
+
+	// If set to true, the job is assumed to have released the db connection so that they're not hogged for
+	// the duration of the job
+	ReleasesDbConn bool
+	Func           jobFunc
 }
 
-var jobNameFuncs []jobNameFunc
+var jobDescs []jobDesc
 
-func registerJobNameFunc(className string, f jobFunc) {
-	jobNameFuncs = append(jobNameFuncs, jobNameFunc{
-		ClassName: className,
-		Func:      f,
+func registerJobNameFunc(className string, releasesDbConn bool, f jobFunc) {
+	jobDescs = append(jobDescs, jobDesc{
+		ClassName:      className,
+		ReleasesDbConn: releasesDbConn,
+		Func:           f,
 	})
 }
 
-// Has to be at most (max_db_connections / 2) - 2 to continue serving requests while every worker is crawling
-// and as many websockets are streaming
-const workerCount = 7
+const workerCount = 1000
 
 const workerNameBase = "go-worker"
 const sleepDelay = 100 * time.Millisecond
@@ -133,12 +136,12 @@ type jobResult struct {
 func startWorker(
 	conn *pgw.Conn, dynoId int, availableWorkers []bool, finishedJobs chan jobResult, logger log.Logger,
 ) error {
-	jobFuncsByClassName := make(map[string]jobFunc)
-	for _, jobNameFunc := range jobNameFuncs {
-		if _, ok := jobFuncsByClassName[jobNameFunc.ClassName]; ok {
-			return oops.Newf("Duplicate job class name: %s", jobNameFunc.ClassName)
+	jobDescsByClassName := make(map[string]jobDesc)
+	for _, jobDesc := range jobDescs {
+		if _, ok := jobDescsByClassName[jobDesc.ClassName]; ok {
+			return oops.Newf("Duplicate job class name: %s", jobDesc.ClassName)
 		}
-		jobFuncsByClassName[jobNameFunc.ClassName] = jobNameFunc.Func
+		jobDescsByClassName[jobDesc.ClassName] = jobDesc
 	}
 
 	signalCtx, signalCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -300,7 +303,7 @@ mainLoop:
 					}
 				}
 			}()
-			status, err := runJob(signalCtx, j, jobFuncsByClassName, assignedWorkerName)
+			status, err := runJob(signalCtx, j, jobDescsByClassName, assignedWorkerName)
 			finishedJobs <- jobResult{
 				WorkerId: assignedWorkerId,
 				Id:       j.Id,
@@ -320,7 +323,7 @@ const (
 )
 
 func runJob(
-	signalCtx context.Context, j job, jobFuncsByClassName map[string]jobFunc, workerName string,
+	signalCtx context.Context, j job, jobDescsByClassName map[string]jobDesc, workerName string,
 ) (jobStatus, error) {
 	jobLogger := &JobLogger{
 		WorkerName: workerName,
@@ -329,8 +332,8 @@ func runJob(
 	}
 	// Context cancellation is handled manually at the job level and not at db level
 	// Quick-running jobs should be able to gracefully finish and reschedule themselves
-	jobConn, err := db.Pool.Acquire(context.Background(), jobLogger)
-	jobFunc, ok := jobFuncsByClassName[j.JobData.Job_Class]
+	jobConn, err := db.Pool.AcquireBackgroundWithLogger(jobLogger)
+	jobDesc, ok := jobDescsByClassName[j.JobData.Job_Class]
 	if !ok {
 		jobErr := oops.Newf("Couldn't find job func for class %s", j.JobData.Job_Class)
 		jobLogger.Error().Err(jobErr).Send()
@@ -344,7 +347,7 @@ func runJob(
 	if err != nil {
 		err := retryAction(err, jobLogger, "job DB connection", func() error {
 			var innerErr error
-			jobConn, innerErr = db.Pool.Acquire(context.Background(), jobLogger)
+			jobConn, innerErr = db.Pool.AcquireBackgroundWithLogger(jobLogger)
 			return innerErr
 		})
 		if err != nil {
@@ -355,21 +358,40 @@ func runJob(
 	jobLogger.LogPerforming(j)
 	jobStart := time.Now().UTC()
 	timeoutCtx, timeoutCancel := context.WithTimeout(signalCtx, maxRunTimeTimeout)
-	jobErr := jobFunc(timeoutCtx, j.Id, jobConn, j.JobData.Arguments)
+	jobErr := jobDesc.Func(timeoutCtx, j.Id, jobConn, j.JobData.Arguments)
 	timeoutCancel()
-	defer jobConn.Release()
+	if !jobDesc.ReleasesDbConn {
+		defer jobConn.Release()
+	}
 	if jobErr != nil {
+		var jobErrConn *pgw.Conn
+		if jobDesc.ReleasesDbConn {
+			jobErrConn, err = db.Pool.AcquireBackgroundWithLogger(jobLogger)
+			if err != nil {
+				err := retryAction(err, jobLogger, "job err DB connection", func() error {
+					var innerErr error
+					jobErrConn, innerErr = db.Pool.AcquireBackgroundWithLogger(jobLogger)
+					return innerErr
+				})
+				if err != nil {
+					return jobStatusFatal, err
+				}
+			}
+			defer jobErrConn.Release()
+		} else {
+			jobErrConn = jobConn
+		}
 		if errors.Is(jobErr, context.Canceled) {
 			jobLogger.LogCanceled(j, jobStart)
 		} else {
 			jobLogger.LogFailed(j, jobStart, jobErr)
 		}
-		err := failJob(jobConn, j, jobErr)
+		err := failJob(jobErrConn, j, jobErr)
 		if errors.Is(err, context.Canceled) {
 			return jobStatusFatal, err
 		} else if err != nil {
 			err := retryAction(err, jobLogger, "fail job", func() error {
-				return failJob(jobConn, j, jobErr)
+				return failJob(jobErrConn, j, jobErr)
 			})
 			if err != nil {
 				return jobStatusFatal, err

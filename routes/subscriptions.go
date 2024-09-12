@@ -2,12 +2,15 @@ package routes
 
 import (
 	"bytes"
+	"context"
 	"feedrewind/config"
 	"feedrewind/crawler"
 	"feedrewind/db"
 	"feedrewind/db/pgw"
 	"feedrewind/jobs"
+	"feedrewind/log"
 	"feedrewind/models"
+	"feedrewind/oops"
 	"feedrewind/publish"
 	"feedrewind/routes/rutil"
 	"feedrewind/templates"
@@ -22,12 +25,13 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/goccy/go-json"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pkg/errors"
 	"github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/checkout/session"
@@ -1894,9 +1898,154 @@ func subscriptions_GetRealisticScheduleDate(
 	}
 }
 
+type blogNotificationChannel struct {
+	Chans                map[uuid.UUID]chan string
+	LastNotificationTime time.Time
+}
+
+var notificationChannelsLock sync.Mutex // Only used when modifying the map or expecting it to be modified
+var notificationChannels map[models.BlogId]*blogNotificationChannel
+
+func Subscriptions_MustStartListeningForNotifications() {
+	notificationChannels = map[models.BlogId]*blogNotificationChannel{}
+	logger := log.BackgroundLogger{}
+	listenConn, err := db.Pool.AcquireBackground()
+	if err != nil {
+		panic(err)
+	}
+	_, err = listenConn.Exec("listen crawl_progress")
+	if err != nil {
+		panic(err)
+	}
+	logger.Info().Msg("Started listening for progress notifications")
+
+	go func() {
+		lastCleanupTime := time.Now()
+		cleanupInterval := time.Minute
+		cleanupExpiration := 5 * time.Minute
+		for {
+			// nolint:gocritic
+			timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), cleanupInterval)
+			notification, err := listenConn.WaitForNotification(timeoutCtx)
+			timeoutCancel()
+			if errors.Is(err, context.DeadlineExceeded) ||
+				(err == nil && time.Since(lastCleanupTime) >= cleanupInterval) {
+
+				if len(notificationChannels) > 0 {
+					func() {
+						conn, err := db.Pool.AcquireBackground()
+						if err != nil {
+							logger.Warn().Err(err).Msg(
+								"Couldn't acquire a db connection to check if any of the blogs are done",
+							)
+							return
+						}
+						defer conn.Release()
+
+						// Clean up the finished entries
+						for blogId, notificationChan := range notificationChannels {
+							if time.Since(notificationChan.LastNotificationTime) < cleanupExpiration {
+								continue
+							}
+							row := conn.QueryRow(`select status from blogs where id = $1`, blogId)
+							var status models.BlogStatus
+							err = row.Scan(&status)
+							if errors.Is(err, pgx.ErrNoRows) ||
+								(err == nil && status != models.BlogStatusCrawlInProgress) {
+								notificationChannelsLock.Lock()
+								delete(notificationChannels, blogId)
+								notificationChannelsLock.Unlock()
+								continue
+							} else if err != nil {
+								logger.Error().Err(err).Msg("Couldn't query blog status")
+								break
+							}
+						}
+						lastCleanupTime = time.Now()
+					}()
+				}
+				if err != nil {
+					continue
+				}
+			} else if err != nil {
+				logger.Warn().Err(err).Msg("Failed to wait for crawl_progress notification")
+				retryStart := time.Now()
+				retryCount := 0
+				for time.Now().Before(retryStart.Add(5 * time.Minute)) {
+					time.Sleep(100 * time.Millisecond)
+					// nolint:gocritic
+					timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), cleanupInterval)
+					notification, err = listenConn.WaitForNotification(timeoutCtx)
+					timeoutCancel()
+					if err == nil {
+						break
+					}
+					retryCount++
+				}
+				if err != nil {
+					logger.Error().Err(err).Msgf(
+						"Failed to wait for crawl_progress notification after %d retries", retryCount,
+					)
+					panic(err)
+				}
+				if retryCount > 1 {
+					logger.Warn().Err(err).Msgf(
+						"Sucessfully got a crawl_progress notification after %d retries", retryCount,
+					)
+				}
+			}
+
+			var payload map[string]any
+			err = json.Unmarshal([]byte(notification.Payload), &payload)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to parse payload json")
+				continue
+			}
+
+			blogIdStr, ok := payload["blog_id"].(string)
+			if !ok {
+				logger.Error().Msgf("Payload doesn't have blog_id: %v", payload)
+				continue
+			}
+			blogIdInt, err := strconv.ParseInt(blogIdStr, 10, 64)
+			if err != nil {
+				logger.Error().Msgf("Couldn't parse blog_id: %s", blogIdStr)
+				continue
+			}
+			blogId := models.BlogId(blogIdInt)
+
+			notificationTime := time.Now()
+			notificationChan, ok := notificationChannels[blogId]
+			if !ok {
+				notificationChan = &blogNotificationChannel{
+					Chans:                map[uuid.UUID]chan string{},
+					LastNotificationTime: notificationTime,
+				}
+				notificationChannelsLock.Lock()
+				notificationChannels[blogId] = notificationChan
+				notificationChannelsLock.Unlock()
+			}
+
+			for _, ch := range notificationChan.Chans {
+				select {
+				case ch <- notification.Payload:
+				default:
+					// The previous value hasn't been consumed, pop it to write the new one,
+					// but it's ok if it got consumed in between
+					select {
+					case <-ch:
+					default:
+					}
+					ch <- notification.Payload
+				}
+			}
+		}
+	}()
+}
+
 func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	requestConn := rutil.DBConn(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -1907,7 +2056,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 	var maybeSubscriptionUserId *models.UserId
 	var blogId models.BlogId
 	var blogStatus models.BlogStatus
-	row := conn.QueryRow(`
+	row := requestConn.QueryRow(`
 		select user_id, blog_id, (select status from blogs where id = blog_id) as blog_status 
 		from subscriptions_without_discarded
 		where id = $1
@@ -1939,28 +2088,56 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	listenConn, err := db.Pool.Acquire(r.Context(), logger)
-	if err != nil {
-		panic(err)
-	}
-	defer listenConn.Release()
+	requestConn.Release()
+	defer func() {
+		if err := requestConn.ReviveFrom(db.Pool); err != nil {
+			panic(err)
+		}
+	}()
 
-	channelName := jobs.DiscoveryChannelName(blogId)
-	_, err = listenConn.Exec("listen " + channelName)
-	if err != nil {
+	var notificationChan *blogNotificationChannel
+	pollStartTime := time.Now()
+	for time.Since(pollStartTime) < 5*time.Minute {
+		notificationChannelsLock.Lock()
+		var ok bool
+		notificationChan, ok = notificationChannels[blogId]
+		notificationChannelsLock.Unlock()
+		if ok {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if notificationChan == nil {
+		err := oops.Newf("Couldn't locate the notification channel for blog %d after 5 minutes", blogId)
+		logger.Warn().Err(err).Send()
 		panic(err)
 	}
-	logger.Info().Msgf("Started listen on %s", channelName)
+
+	consumerId := uuid.New()
+	ch := make(chan string, 1)
+	notificationChannelsLock.Lock()
+	notificationChan.Chans[consumerId] = ch
+	notificationChannelsLock.Unlock()
+	defer func() {
+		notificationChannelsLock.Lock()
+		delete(notificationChan.Chans, consumerId)
+		notificationChannelsLock.Unlock()
+	}()
 
 	// Guard against a race condition where the last NOTIFY happened before we
 	// started listening
+	oneOffConn, err := db.Pool.Acquire(requestConn.Context(), logger)
+	if err != nil {
+		panic(err)
+	}
 	var blogStatusRefresh models.BlogStatus
-	row = conn.QueryRow(`
+	row = oneOffConn.QueryRow(`
 		select (select status from blogs where id = blog_id) as blog_status 
 		from subscriptions_without_discarded
 		where id = $1
 	`, subscriptionId)
 	err = row.Scan(&blogStatusRefresh)
+	oneOffConn.Release()
 	if err != nil {
 		panic(err)
 	}
@@ -1976,31 +2153,16 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
-	notificationChan := make(chan *pgconn.Notification)
-	errorChan := make(chan error)
-	go func() {
-		for {
-			notification, err := listenConn.WaitForNotification()
-			if err != nil {
-				errorChan <- err
-				break
-			}
-			notificationChan <- notification
-		}
-	}()
-
 	for {
 		select {
-		case err := <-errorChan:
-			panic(err)
-		case notification := <-notificationChan:
+		case notification := <-ch:
 			var payload map[string]any
-			err := json.Unmarshal([]byte(notification.Payload), &payload)
+			err := json.Unmarshal([]byte(notification), &payload)
 			if err != nil {
 				panic(err)
 			}
-			logger.Info().Msgf("%s: %s", channelName, notification.Payload)
-			err = ws.WriteMessage(websocket.TextMessage, []byte(notification.Payload))
+			logger.Info().Msgf("%s %d: %s", jobs.CrawlProgressChannelName, blogId, notification)
+			err = ws.WriteMessage(websocket.TextMessage, []byte(notification))
 			if err != nil {
 				panic(err)
 			}
@@ -2008,15 +2170,15 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		case <-ticker.C:
-			payload, err := json.Marshal(map[string]any{
+			notification, err := json.Marshal(map[string]any{
 				"type":    "ping",
 				"message": time.Now().Unix(),
 			})
 			if err != nil {
 				panic(err)
 			}
-			logger.Info().Msgf("%s: %s", channelName, payload)
-			err = ws.WriteMessage(websocket.TextMessage, []byte(payload))
+			logger.Info().Msgf("%s %d: %s", jobs.CrawlProgressChannelName, blogId, notification)
+			err = ws.WriteMessage(websocket.TextMessage, []byte(notification))
 			if err != nil {
 				panic(err)
 			}
