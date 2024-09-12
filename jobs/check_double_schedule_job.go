@@ -11,6 +11,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"CheckDoubleScheduleJob",
+		false,
 		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
 			if len(args) != 0 {
 				return oops.Newf("Expected 0 args, got %d: %v", len(args), args)

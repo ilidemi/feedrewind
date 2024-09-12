@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"feedrewind/crawler"
+	"feedrewind/db"
 	"feedrewind/db/pgw"
+	"feedrewind/log"
 	"feedrewind/models"
 	"feedrewind/oops"
 	"feedrewind/publish"
@@ -17,7 +19,9 @@ import (
 )
 
 func init() {
-	registerJobNameFunc("GuidedCrawlingJob",
+	registerJobNameFunc(
+		"GuidedCrawlingJob",
+		true,
 		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
 			if len(args) != 2 {
 				return oops.Newf("Expected 2 args, got %d: %v", len(args), args)
@@ -65,17 +69,17 @@ func GuidedCrawlingJob_PerformNow(
 }
 
 func GuidedCrawlingJob_Perform(
-	ctx context.Context, id JobId, conn *pgw.Conn, blogId models.BlogId, argsJson string,
+	ctx context.Context, id JobId, preCrawlConn *pgw.Conn, blogId models.BlogId, argsJson string,
 ) error {
 	startTime := time.Now().UTC()
-	logger := conn.Logger()
+	logger := preCrawlConn.Logger()
 	var args GuidedCrawlingJobArgs
 	err := json.Unmarshal([]byte(argsJson), &args)
 	if err != nil {
 		return oops.Wrap(err)
 	}
 
-	row := conn.QueryRow(`
+	row := preCrawlConn.QueryRow(`
 		select title, url, final_url, content, start_page_id
 		from start_feeds
 		where id = $1
@@ -93,7 +97,7 @@ func GuidedCrawlingJob_Perform(
 
 	var maybeStartPage *crawler.DiscoveredStartPage
 	if maybeStartPageId != nil {
-		row := conn.QueryRow(`
+		row := preCrawlConn.QueryRow(`
 			select url, final_url, content from start_pages where id = $1
 		`, *maybeStartPageId)
 		var startPage crawler.DiscoveredStartPage
@@ -106,7 +110,7 @@ func GuidedCrawlingJob_Perform(
 		maybeStartPage = &startPage
 	}
 
-	row = conn.QueryRow(`select feed_url, name from blogs where id = $1`, blogId)
+	row = preCrawlConn.QueryRow(`select feed_url, name from blogs where id = $1`, blogId)
 	var blogFeedUrl string
 	var blogName string
 	err = row.Scan(&blogFeedUrl, &blogName)
@@ -117,7 +121,7 @@ func GuidedCrawlingJob_Perform(
 		return err
 	}
 
-	row = conn.QueryRow(`
+	row = preCrawlConn.QueryRow(`
 		select status from blogs where feed_url = $1 and version != $2 order by version desc limit 1
 	`, blogFeedUrl, models.BlogLatestVersion)
 	hasPreviouslyFailed := false
@@ -128,23 +132,32 @@ func GuidedCrawlingJob_Perform(
 	} else if err == nil {
 		hasPreviouslyFailed = models.BlogFailedStatuses[lastBlogStatus]
 	}
+	preCrawlConn.Release()
 
 	checkCancellationFunc := func() error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+		conn, err := db.Pool.AcquireBackgroundWithLogger(logger)
+		if err != nil {
+			logger.Warn().Err(err).Msg("Couldn't acquire a db connection to check if the job was deleted")
+			return nil
+		}
+		defer conn.Release()
 		row := conn.QueryRow(`select 1 from delayed_jobs where id = $1`, id)
 		var one int
-		err := row.Scan(&one)
-		if err != nil {
-			// ErrNoRows or otherwise
+		err = row.Scan(&one)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return err
+		} else if err != nil {
+			logger.Warn().Err(err).Msg("Couldn't check if the job was deleted")
+			return nil
 		}
 		return nil
 	}
 	httpClient := crawler.NewHttpClientImplFunc(checkCancellationFunc, true)
 	puppeteerClient := crawler.NewPuppeteerClientImpl()
-	progressSaver := NewProgressSaver(blogId, blogFeedUrl, conn)
+	progressSaver := NewProgressSaver(blogId, blogFeedUrl, logger)
 	progressLogger := crawler.NewProgressLogger(progressSaver)
 	crawlCtx := crawler.NewCrawlContext(httpClient, puppeteerClient, &progressLogger)
 	zLogger := crawler.ZeroLogger{
@@ -169,7 +182,14 @@ func GuidedCrawlingJob_Perform(
 		}
 	}
 
-	return util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	postCrawlConn, err := db.Pool.Acquire(ctx, logger)
+	if err != nil {
+		return err
+	}
+	defer postCrawlConn.Release()
+	return util.Tx(postCrawlConn, func(tx *pgw.Tx, postCrawlConn util.Clobber) error {
+		var preCrawlConn util.Clobber
+		_ = preCrawlConn
 		var maybeBlogUrl *string
 		var crawlSucceeded bool
 		if guidedCrawlResult != nil && guidedCrawlResult.HistoricalResult != nil {
@@ -333,19 +353,24 @@ func GuidedCrawlingJob_Perform(
 			}
 		}
 
-		discoveryChannelName := DiscoveryChannelName(blogId)
-		_, err = tx.Exec(`select pg_notify($1, '{"done": true}')`, discoveryChannelName)
+		payload := map[string]any{
+			"blog_id": fmt.Sprint(blogId),
+			"done":    true,
+		}
+		payloadBytes, err := json.Marshal(&payload)
+		if err != nil {
+			return oops.Wrap(err)
+		}
+		_, err = tx.Exec(`select pg_notify($1, $2)`, CrawlProgressChannelName, string(payloadBytes))
 		if err != nil {
 			return err
 		}
-		logger.Info().Msgf("%s done:true", discoveryChannelName)
+		logger.Info().Msgf("%s %d done:true", CrawlProgressChannelName, blogId)
 		return nil
 	})
 }
 
-func logCrawlFinished(
-	tx *pgw.Tx, blogId models.BlogId, blogUpdatedAt time.Time, eventType string,
-) error {
+func logCrawlFinished(tx *pgw.Tx, blogId models.BlogId, blogUpdatedAt time.Time, eventType string) error {
 	rows, err := tx.Query(`
 		select id, created_at, anon_product_user_id, (
 			select product_user_id from users_with_discarded
@@ -406,30 +431,32 @@ func logCrawlFinished(
 	return nil
 }
 
-func DiscoveryChannelName(blogId models.BlogId) string {
-	return fmt.Sprintf("discovery_%d", blogId)
-}
+const CrawlProgressChannelName = "crawl_progress"
 
 type ProgressSaver struct {
 	BlogId             models.BlogId
-	ChannelName        string
 	FeedUrl            string
-	Conn               *pgw.Conn
+	Logger             log.Logger
 	LastEpochTimestamp time.Time
 }
 
-func NewProgressSaver(blogId models.BlogId, feedUrl string, conn *pgw.Conn) *ProgressSaver {
+func NewProgressSaver(blogId models.BlogId, feedUrl string, logger log.Logger) *ProgressSaver {
 	return &ProgressSaver{
 		BlogId:             blogId,
-		ChannelName:        DiscoveryChannelName(blogId),
 		FeedUrl:            feedUrl,
-		Conn:               conn,
+		Logger:             logger,
 		LastEpochTimestamp: time.Now().UTC(),
 	}
 }
 
 func (s *ProgressSaver) SaveStatusAndCount(status string, maybeCount *int) {
-	err := util.Tx(s.Conn, func(tx *pgw.Tx, _ util.Clobber) error {
+	conn, err := db.Pool.AcquireBackgroundWithLogger(s.Logger)
+	if err != nil {
+		s.Logger.Warn().Err(err).Msg("Couldn't acquire a db connection to save status and count")
+		return
+	}
+	defer conn.Release()
+	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
 		row := tx.QueryRow(`
 			update blog_crawl_progresses
 			set progress = $1, count = $2, epoch = epoch + 1
@@ -449,33 +476,40 @@ func (s *ProgressSaver) SaveStatusAndCount(status string, maybeCount *int) {
 		}
 
 		payload := map[string]any{
-			"epoch":  newEpoch,
-			"status": status,
-			"count":  maybeCount,
+			"blog_id": fmt.Sprint(s.BlogId),
+			"epoch":   newEpoch,
+			"status":  status,
+			"count":   maybeCount,
 		}
 		payloadBytes, err := json.Marshal(&payload)
 		if err != nil {
 			return oops.Wrap(err)
 		}
 
-		_, err = tx.Exec(`select pg_notify($1, $2)`, s.ChannelName, string(payloadBytes))
+		_, err = tx.Exec(`select pg_notify($1, $2)`, CrawlProgressChannelName, string(payloadBytes))
 		if err != nil {
 			return err
 		}
 
 		tx.Logger().Info().Msgf(
-			"%s epoch: %d status: %s count: %s",
-			s.ChannelName, newEpoch, status, crawler.SprintIntPtr(maybeCount),
+			"%s %d epoch: %d status: %s count: %s",
+			CrawlProgressChannelName, s.BlogId, newEpoch, status, crawler.SprintIntPtr(maybeCount),
 		)
 		return nil
 	})
 	if err != nil {
-		s.Conn.Logger().Warn().Err(err).Msg("Couldn't save status and count")
+		s.Logger.Warn().Err(err).Msg("Couldn't save status and count")
 	}
 }
 
 func (s *ProgressSaver) SaveStatus(status string) {
-	err := util.Tx(s.Conn, func(tx *pgw.Tx, _ util.Clobber) error {
+	conn, err := db.Pool.AcquireBackgroundWithLogger(s.Logger)
+	if err != nil {
+		s.Logger.Warn().Err(err).Msg("Couldn't acquire a db connection to save status")
+		return
+	}
+	defer conn.Release()
+	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
 		row := tx.QueryRow(`
 			update blog_crawl_progresses
 			set progress = $1, epoch = epoch + 1
@@ -495,29 +529,38 @@ func (s *ProgressSaver) SaveStatus(status string) {
 		}
 
 		payload := map[string]any{
-			"epoch":  newEpoch,
-			"status": status,
+			"blog_id": fmt.Sprint(s.BlogId),
+			"epoch":   newEpoch,
+			"status":  status,
 		}
 		payloadBytes, err := json.Marshal(&payload)
 		if err != nil {
 			return oops.Wrap(err)
 		}
 
-		_, err = tx.Exec(`select pg_notify($1, $2)`, s.ChannelName, string(payloadBytes))
+		_, err = tx.Exec(`select pg_notify($1, $2)`, CrawlProgressChannelName, string(payloadBytes))
 		if err != nil {
 			return err
 		}
 
-		tx.Logger().Info().Msgf("%s epoch: %d status: %s", s.ChannelName, newEpoch, status)
+		tx.Logger().Info().Msgf(
+			"%s %d epoch: %d status: %s", CrawlProgressChannelName, s.BlogId, newEpoch, status,
+		)
 		return nil
 	})
 	if err != nil {
-		s.Conn.Logger().Warn().Err(err).Msg("Couldn't save status")
+		s.Logger.Warn().Err(err).Msg("Couldn't save status")
 	}
 }
 
 func (s *ProgressSaver) SaveCount(maybeCount *int) {
-	err := util.Tx(s.Conn, func(tx *pgw.Tx, _ util.Clobber) error {
+	conn, err := db.Pool.AcquireBackgroundWithLogger(s.Logger)
+	if err != nil {
+		s.Logger.Warn().Err(err).Msg("Couldn't acquire a db connection to save count")
+		return
+	}
+	defer conn.Release()
+	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
 		row := tx.QueryRow(`
 			update blog_crawl_progresses
 			set count = $1, epoch = epoch + 1
@@ -537,41 +580,49 @@ func (s *ProgressSaver) SaveCount(maybeCount *int) {
 		}
 
 		payload := map[string]any{
-			"epoch": newEpoch,
-			"count": maybeCount,
+			"blog_id": fmt.Sprint(s.BlogId),
+			"epoch":   newEpoch,
+			"count":   maybeCount,
 		}
 		payloadBytes, err := json.Marshal(&payload)
 		if err != nil {
 			return oops.Wrap(err)
 		}
 
-		_, err = tx.Exec(`select pg_notify($1, $2)`, s.ChannelName, string(payloadBytes))
+		_, err = tx.Exec(`select pg_notify($1, $2)`, CrawlProgressChannelName, string(payloadBytes))
 		if err != nil {
 			return err
 		}
 
 		tx.Logger().Info().Msgf(
-			"%s epoch: %d count: %s", s.ChannelName, newEpoch, crawler.SprintIntPtr(maybeCount),
+			"%s %d epoch: %d count: %s",
+			CrawlProgressChannelName, s.BlogId, newEpoch, crawler.SprintIntPtr(maybeCount),
 		)
 		return nil
 	})
 	if err != nil {
-		s.Conn.Logger().Warn().Err(err).Msg("Couldn't save count")
+		s.Logger.Warn().Err(err).Msg("Couldn't save count")
 	}
 }
 
 func (s *ProgressSaver) EmitTelemetry(regressions string, extra map[string]any) {
 	fullExtra := map[string]any{
-		"blog_id":     s.BlogId,
+		"blog_id":     fmt.Sprint(s.BlogId),
 		"feed_url":    s.FeedUrl,
 		"regressions": regressions,
 	}
 	for key, value := range extra {
 		fullExtra[key] = value
 	}
-	err := models.AdminTelemetry_Create(s.Conn, "progress_regression", 1, fullExtra)
+	conn, err := db.Pool.AcquireBackgroundWithLogger(s.Logger)
 	if err != nil {
-		s.Conn.Logger().Warn().Err(err).Msg("Couldn't emit telemetry")
+		s.Logger.Warn().Err(err).Msg("Couldn't acquire a db connection to emit telemetry")
+		return
+	}
+	defer conn.Release()
+	err = models.AdminTelemetry_Create(conn, "progress_regression", 1, fullExtra)
+	if err != nil {
+		s.Logger.Warn().Err(err).Msg("Couldn't emit telemetry")
 	}
 }
 

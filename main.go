@@ -218,6 +218,7 @@ func runServer(port int) {
 	}
 	models.MustInit(conn)
 	conn.Release()
+	routes.Subscriptions_MustStartListeningForNotifications()
 
 	stripe.Key = config.Cfg.StripeApiKey
 	stripe.DefaultLeveledLogger = &log.StripeLogger{Logger: logger}
@@ -247,6 +248,8 @@ func runServer(port int) {
 		r.Post(util.SignUpPath, routes.Users_SignUp)
 
 		r.Get("/subscriptions/add", routes.Onboarding_Add)
+		// For the convenience of testing and sharing links
+		r.Get("/subscriptions/add/{start_url}", routes.Onboarding_Add)
 		r.Post("/subscriptions/add/{start_url}", routes.Onboarding_Add)
 		r.Post("/subscriptions/add", routes.Onboarding_AddLanding)
 		r.Post("/subscriptions/discover_feeds", routes.Onboarding_DiscoverFeeds)
@@ -330,8 +333,6 @@ func runServer(port int) {
 	})
 
 	staticR.Group(func(anonR chi.Router) {
-		anonR.Use(frmiddleware.DB)
-
 		anonR.Get("/subscriptions/{id}/feed", routes.Rss_SubscriptionFeed) // Legacy
 		anonR.Get("/feeds/single/{id}", routes.Rss_UserFeed)
 		anonR.Get("/feeds/{id}", routes.Rss_SubscriptionFeed)
