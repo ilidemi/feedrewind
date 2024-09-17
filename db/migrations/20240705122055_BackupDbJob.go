@@ -15,7 +15,7 @@ func (m *BackupDbJob) Version() string {
 	return "20240705122055"
 }
 
-var BackupDbJob_PerformAtFunc func(tx pgw.Queryable, runAt schedule.Time) error
+var BackupDbJob_PerformAtFunc func(qu pgw.Queryable, runAt schedule.Time) error
 
 func (m *BackupDbJob) Up(tx *Tx) {
 	err := BackupDbJob_PerformAtFunc(tx.impl, schedule.UTCNow())

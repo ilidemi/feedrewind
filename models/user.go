@@ -27,16 +27,16 @@ var ErrPasswordTooShort = errors.New("password is too short")
 var ErrUserAlreadyExists = errors.New("user already exists")
 var ErrUserNotFound = errors.New("user not found")
 
-func User_FindByEmail(tx pgw.Queryable, email string) (*User, error) {
-	return user_FindBy(tx, "email", email)
+func User_FindByEmail(qu pgw.Queryable, email string) (*User, error) {
+	return user_FindBy(qu, "email", email)
 }
 
-func User_FindByAuthToken(tx pgw.Queryable, authToken string) (*User, error) {
-	return user_FindBy(tx, "auth_token", authToken)
+func User_FindByAuthToken(qu pgw.Queryable, authToken string) (*User, error) {
+	return user_FindBy(qu, "auth_token", authToken)
 }
 
-func user_FindBy(tx pgw.Queryable, column string, value string) (*User, error) {
-	row := tx.QueryRow(`
+func user_FindBy(qu pgw.Queryable, column string, value string) (*User, error) {
+	row := qu.QueryRow(`
 		select id, email, name, product_user_id
 		from users_without_discarded
 		where `+column+` = $1
@@ -54,8 +54,8 @@ func user_FindBy(tx pgw.Queryable, column string, value string) (*User, error) {
 	return &user, nil
 }
 
-func User_Exists(tx pgw.Queryable, userId UserId) (bool, error) {
-	row := tx.QueryRow("select 1 from users_without_discarded where id = $1", userId)
+func User_Exists(qu pgw.Queryable, userId UserId) (bool, error) {
+	row := qu.QueryRow("select 1 from users_without_discarded where id = $1", userId)
 	var one int
 	err := row.Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -67,8 +67,8 @@ func User_Exists(tx pgw.Queryable, userId UserId) (bool, error) {
 	return true, nil
 }
 
-func User_ExistsByProductUserId(tx pgw.Queryable, productUserId ProductUserId) (bool, error) {
-	row := tx.QueryRow("select 1 from users_with_discarded where product_user_id = $1", productUserId)
+func User_ExistsByProductUserId(qu pgw.Queryable, productUserId ProductUserId) (bool, error) {
+	row := qu.QueryRow("select 1 from users_with_discarded where product_user_id = $1", productUserId)
 	var one int
 	err := row.Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -80,8 +80,8 @@ func User_ExistsByProductUserId(tx pgw.Queryable, productUserId ProductUserId) (
 	return true, nil
 }
 
-func User_GetProductUserId(tx pgw.Queryable, userId UserId) (ProductUserId, error) {
-	row := tx.QueryRow(`select product_user_id from users_without_discarded where id = $1`, userId)
+func User_GetProductUserId(qu pgw.Queryable, userId UserId) (ProductUserId, error) {
+	row := qu.QueryRow(`select product_user_id from users_without_discarded where id = $1`, userId)
 	var productUserId ProductUserId
 	err := row.Scan(&productUserId)
 	if err != nil {
@@ -99,8 +99,8 @@ type UserWithPassword struct {
 	ProductUserId  ProductUserId
 }
 
-func UserWithPassword_FindByEmail(tx pgw.Queryable, email string) (*UserWithPassword, error) {
-	row := tx.QueryRow(`
+func UserWithPassword_FindByEmail(qu pgw.Queryable, email string) (*UserWithPassword, error) {
+	row := qu.QueryRow(`
 		select id, email, password_digest, auth_token, name, product_user_id
 		from users_without_discarded
 		where email = $1
@@ -118,18 +118,18 @@ func UserWithPassword_FindByEmail(tx pgw.Queryable, email string) (*UserWithPass
 	return &user, nil
 }
 
-func UserWithPassword_UpdatePassword(tx pgw.Queryable, id UserId, password string) (*UserWithPassword, error) {
+func UserWithPassword_UpdatePassword(qu pgw.Queryable, id UserId, password string) (*UserWithPassword, error) {
 	passwordDigest, err := generatePasswordDigest(password)
 	if err != nil {
 		return nil, err
 	}
 
-	authToken, err := generateAuthToken(tx)
+	authToken, err := generateAuthToken(qu)
 	if err != nil {
 		return nil, err
 	}
 
-	row := tx.QueryRow(`
+	row := qu.QueryRow(`
 		update users_without_discarded
 		set password_digest = $1, auth_token = $2 where id = $3
 		returning id, email, password_digest, auth_token, name, product_user_id
@@ -145,7 +145,7 @@ func UserWithPassword_UpdatePassword(tx pgw.Queryable, id UserId, password strin
 }
 
 func UserWithPassword_Create(
-	tx pgw.Queryable, email string, password string, name string, productUserId ProductUserId,
+	qu pgw.Queryable, email string, password string, name string, productUserId ProductUserId,
 	offerId OfferId, maybeStripeSubscriptionId *string, maybeStripeCustomerId *string,
 	maybeBillingInterval *BillingInterval, maybeStripeCurrentPeriodEnd *time.Time,
 ) (*UserWithPassword, error) {
@@ -154,18 +154,18 @@ func UserWithPassword_Create(
 		return nil, err
 	}
 
-	authToken, err := generateAuthToken(tx)
+	authToken, err := generateAuthToken(qu)
 	if err != nil {
 		return nil, err
 	}
 
-	idInt, err := mutil.RandomId(tx, "users_with_discarded")
+	idInt, err := mutil.RandomId(qu, "users_with_discarded")
 	if err != nil {
 		return nil, err
 	}
 	id := UserId(idInt)
 
-	row := tx.QueryRow(`select count(1) from users_without_discarded where email = $1`, email)
+	row := qu.QueryRow(`select count(1) from users_without_discarded where email = $1`, email)
 	var count int
 	err = row.Scan(&count)
 	if err != nil {
@@ -175,7 +175,7 @@ func UserWithPassword_Create(
 		return nil, ErrUserAlreadyExists
 	}
 
-	_, err = tx.Exec(`
+	_, err = qu.Exec(`
 		insert into users_without_discarded(
 			id, email, password_digest, auth_token, name, product_user_id, offer_id,
 			stripe_subscription_id, stripe_customer_id, billing_interval, stripe_current_period_end
@@ -210,7 +210,7 @@ func generatePasswordDigest(password string) (string, error) {
 	return string(passwordDigestBytes), nil
 }
 
-func generateAuthToken(tx pgw.Queryable) (string, error) {
+func generateAuthToken(qu pgw.Queryable) (string, error) {
 	authTokenBytes := make([]byte, config.AuthTokenLength)
 	for {
 		_, err := rand.Reader.Read(authTokenBytes)
@@ -219,7 +219,7 @@ func generateAuthToken(tx pgw.Queryable) (string, error) {
 		}
 		authTokenStr := base64.RawStdEncoding.EncodeToString(authTokenBytes)
 
-		row := tx.QueryRow("select 1 from users_with_discarded where auth_token = $1", authTokenStr)
+		row := qu.QueryRow("select 1 from users_with_discarded where auth_token = $1", authTokenStr)
 		var one int
 		err = row.Scan(&one)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -249,16 +249,16 @@ type UserSettings struct {
 	MaybeDeliveryChannel *DeliveryChannel
 }
 
-func UserSettings_Create(tx pgw.Queryable, userId UserId, timezone string) error {
-	_, err := tx.Exec(`
+func UserSettings_Create(qu pgw.Queryable, userId UserId, timezone string) error {
+	_, err := qu.Exec(`
 		insert into user_settings(user_id, timezone, delivery_channel, version)
 		values ($1, $2, null, 1)
 	`, userId, timezone)
 	return err
 }
 
-func UserSettings_Get(tx pgw.Queryable, userId UserId) (*UserSettings, error) {
-	row := tx.QueryRow(`
+func UserSettings_Get(qu pgw.Queryable, userId UserId) (*UserSettings, error) {
+	row := qu.QueryRow(`
 		select timezone, version, delivery_channel from user_settings where user_id = $1
 	`, userId)
 	var us UserSettings
@@ -272,27 +272,27 @@ func UserSettings_Get(tx pgw.Queryable, userId UserId) (*UserSettings, error) {
 }
 
 func UserSettings_SaveTimezone(
-	tx pgw.Queryable, userId UserId, timezone string, version int,
+	qu pgw.Queryable, userId UserId, timezone string, version int,
 ) error {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		update user_settings set timezone = $1, version = $2 where user_id = $3
 	`, timezone, version, userId)
 	return err
 }
 
 func UserSettings_SaveDeliveryChannelVersion(
-	tx pgw.Queryable, userId UserId, deliveryChannel DeliveryChannel, version int,
+	qu pgw.Queryable, userId UserId, deliveryChannel DeliveryChannel, version int,
 ) error {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		update user_settings set delivery_channel = $1, version = $2 where user_id = $3
 	`, deliveryChannel, version, userId)
 	return err
 }
 
 func UserSettings_SaveDeliveryChannel(
-	tx pgw.Queryable, userId UserId, deliveryChannel DeliveryChannel,
+	qu pgw.Queryable, userId UserId, deliveryChannel DeliveryChannel,
 ) error {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		update user_settings set delivery_channel = $1 where user_id = $2
 	`, deliveryChannel, userId)
 	return err

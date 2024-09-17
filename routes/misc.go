@@ -44,8 +44,8 @@ func Misc_About(w http.ResponseWriter, r *http.Request) {
 
 func Misc_Bot(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
-	err := jobs.NotifySlackJob_PerformNow(conn, "Someone looked at /bot")
+	pool := rutil.DBPool(r)
+	err := jobs.NotifySlackJob_PerformNow(pool, "Someone looked at /bot")
 	if err != nil {
 		logger.Error().Err(err).Msgf("Error sending Slack message")
 	}
@@ -57,8 +57,8 @@ func Misc_Bot(w http.ResponseWriter, r *http.Request) {
 
 func Misc_NotFound(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
-	models.ProductEvent_DummyEmitOrLog(conn, r, false, "404", map[string]any{
+	pool := rutil.DBPool(r)
+	models.ProductEvent_DummyEmitOrLog(pool, r, false, "404", map[string]any{
 		"path":    r.URL.Path,
 		"method":  r.Method,
 		"referer": util.CollapseReferer(r),

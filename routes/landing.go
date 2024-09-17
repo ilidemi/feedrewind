@@ -15,8 +15,8 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn := rutil.DBConn(r)
-	pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+	pool := rutil.DBPool(r)
+	pc := models.NewProductEventContext(pool, r, rutil.CurrentProductUserId(r))
 	models.ProductEvent_MustEmitVisitAddPage(pc, "/", true, nil)
 
 	type ScheduleCell struct {

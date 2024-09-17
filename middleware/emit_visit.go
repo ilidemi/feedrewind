@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"feedrewind/db"
 	"feedrewind/models"
 	"feedrewind/util"
 	"net/http"
@@ -49,7 +50,6 @@ func EmitVisit(next http.Handler) http.Handler {
 		})
 
 		logger := GetLogger(r)
-		conn := GetDBConn(r)
 		key := r.Method + " " + rCtx.RoutePattern()
 		var handlerName string
 		var ok bool
@@ -57,7 +57,7 @@ func EmitVisit(next http.Handler) http.Handler {
 			handlerName = "N/A"
 			logger.Warn().Msgf("Couldn't find handler name for key %q", key)
 		}
-		models.ProductEvent_DummyEmitOrLog(conn, r, true, "visit", map[string]any{
+		models.ProductEvent_DummyEmitOrLog(db.RootPool, r, true, "visit", map[string]any{
 			"action":  handlerName,
 			"referer": util.CollapseReferer(r),
 		}, logger)

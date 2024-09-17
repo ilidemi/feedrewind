@@ -21,23 +21,22 @@ import (
 func init() {
 	registerJobNameFunc(
 		"RefreshSuggestionsJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 0 {
 				return oops.Newf("Expected 0 args, got %d: %v", len(args), args)
 			}
 
-			return RefreshSuggestionsJob_Perform(ctx, conn)
+			return RefreshSuggestionsJob_Perform(ctx, pool)
 		},
 	)
 }
 
-func RefreshSuggestionsJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
-	return performAt(tx, runAt, "RefreshSuggestionsJob", defaultQueue)
+func RefreshSuggestionsJob_PerformAt(qu pgw.Queryable, runAt schedule.Time) error {
+	return performAt(qu, runAt, "RefreshSuggestionsJob", defaultQueue)
 }
 
-func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
-	logger := conn.Logger()
+func RefreshSuggestionsJob_Perform(ctx context.Context, pool *pgw.Pool) error {
+	logger := pool.Logger()
 
 	feedUrlsSet := map[string]bool{}
 	for _, screenshotLink := range util.ScreenshotLinks {
@@ -52,7 +51,7 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		feedUrlsSet[miscBlog.FeedUrl] = true
 	}
 
-	result, err := conn.Exec(`
+	result, err := pool.Exec(`
 		delete from ignored_suggestion_feeds where created_at < (utc_now() - interval '23:30')
 	`)
 	if err != nil {
@@ -62,7 +61,7 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		logger.Info().Msgf("Expired %d previously ignored feed(s)", result.RowsAffected())
 	}
 
-	rows, err := conn.Query(`select feed_url from ignored_suggestion_feeds`)
+	rows, err := pool.Query(`select feed_url from ignored_suggestion_feeds`)
 	if err != nil {
 		return err
 	}
@@ -117,7 +116,7 @@ feeds:
 					logger.Error().Msgf(
 						"Couldn't reach feed: %s, attempts exhausted. Silencing further failures", feedUrl,
 					)
-					_, err := conn.Exec(`
+					_, err := pool.Exec(`
 						insert into ignored_suggestion_feeds (feed_url) values ($1)
 					`, feedUrl)
 					if err != nil {
@@ -141,7 +140,7 @@ feeds:
 			continue
 		}
 
-		row := conn.QueryRow(`
+		row := pool.QueryRow(`
 			select id, status, start_feed_id from blogs where feed_url = $1 and version = $2
 		`, feedUrl, models.BlogLatestVersion)
 		var maybeBlogId *models.BlogId
@@ -160,13 +159,13 @@ feeds:
 			}
 
 			logger.Info().Msgf("Downgrading blog %d (%s)", *maybeBlogId, feedUrl)
-			_, err := models.Blog_Downgrade(conn, *maybeBlogId)
+			_, err := models.Blog_Downgrade(pool, *maybeBlogId)
 			if err != nil {
 				logger.Error().Err(err).Msgf("Error when downgrading blog: %s", feedUrl)
 				continue
 			}
 		} else if maybeStartFeedId != nil {
-			row = conn.QueryRow(`select content, url from start_feeds where id = $1`, *maybeStartFeedId)
+			row = pool.QueryRow(`select content, url from start_feeds where id = $1`, *maybeStartFeedId)
 			var content []byte
 			var url string
 			err := row.Scan(&content, &url)
@@ -193,7 +192,7 @@ feeds:
 			newLinks := discoveredSingleFeed.Feed.ParsedFeed.EntryLinks.ToSlice()
 			if len(newLinks) == len(existingLinks) {
 				exactMatch := true
-				curiEqCfg, err := models.BlogCanonicalEqualityConfig_Get(conn, *maybeBlogId)
+				curiEqCfg, err := models.BlogCanonicalEqualityConfig_Get(pool, *maybeBlogId)
 				if errors.Is(err, pgx.ErrNoRows) {
 					logger.Warn().Msgf("CuriEqCfg not found, using an empty one: %s", feedUrl)
 					curiEqCfgVal := crawler.NewCanonicalEqualityConfig()
@@ -215,17 +214,17 @@ feeds:
 			}
 		}
 
-		startFeed, err := models.StartFeed_CreateFetched(conn, nil, discoveredSingleFeed.Feed)
+		startFeed, err := models.StartFeed_CreateFetched(pool, nil, discoveredSingleFeed.Feed)
 		if err != nil {
 			return err
 		}
-		updatedBlog, err := models.Blog_CreateOrUpdate(conn, startFeed, GuidedCrawlingJob_PerformNow)
+		updatedBlog, err := models.Blog_CreateOrUpdate(pool, startFeed, GuidedCrawlingJob_PerformNow)
 		if err != nil {
 			return err
 		}
 		if updatedBlog.MaybeStartFeedId == nil {
 			logger.Info().Msgf("Registering start feed %d for blog %d", startFeed.Id, updatedBlog.Id)
-			_, err := conn.Exec(
+			_, err := pool.Exec(
 				`update blogs set start_feed_id = $1 where id = $2
 			`, startFeed.Id, updatedBlog.Id)
 			if err != nil {
@@ -263,7 +262,7 @@ feeds:
 	}
 
 	runAt := schedule.UTCNow().Add(time.Hour).BeginningOfHour().Add(30 * time.Minute)
-	err = RefreshSuggestionsJob_PerformAt(conn, runAt)
+	err = RefreshSuggestionsJob_PerformAt(pool, runAt)
 	if err != nil {
 		return err
 	}

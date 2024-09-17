@@ -5,27 +5,28 @@ import (
 	"feedrewind/config"
 	"feedrewind/db/migrations"
 	"feedrewind/db/pgw"
+	"feedrewind/log"
 	"feedrewind/oops"
 )
 
-var Pool *pgw.Pool
+var RootPool *pgw.Pool
 
 func init() {
 	var err error
-	Pool, err = pgw.NewPool(context.Background(), config.Cfg.DB.DSN())
+	RootPool, err = pgw.NewPool(context.Background(), &log.BackgroundLogger{}, config.Cfg.DB.DSN())
 	if err != nil {
 		panic(err)
 	}
 }
 
 func EnsureLatestMigration() error {
-	conn, err := Pool.AcquireBackground()
+	conn, err := RootPool.AcquireBackground()
 	if err != nil {
 		return err
 	}
 	defer conn.Release()
 
-	row := conn.QueryRow("select version from schema_migrations order by version desc limit 1")
+	row := RootPool.QueryRow("select version from schema_migrations order by version desc limit 1")
 	var latestDbVersion string
 	err = row.Scan(&latestDbVersion)
 	if err != nil {

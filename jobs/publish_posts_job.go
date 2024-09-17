@@ -20,8 +20,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"PublishPostsJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 3 && len(args) != 4 {
 				return oops.Newf("Expected 3 or 4 args, got %d: %v", len(args), args)
 			}
@@ -56,27 +55,27 @@ func init() {
 				}
 			}
 
-			return PublishPostsJob_Perform(ctx, conn, userId, date, scheduledForStr, isManual)
+			return PublishPostsJob_Perform(ctx, pool, userId, date, scheduledForStr, isManual)
 		},
 	)
 }
 
 func PublishPostsJob_PerformAt(
-	tx pgw.Queryable, runAt schedule.Time, userId models.UserId, date schedule.Date, scheduledForStr string,
+	qu pgw.Queryable, runAt schedule.Time, userId models.UserId, date schedule.Date, scheduledForStr string,
 	isManual bool,
 ) error {
 	return performAt(
-		tx, runAt, "PublishPostsJob", defaultQueue, int64ToYaml(int64(userId)), strToYaml(string(date)),
+		qu, runAt, "PublishPostsJob", defaultQueue, int64ToYaml(int64(userId)), strToYaml(string(date)),
 		strToYaml(scheduledForStr), boolToYaml(isManual),
 	)
 }
 
 func PublishPostsJob_Perform(
-	ctx context.Context, conn *pgw.Conn, userId models.UserId, date schedule.Date, scheduledForStr string,
+	ctx context.Context, pool *pgw.Pool, userId models.UserId, date schedule.Date, scheduledForStr string,
 	isManual bool,
 ) error {
-	logger := conn.Logger()
-	userSettings, err := models.UserSettings_Get(conn, userId)
+	logger := pool.Logger()
+	userSettings, err := models.UserSettings_Get(pool, userId)
 	if errors.Is(err, pgx.ErrNoRows) {
 		logger.Info().Msg("User not found")
 		return nil
@@ -85,7 +84,7 @@ func PublishPostsJob_Perform(
 	}
 
 	if !isManual {
-		row := conn.QueryRow(`
+		row := pool.QueryRow(`
 			select count(*) from subscriptions_without_discarded
 			join (
 				select subscription_id, count(*) from subscription_posts
@@ -108,7 +107,7 @@ func PublishPostsJob_Perform(
 		}
 	}
 
-	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		utcNow := schedule.UTCNow()
 		location := tzdata.LocationByName[userSettings.Timezone]
 		localTime := utcNow.In(location)
@@ -169,7 +168,7 @@ func PublishPostsJob_Perform(
 }
 
 func PublishPostsJob_ScheduleInitial(
-	tx pgw.Queryable, userId models.UserId, userSettings *models.UserSettings, isManual bool,
+	qu pgw.Queryable, userId models.UserId, userSettings *models.UserSettings, isManual bool,
 ) error {
 	utcNow := schedule.UTCNow()
 	location := tzdata.LocationByName[userSettings.Timezone]
@@ -182,26 +181,26 @@ func PublishPostsJob_ScheduleInitial(
 	}
 	nextRunDate := nextRun.MustUTCString()
 
-	return PublishPostsJob_PerformAt(tx, nextRun, userId, date.Date(), nextRunDate, isManual)
+	return PublishPostsJob_PerformAt(qu, nextRun, userId, date.Date(), nextRunDate, isManual)
 }
 
 func PublishPostsJob_Delete(
-	ctx context.Context, tx pgw.Queryable, userId models.UserId, logger log.Logger,
+	ctx context.Context, qu pgw.Queryable, userId models.UserId, logger log.Logger,
 ) error {
 	var attempt int
 	for attempt = 0; attempt < 3; attempt++ {
-		tx2, err := tx.Begin()
+		tx, err := qu.Begin()
 		if err != nil {
 			return err
 		}
 
-		result, err := tx2.Exec(`
+		result, err := tx.Exec(`
 			delete from delayed_jobs
 			where (handler like concat(E'%class: PublishPostsJob\n%'))
 				and handler like concat(E'%arguments:\n  - ', $1::text, E'\n%')
 		`, fmt.Sprint(userId))
 		if err != nil {
-			if err := tx2.Rollback(); err != nil {
+			if err := tx.Rollback(); err != nil {
 				return err
 			}
 			return err
@@ -209,7 +208,7 @@ func PublishPostsJob_Delete(
 		jobsDeleted := result.RowsAffected()
 		if jobsDeleted > 1 {
 			logger.Info().Msgf("Expected to delete 0-1 PublishPostsJob, got %d; retrying", jobsDeleted)
-			if err := tx2.Rollback(); err != nil {
+			if err := tx.Rollback(); err != nil {
 				return err
 			}
 
@@ -219,7 +218,7 @@ func PublishPostsJob_Delete(
 			continue
 		}
 
-		if err := tx2.Commit(); err != nil {
+		if err := tx.Commit(); err != nil {
 			return err
 		}
 		logger.Info().Msgf("Deleted PublishPostsJob for user %d", userId)
@@ -234,8 +233,8 @@ type LockedPublishPostsJob struct {
 	LockedBy string
 }
 
-func PublishPostsJob_Lock(tx pgw.Queryable, userId models.UserId) ([]LockedPublishPostsJob, error) {
-	rows, err := tx.Query(`
+func PublishPostsJob_Lock(qu pgw.Queryable, userId models.UserId) ([]LockedPublishPostsJob, error) {
+	rows, err := qu.Query(`
 		select id, locked_by
 		from delayed_jobs
 		where (handler like concat(E'%class: PublishPostsJob\n%'))
@@ -267,8 +266,8 @@ func PublishPostsJob_Lock(tx pgw.Queryable, userId models.UserId) ([]LockedPubli
 }
 
 // Returns zero value if the job was not found
-func PublishPostsJob_GetNextScheduledDate(tx pgw.Queryable, userId models.UserId) (schedule.Date, error) {
-	row := tx.QueryRow(`
+func PublishPostsJob_GetNextScheduledDate(qu pgw.Queryable, userId models.UserId) (schedule.Date, error) {
+	row := qu.QueryRow(`
 		select (regexp_match(handler, concat(E'arguments:\n  - ', $1::text, E'\n  - ''([0-9-]+)''')))[1]
 		from delayed_jobs
 		where handler like concat(E'%class: PublishPostsJob\n%') and
@@ -297,17 +296,17 @@ func PublishPostsJob_GetHourOfDay(deliveryChannel models.DeliveryChannel) int {
 	}
 }
 
-func PublishPostsJob_UpdateRunAt(tx pgw.Queryable, jobId JobId, runAt schedule.Time) error {
-	_, err := tx.Exec(`
+func PublishPostsJob_UpdateRunAt(qu pgw.Queryable, jobId JobId, runAt schedule.Time) error {
+	_, err := qu.Exec(`
 		update delayed_jobs set run_at = $1 where id = $2
 	`, runAt, jobId)
 	return err
 }
 
 func PublishPostsJob_IsScheduledForDate(
-	tx pgw.Queryable, userId models.UserId, date schedule.Date,
+	qu pgw.Queryable, userId models.UserId, date schedule.Date,
 ) (bool, error) {
-	row := tx.QueryRow(`
+	row := qu.QueryRow(`
 		select count(1)
 		from delayed_jobs
 		where handler like concat(E'%class: PublishPostsJob\n%') and

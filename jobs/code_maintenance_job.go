@@ -17,24 +17,23 @@ import (
 func init() {
 	registerJobNameFunc(
 		"CodeMaintenanceJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 0 {
 				return oops.Newf("Expected 0 args, got %d: %v", len(args), args)
 			}
 
-			return CodeMaintenanceJob_Perform(ctx, conn)
+			return CodeMaintenanceJob_Perform(ctx, pool)
 		},
 	)
 	migrations.CodeMaintenanceJob_PerformAtFunc = CodeMaintenanceJob_PerformAt
 }
 
-func CodeMaintenanceJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
-	return performAt(tx, runAt, "CodeMaintenanceJob", defaultQueue)
+func CodeMaintenanceJob_PerformAt(qu pgw.Queryable, runAt schedule.Time) error {
+	return performAt(qu, runAt, "CodeMaintenanceJob", defaultQueue)
 }
 
-func CodeMaintenanceJob_Perform(ctx context.Context, conn *pgw.Conn) error {
-	logger := conn.Logger()
+func CodeMaintenanceJob_Perform(ctx context.Context, pool *pgw.Pool) error {
+	logger := pool.Logger()
 	utcNow := schedule.UTCNow()
 
 	tzDateCutoff := utcNow.AddDate(0, -6, 0).Format("2006-01-02")
@@ -72,7 +71,7 @@ func CodeMaintenanceJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	if runAt.Sub(utcNow) < 0 {
 		runAt = runAt.AddDate(0, 0, 1)
 	}
-	err := CodeMaintenanceJob_PerformAt(conn, runAt)
+	err := CodeMaintenanceJob_PerformAt(pool, runAt)
 	if err != nil {
 		return err
 	}

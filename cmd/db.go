@@ -89,12 +89,8 @@ func dumpStructure() {
 		panic(err)
 	}
 
-	conn, err := db.Pool.AcquireBackground()
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Release()
-	rows, err := conn.Query("select version from schema_migrations order by version asc")
+	pool := db.RootPool
+	rows, err := pool.Query("select version from schema_migrations order by version asc")
 	if err != nil {
 		panic(err)
 	}
@@ -186,7 +182,7 @@ func (m *{{.StructName}}) Down(tx *Tx) {
 }
 
 func migrate() {
-	conn, err := db.Pool.AcquireBackground()
+	conn, err := db.RootPool.AcquireBackground()
 	if err != nil {
 		panic(err)
 	}
@@ -261,7 +257,7 @@ func migrate() {
 }
 
 func rollback() {
-	conn, err := db.Pool.AcquireBackground()
+	conn, err := db.RootPool.AcquireBackground()
 	if err != nil {
 		panic(err)
 	}

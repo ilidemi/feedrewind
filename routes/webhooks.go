@@ -35,8 +35,8 @@ func Webhooks_PostmarkReportBounce(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	conn := rutil.DBConn(r)
-	tx, err := conn.Begin()
+	pool := rutil.DBPool(r)
+	tx, err := pool.Begin()
 	if err != nil {
 		panic(err)
 	}
@@ -86,8 +86,8 @@ func Webhooks_Stripe(w http.ResponseWriter, r *http.Request) {
 		stripe.EventTypeInvoiceCreated,
 		stripe.EventTypeInvoicePaid:
 
-		conn := rutil.DBConn(r)
-		_, err := conn.Exec(`
+		pool := rutil.DBPool(r)
+		_, err := pool.Exec(`
 			insert into stripe_webhook_events (id, payload) values ($1, $2)
 		`, event.ID, payload)
 		if util.ViolatesUnique(err, "stripe_webhook_events_pkey") {
@@ -96,7 +96,7 @@ func Webhooks_Stripe(w http.ResponseWriter, r *http.Request) {
 		} else if err != nil {
 			panic(err)
 		}
-		err = jobs.StripeWebhookJob_PerformNow(conn, event.ID)
+		err = jobs.StripeWebhookJob_PerformNow(pool, event.ID)
 		if err != nil {
 			panic(err)
 		}

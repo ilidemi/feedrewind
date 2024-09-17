@@ -9,7 +9,7 @@ import (
 )
 
 func Rss_SubscriptionFeed(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
@@ -21,7 +21,7 @@ func Rss_SubscriptionFeed(w http.ResponseWriter, r *http.Request) {
 	var blogBestUrl string
 	var productUserId models.ProductUserId
 
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select
 			(is_paused or (final_item_published_at is not null)),
 			(select body from subscription_rsses where subscription_id = $1),
@@ -36,7 +36,7 @@ func Rss_SubscriptionFeed(w http.ResponseWriter, r *http.Request) {
 
 	if !isPausedOrFinished {
 		productRssClient := resolveRssClient(r)
-		models.ProductEvent_MustEmit(conn, productUserId, "poll feed", map[string]any{
+		models.ProductEvent_MustEmit(pool, productUserId, "poll feed", map[string]any{
 			"subscription_id": subscriptionId,
 			"blog_url":        blogBestUrl,
 			"feed_type":       "subscription",
@@ -49,7 +49,7 @@ func Rss_SubscriptionFeed(w http.ResponseWriter, r *http.Request) {
 }
 
 func Rss_UserFeed(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	userIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
@@ -59,7 +59,7 @@ func Rss_UserFeed(w http.ResponseWriter, r *http.Request) {
 	var hasActiveSubscriptions bool
 	var rss string
 	var productUserId models.ProductUserId
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select (
 			select count(1) from subscriptions_without_discarded
 			where subscriptions_without_discarded.user_id = $1 and
@@ -79,7 +79,7 @@ func Rss_UserFeed(w http.ResponseWriter, r *http.Request) {
 
 	if hasActiveSubscriptions {
 		productRssClient := resolveRssClient(r)
-		models.ProductEvent_MustEmit(conn, productUserId, "poll feed", map[string]any{
+		models.ProductEvent_MustEmit(pool, productUserId, "poll feed", map[string]any{
 			"feed_type": "user",
 			"client":    productRssClient,
 		}, nil)

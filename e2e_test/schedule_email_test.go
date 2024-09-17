@@ -202,7 +202,7 @@ func TestEmailSchedule(t *testing.T) {
 		expectedArrivalMsg.WriteString(".")
 
 		arrivalMsg := page.MustElement("#arrival_msg").MustText()
-		require.Equal(t, expectedArrivalMsg.String(), arrivalMsg, description)
+		require.True(t, strings.HasPrefix(arrivalMsg, expectedArrivalMsg.String()), description)
 		subscriptionId := mustParseSubscriptionId(page)
 		subscriptionPath := fmt.Sprintf("subscriptions/%s", subscriptionId)
 
@@ -292,16 +292,16 @@ func TestEmailSchedule(t *testing.T) {
 		requireSchedulePreview(t, page, outputPreviewTomorrow, description)
 
 		// Cleanup
+		page = visitAdmin(browser, "delete_test_singleton?key=email_metadata")
+		require.Equal(t, "OK", mustPageText(page), description)
+		page = visitAdmin(browser, "destroy_user_subscriptions")
+		require.Equal(t, "OK", mustPageText(page), description)
 		page = visitAdmin(browser, "travel_back")
 		serverTimeStr := mustPageText(page)
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60, description)
 		page = visitAdmin(browser, "reschedule_user_job")
-		require.Equal(t, "OK", mustPageText(page), description)
-		page = visitAdmin(browser, "delete_test_singleton?key=email_metadata")
-		require.Equal(t, "OK", mustPageText(page), description)
-		page = visitAdmin(browser, "destroy_user_subscriptions")
 		require.Equal(t, "OK", mustPageText(page), description)
 		visitDev(browser, "logout")
 

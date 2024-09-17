@@ -18,6 +18,7 @@ import (
 type Queryable interface {
 	Begin() (*Tx, error)
 	Exec(sql string, args ...any) (pgconn.CommandTag, error)
+	ExecWithContext(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 	Query(sql string, args ...any) (*Rows, error)
 	QueryRow(sql string, args ...any) *Row
 	NewBatch() *Batch
@@ -27,15 +28,29 @@ type Queryable interface {
 }
 
 type Pool struct {
-	impl *pgxpool.Pool
+	impl   *pgxpool.Pool
+	ctx    context.Context
+	logger log.Logger
 }
 
-func NewPool(ctx context.Context, connString string) (*Pool, error) {
+func NewPool(ctx context.Context, logger log.Logger, connString string) (*Pool, error) {
 	pool, err := pgxpool.New(ctx, connString)
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
-	return &Pool{pool}, nil
+	return &Pool{
+		impl:   pool,
+		ctx:    ctx,
+		logger: logger,
+	}, nil
+}
+
+func (pool *Pool) Child(childCtx context.Context, childLogger log.Logger) *Pool {
+	return &Pool{
+		impl:   pool.impl,
+		ctx:    childCtx,
+		logger: childLogger,
+	}
 }
 
 func (pool *Pool) Acquire(ctx context.Context, logger log.Logger) (*Conn, error) {
@@ -84,6 +99,92 @@ func (pool *Pool) AcquireBackgroundWithLogger(logger log.Logger) (*Conn, error) 
 		impl:   conn,
 		ctx:    ctx,
 	}, nil
+}
+
+func (pool *Pool) Begin() (*Tx, error) {
+	t1 := time.Now()
+	defer addDuration(pool.ctx, t1)()
+
+	tx, err := pool.impl.Begin(pool.ctx)
+	if err != nil {
+		return nil, oops.Wrap(err)
+	}
+	return &Tx{
+		logger:    pool.logger,
+		impl:      tx,
+		ctx:       pool.ctx,
+		beginTime: t1,
+	}, nil
+}
+
+func (pool *Pool) Exec(sql string, args ...any) (pgconn.CommandTag, error) {
+	t1 := time.Now()
+	defer addDuration(pool.ctx, t1)()
+
+	if err := checkDiscarded(sql); err != nil {
+		return pgconn.CommandTag{}, err // nolint:exhaustruct
+	}
+
+	result, err := pool.impl.Exec(pool.ctx, sql, args...)
+	return result, oops.Wrap(err)
+}
+
+func (pool *Pool) ExecWithContext(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
+	t1 := time.Now()
+	defer addDuration(ctx, t1)()
+
+	if err := checkDiscarded(sql); err != nil {
+		return pgconn.CommandTag{}, err // nolint:exhaustruct
+	}
+
+	result, err := pool.impl.Exec(ctx, sql, args...)
+	return result, oops.Wrap(err)
+}
+
+func (pool *Pool) Query(sql string, args ...any) (*Rows, error) {
+	t1 := time.Now()
+	defer addDuration(pool.ctx, t1)()
+
+	if err := checkDiscarded(sql); err != nil {
+		return nil, err
+	}
+
+	rows, err := pool.impl.Query(pool.ctx, sql, args...)
+	return newRows(rows, pool.ctx), oops.Wrap(err)
+}
+
+func (pool *Pool) QueryRow(sql string, args ...any) *Row {
+	t1 := time.Now()
+	defer addDuration(pool.ctx, t1)()
+
+	if err := checkDiscarded(sql); err != nil {
+		return newErrRow(err)
+	}
+
+	row := pool.impl.QueryRow(pool.ctx, sql, args...)
+	return newRow(row)
+}
+
+func (pool *Pool) NewBatch() *Batch {
+	return &Batch{
+		impl: pgx.Batch{}, //nolint:exhaustruct
+		ctx:  pool.ctx,
+	}
+}
+
+func (pool *Pool) SendBatch(batch *Batch) *BatchResults {
+	t1 := time.Now()
+	defer addDuration(pool.ctx, t1)()
+
+	return newBatchResults(pool.impl.SendBatch(pool.ctx, &batch.impl))
+}
+
+func (pool *Pool) Logger() log.Logger {
+	return pool.logger
+}
+
+func (pool *Pool) Context() context.Context {
+	return pool.ctx
 }
 
 type Conn struct {
@@ -182,19 +283,6 @@ func (conn *Conn) Release() {
 	conn.impl.Release()
 }
 
-// Makes the connection a mutable resource, so should be used sparringly.
-// Intended for use in long-running processes, to release the connection for the duration of it, then revive
-// so that the caller can continue using it
-// The codebase needs a refactor to use the pool directly.
-func (conn *Conn) ReviveFrom(pool *Pool) error {
-	newConn, err := pool.Acquire(conn.ctx, conn.logger)
-	if err != nil {
-		return err
-	}
-	conn.impl = newConn.impl
-	return nil
-}
-
 func (conn *Conn) WaitForNotification(ctx context.Context) (*pgconn.Notification, error) {
 	// Do not track duration. We're mostly waiting here and it's by design.
 
@@ -272,6 +360,18 @@ func (tx *Tx) Exec(sql string, arguments ...any) (pgconn.CommandTag, error) {
 	}
 
 	result, err := tx.impl.Exec(tx.ctx, sql, arguments...)
+	return result, oops.Wrap(err)
+}
+
+func (tx *Tx) ExecWithContext(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
+	t1 := time.Now()
+	defer addDuration(ctx, t1)()
+
+	if err := checkDiscarded(sql); err != nil {
+		return pgconn.CommandTag{}, err // nolint:exhaustruct
+	}
+
+	result, err := tx.impl.Exec(ctx, sql, args...)
 	return result, oops.Wrap(err)
 }
 

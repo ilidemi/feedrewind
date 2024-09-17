@@ -24,8 +24,7 @@ const TimeTravelFormat = "2006-01-02 15:04:05 MST"
 func init() {
 	registerJobNameFunc(
 		"TimeTravelJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 3 {
 				return oops.Newf("Expected 3 args, got %d: %v", len(args), args)
 			}
@@ -62,28 +61,28 @@ func init() {
 				return oops.Wrap(err)
 			}
 
-			return TimeTravelJob_Perform(ctx, conn, commandId, action, timestamp)
+			return TimeTravelJob_Perform(ctx, pool, commandId, action, timestamp)
 		},
 	)
 }
 
 func TimeTravelJob_PerformAtEpoch(
-	tx pgw.Queryable, commandId int64, action TimeTravelJobAction, timestamp time.Time,
+	qu pgw.Queryable, commandId int64, action TimeTravelJobAction, timestamp time.Time,
 ) error {
 	return performAt(
-		tx, schedule.EpochTime, "TimeTravelJob", defaultQueue, int64ToYaml(commandId),
+		qu, schedule.EpochTime, "TimeTravelJob", defaultQueue, int64ToYaml(commandId),
 		strToYaml(string(action)), timeToYaml(timestamp),
 	)
 }
 
 func TimeTravelJob_Perform(
-	ctx context.Context, conn *pgw.Conn, commandId int64, action TimeTravelJobAction, timestamp time.Time,
+	ctx context.Context, pool *pgw.Pool, commandId int64, action TimeTravelJobAction, timestamp time.Time,
 ) error {
 	if !config.Cfg.Env.IsDevOrTest() {
 		return oops.New("No time travel in production!")
 	}
 
-	logger := conn.Logger()
+	logger := pool.Logger()
 	switch action {
 	case TimeTravelJobTravelTo:
 		schedule.MustSetUTCNowOverride(timestamp)
@@ -96,7 +95,7 @@ func TimeTravelJob_Perform(
 	utcNowStr := schedule.UTCNow().Format(TimeTravelFormat)
 	logger.Info().Msgf("Current time: %s", utcNowStr)
 
-	err := util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	err := util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		err := models.TestSingleton_SetValue(tx, "time_travel_command_id", fmt.Sprint(commandId))
 		if err != nil {
 			return err

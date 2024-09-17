@@ -50,7 +50,7 @@ func init() {
 			workerRootName := fmt.Sprintf("%s-%d", workerNameBase, dynoId)
 			logger := &WorkerLogger{WorkerName: workerRootName}
 
-			conn, err := db.Pool.AcquireBackground()
+			conn, err := db.RootPool.AcquireBackground()
 			if err != nil {
 				logger.Error().Err(err).Msg("Couldn't connect to db")
 				os.Exit(1)
@@ -79,24 +79,19 @@ func init() {
 	}
 }
 
-type jobFunc func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error
+type jobFunc func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error
 
 type jobDesc struct {
 	ClassName string
-
-	// If set to true, the job is assumed to have released the db connection so that they're not hogged for
-	// the duration of the job
-	ReleasesDbConn bool
-	Func           jobFunc
+	Func      jobFunc
 }
 
 var jobDescs []jobDesc
 
-func registerJobNameFunc(className string, releasesDbConn bool, f jobFunc) {
+func registerJobNameFunc(className string, f jobFunc) {
 	jobDescs = append(jobDescs, jobDesc{
-		ClassName:      className,
-		ReleasesDbConn: releasesDbConn,
-		Func:           f,
+		ClassName: className,
+		Func:      f,
 	})
 }
 
@@ -332,66 +327,35 @@ func runJob(
 	}
 	// Context cancellation is handled manually at the job level and not at db level
 	// Quick-running jobs should be able to gracefully finish and reschedule themselves
-	jobConn, err := db.Pool.AcquireBackgroundWithLogger(jobLogger)
+	jobPool := db.RootPool.Child(signalCtx, jobLogger)
 	jobDesc, ok := jobDescsByClassName[j.JobData.Job_Class]
 	if !ok {
 		jobErr := oops.Newf("Couldn't find job func for class %s", j.JobData.Job_Class)
 		jobLogger.Error().Err(jobErr).Send()
-		err := failJob(jobConn, j, jobErr)
+		err := failJob(jobPool, j, jobErr)
 		if err != nil {
 			return jobStatusFatal, err
 		}
 		return jobStatusFail, nil
 	}
 
-	if err != nil {
-		err := retryAction(err, jobLogger, "job DB connection", func() error {
-			var innerErr error
-			jobConn, innerErr = db.Pool.AcquireBackgroundWithLogger(jobLogger)
-			return innerErr
-		})
-		if err != nil {
-			return jobStatusFatal, err
-		}
-	}
-
 	jobLogger.LogPerforming(j)
 	jobStart := time.Now().UTC()
 	timeoutCtx, timeoutCancel := context.WithTimeout(signalCtx, maxRunTimeTimeout)
-	jobErr := jobDesc.Func(timeoutCtx, j.Id, jobConn, j.JobData.Arguments)
+	jobErr := jobDesc.Func(timeoutCtx, j.Id, jobPool, j.JobData.Arguments)
 	timeoutCancel()
-	if !jobDesc.ReleasesDbConn {
-		defer jobConn.Release()
-	}
 	if jobErr != nil {
-		var jobErrConn *pgw.Conn
-		if jobDesc.ReleasesDbConn {
-			jobErrConn, err = db.Pool.AcquireBackgroundWithLogger(jobLogger)
-			if err != nil {
-				err := retryAction(err, jobLogger, "job err DB connection", func() error {
-					var innerErr error
-					jobErrConn, innerErr = db.Pool.AcquireBackgroundWithLogger(jobLogger)
-					return innerErr
-				})
-				if err != nil {
-					return jobStatusFatal, err
-				}
-			}
-			defer jobErrConn.Release()
-		} else {
-			jobErrConn = jobConn
-		}
 		if errors.Is(jobErr, context.Canceled) {
 			jobLogger.LogCanceled(j, jobStart)
 		} else {
 			jobLogger.LogFailed(j, jobStart, jobErr)
 		}
-		err := failJob(jobErrConn, j, jobErr)
+		err := failJob(jobPool, j, jobErr)
 		if errors.Is(err, context.Canceled) {
 			return jobStatusFatal, err
 		} else if err != nil {
 			err := retryAction(err, jobLogger, "fail job", func() error {
-				return failJob(jobErrConn, j, jobErr)
+				return failJob(jobPool, j, jobErr)
 			})
 			if err != nil {
 				return jobStatusFatal, err
@@ -404,7 +368,7 @@ func runJob(
 	return jobStatusOk, nil
 }
 
-func failJob(conn *pgw.Conn, j job, jobErr error) error {
+func failJob(qu pgw.Queryable, j job, jobErr error) error {
 	utcNow := schedule.UTCNow()
 	var errorStr string
 	if sterr, ok := jobErr.(*oops.Error); ok {
@@ -414,7 +378,7 @@ func failJob(conn *pgw.Conn, j job, jobErr error) error {
 	}
 
 	if j.Attempts+1 >= maxAttempts {
-		_, err := conn.ExecWithContext(context.Background(), `
+		_, err := qu.ExecWithContext(context.Background(), `
 			update delayed_jobs
 			set locked_at = null,
 				locked_by = null,
@@ -429,7 +393,7 @@ func failJob(conn *pgw.Conn, j job, jobErr error) error {
 	retryInSeconds := math.Pow(float64(j.Attempts), 4) + 5
 	nextRunAt := utcNow.Add(time.Duration(retryInSeconds) * time.Second)
 
-	_, err := conn.ExecWithContext(context.Background(), `
+	_, err := qu.ExecWithContext(context.Background(), `
 		update delayed_jobs
 		set locked_at = null,
 			locked_by = null,

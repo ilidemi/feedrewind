@@ -19,8 +19,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"DispatchAmplitudeJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) > 1 {
 				return oops.Newf("Expected 0 or 1 arg, got %d: %v", len(args), args)
 			}
@@ -34,18 +33,18 @@ func init() {
 				}
 			}
 
-			return DispatchAmplitudeJob_Perform(ctx, conn, isManual)
+			return DispatchAmplitudeJob_Perform(ctx, pool, isManual)
 		},
 	)
 }
 
-func DispatchAmplitudeJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
-	return performAt(tx, runAt, "DispatchAmplitudeJob", defaultQueue)
+func DispatchAmplitudeJob_PerformAt(qu pgw.Queryable, runAt schedule.Time) error {
+	return performAt(qu, runAt, "DispatchAmplitudeJob", defaultQueue)
 }
 
-func DispatchAmplitudeJob_Perform(ctx context.Context, conn *pgw.Conn, isManual bool) error {
-	logger := conn.Logger()
-	eventsToDispatch, err := models.ProductEvent_GetNotDispatched(conn)
+func DispatchAmplitudeJob_Perform(ctx context.Context, pool *pgw.Pool, isManual bool) error {
+	logger := pool.Logger()
+	eventsToDispatch, err := models.ProductEvent_GetNotDispatched(pool)
 	if err != nil {
 		return err
 	}
@@ -70,7 +69,7 @@ func DispatchAmplitudeJob_Perform(ctx context.Context, conn *pgw.Conn, isManual 
 				botSkippedCount++
 				botName := *productEvent.MaybeBotName
 				botCounts[botName]++
-				err := models.ProductEvent_MarkAsDispatched(conn, productEvent.Id, time.Now().UTC())
+				err := models.ProductEvent_MarkAsDispatched(pool, productEvent.Id, time.Now().UTC())
 				if err != nil {
 					return err
 				}
@@ -115,7 +114,7 @@ func DispatchAmplitudeJob_Perform(ctx context.Context, conn *pgw.Conn, isManual 
 		}
 
 		if resp.StatusCode == http.StatusOK {
-			err := models.ProductEvent_MarkAsDispatched(conn, productEvent.Id, time.Now().UTC())
+			err := models.ProductEvent_MarkAsDispatched(pool, productEvent.Id, time.Now().UTC())
 			if err != nil {
 				return err
 			}
@@ -141,7 +140,7 @@ func DispatchAmplitudeJob_Perform(ctx context.Context, conn *pgw.Conn, isManual 
 	if !isManual {
 		hourFromNow := schedule.UTCNow().Add(time.Hour)
 		runAt := hourFromNow.BeginningOfHour()
-		err := DispatchAmplitudeJob_PerformAt(conn, runAt)
+		err := DispatchAmplitudeJob_PerformAt(pool, runAt)
 		if err != nil {
 			return err
 		}

@@ -16,8 +16,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"ProcessPostmarkBounceJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 1 {
 				return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)
 			}
@@ -31,19 +30,19 @@ func init() {
 				bounceId = int64(bounceIdInt)
 			}
 
-			return ProcessPostmarkBounceJob_Perform(ctx, conn, bounceId)
+			return ProcessPostmarkBounceJob_Perform(ctx, pool, bounceId)
 		},
 	)
 }
 
-func ProcessPostmarkBounceJob_PerformNow(tx pgw.Queryable, bounceId int64) error {
-	return performNow(tx, "ProcessPostmarkBounceJob", defaultQueue, int64ToYaml(bounceId))
+func ProcessPostmarkBounceJob_PerformNow(qu pgw.Queryable, bounceId int64) error {
+	return performNow(qu, "ProcessPostmarkBounceJob", defaultQueue, int64ToYaml(bounceId))
 }
 
-func ProcessPostmarkBounceJob_Perform(ctx context.Context, conn *pgw.Conn, bounceId int64) error {
-	logger := conn.Logger()
+func ProcessPostmarkBounceJob_Perform(ctx context.Context, pool *pgw.Pool, bounceId int64) error {
+	logger := pool.Logger()
 
-	bounce, err := models.PostmarkBounce_GetById(conn, bounceId)
+	bounce, err := models.PostmarkBounce_GetById(pool, bounceId)
 	if err != nil {
 		return err
 	}
@@ -55,7 +54,7 @@ func ProcessPostmarkBounceJob_Perform(ctx context.Context, conn *pgw.Conn, bounc
 	messageId := *bounce.MaybeMessageId
 
 	// If a bounce came before the message is saved, query will fail, the job will retry later and it's ok
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select message_type, subscription_id, subscription_post_id
 		from postmark_messages
 		where message_id = $1
@@ -71,7 +70,7 @@ func ProcessPostmarkBounceJob_Perform(ctx context.Context, conn *pgw.Conn, bounc
 		return err
 	}
 
-	row = conn.QueryRow(`
+	row = pool.QueryRow(`
 		select user_id, (
 			select product_user_id from users_with_discarded
 			where users_with_discarded.id = subscriptions_with_discarded.user_id
@@ -110,7 +109,7 @@ func ProcessPostmarkBounceJob_Perform(ctx context.Context, conn *pgw.Conn, bounc
 		logger.Info().Msgf("Soft bounce (%s)", bounce.BounceType)
 
 		attemptCount, err := models.PostmarkMessage_GetAttemptCount(
-			conn, messageType, subscriptionId, maybeSubscriptionPostId,
+			pool, messageType, subscriptionId, maybeSubscriptionPostId,
 		)
 		if err != nil {
 			return err
@@ -126,24 +125,24 @@ func ProcessPostmarkBounceJob_Perform(ctx context.Context, conn *pgw.Conn, bounc
 		}[attemptCount]
 		if !ok {
 			logger.Error().Msgf("Soft bounce after %d attempts, handling as hard bounce", attemptCount)
-			err := markUserBounced(conn, subscriptionId, userId, productUserId, blogBestUrl, *bounce)
+			err := markUserBounced(pool, subscriptionId, userId, productUserId, blogBestUrl, *bounce)
 			return err
 		}
 
 		runAt := schedule.UTCNow().Add(waitTime)
-		err = RetryBouncedEmailJob_PerformAt(conn, runAt, messageId)
+		err = RetryBouncedEmailJob_PerformAt(pool, runAt, messageId)
 		if err != nil {
 			return err
 		}
 	case "SpamNotification", "SpamComplaint", "ChallengeVerification":
 		logger.Error().Msgf("Spam complaint (%s), handling as hard bounce", bounce.BounceType)
-		err := markUserBounced(conn, subscriptionId, userId, productUserId, blogBestUrl, *bounce)
+		err := markUserBounced(pool, subscriptionId, userId, productUserId, blogBestUrl, *bounce)
 		if err != nil {
 			return err
 		}
 	default:
 		logger.Error().Msgf("Hard bounce (%s)", bounce.BounceType)
-		err := markUserBounced(conn, subscriptionId, userId, productUserId, blogBestUrl, *bounce)
+		err := markUserBounced(pool, subscriptionId, userId, productUserId, blogBestUrl, *bounce)
 		if err != nil {
 			return err
 		}
@@ -153,11 +152,11 @@ func ProcessPostmarkBounceJob_Perform(ctx context.Context, conn *pgw.Conn, bounc
 }
 
 func markUserBounced(
-	conn *pgw.Conn, subscriptionId models.SubscriptionId, userId models.UserId,
+	pool *pgw.Pool, subscriptionId models.SubscriptionId, userId models.UserId,
 	productUserId models.ProductUserId, blogBestUrl string, bounce models.PostmarkBounce,
 ) error {
-	logger := conn.Logger()
-	err := util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	logger := pool.Logger()
+	err := util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		exists, err := models.PostmarkBouncedUser_Exists(tx, userId)
 		if err != nil {
 			return err

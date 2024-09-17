@@ -9,8 +9,8 @@ import (
 
 func Posts_Post(w http.ResponseWriter, r *http.Request) {
 	randomId := models.SubscriptionPostRandomId(util.URLParamStr(r, "random_id"))
-	conn := rutil.DBConn(r)
-	row := conn.QueryRow(`
+	pool := rutil.DBPool(r)
+	row := pool.QueryRow(`
 		select
 			(select url from blog_posts where blog_posts.id = subscription_posts.blog_post_id),
 			subscription_id,
@@ -33,7 +33,7 @@ func Posts_Post(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	models.ProductEvent_MustEmit(conn, productUserId, "open post", map[string]any{
+	models.ProductEvent_MustEmit(pool, productUserId, "open post", map[string]any{
 		"subscription_id": subscriptionId,
 		"blog_url":        blogBestUrl,
 	}, nil)

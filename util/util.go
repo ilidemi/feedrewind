@@ -67,8 +67,8 @@ func CommitOrRollbackOnPanic(tx *pgw.Tx) {
 // Helps the caller of Tx to clobber the variable that's passed as parentTx, preventing accidental use
 type Clobber struct{}
 
-func Tx(parentTx pgw.Queryable, f func(*pgw.Tx, Clobber) error) error {
-	tx, err := parentTx.Begin()
+func Tx(qu pgw.Queryable, f func(*pgw.Tx, Clobber) error) error {
+	tx, err := qu.Begin()
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func Tx(parentTx pgw.Queryable, f func(*pgw.Tx, Clobber) error) error {
 	if err != nil {
 		rollbackErr := tx.Rollback()
 		if rollbackErr != nil {
-			parentTx.Logger().Error().Err(rollbackErr).Msg("Rollback error")
+			qu.Logger().Error().Err(rollbackErr).Msg("Rollback error")
 		}
 		return err
 	}
@@ -90,9 +90,9 @@ func Tx(parentTx pgw.Queryable, f func(*pgw.Tx, Clobber) error) error {
 	return nil
 }
 
-func TxReturn[T any](parentTx pgw.Queryable, f func(*pgw.Tx, Clobber) (T, error)) (T, error) {
+func TxReturn[T any](qu pgw.Queryable, f func(*pgw.Tx, Clobber) (T, error)) (T, error) {
 	var zero T
-	tx, err := parentTx.Begin()
+	tx, err := qu.Begin()
 	if err != nil {
 		return zero, err
 	}
@@ -101,7 +101,7 @@ func TxReturn[T any](parentTx pgw.Queryable, f func(*pgw.Tx, Clobber) (T, error)
 	if err != nil {
 		rollbackErr := tx.Rollback()
 		if rollbackErr != nil {
-			parentTx.Logger().Error().Err(rollbackErr).Msg("Rollback error")
+			qu.Logger().Error().Err(rollbackErr).Msg("Rollback error")
 		}
 		return zero, err
 	}

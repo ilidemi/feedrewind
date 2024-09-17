@@ -50,14 +50,14 @@ func newDeliverySettings(userSettings *models.UserSettings) deliverySettings {
 
 func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	currentUser := rutil.CurrentUser(r)
-	userSettings, err := models.UserSettings_Get(conn, currentUser.Id)
+	userSettings, err := models.UserSettings_Get(pool, currentUser.Id)
 	if err != nil {
 		panic(err)
 	}
 	userGroupId, userGroupFound := util.GroupIdByTimezoneId[userSettings.Timezone]
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select plan_id from pricing_offers
 		where id = (select offer_id from users_without_discarded where id = $1)
 	`, currentUser.Id)
@@ -82,7 +82,7 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 	cancelAtStr := ""
 	renewsOnStr := ""
 	if isPaid {
-		row := conn.QueryRow(`
+		row := pool.QueryRow(`
 			select stripe_cancel_at, stripe_current_period_end from users_without_discarded where id = $1
 		`, currentUser.Id)
 		var maybeCancelAt, maybeCurrentPeriodEnd *time.Time
@@ -103,7 +103,7 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 	isPatron := planId == models.PlanIdPatron
 	patronCredits := 0
 	if isPatron {
-		row := conn.QueryRow(`select count from patron_credits where user_id = $1`, currentUser.Id)
+		row := pool.QueryRow(`select count from patron_credits where user_id = $1`, currentUser.Id)
 		err := row.Scan(&patronCredits)
 		if errors.Is(err, pgx.ErrNoRows) {
 			logger.Warn().Msgf("Displaying 0 credits to user %d who upgraded to paid", currentUser.Id)
@@ -170,7 +170,7 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 
 func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	newTimezone := util.EnsureParamStr(r, "timezone")
 	newVersion := util.EnsureParamInt(r, "version")
 	newLocation, ok := tzdata.LocationByName[newTimezone]
@@ -182,7 +182,7 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 	// Saving timezone may race with user's update rss job.
 	// If the job is already running, wait till it finishes, otherwise lock the row so it doesn't start
 	mustSaveTimezone := func() (result bool) {
-		tx, err := conn.Begin()
+		tx, err := pool.Begin()
 		if err != nil {
 			panic(err)
 		}
@@ -245,7 +245,7 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 			logger.Info().Msgf("Rescheduled PublishPostsJob for %s", newRunAt)
 		}
 
-		pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+		pc := models.NewProductEventContext(tx, r, rutil.CurrentProductUserId(r))
 		models.ProductEvent_MustEmitFromRequest(pc, "update timezone", map[string]any{
 			"old_timezone": oldTimezone,
 			"new_timezone": newTimezone,
@@ -273,7 +273,7 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 
 func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	currentUser := rutil.CurrentUser(r)
 	deliveryChannelStr := util.EnsureParamStr(r, "delivery_channel")
 	newVersion := util.EnsureParamInt(r, "version")
@@ -294,7 +294,7 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 	// Saving delivery channel may race with user's update rss job.
 	// If the job is already running, wait till it finishes, otherwise lock the row so it doesn't start
 	mustSaveDeliveryChannel := func() (result bool) {
-		tx, err := conn.Begin()
+		tx, err := pool.Begin()
 		if err != nil {
 			panic(err)
 		}
@@ -370,7 +370,7 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			logger.Info().Msg("Did initial schedule for PublishPostsJob")
 		}
 
-		pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+		pc := models.NewProductEventContext(tx, r, rutil.CurrentProductUserId(r))
 		models.ProductEvent_MustEmitFromRequest(pc, "update delivery channel", map[string]any{
 			"old_delivery_channel": oldDeliveryChannel,
 			"new_delivery_channel": newDeliveryChannel,
@@ -400,8 +400,8 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 
 func UserSettings_Billing(w http.ResponseWriter, r *http.Request) {
 	currentUserId := rutil.CurrentUserId(r)
-	conn := rutil.DBConn(r)
-	row := conn.QueryRow(`
+	pool := rutil.DBPool(r)
+	row := pool.QueryRow(`
 		select stripe_customer_id, (select plan_id from pricing_offers where id = offer_id)
 		from users_without_discarded
 		where id = $1
@@ -442,8 +442,8 @@ func UserSettings_Billing(w http.ResponseWriter, r *http.Request) {
 func UserSettings_BillingFull(w http.ResponseWriter, r *http.Request) {
 	currentUserId := rutil.CurrentUserId(r)
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
-	row := conn.QueryRow(`
+	pool := rutil.DBPool(r)
+	row := pool.QueryRow(`
 		select stripe_customer_id, (select plan_id from pricing_offers where id = offer_id)
 		from users_without_discarded
 		where id = $1

@@ -18,23 +18,22 @@ import (
 func init() {
 	registerJobNameFunc(
 		"CheckStaleStripeJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 0 {
 				return oops.Newf("Expected 0 args, got %d: %v", len(args), args)
 			}
 
-			return CheckStaleStripeJob_Perform(ctx, conn)
+			return CheckStaleStripeJob_Perform(ctx, pool)
 		},
 	)
 }
 
-func CheckStaleStripeJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
-	return performAt(tx, runAt, "CheckStaleStripeJob", defaultQueue)
+func CheckStaleStripeJob_PerformAt(qu pgw.Queryable, runAt schedule.Time) error {
+	return performAt(qu, runAt, "CheckStaleStripeJob", defaultQueue)
 }
 
-func CheckStaleStripeJob_Perform(ctx context.Context, conn *pgw.Conn) error {
-	logger := conn.Logger()
+func CheckStaleStripeJob_Perform(ctx context.Context, pool *pgw.Pool) error {
+	logger := pool.Logger()
 	utcNow := schedule.UTCNow()
 
 	subscriptionCutoff := utcNow.Add(-24 * time.Hour)
@@ -68,7 +67,7 @@ func CheckStaleStripeJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 			batchSet[subscriptionId] = true
 		}
 		batchStr := strings.Join(batch, "', '")
-		rows, err := conn.Query(`
+		rows, err := pool.Query(`
 			select stripe_subscription_id from users_without_discarded
 			where stripe_subscription_id in ('` + batchStr + `')
 		`)
@@ -97,7 +96,7 @@ func CheckStaleStripeJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	}
 
 	tokenCutoff := utcNow.Add(-7 * 24 * time.Hour)
-	row := conn.QueryRow(`select count(1) from stripe_subscription_tokens where created_at < $1`, tokenCutoff)
+	row := pool.QueryRow(`select count(1) from stripe_subscription_tokens where created_at < $1`, tokenCutoff)
 	var staleCount int
 	err := row.Scan(&staleCount)
 	if err != nil {
@@ -130,7 +129,7 @@ func CheckStaleStripeJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		if sesh.PaymentIntent == nil {
 			continue
 		}
-		row := conn.QueryRow(`
+		row := pool.QueryRow(`
 			select 1 from custom_blog_requests
 			where stripe_payment_intent_id = $1
 		`, sesh.PaymentIntent.ID)
@@ -154,7 +153,7 @@ func CheckStaleStripeJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 
 	hourFromNow := utcNow.Add(time.Hour)
 	runAt := hourFromNow.BeginningOfHour()
-	err = CheckStaleStripeJob_PerformAt(conn, runAt)
+	err = CheckStaleStripeJob_PerformAt(pool, runAt)
 	if err != nil {
 		return err
 	}

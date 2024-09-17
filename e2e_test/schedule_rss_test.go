@@ -251,6 +251,8 @@ func TestRssSchedule(t *testing.T) {
 		requireSchedulePreview(t, page, outputPreviewTomorrow, description)
 
 		// Cleanup
+		page = visitAdmin(browser, "destroy_user_subscriptions")
+		require.Equal(t, "OK", mustPageText(page))
 		page = visitAdmin(browser, "travel_back")
 		serverTimeStr := mustPageText(page)
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)

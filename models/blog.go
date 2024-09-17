@@ -79,8 +79,8 @@ const BlogLatestVersion = 1000000
 
 var ErrBlogNotFound = errors.New("blog not found")
 
-func Blog_GetLatestByFeedUrl(tx pgw.Queryable, feedUrl string) (*Blog, error) {
-	row := tx.QueryRow(`
+func Blog_GetLatestByFeedUrl(qu pgw.Queryable, feedUrl string) (*Blog, error) {
+	row := qu.QueryRow(`
 		select id, name, status, update_action, start_feed_id, coalesce(url, feed_url) from blogs
 		where feed_url = $1 and version = $2
 	`, feedUrl, BlogLatestVersion)
@@ -98,25 +98,25 @@ func Blog_GetLatestByFeedUrl(tx pgw.Queryable, feedUrl string) (*Blog, error) {
 
 // Break circular dependency between models and jobs. Jobs will be using models, models only sometimes need to
 // schedule a job.
-type GuidedCrawlingJobScheduleFunc func(tx pgw.Queryable, blogId BlogId, startFeedId StartFeedId) error
+type GuidedCrawlingJobScheduleFunc func(qu pgw.Queryable, blogId BlogId, startFeedId StartFeedId) error
 
 func Blog_CreateOrUpdate(
-	tx pgw.Queryable, startFeed *StartFeed, guidedCrawlingJobScheduleFunc GuidedCrawlingJobScheduleFunc,
+	qu pgw.Queryable, startFeed *StartFeed, guidedCrawlingJobScheduleFunc GuidedCrawlingJobScheduleFunc,
 ) (*Blog, error) {
-	logger := tx.Logger()
-	blog, err := Blog_GetLatestByFeedUrl(tx, startFeed.Url)
+	logger := qu.Logger()
+	blog, err := Blog_GetLatestByFeedUrl(qu, startFeed.Url)
 	if errors.Is(err, ErrBlogNotFound) {
 		logger.Info().Msgf("Creating a new blog for feed url %s", startFeed.Url)
 		blog, err = func() (blog *Blog, err error) {
-			nestedTx, err := tx.Begin()
+			tx, err := qu.Begin()
 			if err != nil {
 				return nil, err
 			}
-			defer util.CommitOrRollbackErr(nestedTx, &err)
-			blog, err = blog_CreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobScheduleFunc)
+			defer util.CommitOrRollbackErr(tx, &err)
+			blog, err = blog_CreateWithCrawling(tx, startFeed, guidedCrawlingJobScheduleFunc)
 			if errors.Is(err, errBlogAlreadyExists) {
 				// Another writer must've created the record at the same time, let's use that
-				blog, err = Blog_GetLatestByFeedUrl(nestedTx, startFeed.Url)
+				blog, err = Blog_GetLatestByFeedUrl(tx, startFeed.Url)
 				if err != nil {
 					return nil, oops.Wrapf(
 						err,
@@ -148,7 +148,7 @@ func Blog_CreateOrUpdate(
 	// Update blog from feed
 	var blogPostCuris []crawler.CanonicalUri
 	zlogger := crawler.ZeroLogger{Logger: logger}
-	rows, err := tx.Query(`select url from blog_posts where blog_id = $1 order by index desc`, blog.Id)
+	rows, err := qu.Query(`select url from blog_posts where blog_id = $1 order by index desc`, blog.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -168,12 +168,12 @@ func Blog_CreateOrUpdate(
 		return nil, err
 	}
 
-	curiEqCfg, err := BlogCanonicalEqualityConfig_Get(tx, blog.Id)
+	curiEqCfg, err := BlogCanonicalEqualityConfig_Get(qu, blog.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err = tx.Query(`select url from blog_discarded_feed_entries where blog_id = $1`, blog.Id)
+	rows, err = qu.Query(`select url from blog_discarded_feed_entries where blog_id = $1`, blog.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func Blog_CreateOrUpdate(
 		return nil, err
 	}
 
-	rows, err = tx.Query(`select url from blog_missing_from_feed_entries where blog_id = $1`, blog.Id)
+	rows, err = qu.Query(`select url from blog_missing_from_feed_entries where blog_id = $1`, blog.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -231,21 +231,21 @@ func Blog_CreateOrUpdate(
 	case BlogUpdateActionRecrawl:
 		logger.Info().Msgf("Blog %s is marked to recrawl on update", startFeed.Url)
 		return func() (newBlog *Blog, err error) {
-			nestedTx, err := tx.Begin()
+			tx, err := qu.Begin()
 			if err != nil {
 				return nil, err
 			}
-			defer util.CommitOrRollbackErr(nestedTx, &err)
+			defer util.CommitOrRollbackErr(tx, &err)
 
-			_, err = Blog_Downgrade(nestedTx, blog.Id)
+			_, err = Blog_Downgrade(tx, blog.Id)
 			if err == nil {
-				newBlog, err = blog_CreateWithCrawling(nestedTx, startFeed, guidedCrawlingJobScheduleFunc)
+				newBlog, err = blog_CreateWithCrawling(tx, startFeed, guidedCrawlingJobScheduleFunc)
 				if err != nil {
 					return nil, err
 				}
 			} else if errors.Is(err, ErrNoLatestVersion) || errors.Is(err, errBlogAlreadyExists) {
 				// Another writer deprecated this blog at the same time
-				newBlog, err = Blog_GetLatestByFeedUrl(nestedTx, startFeed.Url)
+				newBlog, err = Blog_GetLatestByFeedUrl(tx, startFeed.Url)
 				if errors.Is(err, ErrBlogNotFound) {
 					return nil, oops.Newf(
 						"Blog %s with latest version was deprecated by another request but the latest version still doesn't exist",
@@ -263,7 +263,7 @@ func Blog_CreateOrUpdate(
 	case BlogUpdateActionUpdateFromFeedOrFail:
 		if newLinksOk {
 			logger.Info().Msgf("Updating blog %s from feed with %d new links", startFeed.Url, len(newLinks))
-			rows, err := tx.Query(`select id, name from blog_post_categories where blog_id = $1`, blog.Id)
+			rows, err := qu.Query(`select id, name from blog_post_categories where blog_id = $1`, blog.Id)
 			if err != nil {
 				return nil, err
 			}
@@ -283,13 +283,13 @@ func Blog_CreateOrUpdate(
 			everythingId := categoryIdByName["Everything"]
 
 			return func() (newBlog *Blog, err error) {
-				nestedTx, err := tx.Begin()
+				tx, err := qu.Begin()
 				if err != nil {
 					return nil, err
 				}
-				defer util.CommitOrRollbackErr(nestedTx, &err)
+				defer util.CommitOrRollbackErr(tx, &err)
 
-				rows, err = nestedTx.Query(`
+				rows, err = tx.Query(`
 					select blog_id from blog_post_locks
 					where blog_id = $1
 					for update nowait
@@ -297,7 +297,7 @@ func Blog_CreateOrUpdate(
 				var pgErr *pgconn.PgError
 				if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.LockNotAvailable {
 					logger.Info().Msgf("Someone else is updating the blog posts for %s, just waiting till they're done", startFeed.Url)
-					rows, err := nestedTx.Query(`
+					rows, err := tx.Query(`
 						select blog_id from blog_post_locks
 						where blog_id = $1
 						for update
@@ -314,7 +314,7 @@ func Blog_CreateOrUpdate(
 					// a newer list and ends up using the older list. But if both updates came a second
 					// earlier, both would get the older list, and the new post would still get published a
 					// second later, so the UX is the same and there's nothing we could do about it.
-					newBlog, err = Blog_GetLatestByFeedUrl(nestedTx, startFeed.Url)
+					newBlog, err = Blog_GetLatestByFeedUrl(tx, startFeed.Url)
 					if errors.Is(err, ErrBlogNotFound) {
 						return nil, oops.Newf(
 							"Blog %s with latest version was updated by another request but the latest version also doesn't exist",
@@ -340,13 +340,13 @@ func Blog_CreateOrUpdate(
 					feedLink.Curi, crawler.HardcodedOvercomingBiasFeed, curiEqCfg,
 				)
 
-				row := nestedTx.QueryRow("select max(index) from blog_posts where blog_id = $1", blog.Id)
+				row := tx.QueryRow("select max(index) from blog_posts where blog_id = $1", blog.Id)
 				var maxIndex int
 				err = row.Scan(&maxIndex)
 				if err != nil {
 					return nil, err
 				}
-				batch := nestedTx.NewBatch()
+				batch := tx.NewBatch()
 				for i := range len(newLinks) {
 					index := maxIndex + 1 + i
 					link := newLinks[len(newLinks)-1-i]
@@ -369,7 +369,7 @@ func Blog_CreateOrUpdate(
 					for _, categoryName := range categoryNames {
 						categoryId, ok := categoryIdByName[categoryName]
 						if !ok {
-							row := nestedTx.QueryRow(`
+							row := tx.QueryRow(`
 								insert into blog_post_categories (blog_id, name, index, top_status)
 								values (
 									$1,
@@ -405,11 +405,11 @@ func Blog_CreateOrUpdate(
 						select (select id from blog_post_ids), id from category_ids
 					`, blog.Id, index, link.Url, title)
 				}
-				err = nestedTx.SendBatch(batch).Close()
+				err = tx.SendBatch(batch).Close()
 				if err != nil {
 					return nil, err
 				}
-				_, err = nestedTx.Exec(`
+				_, err = tx.Exec(`
 					update blogs set start_feed_id = $1 where id = $2
 				`, startFeed.Id, blog.Id)
 				if err != nil {
@@ -419,7 +419,7 @@ func Blog_CreateOrUpdate(
 			}()
 		} else {
 			logger.Warn().Msgf("Couldn't update blog %s from feed, marking as failed", startFeed.Url)
-			_, err := tx.Exec(`
+			_, err := qu.Exec(`
 				update blogs set status = $1 where id = $2
 			`, BlogStatusUpdateFromFeedFailed, blog.Id)
 			if err != nil {
@@ -430,7 +430,7 @@ func Blog_CreateOrUpdate(
 		}
 	case BlogUpdateActionFail:
 		logger.Warn().Msgf("Blog %s is marked to fail on update", startFeed.Url)
-		_, err := tx.Exec(`
+		_, err := qu.Exec(`
 			update blogs set status = $1 where id = $2
 		`, BlogStatusUpdateFromFeedFailed, blog.Id)
 		if err != nil {
@@ -449,10 +449,10 @@ func Blog_CreateOrUpdate(
 var errBlogAlreadyExists = errors.New("blog already exists")
 
 func blog_CreateWithCrawling(
-	tx pgw.Queryable, startFeed *StartFeed,
+	qu pgw.Queryable, startFeed *StartFeed,
 	guidedCrawlingJobScheduleFunc GuidedCrawlingJobScheduleFunc,
 ) (*Blog, error) {
-	row := tx.QueryRow(`
+	row := qu.QueryRow(`
 		select count(1) from blogs where feed_url = $1 and version = $2
 	`, startFeed.Url, BlogLatestVersion)
 	var count int
@@ -464,14 +464,14 @@ func blog_CreateWithCrawling(
 		return nil, errBlogAlreadyExists
 	}
 
-	blogIdInt, err := mutil.RandomId(tx, "blogs")
+	blogIdInt, err := mutil.RandomId(qu, "blogs")
 	if err != nil {
 		return nil, err
 	}
 	blogId := BlogId(blogIdInt)
 	status := BlogStatusCrawlInProgress
 	updateAction := BlogUpdateActionRecrawl
-	_, err = tx.Exec(`
+	_, err = qu.Exec(`
 		insert into blogs (
 			id, name, feed_url, url, status, status_updated_at, version, update_action, start_feed_id
 		)
@@ -481,15 +481,15 @@ func blog_CreateWithCrawling(
 		return nil, err
 	}
 
-	_, err = tx.Exec(`insert into blog_crawl_progresses (blog_id, epoch) values ($1, 0)`, blogId)
+	_, err = qu.Exec(`insert into blog_crawl_progresses (blog_id, epoch) values ($1, 0)`, blogId)
 	if err != nil {
 		return nil, err
 	}
-	_, err = tx.Exec(`insert into blog_post_locks (blog_id) values ($1)`, blogId)
+	_, err = qu.Exec(`insert into blog_post_locks (blog_id) values ($1)`, blogId)
 	if err != nil {
 		return nil, err
 	}
-	err = guidedCrawlingJobScheduleFunc(tx, blogId, startFeed.Id)
+	err = guidedCrawlingJobScheduleFunc(qu, blogId, startFeed.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -507,8 +507,8 @@ func blog_CreateWithCrawling(
 
 var ErrNoLatestVersion = errors.New("blog with latest version not found")
 
-func Blog_Downgrade(tx pgw.Queryable, blogId BlogId) (int32, error) {
-	row := tx.QueryRow(`
+func Blog_Downgrade(qu pgw.Queryable, blogId BlogId) (int32, error) {
+	row := qu.QueryRow(`
 		update blogs
 		set version = (
 			select coalesce(max(version), 0) from blogs
@@ -677,8 +677,8 @@ func Blog_InitCrawled(
 	return updatedAt, nil
 }
 
-func Blog_GetBestUrl(tx pgw.Queryable, blogId BlogId) (string, error) {
-	row := tx.QueryRow(`
+func Blog_GetBestUrl(qu pgw.Queryable, blogId BlogId) (string, error) {
+	row := qu.QueryRow(`
 		select coalesce(url, feed_url) from blogs
 		where id = $1
 	`, blogId)
@@ -690,8 +690,8 @@ func Blog_GetBestUrl(tx pgw.Queryable, blogId BlogId) (string, error) {
 
 // BlogPostLock
 
-func BlogPostLock_Create(tx pgw.Queryable, blogId BlogId) error {
-	_, err := tx.Exec(`insert into blog_post_locks (blog_id) values ($1)`, blogId)
+func BlogPostLock_Create(qu pgw.Queryable, blogId BlogId) error {
+	_, err := qu.Exec(`insert into blog_post_locks (blog_id) values ($1)`, blogId)
 	return err
 }
 
@@ -703,8 +703,8 @@ type BlogCrawlProgress struct {
 	Epoch    int32
 }
 
-func BlogCrawlProgress_Get(tx pgw.Queryable, blogId BlogId) (*BlogCrawlProgress, error) {
-	row := tx.QueryRow(`
+func BlogCrawlProgress_Get(qu pgw.Queryable, blogId BlogId) (*BlogCrawlProgress, error) {
+	row := qu.QueryRow(`
 		select count, progress, epoch from blog_crawl_progresses where blog_id = $1
 	`, blogId)
 	var maybeCount *int32
@@ -736,8 +736,8 @@ type BlogCrawlClientToken string
 
 var ErrBlogCrawlClientTokenNotFound = errors.New("blog crawl client token not found")
 
-func BlogCrawlClientToken_GetById(tx pgw.Queryable, blogId BlogId) (BlogCrawlClientToken, error) {
-	row := tx.QueryRow(`select value from blog_crawl_client_tokens where blog_id = $1`, blogId)
+func BlogCrawlClientToken_GetById(qu pgw.Queryable, blogId BlogId) (BlogCrawlClientToken, error) {
+	row := qu.QueryRow(`select value from blog_crawl_client_tokens where blog_id = $1`, blogId)
 	var result BlogCrawlClientToken
 	err := row.Scan(&result)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -750,13 +750,13 @@ func BlogCrawlClientToken_GetById(tx pgw.Queryable, blogId BlogId) (BlogCrawlCli
 }
 
 // Returns zero value on conflict
-func BlogCrawlClientToken_Create(tx pgw.Queryable, blogId BlogId) (BlogCrawlClientToken, error) {
+func BlogCrawlClientToken_Create(qu pgw.Queryable, blogId BlogId) (BlogCrawlClientToken, error) {
 	valueInt, err := util.RandomInt63()
 	if err != nil {
 		return "", err
 	}
 	value := BlogCrawlClientToken(fmt.Sprintf("%x", valueInt))
-	row := tx.QueryRow(`select count(1) from blog_crawl_client_tokens where value = $1`, value)
+	row := qu.QueryRow(`select count(1) from blog_crawl_client_tokens where value = $1`, value)
 	var count int
 	err = row.Scan(&count)
 	if err != nil {
@@ -766,7 +766,7 @@ func BlogCrawlClientToken_Create(tx pgw.Queryable, blogId BlogId) (BlogCrawlClie
 		return "", nil
 	}
 
-	_, err = tx.Exec(`
+	_, err = qu.Exec(`
 		insert into blog_crawl_client_tokens (blog_id, value) values ($1, $2)
 	`, blogId, value)
 	if err != nil {
@@ -786,13 +786,13 @@ const (
 )
 
 func BlogCrawlVote_Create(
-	tx pgw.Queryable, blogId BlogId, userId UserId, value BlogCrawlVoteValue,
+	qu pgw.Queryable, blogId BlogId, userId UserId, value BlogCrawlVoteValue,
 ) error {
 	var sqlUserId *UserId
 	if userId != 0 {
 		sqlUserId = &userId
 	}
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		insert into blog_crawl_votes (blog_id, user_id, value) values ($1, $2, $3)
 	`, blogId, sqlUserId, value)
 	return err
@@ -809,8 +809,8 @@ type BlogPost struct {
 	Title string
 }
 
-func BlogPost_List(tx pgw.Queryable, blogId BlogId) ([]BlogPost, error) {
-	rows, err := tx.Query(`
+func BlogPost_List(qu pgw.Queryable, blogId BlogId) ([]BlogPost, error) {
+	rows, err := qu.Query(`
 		select id, index, url, title from blog_posts where blog_id = $1
 	`, blogId)
 	if err != nil {
@@ -867,8 +867,8 @@ type BlogPostCategory struct {
 	BlogPostIds map[BlogPostId]bool
 }
 
-func BlogPostCategory_ListOrdered(tx pgw.Queryable, blogId BlogId) ([]BlogPostCategory, error) {
-	rows, err := tx.Query(`
+func BlogPostCategory_ListOrdered(qu pgw.Queryable, blogId BlogId) ([]BlogPostCategory, error) {
+	rows, err := qu.Query(`
 		select id, name, top_status from blog_post_categories where blog_id = $1 order by index asc
 	`, blogId)
 	if err != nil {
@@ -889,7 +889,7 @@ func BlogPostCategory_ListOrdered(tx pgw.Queryable, blogId BlogId) ([]BlogPostCa
 		return nil, err
 	}
 
-	rows, err = tx.Query(`
+	rows, err = qu.Query(`
 		select category_id, blog_post_id from blog_post_category_assignments
 		where category_id in (select id from blog_post_categories where blog_id = $1)
 	`, blogId)
@@ -923,9 +923,9 @@ func BlogPostCategory_ListOrdered(tx pgw.Queryable, blogId BlogId) ([]BlogPostCa
 }
 
 func BlogPostCategory_GetNamePostsCountById(
-	tx pgw.Queryable, categoryId BlogPostCategoryId,
+	qu pgw.Queryable, categoryId BlogPostCategoryId,
 ) (name string, postsCount int, err error) {
-	row := tx.QueryRow(`
+	row := qu.QueryRow(`
 		select
 			name,
 			(select count(1) from blog_post_category_assignments where category_id = blog_post_categories.id)
@@ -939,9 +939,9 @@ func BlogPostCategory_GetNamePostsCountById(
 // BlogCanonicalEqualityConfig
 
 func BlogCanonicalEqualityConfig_Get(
-	tx pgw.Queryable, blogId BlogId,
+	qu pgw.Queryable, blogId BlogId,
 ) (*crawler.CanonicalEqualityConfig, error) {
-	row := tx.QueryRow(`
+	row := qu.QueryRow(`
 		select same_hosts, expect_tumblr_paths from blog_canonical_equality_configs
 		where blog_id = $1
 	`, blogId)

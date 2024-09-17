@@ -27,8 +27,8 @@ import (
 
 func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
 	currentUserId := rutil.CurrentUserId(r)
-	conn := rutil.DBConn(r)
-	_, err := conn.Exec(`
+	pool := rutil.DBPool(r)
+	_, err := pool.Exec(`
 		delete from delayed_jobs
 		where (handler like '%class: PublishPostsJob%' or
 			handler like '%class: EmailInitialItemJob%' or
@@ -40,12 +40,12 @@ func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	userSettings, err := models.UserSettings_Get(conn, currentUserId)
+	userSettings, err := models.UserSettings_Get(pool, currentUserId)
 	if err != nil {
 		panic(err)
 	}
 
-	err = jobs.PublishPostsJob_ScheduleInitial(conn, currentUserId, userSettings, false)
+	err = jobs.PublishPostsJob_ScheduleInitial(pool, currentUserId, userSettings, false)
 	if err != nil {
 		panic(err)
 	}
@@ -54,8 +54,8 @@ func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminTest_RunResetFailedBlogsJob(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
-	err := jobs.ResetFailedBlogsJob_PerformNow(conn, false)
+	pool := rutil.DBPool(r)
+	err := jobs.ResetFailedBlogsJob_PerformNow(pool, false)
 	if err != nil {
 		panic(err)
 	}
@@ -64,8 +64,8 @@ func AdminTest_RunResetFailedBlogsJob(w http.ResponseWriter, r *http.Request) {
 
 func AdminTest_DestroyUserSubscriptions(w http.ResponseWriter, r *http.Request) {
 	currentUserId := rutil.CurrentUserId(r)
-	conn := rutil.DBConn(r)
-	_, err := conn.Exec(`delete from subscriptions_with_discarded where user_id = $1`, currentUserId)
+	pool := rutil.DBPool(r)
+	_, err := pool.Exec(`delete from subscriptions_with_discarded where user_id = $1`, currentUserId)
 	if err != nil {
 		panic(err)
 	}
@@ -74,8 +74,8 @@ func AdminTest_DestroyUserSubscriptions(w http.ResponseWriter, r *http.Request) 
 
 func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 	email := util.EnsureParamStr(r, "email")
-	conn := rutil.DBConn(r)
-	row := conn.QueryRow(`
+	pool := rutil.DBPool(r)
+	row := pool.QueryRow(`
 		select stripe_subscription_id from users_without_discarded
 		where email = $1 and stripe_subscription_id is not null
 	`, email)
@@ -93,7 +93,7 @@ func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_, err = conn.Exec(`
+	_, err = pool.Exec(`
 		delete from custom_blog_requests
 		where user_id in (select id from users_with_discarded where email = $1)
 	`, email)
@@ -102,7 +102,7 @@ func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger := rutil.Logger(r)
-	rows, err := conn.Query(`delete from users_with_discarded where email = $1 returning id`, email)
+	rows, err := pool.Query(`delete from users_with_discarded where email = $1 returning id`, email)
 	if err != nil {
 		panic(err)
 	}
@@ -124,7 +124,7 @@ func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, userId := range deletedIds {
-		err := jobs.PublishPostsJob_Delete(r.Context(), conn, userId, logger)
+		err := jobs.PublishPostsJob_Delete(r.Context(), pool, userId, logger)
 		if err != nil {
 			panic(err)
 		}
@@ -134,8 +134,8 @@ func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 
 func AdminTest_GetTestSingleton(w http.ResponseWriter, r *http.Request) {
 	key := util.EnsureParamStr(r, "key")
-	conn := rutil.DBConn(r)
-	row := conn.QueryRow(`select value from test_singletons where key = $1`, key)
+	pool := rutil.DBPool(r)
+	row := pool.QueryRow(`select value from test_singletons where key = $1`, key)
 	var maybeValue *string
 	err := row.Scan(&maybeValue)
 	if err != nil {
@@ -151,8 +151,8 @@ func AdminTest_GetTestSingleton(w http.ResponseWriter, r *http.Request) {
 func AdminTest_SetTestSingleton(w http.ResponseWriter, r *http.Request) {
 	key := util.EnsureParamStr(r, "key")
 	value := util.EnsureParamStr(r, "value")
-	conn := rutil.DBConn(r)
-	_, err := conn.Exec(`update test_singletons set value = $1 where key = $2`, value, key)
+	pool := rutil.DBPool(r)
+	_, err := pool.Exec(`update test_singletons set value = $1 where key = $2`, value, key)
 	if err != nil {
 		panic(err)
 	}
@@ -161,8 +161,8 @@ func AdminTest_SetTestSingleton(w http.ResponseWriter, r *http.Request) {
 
 func AdminTest_DeleteTestSingleton(w http.ResponseWriter, r *http.Request) {
 	key := util.EnsureParamStr(r, "key")
-	conn := rutil.DBConn(r)
-	_, err := conn.Exec(`update test_singletons set value = null where key = $1`, key)
+	pool := rutil.DBPool(r)
+	_, err := pool.Exec(`update test_singletons set value = null where key = $1`, key)
 	if err != nil {
 		panic(err)
 	}
@@ -176,8 +176,8 @@ func AdminTest_AssertEmailCountWithMetadata(w http.ResponseWriter, r *http.Reque
 	lastTag := util.EnsureParamStr(r, "last_tag")
 
 	pollCount := 0
-	conn := rutil.DBConn(r)
-	postmarkClient, _ := jobs.GetPostmarkClientAndMaybeMetadata(conn)
+	pool := rutil.DBPool(r)
+	postmarkClient, _ := jobs.GetPostmarkClientAndMaybeMetadata(pool)
 	for {
 		messages, _, err := postmarkClient.GetOutboundMessages(
 			r.Context(), 100, 0, map[string]any{"metadata_test": value},
@@ -232,16 +232,16 @@ func AdminTest_TravelTo(w http.ResponseWriter, r *http.Request) {
 	}
 	schedule.MustSetUTCNowOverride(timestamp)
 
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	commandId, err := util.RandomInt63()
 	if err != nil {
 		panic(err)
 	}
-	err = jobs.TimeTravelJob_PerformAtEpoch(conn, commandId, jobs.TimeTravelJobTravelTo, timestamp)
+	err = jobs.TimeTravelJob_PerformAtEpoch(pool, commandId, jobs.TimeTravelJobTravelTo, timestamp)
 	if err != nil {
 		panic(err)
 	}
-	err = adminTest_CompareTimestamps(conn, commandId)
+	err = adminTest_CompareTimestamps(pool, commandId)
 	if err != nil {
 		panic(err)
 	}
@@ -252,16 +252,16 @@ func AdminTest_TravelTo(w http.ResponseWriter, r *http.Request) {
 func AdminTest_TravelBack(w http.ResponseWriter, r *http.Request) {
 	schedule.ResetUTCNowOverride()
 
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	commandId, err := util.RandomInt63()
 	if err != nil {
 		panic(err)
 	}
-	err = jobs.TimeTravelJob_PerformAtEpoch(conn, commandId, jobs.TimeTravelJobTravelBack, time.Time{})
+	err = jobs.TimeTravelJob_PerformAtEpoch(pool, commandId, jobs.TimeTravelJobTravelBack, time.Time{})
 	if err != nil {
 		panic(err)
 	}
-	err = adminTest_CompareTimestamps(conn, commandId)
+	err = adminTest_CompareTimestamps(pool, commandId)
 	if err != nil {
 		panic(err)
 	}
@@ -273,8 +273,8 @@ func AdminTest_WaitForPublishPostsJob(w http.ResponseWriter, r *http.Request) {
 	currentUserId := rutil.CurrentUserId(r)
 
 	utcNow := schedule.UTCNow()
-	conn := rutil.DBConn(r)
-	userSettings, err := models.UserSettings_Get(conn, currentUserId)
+	pool := rutil.DBPool(r)
+	userSettings, err := models.UserSettings_Get(pool, currentUserId)
 	if err != nil {
 		panic(err)
 	}
@@ -282,7 +282,7 @@ func AdminTest_WaitForPublishPostsJob(w http.ResponseWriter, r *http.Request) {
 	localDate := localTime.Date()
 
 	for pollCount := 0; pollCount < 50; pollCount++ {
-		isScheduledForDate, err := jobs.PublishPostsJob_IsScheduledForDate(conn, currentUserId, localDate)
+		isScheduledForDate, err := jobs.PublishPostsJob_IsScheduledForDate(pool, currentUserId, localDate)
 		if err != nil {
 			panic(err)
 		}
@@ -297,13 +297,13 @@ func AdminTest_WaitForPublishPostsJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminTest_ExecuteSql(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	query := util.EnsureParamStr(r, "query")
 	jsonQuery := fmt.Sprintf(`
 		with result_rows as (%s)
 		SELECT array_to_json(array_agg(row_to_json(t))) FROM result_rows t
 	`, query)
-	row := conn.QueryRow(jsonQuery)
+	row := pool.QueryRow(jsonQuery)
 	var result *string
 	err := row.Scan(&result)
 	if err != nil {
@@ -314,11 +314,11 @@ func AdminTest_ExecuteSql(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func adminTest_CompareTimestamps(conn *pgw.Conn, commandId int64) error {
+func adminTest_CompareTimestamps(pool *pgw.Pool, commandId int64) error {
 	commandIdStr := fmt.Sprint(commandId)
 	pollCount := 0
 	for {
-		workerCommandIdStr, err := models.TestSingleton_GetValue(conn, "time_travel_command_id")
+		workerCommandIdStr, err := models.TestSingleton_GetValue(pool, "time_travel_command_id")
 		if err != nil {
 			return err
 		}
@@ -334,7 +334,7 @@ func adminTest_CompareTimestamps(conn *pgw.Conn, commandId int64) error {
 	}
 
 	webTimestamp := schedule.UTCNow()
-	maybeWorkerTimestampStr, err := models.TestSingleton_GetValue(conn, "time_travel_timestamp")
+	maybeWorkerTimestampStr, err := models.TestSingleton_GetValue(pool, "time_travel_timestamp")
 	if err != nil {
 		return err
 	}
@@ -389,8 +389,8 @@ func AdminTest_EnsureStripeListen(w http.ResponseWriter, r *http.Request) {
 
 func AdminTest_DeleteStripeSubscription(w http.ResponseWriter, r *http.Request) {
 	email := util.EnsureParamStr(r, "email")
-	conn := rutil.DBConn(r)
-	row := conn.QueryRow(`
+	pool := rutil.DBPool(r)
+	row := pool.QueryRow(`
 		select stripe_subscription_id from users_without_discarded
 		where email = $1 and stripe_subscription_id is not null
 	`, email)
@@ -417,8 +417,8 @@ func AdminTest_ForwardStripeCustomer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	conn := rutil.DBConn(r)
-	row := conn.QueryRow(`select stripe_customer_id from users_without_discarded where email = $1`, email)
+	pool := rutil.DBPool(r)
+	row := pool.QueryRow(`select stripe_customer_id from users_without_discarded where email = $1`, email)
 	var stripeCustomerId string
 	err = row.Scan(&stripeCustomerId)
 	if err != nil {

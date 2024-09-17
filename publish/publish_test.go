@@ -417,23 +417,20 @@ func TestInitSubscription(t *testing.T) {
 		},
 	}
 
-	conn, err := db.Pool.AcquireBackground() //nolint:gocritic,staticcheck
-	oops.RequireNoError(t, err)
-	defer conn.Release()
-
+	pool := db.RootPool
 	timeFormat := "2006-01-02 15:04:05-07:00"
 	wed := "2022-05-04 00:00:00+00:00"
 	thu := "2022-05-05 00:00:00+00:00"
 
 	for _, tc := range tests {
-		user, err := createUser(conn)
+		user, err := createUser(pool)
 		oops.RequireNoError(t, err, tc.Description)
 
 		finishedSetupAt, err := schedule.ParseTime(timeFormat, thu)
 		oops.RequireNoError(t, err, tc.Description)
 
 		subscription, err := createSubscription(
-			conn, user.Id, 1, finishedSetupAt, 5, 0, tc.Subscription.CountByDay,
+			pool, user.Id, 1, finishedSetupAt, 5, 0, tc.Subscription.CountByDay,
 		)
 		oops.RequireNoError(t, err, tc.Description)
 
@@ -442,14 +439,14 @@ func TestInitSubscription(t *testing.T) {
 			oops.RequireNoError(t, err, tc.Description)
 
 			_, err = createSubscription(
-				conn, user.Id, 2, existingFinishedSetupAt, 5, 1, tc.MaybeExistingSubscription.CountByDay,
+				pool, user.Id, 2, existingFinishedSetupAt, 5, 1, tc.MaybeExistingSubscription.CountByDay,
 			)
 			oops.RequireNoError(t, err, tc.Description)
 		}
 
 		utcNow := finishedSetupAt
 		utcNowDate := utcNow.Date()
-		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 			return InitSubscription(
 				tx, user.Id, user.ProductUserId, subscription.Id, subscription.Name, subscription.BlogBestUrl,
 				user.DeliveryChannel, tc.ShouldPublishRssPosts, utcNow, utcNow, utcNowDate,
@@ -457,15 +454,15 @@ func TestInitSubscription(t *testing.T) {
 		})
 		oops.RequireNoError(t, err, tc.Description)
 
-		subBody, err := models.SubscriptionRss_GetBody(conn, subscription.Id)
+		subBody, err := models.SubscriptionRss_GetBody(pool, subscription.Id)
 		oops.RequireNoError(t, err, tc.Description)
 		require.Equal(t, tc.ExpectedSubBody, subBody, tc.Description)
 
-		userBody, err := models.UserRss_GetBody(conn, user.Id)
+		userBody, err := models.UserRss_GetBody(pool, user.Id)
 		oops.RequireNoError(t, err, tc.Description)
 		require.Equal(t, tc.ExpectedUserBody, userBody, tc.Description)
 
-		err = cleanup(conn)
+		err = cleanup(pool)
 		oops.RequireNoError(t, err, tc.Description)
 	}
 }
@@ -905,17 +902,14 @@ func TestPublishForUser(t *testing.T) {
 		},
 	}
 
-	conn, err := db.Pool.AcquireBackground() //nolint:gocritic,staticcheck
-	oops.RequireNoError(t, err)
-	defer conn.Release()
-
+	pool := db.RootPool
 	timeFormat := "2006-01-02 15:04:05-07:00"
 	wed := "2022-05-04 00:00:00+00:00"
 	thu := "2022-05-05 00:00:00+00:00"
 	fri := "2022-05-06 00:00:00+00:00"
 
 	for _, tc := range tests {
-		user, err := createUser(conn)
+		user, err := createUser(pool)
 		oops.RequireNoError(t, err, tc.Description)
 
 		var Maybesubscription1 *testSubscription
@@ -924,12 +918,12 @@ func TestPublishForUser(t *testing.T) {
 			oops.RequireNoError(t, err, tc.Description)
 
 			Maybesubscription1, err = createSubscription(
-				conn, user.Id, 1, finishedSetupAt1, 5, 0, tc.MaybeSubscription1.CountByDay,
+				pool, user.Id, 1, finishedSetupAt1, 5, 0, tc.MaybeSubscription1.CountByDay,
 			)
 			oops.RequireNoError(t, err, tc.Description)
 
 			finishedSetupAt1Date := finishedSetupAt1.Date()
-			err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+			err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 				return InitSubscription(
 					tx, user.Id, user.ProductUserId, Maybesubscription1.Id, Maybesubscription1.Name,
 					Maybesubscription1.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt1, finishedSetupAt1,
@@ -943,12 +937,12 @@ func TestPublishForUser(t *testing.T) {
 		oops.RequireNoError(t, err, tc.Description)
 
 		subscription2, err := createSubscription(
-			conn, user.Id, 2, finishedSetupAt2, 5, 0, tc.Subscription2.CountByDay,
+			pool, user.Id, 2, finishedSetupAt2, 5, 0, tc.Subscription2.CountByDay,
 		)
 		oops.RequireNoError(t, err, tc.Description)
 
 		finishedSetupAt2Date := finishedSetupAt2.Date()
-		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 			return InitSubscription(
 				tx, user.Id, user.ProductUserId, subscription2.Id, subscription2.Name,
 				subscription2.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt2, finishedSetupAt2,
@@ -964,7 +958,7 @@ func TestPublishForUser(t *testing.T) {
 		utcNowDate := utcNow.Date()
 		utcNowScheduledFor := utcNow.MustUTCString()
 
-		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 			return PublishForUser(
 				tx, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
 				utcNowScheduledFor,
@@ -973,20 +967,20 @@ func TestPublishForUser(t *testing.T) {
 		oops.RequireNoError(t, err, tc.Description)
 
 		if tc.MaybeSubscription1 != nil {
-			sub1Body, err := models.SubscriptionRss_GetBody(conn, Maybesubscription1.Id)
+			sub1Body, err := models.SubscriptionRss_GetBody(pool, Maybesubscription1.Id)
 			oops.RequireNoError(t, err, tc.Description)
 			require.Equal(t, tc.MaybeSubscription1.ExpectedRssBody, sub1Body, tc.Description)
 		}
 
-		sub2Body, err := models.SubscriptionRss_GetBody(conn, subscription2.Id)
+		sub2Body, err := models.SubscriptionRss_GetBody(pool, subscription2.Id)
 		oops.RequireNoError(t, err, tc.Description)
 		require.Equal(t, tc.Subscription2.ExpectedRssBody, sub2Body, tc.Description)
 
-		userBody, err := models.UserRss_GetBody(conn, user.Id)
+		userBody, err := models.UserRss_GetBody(pool, user.Id)
 		oops.RequireNoError(t, err, tc.Description)
 		require.Equal(t, tc.ExpectedUserBody, userBody, tc.Description)
 
-		err = cleanup(conn)
+		err = cleanup(pool)
 		oops.RequireNoError(t, err, tc.Description)
 	}
 }
@@ -1190,30 +1184,27 @@ func TestRssCountLimit(t *testing.T) {
 		},
 	}
 
-	conn, err := db.Pool.AcquireBackground() //nolint:gocritic,staticcheck
-	oops.RequireNoError(t, err)
-	defer conn.Release()
-
+	pool := db.RootPool
 	timeFormat := "2006-01-02 15:04:05-07:00"
 	thu := "2022-05-05 00:00:00+00:00"
 	fri := "2022-05-06 00:00:00+00:00"
 
 	for _, tc := range tests {
-		user, err := createUser(conn)
+		user, err := createUser(pool)
 		oops.RequireNoError(t, err, tc.Description)
 
 		finishedSetupAt, err := schedule.ParseTime(timeFormat, thu)
 		oops.RequireNoError(t, err, tc.Description)
 
 		subscription, err := createSubscription(
-			conn, user.Id, 1, finishedSetupAt, tc.TotalPosts, tc.PublishedPosts,
+			pool, user.Id, 1, finishedSetupAt, tc.TotalPosts, tc.PublishedPosts,
 			map[schedule.DayOfWeek]int{"fri": 1},
 		)
 		oops.RequireNoError(t, err, tc.Description)
 
 		finishedSetupAtDate := finishedSetupAt.Date()
 		postsInRss := 5
-		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 			return initSubscriptionImpl(
 				tx, user.Id, user.ProductUserId, subscription.Id, subscription.Name,
 				subscription.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt, finishedSetupAt,
@@ -1229,7 +1220,7 @@ func TestRssCountLimit(t *testing.T) {
 		utcNowDate := utcNow.Date()
 		utcNowScheduledFor := utcNow.MustUTCString()
 
-		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 			return publishForUserImpl(
 				tx, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
 				utcNowScheduledFor, postsInRss,
@@ -1237,43 +1228,40 @@ func TestRssCountLimit(t *testing.T) {
 		})
 		oops.RequireNoError(t, err, tc.Description)
 
-		subBody, err := models.SubscriptionRss_GetBody(conn, subscription.Id)
+		subBody, err := models.SubscriptionRss_GetBody(pool, subscription.Id)
 		oops.RequireNoError(t, err, tc.Description)
 		require.Equal(t, tc.ExpectedSubBody, subBody, tc.Description)
 
-		err = cleanup(conn)
+		err = cleanup(pool)
 		oops.RequireNoError(t, err, tc.Description)
 	}
 }
 
 func TestIsPausedHandling(t *testing.T) {
-	conn, err := db.Pool.AcquireBackground() //nolint:gocritic,staticcheck
-	oops.RequireNoError(t, err)
-	defer conn.Release()
-
+	pool := db.RootPool
 	timeFormat := "2006-01-02 15:04:05-07:00"
 	thu := "2022-05-05 00:00:00+00:00"
 	fri := "2022-05-06 00:00:00+00:00"
 
-	user, err := createUser(conn)
+	user, err := createUser(pool)
 	oops.RequireNoError(t, err)
 
 	finishedSetupAt, err := schedule.ParseTime(timeFormat, thu)
 	oops.RequireNoError(t, err)
 
 	subscription, err := createSubscription(
-		conn, user.Id, 1, finishedSetupAt, 5, 0, map[schedule.DayOfWeek]int{"fri": 1},
+		pool, user.Id, 1, finishedSetupAt, 5, 0, map[schedule.DayOfWeek]int{"fri": 1},
 	)
 	oops.RequireNoError(t, err)
 
-	_, err = conn.Exec(`
+	_, err = pool.Exec(`
         update subscriptions_without_discarded
         set is_paused = true where id = $1
     `, subscription.Id)
 	oops.RequireNoError(t, err)
 
 	finishedSetupAtDate := finishedSetupAt.Date()
-	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		return InitSubscription(
 			tx, user.Id, user.ProductUserId, subscription.Id, subscription.Name,
 			subscription.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt, finishedSetupAt,
@@ -1289,7 +1277,7 @@ func TestIsPausedHandling(t *testing.T) {
 	utcNowDate := utcNow.Date()
 	utcNowScheduledFor := utcNow.MustUTCString()
 
-	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		return PublishForUser(
 			tx, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
 			utcNowScheduledFor,
@@ -1297,7 +1285,7 @@ func TestIsPausedHandling(t *testing.T) {
 	})
 	oops.RequireNoError(t, err)
 
-	subBody, err := models.SubscriptionRss_GetBody(conn, subscription.Id)
+	subBody, err := models.SubscriptionRss_GetBody(pool, subscription.Id)
 	oops.RequireNoError(t, err)
 
 	expectedSubBody := `<?xml version="1.0" encoding="UTF-8"?>
@@ -1316,29 +1304,26 @@ func TestIsPausedHandling(t *testing.T) {
 </rss>`
 	require.Equal(t, expectedSubBody, subBody)
 
-	err = cleanup(conn)
+	err = cleanup(pool)
 	oops.RequireNoError(t, err)
 }
 
 func TestUserFeedStableSort(t *testing.T) {
-	conn, err := db.Pool.AcquireBackground() //nolint:gocritic,staticcheck
-	oops.RequireNoError(t, err)
-	defer conn.Release()
-
+	pool := db.RootPool
 	timeFormat := "2006-01-02 15:04:05-07:00"
 	tue := "2022-05-03 00:00:00+00:00"
 	wed := "2022-05-04 00:00:00+00:00"
 	thu := "2022-05-05 00:00:00+00:00"
 	fri := "2022-05-06 00:00:00+00:00"
 
-	user, err := createUser(conn)
+	user, err := createUser(pool)
 	oops.RequireNoError(t, err)
 
 	finishedSetupAt1, err := schedule.ParseTime(timeFormat, tue)
 	oops.RequireNoError(t, err)
 
 	_, err = createSubscription(
-		conn, user.Id, 1, finishedSetupAt1, 5, 0, map[schedule.DayOfWeek]int{"fri": 2},
+		pool, user.Id, 1, finishedSetupAt1, 5, 0, map[schedule.DayOfWeek]int{"fri": 2},
 	)
 	oops.RequireNoError(t, err)
 
@@ -1346,7 +1331,7 @@ func TestUserFeedStableSort(t *testing.T) {
 	oops.RequireNoError(t, err)
 
 	_, err = createSubscription(
-		conn, user.Id, 2, finishedSetupAt2, 5, 0, map[schedule.DayOfWeek]int{"fri": 1},
+		pool, user.Id, 2, finishedSetupAt2, 5, 0, map[schedule.DayOfWeek]int{"fri": 1},
 	)
 	oops.RequireNoError(t, err)
 
@@ -1354,12 +1339,12 @@ func TestUserFeedStableSort(t *testing.T) {
 	oops.RequireNoError(t, err)
 
 	subscription3, err := createSubscription(
-		conn, user.Id, 3, finishedSetupAt3, 1, 1, map[schedule.DayOfWeek]int{"sat": 1},
+		pool, user.Id, 3, finishedSetupAt3, 1, 1, map[schedule.DayOfWeek]int{"sat": 1},
 	)
 	oops.RequireNoError(t, err)
 
 	finishedSetupAt3Date := finishedSetupAt3.Date()
-	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		return InitSubscription(
 			tx, user.Id, user.ProductUserId, subscription3.Id, subscription3.Name,
 			subscription3.BlogBestUrl, user.DeliveryChannel, true, finishedSetupAt3, finishedSetupAt3,
@@ -1375,7 +1360,7 @@ func TestUserFeedStableSort(t *testing.T) {
 	utcNowDate := utcNow.Date()
 	utcNowScheduledFor := utcNow.MustUTCString()
 
-	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		return PublishForUser(
 			tx, user.Id, user.ProductUserId, user.DeliveryChannel, utcNow, utcNow, utcNowDate,
 			utcNowScheduledFor,
@@ -1383,7 +1368,7 @@ func TestUserFeedStableSort(t *testing.T) {
 	})
 	oops.RequireNoError(t, err)
 
-	userBody, err := models.UserRss_GetBody(conn, user.Id)
+	userBody, err := models.UserRss_GetBody(pool, user.Id)
 	oops.RequireNoError(t, err)
 
 	expectedUserBody := `<?xml version="1.0" encoding="UTF-8"?>
@@ -1451,7 +1436,7 @@ func TestUserFeedStableSort(t *testing.T) {
 </rss>`
 	require.Equal(t, expectedUserBody, userBody)
 
-	err = cleanup(conn)
+	err = cleanup(pool)
 	oops.RequireNoError(t, err)
 }
 
@@ -1461,8 +1446,8 @@ type testUser struct {
 	DeliveryChannel models.DeliveryChannel
 }
 
-func createUser(tx pgw.Queryable) (*testUser, error) {
-	if err := ensureTestDb(tx); err != nil {
+func createUser(qu pgw.Queryable) (*testUser, error) {
+	if err := ensureTestDb(qu); err != nil {
 		return nil, err
 	}
 
@@ -1470,13 +1455,13 @@ func createUser(tx pgw.Queryable) (*testUser, error) {
 		return nil, err
 	}
 
-	if err := cleanup(tx); err != nil {
+	if err := cleanup(qu); err != nil {
 		return nil, err
 	}
 
 	userId := models.UserId(0)
 	productUserId := models.ProductUserId("00000000-0000-0000-0000-000000000000")
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
         insert into users_without_discarded (id, email, name, password_digest, auth_token, offer_id, product_user_id)
         values ($1, 'test@feedrewind.com', 'test', 'asdf', 'asdf', (select default_offer_id from pricing_plans where id = $2), $3)
     `, userId, models.PlanIdFree, productUserId)
@@ -1485,7 +1470,7 @@ func createUser(tx pgw.Queryable) (*testUser, error) {
 	}
 
 	deliveryChannel := models.DeliveryChannelMultipleFeeds
-	_, err = tx.Exec(`
+	_, err = qu.Exec(`
         insert into user_settings (user_id, timezone, version, delivery_channel)
         values (0, 'America/Los_Angeles', 1, $1)
     `, deliveryChannel)
@@ -1507,10 +1492,10 @@ type testSubscription struct {
 }
 
 func createSubscription(
-	tx pgw.Queryable, userId models.UserId, id int64, finishedSetupAt schedule.Time, totalCount int,
+	qu pgw.Queryable, userId models.UserId, id int64, finishedSetupAt schedule.Time, totalCount int,
 	publishedCount int, countsByDay map[schedule.DayOfWeek]int,
 ) (*testSubscription, error) {
-	if err := ensureTestDb(tx); err != nil {
+	if err := ensureTestDb(qu); err != nil {
 		return nil, err
 	}
 
@@ -1520,7 +1505,7 @@ func createSubscription(
 
 	blogName := fmt.Sprintf("Test blog %d", id)
 	feedUrl := fmt.Sprintf("https://blog%d/feed.xml", id)
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
         insert into blogs (id, name, feed_url, status, status_updated_at, version, update_action)
         values ($1, $2, $3, $4, $5, $6, $7)
     `, id, blogName, feedUrl, models.BlogStatusCrawledConfirmed, finishedSetupAt, models.BlogLatestVersion,
@@ -1530,7 +1515,7 @@ func createSubscription(
 	}
 
 	subscriptionName := fmt.Sprintf("Test Subscription %d", id)
-	_, err = tx.Exec(`
+	_, err = qu.Exec(`
         insert into subscriptions_without_discarded (
             id, user_id, blog_id, name, status, is_paused, is_added_past_midnight, schedule_version,
             finished_setup_at
@@ -1542,7 +1527,7 @@ func createSubscription(
 	}
 
 	for _, dayOfWeek := range schedule.DaysOfWeek {
-		_, err := tx.Exec(`
+		_, err := qu.Exec(`
             insert into schedules (subscription_id, day_of_week, count)
             values ($1, $2, $3)
         `, id, dayOfWeek, countsByDay[dayOfWeek])
@@ -1555,7 +1540,7 @@ func createSubscription(
 		postId := id*100 + int64(i)
 		postUrl := fmt.Sprintf("https://blog%d/%d", id, i)
 		postTitle := fmt.Sprintf("Post %d", i)
-		_, err := tx.Exec(`
+		_, err := qu.Exec(`
             insert into blog_posts (id, blog_id, index, url, title)
             values ($1, $2, $3, $4, $5)
         `, postId, id, i, postUrl, postTitle)
@@ -1567,7 +1552,7 @@ func createSubscription(
 		if i <= publishedCount {
 			publishedAt = &finishedSetupAt
 		}
-		_, err = tx.Exec(`
+		_, err = qu.Exec(`
             insert into subscription_posts (id, blog_post_id, subscription_id, random_id, published_at)
             values ($1, $2, $3, $4, $5)
         `, postId, postId, id, randomId, publishedAt)
@@ -1583,8 +1568,8 @@ func createSubscription(
 	}, nil
 }
 
-func cleanup(tx pgw.Queryable) error {
-	if err := ensureTestDb(tx); err != nil {
+func cleanup(qu pgw.Queryable) error {
+	if err := ensureTestDb(qu); err != nil {
 		return err
 	}
 
@@ -1593,7 +1578,7 @@ func cleanup(tx pgw.Queryable) error {
 		"user_settings", "users_with_discarded",
 	}
 	for _, table := range tables {
-		_, err := tx.Exec(`delete from ` + table)
+		_, err := qu.Exec(`delete from ` + table)
 		if err != nil {
 			return err
 		}
@@ -1602,8 +1587,8 @@ func cleanup(tx pgw.Queryable) error {
 	return nil
 }
 
-func ensureTestDb(tx pgw.Queryable) error {
-	row := tx.QueryRow(`select current_database()`)
+func ensureTestDb(qu pgw.Queryable) error {
+	row := qu.QueryRow(`select current_database()`)
 	var dbName string
 	err := row.Scan(&dbName)
 	if err != nil {

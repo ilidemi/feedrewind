@@ -137,16 +137,16 @@ func TestSignupEmail(t *testing.T) {
 		require.Equal(t, "OK", mustPageText(page), description)
 
 		// Cleanup
+		page = visitAdmin(browser, "delete_test_singleton?key=email_metadata")
+		require.Equal(t, "OK", mustPageText(page), description)
+		page = visitAdmin(browser, "destroy_user_subscriptions")
+		require.Equal(t, "OK", mustPageText(page))
 		page = visitAdmin(browser, "travel_back")
 		serverTimeStr := mustPageText(page)
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60, description)
 		page = visitAdmin(browser, "reschedule_user_job")
-		require.Equal(t, "OK", mustPageText(page), description)
-		page = visitAdmin(browser, "delete_test_singleton?key=email_metadata")
-		require.Equal(t, "OK", mustPageText(page), description)
-		page = visitAdminf(browser, "destroy_user?email=%s", tc.Email)
 		require.Equal(t, "OK", mustPageText(page), description)
 
 		browser.MustClose()

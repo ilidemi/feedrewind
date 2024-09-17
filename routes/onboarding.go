@@ -64,10 +64,10 @@ func feedsDataFromTypedResult(startUrl string, typedResult models.TypedBlogUrlRe
 
 func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	currentUser := rutil.CurrentUser(r)
 	productUserId := rutil.CurrentProductUserId(r)
-	pc := models.NewProductEventContext(conn, r, productUserId)
+	pc := models.NewProductEventContext(pool, r, productUserId)
 	userIsAnonymous := currentUser == nil
 
 	type OnboardingResult struct {
@@ -91,14 +91,14 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 			"blog_url": startUrl,
 		})
 		discoverFeedsResult, typedResult := onboarding_MustDiscoverFeeds(
-			conn, startUrl, currentUser, productUserId,
+			pool, startUrl, currentUser, productUserId,
 		)
 		models.ProductEvent_MustEmitDiscoverFeeds(pc, startUrl, typedResult, userIsAnonymous)
 		var maybeUserId *models.UserId
 		if currentUser != nil {
 			maybeUserId = &currentUser.Id
 		}
-		err := models.TypedBlogUrl_Create(conn, typedUrl, startUrl, path, typedResult, maybeUserId)
+		err := models.TypedBlogUrl_Create(pool, typedUrl, startUrl, path, typedResult, maybeUserId)
 		if err != nil {
 			panic(err)
 		}
@@ -124,7 +124,7 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 			}
 		case *discoverError:
 			if util.SuggestionFeedUrls[startUrl] {
-				blog, err := models.Blog_GetLatestByFeedUrl(conn, startUrl)
+				blog, err := models.Blog_GetLatestByFeedUrl(pool, startUrl)
 				if errors.Is(err, models.ErrBlogNotFound) {
 					logger.Info().Msgf(
 						"Tried to use a cached suggestion but could not find any: %s", startUrl,
@@ -135,7 +135,7 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 					models.BlogCrawledStatuses[blog.Status] {
 
 					subscription, err := models.Subscription_CreateForBlog(
-						conn, blog, currentUser, productUserId,
+						pool, blog, currentUser, productUserId,
 					)
 					if err != nil {
 						panic(err)
@@ -181,10 +181,10 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 
 func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	currentUser := rutil.CurrentUser(r)
 	productUserId := rutil.CurrentProductUserId(r)
-	pc := models.NewProductEventContext(conn, r, productUserId)
+	pc := models.NewProductEventContext(pool, r, productUserId)
 	userIsAnonymous := currentUser == nil
 
 	type OnboardingResult struct {
@@ -199,14 +199,14 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 	typedUrl := util.EnsureParamStr(r, "start_url")
 	startUrl := strings.TrimSpace(typedUrl)
 	discoverFeedsResult, typedResult := onboarding_MustDiscoverFeeds(
-		conn, startUrl, currentUser, productUserId,
+		pool, startUrl, currentUser, productUserId,
 	)
 	models.ProductEvent_MustEmitDiscoverFeeds(pc, startUrl, typedResult, userIsAnonymous)
 	var maybeUserId *models.UserId
 	if currentUser != nil {
 		maybeUserId = &currentUser.Id
 	}
-	err := models.TypedBlogUrl_Create(conn, typedUrl, startUrl, "/", typedResult, maybeUserId)
+	err := models.TypedBlogUrl_Create(pool, typedUrl, startUrl, "/", typedResult, maybeUserId)
 	if err != nil {
 		panic(err)
 	}
@@ -230,7 +230,7 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 		}
 	case *discoverError:
 		if util.SuggestionFeedUrls[startUrl] {
-			blog, err := models.Blog_GetLatestByFeedUrl(conn, startUrl)
+			blog, err := models.Blog_GetLatestByFeedUrl(pool, startUrl)
 			if errors.Is(err, models.ErrBlogNotFound) {
 				logger.Info().Msgf(
 					"Tried to use a cached suggestion but could not find any: %s", startUrl,
@@ -241,7 +241,7 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 				models.BlogCrawledStatuses[blog.Status] {
 
 				subscription, err := models.Subscription_CreateForBlog(
-					conn, blog, currentUser, productUserId,
+					pool, blog, currentUser, productUserId,
 				)
 				if err != nil {
 					panic(err)
@@ -272,10 +272,10 @@ func Onboarding_AddLanding(w http.ResponseWriter, r *http.Request) {
 }
 
 func Onboarding_DiscoverFeeds(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	currentUser := rutil.CurrentUser(r)
 	productUserId := rutil.CurrentProductUserId(r)
-	pc := models.NewProductEventContext(conn, r, productUserId)
+	pc := models.NewProductEventContext(pool, r, productUserId)
 	userIsAnonymous := currentUser == nil
 
 	var result feedsData
@@ -283,7 +283,7 @@ func Onboarding_DiscoverFeeds(w http.ResponseWriter, r *http.Request) {
 	typedUrl := util.EnsureParamStr(r, "start_url")
 	startUrl := strings.TrimSpace(typedUrl)
 	discoverFeedsResult, typedResult := onboarding_MustDiscoverFeeds(
-		conn, startUrl, currentUser, productUserId,
+		pool, startUrl, currentUser, productUserId,
 	)
 	models.ProductEvent_MustEmitDiscoverFeeds(pc, startUrl, typedResult, userIsAnonymous)
 	var maybeUserId *models.UserId
@@ -291,7 +291,7 @@ func Onboarding_DiscoverFeeds(w http.ResponseWriter, r *http.Request) {
 		maybeUserId = &currentUser.Id
 	}
 	err := models.TypedBlogUrl_Create(
-		conn, typedUrl, startUrl, "/subscriptions/add", typedResult, maybeUserId,
+		pool, typedUrl, startUrl, "/subscriptions/add", typedResult, maybeUserId,
 	)
 	if err != nil {
 		panic(err)
@@ -358,17 +358,17 @@ func (*discoveredFeeds) discoverResultTag()        {}
 func (*discoverError) discoverResultTag()          {}
 
 func onboarding_MustDiscoverFeeds(
-	conn *pgw.Conn, startUrl string, currentUser *models.User, productUserId models.ProductUserId,
+	pool *pgw.Pool, startUrl string, currentUser *models.User, productUserId models.ProductUserId,
 ) (discoverResult, models.TypedBlogUrlResult) {
-	logger := conn.Logger()
+	logger := pool.Logger()
 	if startUrl == crawler.HardcodedOurMachinery || startUrl == crawler.HardcodedSequences {
-		blog, err := models.Blog_GetLatestByFeedUrl(conn, startUrl)
+		blog, err := models.Blog_GetLatestByFeedUrl(pool, startUrl)
 		if errors.Is(err, models.ErrBlogNotFound) {
 			panic(fmt.Errorf("Blog not found for %s", startUrl))
 		} else if err != nil {
 			panic(err)
 		}
-		subscription, err := models.Subscription_CreateForBlog(conn, blog, currentUser, productUserId)
+		subscription, err := models.Subscription_CreateForBlog(pool, blog, currentUser, productUserId)
 		if err != nil {
 			panic(err)
 		}
@@ -376,7 +376,7 @@ func onboarding_MustDiscoverFeeds(
 		return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultHardcoded
 	}
 
-	httpClient := crawler.NewHttpClientImplCtx(conn.Context(), false)
+	httpClient := crawler.NewHttpClientImplCtx(pool.Context(), false)
 	zlogger := crawler.ZeroLogger{Logger: logger}
 	progressLogger := crawler.NewMockProgressLogger(&zlogger)
 	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
@@ -386,21 +386,21 @@ func onboarding_MustDiscoverFeeds(
 		logger.Info().Msgf("Discover feeds at %s - found single feed", startUrl)
 		var maybeStartPageId *models.StartPageId
 		if result.MaybeStartPage != nil {
-			startPageId, err := models.StartPage_Create(conn, *result.MaybeStartPage)
+			startPageId, err := models.StartPage_Create(pool, *result.MaybeStartPage)
 			if err != nil {
 				panic(err)
 			}
 			maybeStartPageId = &startPageId
 		}
-		startFeed, err := models.StartFeed_CreateFetched(conn, maybeStartPageId, result.Feed)
+		startFeed, err := models.StartFeed_CreateFetched(pool, maybeStartPageId, result.Feed)
 		if err != nil {
 			panic(err)
 		}
-		updatedBlog, err := models.Blog_CreateOrUpdate(conn, startFeed, jobs.GuidedCrawlingJob_PerformNow)
+		updatedBlog, err := models.Blog_CreateOrUpdate(pool, startFeed, jobs.GuidedCrawlingJob_PerformNow)
 		if err != nil {
 			panic(err)
 		}
-		subscription, err := models.Subscription_CreateForBlog(conn, updatedBlog, currentUser, productUserId)
+		subscription, err := models.Subscription_CreateForBlog(pool, updatedBlog, currentUser, productUserId)
 		if err != nil {
 			panic(err)
 		}
@@ -408,13 +408,13 @@ func onboarding_MustDiscoverFeeds(
 		return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultFeed
 	case *crawler.DiscoveredMultipleFeeds:
 		logger.Info().Msgf("Discover feeds at %s - found %d feeds", startUrl, len(result.Feeds))
-		startPageId, err := models.StartPage_Create(conn, result.StartPage)
+		startPageId, err := models.StartPage_Create(pool, result.StartPage)
 		if err != nil {
 			panic(err)
 		}
 		var startFeeds []*models.StartFeed
 		for _, discoveredFeed := range result.Feeds {
-			startFeed, err := models.StartFeed_Create(conn, startPageId, discoveredFeed)
+			startFeed, err := models.StartFeed_Create(pool, startPageId, discoveredFeed)
 			if err != nil {
 				panic(err)
 			}
@@ -440,13 +440,13 @@ func onboarding_MustDiscoverFeeds(
 
 func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
 	currentUser := rutil.CurrentUser(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	isOnFreePlan := false
 	isOnSupporterPlan := false
 	isOnPatronPlan := false
 	onboardingBlogName := ""
 	if currentUser != nil {
-		row := conn.QueryRow(`
+		row := pool.QueryRow(`
 			select plan_id from pricing_offers
 			where id = (select offer_id from users_without_discarded where id = $1)
 		`, currentUser.Id)
@@ -469,7 +469,7 @@ func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
 	} else {
 		subscriptionId := rutil.MustExtractAnonymousSubscriptionId(w, r)
 		if subscriptionId != 0 {
-			row := conn.QueryRow(`
+			row := pool.QueryRow(`
 				select name from subscriptions_without_discarded where id = $1 and user_id is null
 			`, subscriptionId)
 			err := row.Scan(&onboardingBlogName)
@@ -481,7 +481,7 @@ func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select * from (
 			select id, monthly_rate::numeric, yearly_rate::numeric from pricing_offers
 			where id = (select default_offer_id from pricing_plans where id = $1)
@@ -542,13 +542,13 @@ func Onboarding_Pricing(w http.ResponseWriter, r *http.Request) {
 }
 
 func Onboarding_Checkout(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	currentUser := rutil.CurrentUser(r)
 	var maybeCustomerEmail *string
 	var maybeMetadata map[string]string
 	successPath := "/signup"
 	if currentUser != nil {
-		row := conn.QueryRow(`
+		row := pool.QueryRow(`
 			select plan_id from pricing_offers
 			where id = (select offer_id from users_without_discarded where id = $1)
 		`, currentUser.Id)
@@ -575,7 +575,7 @@ func Onboarding_Checkout(w http.ResponseWriter, r *http.Request) {
 		panic(fmt.Errorf("Unknown interval: %s", interval))
 	}
 	offerId := util.EnsureParamStr(r, "offer_id")
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select stripe_`+interval+`_price_id from pricing_offers
 		where id = $1
 	`, offerId)
@@ -588,7 +588,7 @@ func Onboarding_Checkout(w http.ResponseWriter, r *http.Request) {
 	var maybeCustomerId *string
 	var maybeCustomerUpdate *stripe.CheckoutSessionCustomerUpdateParams
 	if config.Cfg.Env.IsDevOrTest() {
-		maybeTestClock, err := models.TestSingleton_GetValue(conn, "test_clock")
+		maybeTestClock, err := models.TestSingleton_GetValue(pool, "test_clock")
 		if err != nil {
 			panic(err)
 		}

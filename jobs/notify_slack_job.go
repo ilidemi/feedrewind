@@ -17,8 +17,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"NotifySlackJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 1 {
 				return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)
 			}
@@ -28,17 +27,17 @@ func init() {
 				return oops.Newf("Failed to parse text (expected string): %v", args[0])
 			}
 
-			return NotifySlackJob_Perform(ctx, conn, text)
+			return NotifySlackJob_Perform(ctx, pool, text)
 		},
 	)
 }
 
-func NotifySlackJob_PerformNow(tx pgw.Queryable, text string) error {
-	return performNow(tx, "NotifySlackJob", defaultQueue, strToYaml(text))
+func NotifySlackJob_PerformNow(qu pgw.Queryable, text string) error {
+	return performNow(qu, "NotifySlackJob", defaultQueue, strToYaml(text))
 }
 
-func NotifySlackJob_Perform(ctx context.Context, conn *pgw.Conn, text string) error {
-	logger := conn.Logger()
+func NotifySlackJob_Perform(ctx context.Context, pool *pgw.Pool, text string) error {
+	logger := pool.Logger()
 	webhookUrl := config.Cfg.SlackWebhook
 
 	body, err := json.Marshal(map[string]string{
@@ -68,12 +67,12 @@ func NotifySlackJob_Perform(ctx context.Context, conn *pgw.Conn, text string) er
 	}
 
 	if config.Cfg.Env.IsDevOrTest() {
-		maybeSlackDump, err := models.TestSingleton_GetValue(conn, "slack_dump")
+		maybeSlackDump, err := models.TestSingleton_GetValue(pool, "slack_dump")
 		if err != nil {
 			return err
 		}
 		if maybeSlackDump != nil && *maybeSlackDump == "yes" {
-			err = models.TestSingleton_SetValue(conn, "slack_last_message", text)
+			err = models.TestSingleton_SetValue(pool, "slack_last_message", text)
 			if err != nil {
 				return err
 			}

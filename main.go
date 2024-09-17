@@ -72,12 +72,8 @@ func main() {
 	rootCmd.AddCommand(&cobra.Command{
 		Use: "stripe-configure-portal",
 		Run: func(_ *cobra.Command, _ []string) {
-			conn, err := db.Pool.AcquireBackground()
-			if err != nil {
-				panic(err)
-			}
-			models.MustInit(conn)
-			defer conn.Release()
+			pool := db.RootPool
+			models.MustInit(pool)
 
 			stripe.Key = config.Cfg.StripeApiKey
 
@@ -129,13 +125,13 @@ func main() {
 				},
 			}
 
-			row := conn.QueryRow(`
+			row := pool.QueryRow(`
 				select stripe_product_id, stripe_monthly_price_id, stripe_yearly_price_id
 				from pricing_offers
 				where id = (select default_offer_id from pricing_plans where id = 'supporter')
 			`)
 			var stripeProductId, stripeMonthlyPriceId, stripeYearlyPriceId string
-			err = row.Scan(&stripeProductId, &stripeMonthlyPriceId, &stripeYearlyPriceId)
+			err := row.Scan(&stripeProductId, &stripeMonthlyPriceId, &stripeYearlyPriceId)
 			if err != nil {
 				panic(err)
 			}
@@ -153,7 +149,7 @@ func main() {
 			}
 			fmt.Println("Supporter", supporterResult.ID)
 
-			row = conn.QueryRow(`
+			row = pool.QueryRow(`
 				select stripe_product_id, stripe_monthly_price_id, stripe_yearly_price_id
 				from pricing_offers
 				where id = (select default_offer_id from pricing_plans where id = 'patron')
@@ -212,12 +208,7 @@ func runServer(port int) {
 		}()
 	}
 
-	conn, err := db.Pool.AcquireBackground()
-	if err != nil {
-		panic(err)
-	}
-	models.MustInit(conn)
-	conn.Release()
+	models.MustInit(db.RootPool)
 	routes.Subscriptions_MustStartListeningForNotifications()
 
 	stripe.Key = config.Cfg.StripeApiKey
@@ -356,14 +347,9 @@ func runServer(port int) {
 func logStalledJobs() {
 	logger := &log.BackgroundLogger{}
 	logger.Info().Msg("Checking for stalled jobs")
-	conn, err := db.Pool.AcquireBackground()
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Release()
 
 	hourAgo := schedule.UTCNow().Add(-1 * time.Hour)
-	rows, err := conn.Query(`
+	rows, err := db.RootPool.Query(`
 		select id, handler from delayed_jobs where locked_at < $1
 	`, hourAgo)
 	if err != nil {
