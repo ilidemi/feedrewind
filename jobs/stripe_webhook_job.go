@@ -22,8 +22,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"StripeWebhookJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 1 {
 				return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)
 			}
@@ -33,20 +32,20 @@ func init() {
 				return oops.Newf("Failed to parse eventId (expected string): %v", args[0])
 			}
 
-			return StripeWebhookJob_Perform(ctx, conn, eventId)
+			return StripeWebhookJob_Perform(ctx, pool, eventId)
 		},
 	)
 }
 
-func StripeWebhookJob_PerformNow(tx pgw.Queryable, eventId string) error {
-	return performNow(tx, "StripeWebhookJob", defaultQueue, strToYaml(eventId))
+func StripeWebhookJob_PerformNow(qu pgw.Queryable, eventId string) error {
+	return performNow(qu, "StripeWebhookJob", defaultQueue, strToYaml(eventId))
 }
 
-func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId string) error {
-	logger := conn.Logger()
+func StripeWebhookJob_Perform(ctx context.Context, pool *pgw.Pool, eventId string) error {
+	logger := pool.Logger()
 
 	var payload []byte
-	row := conn.QueryRow(`select payload from stripe_webhook_events where id = $1`, eventId)
+	row := pool.QueryRow(`select payload from stripe_webhook_events where id = $1`, eventId)
 	err := row.Scan(&payload)
 	if errors.Is(err, pgx.ErrNoRows) {
 		logger.Error().Msgf("Couldn't find event: %s", eventId)
@@ -71,7 +70,7 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 		if err != nil {
 			return oops.Wrap(err)
 		}
-		row := conn.QueryRow(`
+		row := pool.QueryRow(`
 			select plan_id from pricing_offers
 			where stripe_monthly_price_id = $1 or stripe_yearly_price_id = $1
 		`, sub.Items.Data[0].Price.ID)
@@ -89,7 +88,7 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 		default:
 			panic(fmt.Errorf("Unknown plan id: %s", planId))
 		}
-		err = NotifySlackJob_PerformNow(conn, slackMessage)
+		err = NotifySlackJob_PerformNow(pool, slackMessage)
 		if err != nil {
 			return err
 		}
@@ -111,7 +110,7 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 		if err != nil {
 			return oops.Wrap(err)
 		}
-		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 			stripeProductId := sub.Items.Data[0].Price.Product.ID
 			row := tx.QueryRow(`
 				select id, plan_id from pricing_offers where stripe_product_id = $1
@@ -168,7 +167,7 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 			return oops.Wrap(err)
 		}
 		if sub.Status == stripe.SubscriptionStatusActive {
-			err := util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+			err := util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 				if sub.CanceledAt != 0 {
 					if _, ok := getPreviousValue(&event, "canceled_at"); !ok {
 						cancelAt := time.Unix(sub.CancelAt, 0).UTC()
@@ -347,7 +346,7 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 		if err != nil {
 			return oops.Wrap(err)
 		}
-		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 			row := tx.QueryRow(`
 				update users_with_discarded
 				set billing_interval = null,
@@ -412,7 +411,7 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 			return oops.Wrap(err)
 		}
 		currentPeriodEnd := time.Unix(sub.CurrentPeriodEnd, 0).UTC()
-		result, err := conn.Exec(`
+		result, err := pool.Exec(`
 			update users_with_discarded set stripe_current_period_end = $1 where stripe_subscription_id = $2
 		`, currentPeriodEnd, sub.ID)
 		if err != nil {
@@ -432,7 +431,7 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 		if err != nil {
 			return oops.Wrap(err)
 		}
-		err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+		err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 			var priceId string
 			for _, lineItem := range invoice.Lines.Data {
 				if lineItem.Amount > 0 {
@@ -583,7 +582,7 @@ func StripeWebhookJob_Perform(ctx context.Context, conn *pgw.Conn, eventId strin
 		return oops.Newf("Unknown event type: %v", event.Type)
 	}
 
-	_, err = conn.Exec(`delete from stripe_webhook_events where id = $1`, eventId)
+	_, err = pool.Exec(`delete from stripe_webhook_events where id = $1`, eventId)
 	if err != nil {
 		return err
 	}

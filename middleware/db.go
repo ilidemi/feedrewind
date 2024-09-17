@@ -10,26 +10,21 @@ import (
 func DB(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		logger := GetLogger(r)
-		conn, err := db.Pool.Acquire(r.Context(), logger)
-		if err != nil {
-			panic(err)
-		}
-		defer conn.Release()
-
-		next.ServeHTTP(w, withDBConn(r, conn))
+		pool := db.RootPool.Child(r.Context(), logger)
+		next.ServeHTTP(w, withDBPool(r, pool))
 	}
 	return http.HandlerFunc(fn)
 }
 
-type dbConnKeyType struct{}
+type dbPoolKeyType struct{}
 
-var dbConnKey = &dbConnKeyType{}
+var dbPoolKey = &dbPoolKeyType{}
 
-func withDBConn(r *http.Request, conn *pgw.Conn) *http.Request {
-	r = r.WithContext(context.WithValue(r.Context(), dbConnKey, conn))
+func withDBPool(r *http.Request, pool *pgw.Pool) *http.Request {
+	r = r.WithContext(context.WithValue(r.Context(), dbPoolKey, pool))
 	return r
 }
 
-func GetDBConn(r *http.Request) *pgw.Conn {
-	return r.Context().Value(dbConnKey).(*pgw.Conn)
+func GetDBPool(r *http.Request) *pgw.Pool {
+	return r.Context().Value(dbPoolKey).(*pgw.Pool)
 }

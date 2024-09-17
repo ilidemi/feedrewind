@@ -13,12 +13,12 @@ import (
 	"github.com/mrz1836/postmark"
 )
 
-func GetPostmarkClientAndMaybeMetadata(tx pgw.Queryable) (*postmark.Client, *string) {
+func GetPostmarkClientAndMaybeMetadata(qu pgw.Queryable) (*postmark.Client, *string) {
 	var maybeTestMetadata *string
 	var apiToken string
 	if config.Cfg.Env.IsDevOrTest() {
 		var err error
-		maybeTestMetadata, err = models.TestSingleton_GetValue(tx, "email_metadata")
+		maybeTestMetadata, err = models.TestSingleton_GetValue(qu, "email_metadata")
 		if errors.Is(err, pgx.ErrNoRows) {
 			apiToken = config.Cfg.PostmarkApiSandboxToken
 		} else if err != nil {

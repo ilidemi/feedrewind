@@ -13,24 +13,23 @@ import (
 
 func init() {
 	registerJobNameFunc("PollPostmarkBouncesJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 0 {
 				return oops.Newf("Expected 0 args, got %d: %v", len(args), args)
 			}
 
-			return PollPostmarkBouncesJob_Perform(ctx, conn)
+			return PollPostmarkBouncesJob_Perform(ctx, pool)
 		},
 	)
 }
 
-func PollPostmarkBouncesJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
-	return performAt(tx, runAt, "PollPostmarkBouncesJob", defaultQueue)
+func PollPostmarkBouncesJob_PerformAt(qu pgw.Queryable, runAt schedule.Time) error {
+	return performAt(qu, runAt, "PollPostmarkBouncesJob", defaultQueue)
 }
 
-func PollPostmarkBouncesJob_Perform(ctx context.Context, conn *pgw.Conn) error {
-	logger := conn.Logger()
-	client, _ := GetPostmarkClientAndMaybeMetadata(conn)
+func PollPostmarkBouncesJob_Perform(ctx context.Context, pool *pgw.Pool) error {
+	logger := pool.Logger()
+	client, _ := GetPostmarkClientAndMaybeMetadata(pool)
 	bounces, _, err := client.GetBounces(ctx, 100, 0, nil)
 	if err != nil {
 		return oops.Wrap(err)
@@ -44,7 +43,7 @@ func PollPostmarkBouncesJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 			return err
 		}
 
-		exists, err := models.PostmarkBounce_Exists(conn, bounce.ID)
+		exists, err := models.PostmarkBounce_Exists(pool, bounce.ID)
 		if err != nil {
 			return err
 		}
@@ -64,7 +63,7 @@ func PollPostmarkBouncesJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 		logger.Warn().Msg("All bounces are new, likely missed some on the second page")
 	}
 
-	tx, err := conn.Begin()
+	tx, err := pool.Begin()
 	if err != nil {
 		return err
 	}
@@ -101,7 +100,7 @@ func PollPostmarkBouncesJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 
 	hourFromNow := schedule.UTCNow().Add(time.Hour)
 	runAt := hourFromNow.BeginningOfHour()
-	err = PollPostmarkBouncesJob_PerformAt(conn, runAt)
+	err = PollPostmarkBouncesJob_PerformAt(pool, runAt)
 	if err != nil {
 		return err
 	}

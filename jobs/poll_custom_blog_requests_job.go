@@ -14,25 +14,24 @@ import (
 func init() {
 	registerJobNameFunc(
 		"PollCustomBlogRequestsJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 0 {
 				return oops.Newf("Expected 0 args, got %d: %v", len(args), args)
 			}
 
-			return PollCustomBlogRequestsJob_Perform(ctx, conn)
+			return PollCustomBlogRequestsJob_Perform(ctx, pool)
 		},
 	)
 }
 
-func PollCustomBlogRequestsJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
-	return performAt(tx, runAt, "PollCustomBlogRequestsJob", defaultQueue)
+func PollCustomBlogRequestsJob_PerformAt(qu pgw.Queryable, runAt schedule.Time) error {
+	return performAt(qu, runAt, "PollCustomBlogRequestsJob", defaultQueue)
 }
 
-func PollCustomBlogRequestsJob_Perform(ctx context.Context, conn *pgw.Conn) error {
-	logger := conn.Logger()
+func PollCustomBlogRequestsJob_Perform(ctx context.Context, pool *pgw.Pool) error {
+	logger := pool.Logger()
 
-	rows, err := conn.Query(`select id from custom_blog_requests where fulfilled_at is null`)
+	rows, err := pool.Query(`select id from custom_blog_requests where fulfilled_at is null`)
 	if err != nil {
 		return err
 	}
@@ -52,7 +51,7 @@ func PollCustomBlogRequestsJob_Perform(ctx context.Context, conn *pgw.Conn) erro
 	if len(ids) > 0 {
 		message := fmt.Sprintf("Found unfulfilled custom blog requests: %d %v", len(ids), ids)
 		logger.Warn().Msg(message)
-		err = NotifySlackJob_PerformNow(conn, message)
+		err = NotifySlackJob_PerformNow(pool, message)
 		if err != nil {
 			return err
 		}
@@ -61,7 +60,7 @@ func PollCustomBlogRequestsJob_Perform(ctx context.Context, conn *pgw.Conn) erro
 	tomorrow := schedule.UTCNow().Add(24 * time.Hour)
 	pst := tzdata.LocationByName["America/Los_Angeles"]
 	runAt := tomorrow.BeginningOfDayIn(pst).Add(8 * time.Hour)
-	err = PollCustomBlogRequestsJob_PerformAt(conn, runAt)
+	err = PollCustomBlogRequestsJob_PerformAt(pool, runAt)
 	if err != nil {
 		return err
 	}

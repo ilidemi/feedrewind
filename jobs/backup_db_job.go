@@ -26,24 +26,23 @@ import (
 func init() {
 	registerJobNameFunc(
 		"BackupDbJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 0 {
 				return oops.Newf("Expected 0 args, got %d: %v", len(args), args)
 			}
 
-			return BackupDbJob_Perform(ctx, conn)
+			return BackupDbJob_Perform(ctx, pool)
 		},
 	)
 	migrations.BackupDbJob_PerformAtFunc = BackupDbJob_PerformAt
 }
 
-func BackupDbJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
-	return performAt(tx, runAt, "BackupDbJob", defaultQueue)
+func BackupDbJob_PerformAt(qu pgw.Queryable, runAt schedule.Time) error {
+	return performAt(qu, runAt, "BackupDbJob", defaultQueue)
 }
 
-func BackupDbJob_Perform(ctx context.Context, conn *pgw.Conn) error {
-	logger := conn.Logger()
+func BackupDbJob_Perform(ctx context.Context, pool *pgw.Pool) error {
+	logger := pool.Logger()
 	if config.Cfg.Env.IsDevOrTest() {
 		logger.Info().Msg("No db backup in dev")
 	} else {
@@ -328,7 +327,7 @@ func BackupDbJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	if runAt.Sub(utcNow) < 0 {
 		runAt = runAt.AddDate(0, 0, 1)
 	}
-	err := BackupDbJob_PerformAt(conn, runAt)
+	err := BackupDbJob_PerformAt(pool, runAt)
 	if err != nil {
 		return err
 	}

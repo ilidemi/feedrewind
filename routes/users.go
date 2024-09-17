@@ -78,8 +78,8 @@ func Users_Login(w http.ResponseWriter, r *http.Request) {
 	password := util.EnsureParamStr(r, "current-password")
 	redirect := util.EnsureParamStr(r, "redirect")
 
-	conn := rutil.DBConn(r)
-	user, err := models.UserWithPassword_FindByEmail(conn, email)
+	pool := rutil.DBPool(r)
+	user, err := models.UserWithPassword_FindByEmail(pool, email)
 	if errors.Is(err, models.ErrUserNotFound) {
 		logger.Info().Msg("User not found")
 	} else if err != nil {
@@ -91,7 +91,7 @@ func Users_Login(w http.ResponseWriter, r *http.Request) {
 
 			// Users visiting landing page then signing in need to be excluded from the sign up funnel
 			// Track them twice: first as anonymous, then properly
-			pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+			pc := models.NewProductEventContext(pool, r, rutil.CurrentProductUserId(r))
 			models.ProductEvent_MustEmitFromRequest(
 				pc, "log in", map[string]any{"user_is_anonymous": true}, nil,
 			)
@@ -101,12 +101,12 @@ func Users_Login(w http.ResponseWriter, r *http.Request) {
 
 			subscriptionId := rutil.MustExtractAnonymousSubscriptionId(w, r)
 			if subscriptionId != 0 {
-				exists, err := models.Subscription_Exists(conn, subscriptionId)
+				exists, err := models.Subscription_Exists(pool, subscriptionId)
 				if err != nil {
 					panic(err)
 				}
 				if exists {
-					err := models.Subscription_SetUserId(conn, subscriptionId, user.Id)
+					err := models.Subscription_SetUserId(pool, subscriptionId, user.Id)
 					if err != nil {
 						panic(err)
 					}
@@ -180,9 +180,9 @@ func Users_SignUpPage(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 		email = sesh.CustomerDetails.Email
-		conn := rutil.DBConn(r)
-		stripeSubscriptionToken, err = util.TxReturn(conn,
-			func(tx *pgw.Tx, conn util.Clobber) (string, error) {
+		pool := rutil.DBPool(r)
+		stripeSubscriptionToken, err = util.TxReturn(pool,
+			func(tx *pgw.Tx, pool util.Clobber) (string, error) {
 				randomId, err := mutil.RandomId(tx, "stripe_subscription_tokens")
 				if err != nil {
 					return "", err
@@ -258,7 +258,7 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tx, err := rutil.DBConn(r).Begin()
+	tx, err := rutil.DBPool(r).Begin()
 	if err != nil {
 		panic(err)
 	}
@@ -497,9 +497,9 @@ func Users_Upgrade(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	currentUser := rutil.CurrentUser(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	stripeProductId := sub.Items.Data[0].Price.Product.ID
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select id, plan_id from pricing_offers where stripe_product_id = $1
 	`, stripeProductId)
 	var offerId models.OfferId
@@ -509,14 +509,14 @@ func Users_Upgrade(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	stripePriceId := sub.Items.Data[0].Price.ID
-	billingInterval, err := models.BillingInterval_GetByOffer(conn, stripeProductId, stripePriceId)
+	billingInterval, err := models.BillingInterval_GetByOffer(pool, stripeProductId, stripePriceId)
 	if err != nil {
 		panic(err)
 	}
 	// It is possible that this route is visited twice with the use of a back button and so the update here
 	// happens twice. Hopefully no one will keep this tab open, cancel the subscription later, then go to the
 	// old tab and press back
-	_, err = conn.Exec(`
+	_, err = pool.Exec(`
 		update users_without_discarded
 		set offer_id = $1,
 			stripe_subscription_id = $2,
@@ -534,8 +534,8 @@ func Users_Upgrade(w http.ResponseWriter, r *http.Request) {
 func Users_DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
 	user := rutil.CurrentUser(r)
-	conn := rutil.DBConn(r)
-	err := util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	pool := rutil.DBPool(r)
+	err := util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		row := tx.QueryRow(`
 			select stripe_subscription_id from users_without_discarded
 			where id = $1 and stripe_subscription_id is not null

@@ -15,7 +15,7 @@ func (m *CleanupDbJob) Version() string {
 	return "20240705190748"
 }
 
-var CleanupDbJob_PerformAtFunc func(tx pgw.Queryable, runAt schedule.Time) error
+var CleanupDbJob_PerformAtFunc func(qu pgw.Queryable, runAt schedule.Time) error
 
 func (m *CleanupDbJob) Up(tx *Tx) {
 	err := CleanupDbJob_PerformAtFunc(tx.impl, schedule.UTCNow())

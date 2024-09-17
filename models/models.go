@@ -11,8 +11,8 @@ import (
 	"strings"
 )
 
-func MustInit(tx pgw.Queryable) {
-	logger := tx.Logger()
+func MustInit(qu pgw.Queryable) {
+	logger := qu.Logger()
 	var timezoneInExpr bytes.Buffer
 	timezoneInExpr.WriteString("('")
 	isFirst := true
@@ -33,7 +33,7 @@ func MustInit(tx pgw.Queryable) {
 		"select user_id, timezone from user_settings where timezone not in %s", timezoneInExpr.String(),
 	)
 
-	rows, err := tx.Query(query)
+	rows, err := qu.Query(query)
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +50,7 @@ func MustInit(tx pgw.Queryable) {
 		panic(err)
 	}
 
-	rows, err = tx.Query(`select id, plan_id from pricing_offers`)
+	rows, err = qu.Query(`select id, plan_id from pricing_offers`)
 	if err != nil {
 		panic(err)
 	}
@@ -90,10 +90,10 @@ const (
 )
 
 func TypedBlogUrl_Create(
-	tx pgw.Queryable, typedUrl string, strippedUrl string, source string, result TypedBlogUrlResult,
+	qu pgw.Queryable, typedUrl string, strippedUrl string, source string, result TypedBlogUrlResult,
 	maybeUserId *UserId,
 ) error {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		insert into typed_blog_urls (typed_url, stripped_url, source, result, user_id)
 		values ($1, $2, $3, $4, $5)
 	`, typedUrl, strippedUrl, source, result, maybeUserId)
@@ -112,14 +112,14 @@ type StartFeed struct {
 }
 
 func StartFeed_CreateFetched(
-	tx pgw.Queryable, startPageId *StartPageId, discoveredFetchedFeed crawler.DiscoveredFetchedFeed,
+	qu pgw.Queryable, startPageId *StartPageId, discoveredFetchedFeed crawler.DiscoveredFetchedFeed,
 ) (*StartFeed, error) {
-	idInt, err := mutil.RandomId(tx, "start_feeds")
+	idInt, err := mutil.RandomId(qu, "start_feeds")
 	if err != nil {
 		return nil, err
 	}
 	id := StartFeedId(idInt)
-	_, err = tx.Exec(`
+	_, err = qu.Exec(`
 		insert into start_feeds (id, start_page_id, title, url, final_url, content)
 		values ($1, $2, $3, $4, $5, $6)
 	`, id, startPageId, discoveredFetchedFeed.Title, discoveredFetchedFeed.Url,
@@ -138,14 +138,14 @@ func StartFeed_CreateFetched(
 }
 
 func StartFeed_Create(
-	tx pgw.Queryable, startPageId StartPageId, discoveredFeed crawler.DiscoveredFeed,
+	qu pgw.Queryable, startPageId StartPageId, discoveredFeed crawler.DiscoveredFeed,
 ) (*StartFeed, error) {
-	idInt, err := mutil.RandomId(tx, "start_feeds")
+	idInt, err := mutil.RandomId(qu, "start_feeds")
 	if err != nil {
 		return nil, err
 	}
 	id := StartFeedId(idInt)
-	_, err = tx.Exec(`
+	_, err = qu.Exec(`
 		insert into start_feeds (id, start_page_id, title, url, final_url, content)
 		values ($1, $2, $3, $4, null, null)
 		returning id
@@ -162,8 +162,8 @@ func StartFeed_Create(
 	}, nil
 }
 
-func StartFeed_GetUnfetched(tx pgw.Queryable, id StartFeedId) (*StartFeed, error) {
-	row := tx.QueryRow(`select title, url from start_feeds where id = $1`, id)
+func StartFeed_GetUnfetched(qu pgw.Queryable, id StartFeedId) (*StartFeed, error) {
+	row := qu.QueryRow(`select title, url from start_feeds where id = $1`, id)
 	var title, url string
 	err := row.Scan(&title, &url)
 	if err != nil {
@@ -179,9 +179,9 @@ func StartFeed_GetUnfetched(tx pgw.Queryable, id StartFeedId) (*StartFeed, error
 }
 
 func StartFeed_UpdateFetched(
-	tx pgw.Queryable, startFeed *StartFeed, finalUrl string, content string, parsedFeed *crawler.ParsedFeed,
+	qu pgw.Queryable, startFeed *StartFeed, finalUrl string, content string, parsedFeed *crawler.ParsedFeed,
 ) (*StartFeed, error) {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		update start_feeds set final_url = $1, content = $2 where id = $3
 	`, finalUrl, content, startFeed.Id)
 	if err != nil {
@@ -201,9 +201,9 @@ func StartFeed_UpdateFetched(
 type StartPageId int64
 
 func StartPage_Create(
-	tx pgw.Queryable, discoveredStartPage crawler.DiscoveredStartPage,
+	qu pgw.Queryable, discoveredStartPage crawler.DiscoveredStartPage,
 ) (StartPageId, error) {
-	row := tx.QueryRow(`
+	row := qu.QueryRow(`
 		insert into start_pages (url, final_url, content)
 		values ($1, $2, $3)
 		returning id
@@ -219,15 +219,15 @@ func StartPage_Create(
 
 // RSS
 
-func UserRss_GetBody(tx pgw.Queryable, userId UserId) (string, error) {
-	row := tx.QueryRow(`select body from user_rsses where user_id = $1`, userId)
+func UserRss_GetBody(qu pgw.Queryable, userId UserId) (string, error) {
+	row := qu.QueryRow(`select body from user_rsses where user_id = $1`, userId)
 	var body string
 	err := row.Scan(&body)
 	return body, err
 }
 
-func UserRss_Upsert(tx pgw.Queryable, userId UserId, body string) error {
-	_, err := tx.Exec(`
+func UserRss_Upsert(qu pgw.Queryable, userId UserId, body string) error {
+	_, err := qu.Exec(`
 		insert into user_rsses (user_id, body) values ($1, $2)
 		on conflict (user_id)
 		do update set body = $2
@@ -235,15 +235,15 @@ func UserRss_Upsert(tx pgw.Queryable, userId UserId, body string) error {
 	return err
 }
 
-func SubscriptionRss_GetBody(tx pgw.Queryable, subscriptionId SubscriptionId) (string, error) {
-	row := tx.QueryRow(`select body from subscription_rsses where subscription_id = $1`, subscriptionId)
+func SubscriptionRss_GetBody(qu pgw.Queryable, subscriptionId SubscriptionId) (string, error) {
+	row := qu.QueryRow(`select body from subscription_rsses where subscription_id = $1`, subscriptionId)
 	var body string
 	err := row.Scan(&body)
 	return body, err
 }
 
-func SubscriptionRss_Upsert(tx pgw.Queryable, subscriptionId SubscriptionId, body string) error {
-	_, err := tx.Exec(`
+func SubscriptionRss_Upsert(qu pgw.Queryable, subscriptionId SubscriptionId, body string) error {
+	_, err := qu.Exec(`
 		insert into subscription_rsses (subscription_id, body) values ($1, $2)
 		on conflict (subscription_id)
 		do update set body = $2
@@ -279,9 +279,9 @@ const (
 )
 
 func BillingInterval_GetByOffer(
-	tx pgw.Queryable, stripeProductId, stripePriceId string,
+	qu pgw.Queryable, stripeProductId, stripePriceId string,
 ) (BillingInterval, error) {
-	row := tx.QueryRow(`
+	row := qu.QueryRow(`
 		select stripe_monthly_price_id, stripe_yearly_price_id from pricing_offers
 		where stripe_product_id = $1
 	`, stripeProductId)
@@ -308,8 +308,8 @@ type CustomBlogRequestId int64
 
 // AdminTelemetry
 
-func AdminTelemetry_Create(tx pgw.Queryable, key string, value float64, extra map[string]any) error {
-	_, err := tx.Exec(`
+func AdminTelemetry_Create(qu pgw.Queryable, key string, value float64, extra map[string]any) error {
+	_, err := qu.Exec(`
 		insert into admin_telemetries (key, value, extra) values ($1, $2, $3)
 	`, key, value, extra)
 	return err
@@ -317,15 +317,15 @@ func AdminTelemetry_Create(tx pgw.Queryable, key string, value float64, extra ma
 
 // TestSingleton
 
-func TestSingleton_GetValue(tx pgw.Queryable, key string) (*string, error) {
-	row := tx.QueryRow(`select value from test_singletons where key = $1`, key)
+func TestSingleton_GetValue(qu pgw.Queryable, key string) (*string, error) {
+	row := qu.QueryRow(`select value from test_singletons where key = $1`, key)
 	var maybeValue *string
 	err := row.Scan(&maybeValue)
 	return maybeValue, err
 }
 
-func TestSingleton_SetValue(tx pgw.Queryable, key, value string) error {
-	tag, err := tx.Exec(`
+func TestSingleton_SetValue(qu pgw.Queryable, key, value string) error {
+	tag, err := qu.Exec(`
 		update test_singletons
 		set value = $1
 		where key = $2

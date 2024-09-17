@@ -9,8 +9,8 @@ import (
 
 func Static_File(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
-	models.ProductEvent_DummyEmitOrLog(conn, r, false, "static asset", map[string]any{
+	pool := rutil.DBPool(r)
+	models.ProductEvent_DummyEmitOrLog(pool, r, false, "static asset", map[string]any{
 		"path": r.URL.Path,
 	}, logger)
 

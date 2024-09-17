@@ -15,8 +15,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"RetryBouncedEmailJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 1 {
 				return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)
 			}
@@ -27,22 +26,22 @@ func init() {
 			}
 			messageId := models.PostmarkMessageId(messageIdStr)
 
-			return RetryBouncedEmailJob_Perform(ctx, conn, messageId)
+			return RetryBouncedEmailJob_Perform(ctx, pool, messageId)
 		},
 	)
 }
 
 func RetryBouncedEmailJob_PerformAt(
-	tx pgw.Queryable, runAt schedule.Time, messageId models.PostmarkMessageId,
+	qu pgw.Queryable, runAt schedule.Time, messageId models.PostmarkMessageId,
 ) error {
-	return performAt(tx, runAt, "RetryBouncedEmailJob", defaultQueue, strToYaml(string(messageId)))
+	return performAt(qu, runAt, "RetryBouncedEmailJob", defaultQueue, strToYaml(string(messageId)))
 }
 
 func RetryBouncedEmailJob_Perform(
-	ctx context.Context, conn *pgw.Conn, messageId models.PostmarkMessageId,
+	ctx context.Context, pool *pgw.Pool, messageId models.PostmarkMessageId,
 ) error {
-	logger := conn.Logger()
-	row := conn.QueryRow(`
+	logger := pool.Logger()
+	row := pool.QueryRow(`
 		select message_type, subscription_id, subscription_post_id
 		from postmark_messages
 		where message_id = $1
@@ -55,7 +54,7 @@ func RetryBouncedEmailJob_Perform(
 		return err
 	}
 
-	row = conn.QueryRow(`
+	row = pool.QueryRow(`
 		select name, user_id, (
 			select email from users_with_discarded
 			where users_with_discarded.id = subscriptions_without_discarded.user_id
@@ -74,7 +73,7 @@ func RetryBouncedEmailJob_Perform(
 		return err
 	}
 
-	client, maybeTestMetadata := GetPostmarkClientAndMaybeMetadata(conn)
+	client, maybeTestMetadata := GetPostmarkClientAndMaybeMetadata(pool)
 	scheduledFor := schedule.UTCNow().MustUTCString()
 	logger.Info().Msgf("Retrying message: %s", messageId)
 
@@ -89,7 +88,7 @@ func RetryBouncedEmailJob_Perform(
 			userId, userEmail, subscriptionId, subscriptionName, maybeTestMetadata, scheduledFor,
 		)
 	case models.PostmarkMessageSubPost:
-		row := conn.QueryRow(`
+		row := pool.QueryRow(`
 			select random_id, (
 				select title from blog_posts where blog_posts.id = subscription_posts.blog_post_id
 			)
@@ -121,7 +120,7 @@ func RetryBouncedEmailJob_Perform(
 		Any("metadata", email.Metadata).
 		Any("response", response).
 		Msg("Sent email")
-	_, err = conn.Exec(`
+	_, err = pool.Exec(`
 		insert into postmark_messages (message_id, message_type, subscription_id, subscription_post_id)
 		values ($1, $2, $3, $4)
 	`, response.MessageID, messageType, subscriptionId, maybeSubscriptionPostId)

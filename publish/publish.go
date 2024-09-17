@@ -41,11 +41,11 @@ func PublishForUser(
 }
 
 var EmailInitialItemJob_PerformNowFunc func(
-	tx pgw.Queryable, userId models.UserId, subscriptionId models.SubscriptionId, scheduledFor string,
+	qu pgw.Queryable, userId models.UserId, subscriptionId models.SubscriptionId, scheduledFor string,
 ) error
 
 var EmailPostsJob_PerformNowFunc func(
-	tx pgw.Queryable, userId models.UserId, date schedule.Date, scheduledFor string,
+	qu pgw.Queryable, userId models.UserId, date schedule.Date, scheduledFor string,
 	finalItemSubscriptionIds []models.SubscriptionId,
 ) error
 

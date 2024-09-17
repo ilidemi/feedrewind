@@ -25,26 +25,26 @@ func ProductUserId_New() (ProductUserId, error) {
 }
 
 type ProductEventContext struct {
-	Tx            pgw.Queryable
+	Qu            pgw.Queryable
 	Request       *http.Request
 	ProductUserId ProductUserId
 }
 
 func ProductEvent_MustEmit(
-	tx pgw.Queryable, productUserId ProductUserId, eventType string, eventProperties map[string]any,
+	qu pgw.Queryable, productUserId ProductUserId, eventType string, eventProperties map[string]any,
 	userProperties map[string]any,
 ) {
-	err := ProductEvent_Emit(tx, productUserId, eventType, eventProperties, userProperties)
+	err := ProductEvent_Emit(qu, productUserId, eventType, eventProperties, userProperties)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func ProductEvent_Emit(
-	tx pgw.Queryable, productUserId ProductUserId, eventType string, eventProperties map[string]any,
+	qu pgw.Queryable, productUserId ProductUserId, eventType string, eventProperties map[string]any,
 	userProperties map[string]any,
 ) error {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		insert into product_events (
 			event_type, event_properties, user_properties, product_user_id
 		)
@@ -54,7 +54,7 @@ func ProductEvent_Emit(
 }
 
 func ProductEvent_DummyEmitOrLog(
-	tx pgw.Queryable, request *http.Request, allowBots bool, eventType string,
+	qu pgw.Queryable, request *http.Request, allowBots bool, eventType string,
 	eventProperties map[string]any, errorLogger log.Logger,
 ) {
 	uuid, err := uuid.NewRandom()
@@ -69,7 +69,7 @@ func ProductEvent_DummyEmitOrLog(
 	}
 	platform := resolveUserAgent(request.UserAgent())
 	anonIp := util.AnonUserIp(request)
-	_, err = tx.Exec(`
+	_, err = qu.Exec(`
 		insert into product_events (
 			product_user_id, event_type, event_properties, user_properties, user_ip, browser, os_name,
 			os_version, bot_name
@@ -96,10 +96,10 @@ func ProductEvent_EmitToBatch(
 }
 
 func NewProductEventContext(
-	tx pgw.Queryable, request *http.Request, productUserId ProductUserId,
+	qu pgw.Queryable, request *http.Request, productUserId ProductUserId,
 ) ProductEventContext {
 	return ProductEventContext{
-		Tx:            tx,
+		Qu:            qu,
 		Request:       request,
 		ProductUserId: productUserId,
 	}
@@ -110,7 +110,7 @@ func ProductEvent_MustEmitFromRequest(
 ) {
 	platform := resolveUserAgent(pc.Request.UserAgent())
 	anonIp := util.AnonUserIp(pc.Request)
-	_, err := pc.Tx.Exec(`
+	_, err := pc.Qu.Exec(`
 		insert into product_events (
 			event_type, event_properties, user_properties, user_ip, product_user_id, browser, os_name,
 			os_version, bot_name
@@ -190,8 +190,8 @@ type ProductEvent struct {
 	MaybeBotName         *string
 }
 
-func ProductEvent_GetNotDispatched(tx pgw.Queryable) ([]ProductEvent, error) {
-	rows, err := tx.Query(`
+func ProductEvent_GetNotDispatched(qu pgw.Queryable) ([]ProductEvent, error) {
+	rows, err := qu.Query(`
 		select id, product_user_id, event_type, created_at, event_properties, user_properties, user_ip,
 			browser, os_name, os_version, bot_name
 		from product_events
@@ -223,9 +223,9 @@ func ProductEvent_GetNotDispatched(tx pgw.Queryable) ([]ProductEvent, error) {
 }
 
 func ProductEvent_MarkAsDispatched(
-	tx pgw.Queryable, productEventId ProductEventId, dispatchedAt time.Time,
+	qu pgw.Queryable, productEventId ProductEventId, dispatchedAt time.Time,
 ) error {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		update product_events
 		set dispatched_at = $1
 		where id = $2

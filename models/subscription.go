@@ -24,8 +24,8 @@ const (
 	SubscriptionStatusLive                = "live"
 )
 
-func Subscription_Exists(tx pgw.Queryable, id SubscriptionId) (bool, error) {
-	row := tx.QueryRow("select 1 from subscriptions_without_discarded where id = $1", id)
+func Subscription_Exists(qu pgw.Queryable, id SubscriptionId) (bool, error) {
+	row := qu.QueryRow("select 1 from subscriptions_without_discarded where id = $1", id)
 	var one int
 	err := row.Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -37,21 +37,21 @@ func Subscription_Exists(tx pgw.Queryable, id SubscriptionId) (bool, error) {
 	return true, nil
 }
 
-func Subscription_SetUserId(tx pgw.Queryable, id SubscriptionId, userId UserId) error {
-	_, err := tx.Exec("update subscriptions_without_discarded set user_id = $1 where id = $2", userId, id)
+func Subscription_SetUserId(qu pgw.Queryable, id SubscriptionId, userId UserId) error {
+	_, err := qu.Exec("update subscriptions_without_discarded set user_id = $1 where id = $2", userId, id)
 	return err
 }
 
-func Subscription_SetIsPaused(tx pgw.Queryable, subscriptionId SubscriptionId, isPaused bool) error {
-	_, err := tx.Exec(`
+func Subscription_SetIsPaused(qu pgw.Queryable, subscriptionId SubscriptionId, isPaused bool) error {
+	_, err := qu.Exec(`
 		update subscriptions_without_discarded set is_paused = $1 where id = $2
 	`, isPaused, subscriptionId)
 	return err
 }
 
-func Subscription_Delete(tx pgw.Queryable, subscriptionId SubscriptionId) error {
+func Subscription_Delete(qu pgw.Queryable, subscriptionId SubscriptionId) error {
 	// Has to be with_discarded because adding timestamp to without_discarded is a constraint violation
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		update subscriptions_with_discarded
 		set discarded_at = utc_now()
 		where id = $1
@@ -59,8 +59,8 @@ func Subscription_Delete(tx pgw.Queryable, subscriptionId SubscriptionId) error 
 	return err
 }
 
-func Subscription_GetName(tx pgw.Queryable, subscriptionId SubscriptionId) (string, error) {
-	row := tx.QueryRow(`
+func Subscription_GetName(qu pgw.Queryable, subscriptionId SubscriptionId) (string, error) {
+	row := qu.QueryRow(`
 		select name from subscriptions_without_discarded where id = $1
 	`, subscriptionId)
 	var name string
@@ -69,9 +69,9 @@ func Subscription_GetName(tx pgw.Queryable, subscriptionId SubscriptionId) (stri
 }
 
 func Subscription_GetOtherNamesByDay(
-	tx pgw.Queryable, currentSubscriptionId SubscriptionId, userId UserId,
+	qu pgw.Queryable, currentSubscriptionId SubscriptionId, userId UserId,
 ) (map[schedule.DayOfWeek][]string, error) {
-	rows, err := tx.Query(`
+	rows, err := qu.Query(`
 		with user_subscriptions as (
 			select id, name, created_at from subscriptions_without_discarded
 			where user_id = $1 and
@@ -139,9 +139,9 @@ type SchedulePreviewNextPost struct {
 }
 
 func Subscription_GetSchedulePreview(
-	tx pgw.Queryable, subscriptionId SubscriptionId,
+	qu pgw.Queryable, subscriptionId SubscriptionId,
 ) (*SchedulePreview, error) {
-	rows, err := tx.Query(`(
+	rows, err := qu.Query(`(
 		select
 			'prev_post' as tag,
 			url,
@@ -229,9 +229,9 @@ func Subscription_GetSchedulePreview(
 }
 
 func Subscription_UpdateScheduleVersion(
-	tx pgw.Queryable, subscriptionId SubscriptionId, scheduleVersion int64,
+	qu pgw.Queryable, subscriptionId SubscriptionId, scheduleVersion int64,
 ) error {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		update subscriptions_without_discarded set schedule_version = $1 where id = $2
 	`, scheduleVersion, subscriptionId)
 	return err
@@ -244,7 +244,7 @@ type SubscriptionCreateResult struct {
 }
 
 func Subscription_CreateForBlog(
-	tx pgw.Queryable, blog *Blog, currentUser *User, productUserId ProductUserId,
+	qu pgw.Queryable, blog *Blog, currentUser *User, productUserId ProductUserId,
 ) (*SubscriptionCreateResult, error) {
 	var userId *UserId
 	var anonProductUserId *ProductUserId
@@ -257,20 +257,20 @@ func Subscription_CreateForBlog(
 	}
 
 	return Subscription_Create(
-		tx, userId, anonProductUserId, blog, SubscriptionStatusWaitingForBlog, false, 0,
+		qu, userId, anonProductUserId, blog, SubscriptionStatusWaitingForBlog, false, 0,
 	)
 }
 
 func Subscription_Create(
-	tx pgw.Queryable, userId *UserId, anonProductUserId *ProductUserId, blog *Blog, status SubscriptionStatus,
+	qu pgw.Queryable, userId *UserId, anonProductUserId *ProductUserId, blog *Blog, status SubscriptionStatus,
 	isPaused bool, scheduleVersion int64,
 ) (*SubscriptionCreateResult, error) {
-	idInt, err := mutil.RandomId(tx, "subscriptions_with_discarded")
+	idInt, err := mutil.RandomId(qu, "subscriptions_with_discarded")
 	if err != nil {
 		return nil, err
 	}
 	id := SubscriptionId(idInt)
-	_, err = tx.Exec(`
+	_, err = qu.Exec(`
 		insert into subscriptions_without_discarded(
 			id, user_id, anon_product_user_id, blog_id, name, status, is_paused, schedule_version
 		) values ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -290,9 +290,9 @@ func Subscription_Create(
 var psqlRandomId = "rtrim(replace(replace(encode(gen_random_bytes(16), 'base64'), '+', '-'), '/', '_'), '=')"
 
 func Subscription_CreatePostsFromCategory(
-	tx pgw.Queryable, subscriptionId SubscriptionId, categoryId BlogPostCategoryId,
+	qu pgw.Queryable, subscriptionId SubscriptionId, categoryId BlogPostCategoryId,
 ) error {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		insert into subscription_posts (subscription_id, blog_post_id, random_id, published_at)
 		select $1, blog_post_id, `+psqlRandomId+`, null
 		from blog_post_category_assignments
@@ -302,7 +302,7 @@ func Subscription_CreatePostsFromCategory(
 }
 
 func Subscription_CreatePostsFromIds(
-	tx pgw.Queryable, subscriptionId SubscriptionId, blogId BlogId, blogPostIds map[BlogPostId]bool,
+	qu pgw.Queryable, subscriptionId SubscriptionId, blogId BlogId, blogPostIds map[BlogPostId]bool,
 ) error {
 	var blogPostIdsStr strings.Builder
 	for blogPostId := range blogPostIds {
@@ -312,7 +312,7 @@ func Subscription_CreatePostsFromIds(
 		fmt.Fprint(&blogPostIdsStr, blogPostId)
 	}
 
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		insert into subscription_posts (subscription_id, blog_post_id, random_id, published_at)
 		select $1, id, `+psqlRandomId+`, null
 		from blog_posts
@@ -322,19 +322,19 @@ func Subscription_CreatePostsFromIds(
 }
 
 func Subscription_UpdateStatus(
-	tx pgw.Queryable, subscriptionId SubscriptionId, newStatus SubscriptionStatus,
+	qu pgw.Queryable, subscriptionId SubscriptionId, newStatus SubscriptionStatus,
 ) error {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		update subscriptions_without_discarded set status = $1 where id = $2
 	`, newStatus, subscriptionId)
 	return err
 }
 
 func Subscription_FinishSetup(
-	tx pgw.Queryable, subscriptionId SubscriptionId, name string, status SubscriptionStatus,
+	qu pgw.Queryable, subscriptionId SubscriptionId, name string, status SubscriptionStatus,
 	finishedSetupAt schedule.Time, scheduleVersion int, isAddedPastMidnight bool,
 ) error {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		update subscriptions_without_discarded
 		set name = $1, status = $2, finished_setup_at = $3, schedule_version = $4, is_added_past_midnight = $5
 		where id = $6
@@ -351,8 +351,8 @@ type SubscriptionToPublish struct {
 	BlogId                    BlogId
 }
 
-func Subscription_ListSortedToPublish(tx pgw.Queryable, userId UserId) ([]SubscriptionToPublish, error) {
-	rows, err := tx.Query(`
+func Subscription_ListSortedToPublish(qu pgw.Queryable, userId UserId) ([]SubscriptionToPublish, error) {
+	rows, err := qu.Query(`
 		select id, name, is_paused, finished_setup_at, final_item_published_at, blog_id
 		from subscriptions_without_discarded
 		where user_id = $1 and status = $2
@@ -402,9 +402,9 @@ const (
 )
 
 func SubscriptionPost_GetNextUnpublished(
-	tx pgw.Queryable, subscriptionId SubscriptionId, count int,
+	qu pgw.Queryable, subscriptionId SubscriptionId, count int,
 ) ([]SubscriptionBlogPost, error) {
-	rows, err := tx.Query(`
+	rows, err := qu.Query(`
 		select subscription_posts.id, title, random_id, published_at from subscription_posts 
 		join blog_posts on subscription_posts.blog_post_id = blog_posts.id
 		where subscription_id = $1 and published_at is null
@@ -439,9 +439,9 @@ type PublishedSubscriptionBlogPost struct {
 }
 
 func SubscriptionPost_GetLastPublishedDesc(
-	tx pgw.Queryable, subscriptionId SubscriptionId, count int,
+	qu pgw.Queryable, subscriptionId SubscriptionId, count int,
 ) ([]PublishedSubscriptionBlogPost, error) {
-	rows, err := tx.Query(`
+	rows, err := qu.Query(`
 		select subscription_posts.id, title, random_id, published_at from subscription_posts
 		join blog_posts on subscription_posts.blog_post_id = blog_posts.id
 		where subscription_id = $1 and published_at is not null
@@ -469,10 +469,10 @@ func SubscriptionPost_GetLastPublishedDesc(
 }
 
 func SubscriptionPost_UpdatePublished(
-	tx pgw.Queryable, postId SubscriptionPostId, publishedAt schedule.Time,
+	qu pgw.Queryable, postId SubscriptionPostId, publishedAt schedule.Time,
 	publishedAtLocalDate schedule.Date, publishStatus PostPublishStatus,
 ) error {
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		update subscription_posts
 		set published_at = $1, published_at_local_date = $2, publish_status = $3
 		where id = $4
@@ -480,8 +480,8 @@ func SubscriptionPost_UpdatePublished(
 	return err
 }
 
-func SubscriptionPost_GetUnpublishedCount(tx pgw.Queryable, subscriptionId SubscriptionId) (int, error) {
-	row := tx.QueryRow(`
+func SubscriptionPost_GetUnpublishedCount(qu pgw.Queryable, subscriptionId SubscriptionId) (int, error) {
+	row := qu.QueryRow(`
 		select count(1) from subscription_posts where subscription_id = $1 and published_at is null
 	`, subscriptionId)
 	var result int
@@ -492,7 +492,7 @@ func SubscriptionPost_GetUnpublishedCount(tx pgw.Queryable, subscriptionId Subsc
 // Schedule
 
 func Schedule_Create(
-	tx pgw.Queryable, subscriptionId SubscriptionId, countsByDay map[schedule.DayOfWeek]int,
+	qu pgw.Queryable, subscriptionId SubscriptionId, countsByDay map[schedule.DayOfWeek]int,
 ) error {
 	var valuesSql strings.Builder
 	for dayOfWeek, count := range countsByDay {
@@ -501,7 +501,7 @@ func Schedule_Create(
 		}
 		fmt.Fprintf(&valuesSql, "(%d, '%s', %d)", subscriptionId, dayOfWeek, count)
 	}
-	_, err := tx.Exec(`
+	_, err := qu.Exec(`
 		insert into schedules (subscription_id, day_of_week, count)
 		values ` + valuesSql.String() + `
 	`)
@@ -509,9 +509,9 @@ func Schedule_Create(
 }
 
 func Schedule_GetCount(
-	tx pgw.Queryable, subscriptionId SubscriptionId, dayOfWeek schedule.DayOfWeek,
+	qu pgw.Queryable, subscriptionId SubscriptionId, dayOfWeek schedule.DayOfWeek,
 ) (int, error) {
-	row := tx.QueryRow(`
+	row := qu.QueryRow(`
 		select count from schedules where subscription_id = $1 and day_of_week = $2
 	`, subscriptionId, dayOfWeek)
 	var result int
@@ -520,9 +520,9 @@ func Schedule_GetCount(
 }
 
 func Schedule_GetCountsByDay(
-	tx pgw.Queryable, subscriptionId SubscriptionId,
+	qu pgw.Queryable, subscriptionId SubscriptionId,
 ) (map[schedule.DayOfWeek]int, error) {
-	rows, err := tx.Query(`
+	rows, err := qu.Query(`
 		select day_of_week, count
 		from schedules
 		where subscription_id = $1
@@ -550,7 +550,7 @@ func Schedule_GetCountsByDay(
 }
 
 func Schedule_Update(
-	tx pgw.Queryable, subscriptionId SubscriptionId, countsByDay map[schedule.DayOfWeek]int,
+	qu pgw.Queryable, subscriptionId SubscriptionId, countsByDay map[schedule.DayOfWeek]int,
 ) error {
 	var queryBuf bytes.Buffer
 	queryBuf.WriteString(`
@@ -572,6 +572,6 @@ func Schedule_Update(
 	`)
 	query := queryBuf.String()
 
-	_, err := tx.Exec(query, subscriptionId)
+	_, err := qu.Exec(query, subscriptionId)
 	return err
 }

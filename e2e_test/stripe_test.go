@@ -106,10 +106,6 @@ func TestStripeSupporter(t *testing.T) {
 		page.MustElement("#billingAddressLine1").MustInput("400 Broad Street")
 		page.MustElement("#billingLocality").MustInput("Seattle")
 		page.MustElement("#billingPostalCode").MustInput("98109")
-		enableStripePass := page.MustElement("#enableStripePass")
-		if enableStripePass.MustProperty("checked").Bool() {
-			enableStripePass.MustClick()
-		}
 		page.MustElement(".SubmitButton--complete").MustClick()
 
 		// Create user
@@ -495,10 +491,6 @@ func TestStripeFreeUpgradeToYearlySupporter(t *testing.T) {
 	page.MustElement("#billingAddressLine1").MustInput("400 Broad Street")
 	page.MustElement("#billingLocality").MustInput("Seattle")
 	page.MustElement("#billingPostalCode").MustInput("98109")
-	enableStripePass := page.MustElement("#enableStripePass")
-	if enableStripePass.MustProperty("checked").Bool() {
-		enableStripePass.MustClick()
-	}
 	page.MustElement(".SubmitButton--complete").MustClick()
 
 	// Settings
@@ -556,10 +548,6 @@ func TestStripePatron(t *testing.T) {
 		page.MustElement("#billingAddressLine1").MustInput("400 Broad Street")
 		page.MustElement("#billingLocality").MustInput("Seattle")
 		page.MustElement("#billingPostalCode").MustInput("98109")
-		enableStripePass := page.MustElement("#enableStripePass")
-		if enableStripePass.MustProperty("checked").Bool() {
-			enableStripePass.MustClick()
-		}
 		page.MustElement(".SubmitButton--complete").MustClick()
 
 		// Create user
@@ -889,10 +877,6 @@ func TestStripeFreeUpgrade(t *testing.T) {
 			page.MustElement("#billingAddressLine1").MustInput("400 Broad Street")
 			page.MustElement("#billingLocality").MustInput("Seattle")
 			page.MustElement("#billingPostalCode").MustInput("98109")
-			enableStripePass := page.MustElement("#enableStripePass")
-			if enableStripePass.MustProperty("checked").Bool() {
-				enableStripePass.MustClick()
-			}
 			page.MustElement(".SubmitButton--complete").MustClick()
 
 			// Settings
@@ -1183,10 +1167,18 @@ func TestStripePatronWithCreditsCustomBlogRequest(t *testing.T) {
 	require.Equal(t, "Credits available: 0", patronCreditsText)
 
 	// Ensure slack message
-	page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
-	require.Equal(
-		t, "Custom blog requested for subscription "+subscriptionId+" (yes others)", mustPageText(page),
-	)
+	pollCount := 0
+	for {
+		page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
+		pageText := mustPageText(page)
+		if pageText == "Custom blog requested for subscription "+subscriptionId+" (yes others)" {
+			break
+		}
+
+		time.Sleep(time.Second)
+		pollCount++
+		require.Less(t, pollCount, 10)
+	}
 
 	// Ensure the subscription can't be deleted while the request is there
 	page = visitAdmin(browser, `
@@ -1254,10 +1246,6 @@ func TestStripePatronWithoutCreditsCustomBlogRequest(t *testing.T) {
 	page.MustElement("#billingAddressLine1").MustInput("400 Broad Street")
 	page.MustElement("#billingLocality").MustInput("Seattle")
 	page.MustElement("#billingPostalCode").MustInput("98109")
-	enableStripePass := page.MustElement("#enableStripePass")
-	if enableStripePass.MustProperty("checked").Bool() {
-		enableStripePass.MustClick()
-	}
 	page.MustElement(".SubmitButton--complete").MustClick()
 
 	// Ensure ack
@@ -1284,10 +1272,18 @@ func TestStripePatronWithoutCreditsCustomBlogRequest(t *testing.T) {
 	require.Equal(t, "Credits available: 0", patronCreditsText)
 
 	// Ensure slack message
-	page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
-	require.Equal(
-		t, "Custom blog requested for subscription "+subscriptionId+" (yes others)", mustPageText(page),
-	)
+	pollCount := 0
+	for {
+		page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
+		pageText := mustPageText(page)
+		if pageText == "Custom blog requested for subscription "+subscriptionId+" (yes others)" {
+			break
+		}
+
+		time.Sleep(time.Second)
+		pollCount++
+		require.Less(t, pollCount, 10)
+	}
 
 	// Cleanup
 	page = visitAdmin(browser, "delete_test_singleton?key=slack_dump")
@@ -1331,10 +1327,6 @@ func TestStripeSupporterCustomBlogRequest(t *testing.T) {
 	page.MustElement("#billingAddressLine1").MustInput("400 Broad Street")
 	page.MustElement("#billingLocality").MustInput("Seattle")
 	page.MustElement("#billingPostalCode").MustInput("98109")
-	enableStripePass := page.MustElement("#enableStripePass")
-	if enableStripePass.MustProperty("checked").Bool() {
-		enableStripePass.MustClick()
-	}
 	page.MustElement(".SubmitButton--complete").MustClick()
 
 	// Ensure ack
@@ -1356,10 +1348,18 @@ func TestStripeSupporterCustomBlogRequest(t *testing.T) {
 	require.True(t, strings.HasPrefix(customBlogRequest[0]["stripe_payment_intent_id"].(string), "pi_"))
 
 	// Ensure slack message
-	page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
-	require.Equal(
-		t, "Custom blog requested for subscription "+subscriptionId+" (yes others)", mustPageText(page),
-	)
+	pollCount := 0
+	for {
+		page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
+		pageText := mustPageText(page)
+		if pageText == "Custom blog requested for subscription "+subscriptionId+" (yes others)" {
+			break
+		}
+
+		time.Sleep(time.Second)
+		pollCount++
+		require.Less(t, pollCount, 10)
+	}
 
 	// Cleanup
 	page = visitAdmin(browser, "delete_test_singleton?key=slack_dump")
@@ -1419,10 +1419,6 @@ func TestStripeFreeCustomBlogRequest(t *testing.T) {
 	page.MustElement("#billingAddressLine1").MustInput("400 Broad Street")
 	page.MustElement("#billingLocality").MustInput("Seattle")
 	page.MustElement("#billingPostalCode").MustInput("98109")
-	enableStripePass := page.MustElement("#enableStripePass")
-	if enableStripePass.MustProperty("checked").Bool() {
-		enableStripePass.MustClick()
-	}
 	page.MustElement(".SubmitButton--complete").MustClick()
 
 	// Ensure ack
@@ -1444,10 +1440,18 @@ func TestStripeFreeCustomBlogRequest(t *testing.T) {
 	require.True(t, strings.HasPrefix(customBlogRequest[0]["stripe_payment_intent_id"].(string), "pi_"))
 
 	// Ensure slack message
-	page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
-	require.Equal(
-		t, "Custom blog requested for subscription "+subscriptionId+" (no others)", mustPageText(page),
-	)
+	pollCount := 0
+	for {
+		page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
+		pageText := mustPageText(page)
+		if pageText == "Custom blog requested for subscription "+subscriptionId+" (no others)" {
+			break
+		}
+
+		time.Sleep(time.Second)
+		pollCount++
+		require.Less(t, pollCount, 10)
+	}
 
 	// Cleanup
 	page = visitAdmin(browser, "delete_test_singleton?key=slack_dump")
@@ -1613,10 +1617,6 @@ func TestStripeRequestCustomBlogDoubleRedirectAfterCheckout(t *testing.T) {
 	page.MustElement("#billingAddressLine1").MustInput("400 Broad Street")
 	page.MustElement("#billingLocality").MustInput("Seattle")
 	page.MustElement("#billingPostalCode").MustInput("98109")
-	enableStripePass := page.MustElement("#enableStripePass")
-	if enableStripePass.MustProperty("checked").Bool() {
-		enableStripePass.MustClick()
-	}
 
 	// Set up hijack for the redirect
 	hijackRouter := page.HijackRequests()
@@ -1700,10 +1700,6 @@ func TestStripeCustomBlogRequestDoubleCheckout(t *testing.T) {
 	page.MustElement("#billingAddressLine1").MustInput("400 Broad Street")
 	page.MustElement("#billingLocality").MustInput("Seattle")
 	page.MustElement("#billingPostalCode").MustInput("98109")
-	enableStripePass := page.MustElement("#enableStripePass")
-	if enableStripePass.MustProperty("checked").Bool() {
-		enableStripePass.MustClick()
-	}
 	page.MustElement(".SubmitButton--complete").MustClick()
 
 	// Ensure ack 1
@@ -1718,10 +1714,6 @@ func TestStripeCustomBlogRequestDoubleCheckout(t *testing.T) {
 	page2.MustElement("#billingAddressLine1").MustInput("400 Broad Street")
 	page2.MustElement("#billingLocality").MustInput("Seattle")
 	page2.MustElement("#billingPostalCode").MustInput("98109")
-	enableStripePass = page2.MustElement("#enableStripePass")
-	if enableStripePass.MustProperty("checked").Bool() {
-		enableStripePass.MustClick()
-	}
 	page2.MustElement(".SubmitButton--complete").MustClick()
 
 	// Ensure ack 2
@@ -1729,11 +1721,21 @@ func TestStripeCustomBlogRequestDoubleCheckout(t *testing.T) {
 
 	// Ensure slack message
 	page.MustActivate()
-	page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
-	require.True(t, strings.HasPrefix(
-		mustPageText(page),
-		"Double payment for the same custom blog request, contact customer asap: ",
-	))
+	pollCount := 0
+	for {
+		page = visitAdmin(browser, "get_test_singleton?key=slack_last_message")
+		pageText := mustPageText(page)
+		hasPrefix := strings.HasPrefix(
+			pageText, "Double payment for the same custom blog request, contact customer asap:",
+		)
+		if hasPrefix {
+			break
+		}
+
+		time.Sleep(time.Second)
+		pollCount++
+		require.Less(t, pollCount, 10)
+	}
 
 	// Cleanup
 	page = visitAdmin(browser, "delete_test_singleton?key=slack_dump")
@@ -1793,10 +1795,6 @@ func mustSetupPaidUser(
 	page.MustElement("#billingAddressLine1").MustInput("400 Broad Street")
 	page.MustElement("#billingLocality").MustInput("Seattle")
 	page.MustElement("#billingPostalCode").MustInput("98109")
-	enableStripePass := page.MustElement("#enableStripePass")
-	if enableStripePass.MustProperty("checked").Bool() {
-		enableStripePass.MustClick()
-	}
 	page.MustElement(".SubmitButton--complete").MustClick()
 
 	// Create user

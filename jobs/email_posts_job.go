@@ -16,8 +16,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"EmailPostsJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 4 {
 				return oops.Newf("Expected 4 args, got %d: %v", len(args), args)
 			}
@@ -64,7 +63,7 @@ func init() {
 					append(finalItemSubscriptionIds, models.SubscriptionId(subscriptionIdInt64))
 			}
 
-			return EmailPostsJob_Perform(ctx, conn, userId, date, scheduledFor, finalItemSubscriptionIds)
+			return EmailPostsJob_Perform(ctx, pool, userId, date, scheduledFor, finalItemSubscriptionIds)
 		},
 	)
 
@@ -72,7 +71,7 @@ func init() {
 }
 
 func EmailPostsJob_PerformNow(
-	tx pgw.Queryable, userId models.UserId, date schedule.Date, scheduledFor string,
+	qu pgw.Queryable, userId models.UserId, date schedule.Date, scheduledFor string,
 	finalItemSubscriptionIds []models.SubscriptionId,
 ) error {
 	finalItemSubscriptionIdInts := make([]int64, 0, len(finalItemSubscriptionIds))
@@ -80,16 +79,16 @@ func EmailPostsJob_PerformNow(
 		finalItemSubscriptionIdInts = append(finalItemSubscriptionIdInts, int64(subscriptionId))
 	}
 	return performNow(
-		tx, "EmailPostsJob", defaultQueue, int64ToYaml(int64(userId)), strToYaml(string(date)),
+		qu, "EmailPostsJob", defaultQueue, int64ToYaml(int64(userId)), strToYaml(string(date)),
 		strToYaml(scheduledFor), int64ListToYaml(finalItemSubscriptionIdInts),
 	)
 }
 
 func EmailPostsJob_Perform(
-	ctx context.Context, conn *pgw.Conn, userId models.UserId, date schedule.Date, scheduledFor string,
+	ctx context.Context, pool *pgw.Pool, userId models.UserId, date schedule.Date, scheduledFor string,
 	finalItemSubscriptionIds []models.SubscriptionId,
 ) error {
-	return util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	return util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		logger := tx.Logger()
 
 		exists, err := models.User_Exists(tx, userId)

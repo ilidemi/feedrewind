@@ -38,10 +38,10 @@ import (
 )
 
 func Subscriptions_Index(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	currentUser := rutil.CurrentUser(r)
 
-	rows, err := conn.Query(`
+	rows, err := pool.Query(`
 		with user_subscriptions as (
 			select id, name, status, is_paused, finished_setup_at, created_at
 			from subscriptions_without_discarded
@@ -198,7 +198,7 @@ type subscriptionsScheduleJsResult struct {
 }
 
 func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -209,7 +209,7 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 	currentUser := rutil.CurrentUser(r)
 
 	var status models.SubscriptionStatus
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select status from subscriptions_without_discarded
 		where id = $1 and user_id = $2
 	`, subscriptionId, currentUser.Id)
@@ -233,7 +233,7 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 	var url string
 	var publishedCount int
 	var totalCount int
-	row = conn.QueryRow(`
+	row = pool.QueryRow(`
 		select name, is_paused, schedule_version, is_added_past_midnight,
 			(select url from blogs where id = blog_id) as url,
 			(
@@ -254,7 +254,7 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	userSettings, err := models.UserSettings_Get(conn, currentUser.Id)
+	userSettings, err := models.UserSettings_Get(pool, currentUser.Id)
 	if err != nil {
 		panic(err)
 	}
@@ -262,16 +262,16 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 	if *userSettings.MaybeDeliveryChannel != models.DeliveryChannelEmail {
 		feedUrl = rutil.SubscriptionFeedUrl(r, subscriptionId)
 	}
-	countByDay, err := models.Schedule_GetCountsByDay(conn, subscriptionId)
+	countByDay, err := models.Schedule_GetCountsByDay(pool, subscriptionId)
 	if err != nil {
 		panic(err)
 	}
-	otherSubNamesByDay, err := models.Subscription_GetOtherNamesByDay(conn, subscriptionId, currentUser.Id)
+	otherSubNamesByDay, err := models.Subscription_GetOtherNamesByDay(pool, subscriptionId, currentUser.Id)
 	if err != nil {
 		panic(err)
 	}
 	preview := subscriptions_MustGetSchedulePreview(
-		conn, subscriptionId, status, currentUser.Id, userSettings,
+		pool, subscriptionId, status, currentUser.Id, userSettings,
 	)
 
 	type SubscriptionResult struct {
@@ -324,13 +324,13 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 
 func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	currentUser := rutil.CurrentUser(r)
 	productUserId := rutil.CurrentProductUserId(r)
 	userIsAnonymous := currentUser == nil
-	pc := models.NewProductEventContext(conn, r, productUserId)
+	pc := models.NewProductEventContext(pool, r, productUserId)
 	startFeedId := models.StartFeedId(util.EnsureParamInt64(r, "start_feed_id"))
-	startFeed, err := models.StartFeed_GetUnfetched(conn, startFeedId)
+	startFeed, err := models.StartFeed_GetUnfetched(pool, startFeedId)
 	if err != nil {
 		panic(err)
 	}
@@ -353,18 +353,18 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		startFeed, err = models.StartFeed_UpdateFetched(
-			conn, startFeed, finalUrl, fetchResult.Page.Content, parsedFeed,
+			pool, startFeed, finalUrl, fetchResult.Page.Content, parsedFeed,
 		)
 		if err != nil {
 			panic(err)
 		}
-		updatedBlog, err := models.Blog_CreateOrUpdate(conn, startFeed, jobs.GuidedCrawlingJob_PerformNow)
+		updatedBlog, err := models.Blog_CreateOrUpdate(pool, startFeed, jobs.GuidedCrawlingJob_PerformNow)
 		if err != nil {
 			panic(err)
 		}
 
 		subscriptionCreateResult, err := models.Subscription_CreateForBlog(
-			conn, updatedBlog, currentUser, productUserId,
+			pool, updatedBlog, currentUser, productUserId,
 		)
 		if err != nil {
 			panic(err)
@@ -399,7 +399,7 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -414,7 +414,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 	var subscriptionName string
 	var blogId models.BlogId
 	var maybeSubscriptionUserId *models.UserId
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select
 			status,
 			(select status from blogs where id = blog_id) as blog_status,
@@ -460,9 +460,9 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 	case models.SubscriptionStatusWaitingForBlog:
 		switch blogStatus {
 		case models.BlogStatusCrawlInProgress:
-			clientToken, err := models.BlogCrawlClientToken_GetById(conn, blogId)
+			clientToken, err := models.BlogCrawlClientToken_GetById(pool, blogId)
 			if errors.Is(err, models.ErrBlogCrawlClientTokenNotFound) {
-				clientToken, err = models.BlogCrawlClientToken_Create(conn, blogId)
+				clientToken, err = models.BlogCrawlClientToken_Create(pool, blogId)
 				if err != nil {
 					panic(err)
 				}
@@ -470,7 +470,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 
-			blogCrawlProgress, err := models.BlogCrawlProgress_Get(conn, blogId)
+			blogCrawlProgress, err := models.BlogCrawlProgress_Get(pool, blogId)
 			if err != nil {
 				panic(err)
 			}
@@ -582,7 +582,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				CustomSubmit                Submit
 			}
 
-			allBlogPosts, err := models.BlogPost_List(conn, blogId)
+			allBlogPosts, err := models.BlogPost_List(pool, blogId)
 			if err != nil {
 				panic(err)
 			}
@@ -595,7 +595,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				blogPostsById[allBlogPosts[i].Id] = &allBlogPosts[i]
 			}
 
-			allCategories, err := models.BlogPostCategory_ListOrdered(conn, blogId)
+			allCategories, err := models.BlogPostCategory_ListOrdered(pool, blogId)
 			if err != nil {
 				panic(err)
 			}
@@ -757,7 +757,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			notifyWhenSupportedVersion := 0
 			isAnonymousUser := currentUser == nil
 			if !isAnonymousUser {
-				row := conn.QueryRow(`
+				row := pool.QueryRow(`
 					select 1 from patron_credits
 					where
 						user_id = $1 and
@@ -776,7 +776,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				}
 
 				// Could be any user, if the current user owns the email they can tick the checkbox
-				row = conn.QueryRow(`
+				row = pool.QueryRow(`
 					select notify, version from feed_waitlist_emails where email = $1 and feed_url = $2
 				`, currentUser.Email, feedUrl)
 				err = row.Scan(&notifyWhenSupportedChecked, &notifyWhenSupportedVersion)
@@ -828,17 +828,17 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 		})
 	case models.SubscriptionStatusSetup:
 		otherSubNamesByDay, err := models.Subscription_GetOtherNamesByDay(
-			conn, subscriptionId, currentUser.Id,
+			pool, subscriptionId, currentUser.Id,
 		)
 		if err != nil {
 			panic(err)
 		}
-		userSettings, err := models.UserSettings_Get(conn, currentUser.Id)
+		userSettings, err := models.UserSettings_Get(pool, currentUser.Id)
 		if err != nil {
 			panic(err)
 		}
 		preview := subscriptions_MustGetSchedulePreview(
-			conn, subscriptionId, subscriptionStatus, currentUser.Id, userSettings,
+			pool, subscriptionId, subscriptionStatus, currentUser.Id, userSettings,
 		)
 		type SetScheduleResult struct {
 			Title                    string
@@ -875,17 +875,17 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			SubscriptionSchedulePath: rutil.SubscriptionSchedulePath(subscriptionId),
 		})
 	case models.SubscriptionStatusLive:
-		subscriptionName, err := models.Subscription_GetName(conn, subscriptionId)
+		subscriptionName, err := models.Subscription_GetName(pool, subscriptionId)
 		if err != nil {
 			panic(err)
 		}
 		feedUrl := rutil.SubscriptionFeedUrl(r, subscriptionId)
-		userSettings, err := models.UserSettings_Get(conn, currentUser.Id)
+		userSettings, err := models.UserSettings_Get(pool, currentUser.Id)
 		if err != nil {
 			panic(err)
 		}
 
-		row := conn.QueryRow(`
+		row := pool.QueryRow(`
 			select count(1) from subscription_posts where subscription_id = $1 and published_at is not null
 		`, subscriptionId)
 		var publishedCount int
@@ -897,7 +897,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 		var willArriveDate string
 		var willArriveOne bool
 		if publishedCount == 0 {
-			countsByDay, err := models.Schedule_GetCountsByDay(conn, subscriptionId)
+			countsByDay, err := models.Schedule_GetCountsByDay(pool, subscriptionId)
 			if err != nil {
 				panic(err)
 			}
@@ -907,7 +907,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			localDate := localTime.Date()
 
 			nextJobScheduleDate, err := subscriptions_GetRealisticScheduleDate(
-				conn, currentUser.Id, localTime, localDate,
+				pool, currentUser.Id, localTime, localDate,
 			)
 			if err != nil {
 				panic(err)
@@ -966,7 +966,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 }
 
 func Subscriptions_Progress(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	logger := rutil.Logger(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
@@ -977,7 +977,7 @@ func Subscriptions_Progress(w http.ResponseWriter, r *http.Request) {
 	var maybeUserId *models.UserId
 	var blogId models.BlogId
 	var blogStatus models.BlogStatus
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select user_id, blog_id, (
 			select status from blogs where blogs.id = subscriptions_without_discarded.blog_id
 		)
@@ -1001,7 +1001,7 @@ func Subscriptions_Progress(w http.ResponseWriter, r *http.Request) {
 	var progressMap map[string]any
 	switch blogStatus {
 	case models.BlogStatusCrawlInProgress:
-		blogCrawlProgress, err := models.BlogCrawlProgress_Get(conn, blogId)
+		blogCrawlProgress, err := models.BlogCrawlProgress_Get(pool, blogId)
 		if err != nil {
 			panic(err)
 		}
@@ -1024,7 +1024,8 @@ func Subscriptions_Progress(w http.ResponseWriter, r *http.Request) {
 
 func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	// this route is called as fire-and-forget so the request will often be canceled
+	pool := rutil.DBPool(r).Child(context.Background(), logger) //nolint:gocritic
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
@@ -1042,7 +1043,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	var blogCrawlClientToken models.BlogCrawlClientToken
 	var blogCrawlEpoch int32
 	var maybeBlogCrawlEpochTimes *string
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select user_id, blogs.feed_url, blog_crawl_client_tokens.value, blog_crawl_progresses.epoch,
 			blog_crawl_progresses.epoch_times
 		from subscriptions_without_discarded
@@ -1090,7 +1091,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	if totalReconnectAttempts > 0 {
 		logger.Info().Msgf("Total reconnect attempts: %d", totalReconnectAttempts)
 		err := models.AdminTelemetry_Create(
-			conn, "websocket_reconnects", float64(totalReconnectAttempts), adminTelemetryExtra,
+			pool, "websocket_reconnects", float64(totalReconnectAttempts), adminTelemetryExtra,
 		)
 		if err != nil {
 			panic(err)
@@ -1153,7 +1154,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		calcStdDeviation(clientDurationsAfterInitialLoad, serverDurationsAfterInitialLoad)
 	logger.Info().Msgf("Standard deviation after initial load: %.03f", stdDeviationAfterInitialLoad)
 	err = models.AdminTelemetry_Create(
-		conn, "progress_timing_std_deviation", stdDeviationAfterInitialLoad, adminTelemetryExtra,
+		pool, "progress_timing_std_deviation", stdDeviationAfterInitialLoad, adminTelemetryExtra,
 	)
 	if err != nil {
 		panic(err)
@@ -1167,7 +1168,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		logger.Info().Msgf("Initial load duration: %.03f", initialLoadDuration)
 	}
 	err = models.AdminTelemetry_Create(
-		conn, "progress_timing_initial_load", initialLoadDuration, adminTelemetryExtra,
+		pool, "progress_timing_initial_load", initialLoadDuration, adminTelemetryExtra,
 	)
 	if err != nil {
 		panic(err)
@@ -1180,7 +1181,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Info().Msgf("Websocket wait duration: %.03f", realWebsocketWaitDuration)
 	err = models.AdminTelemetry_Create(
-		conn, "websocket_wait_duration", realWebsocketWaitDuration, adminTelemetryExtra,
+		pool, "websocket_wait_duration", realWebsocketWaitDuration, adminTelemetryExtra,
 	)
 	if err != nil {
 		panic(err)
@@ -1189,7 +1190,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 
 func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -1203,7 +1204,7 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 	var blogId models.BlogId
 	var blogBestUrl string
 	var maybeSubscriptionUserId *models.UserId
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select status, (
 			select status from blogs where id = blog_id
 		) as blog_status, (
@@ -1249,7 +1250,7 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 		topCategoryId = models.BlogPostCategoryId(topCategoryIdInt)
-		topCategoryName, postsCount, err := models.BlogPostCategory_GetNamePostsCountById(conn, topCategoryId)
+		topCategoryName, postsCount, err := models.BlogPostCategory_GetNamePostsCountById(pool, topCategoryId)
 		if err != nil {
 			panic(err)
 		}
@@ -1280,14 +1281,14 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = models.BlogCrawlVote_Create(
-		conn, blogId, rutil.CurrentUserId(r), models.BlogCrawlVoteConfirmed,
+		pool, blogId, rutil.CurrentUserId(r), models.BlogCrawlVoteConfirmed,
 	)
 	if err != nil {
 		panic(err)
 	}
 
 	currentUser := rutil.CurrentUser(r)
-	pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+	pc := models.NewProductEventContext(pool, r, rutil.CurrentProductUserId(r))
 	models.ProductEvent_MustEmitFromRequest(pc, "select posts", map[string]any{
 		"subscription_id":   subscriptionId,
 		"blog_url":          blogBestUrl,
@@ -1297,7 +1298,7 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 		"user_is_anonymous": currentUser == nil,
 	}, nil)
 
-	tx, err := rutil.DBConn(r).Begin()
+	tx, err := pool.Begin()
 	if err != nil {
 		panic(err)
 	}
@@ -1328,7 +1329,7 @@ func Subscriptions_SelectPosts(w http.ResponseWriter, r *http.Request) {
 
 func Subscriptions_MarkWrong(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -1342,7 +1343,7 @@ func Subscriptions_MarkWrong(w http.ResponseWriter, r *http.Request) {
 	var blogBestUrl string
 	var blogId models.BlogId
 	var maybeSubscriptionUserId *models.UserId
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select
 			status,
 			(select status from blogs where id = blog_id) as blog_status,
@@ -1377,13 +1378,13 @@ func Subscriptions_MarkWrong(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = models.BlogCrawlVote_Create(
-		conn, blogId, rutil.CurrentUserId(r), models.BlogCrawlVoteLooksWrong,
+		pool, blogId, rutil.CurrentUserId(r), models.BlogCrawlVoteLooksWrong,
 	)
 	if err != nil {
 		panic(err)
 	}
 
-	pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+	pc := models.NewProductEventContext(pool, r, rutil.CurrentProductUserId(r))
 	models.ProductEvent_MustEmitFromRequest(pc, "mark wrong", map[string]any{
 		"subscription_id":   subscriptionId,
 		"blog_url":          blogBestUrl,
@@ -1395,7 +1396,7 @@ func Subscriptions_MarkWrong(w http.ResponseWriter, r *http.Request) {
 
 func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -1408,7 +1409,7 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 	var blogBestUrl string
 	var blogId models.BlogId
 	var maybeSubscriptionUserId *models.UserId
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select
 			status,
 			(select status from blogs where id = blog_id) as blog_status,
@@ -1457,7 +1458,7 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 	// Initializing subscription feed may race with user's update rss job.
 	// If the job is already running, wait till it finishes, otherwise lock the row so it doesn't start
 	mustSaveSchedule := func() (result bool) {
-		tx, err := conn.Begin()
+		tx, err := pool.Begin()
 		if err != nil {
 			panic(err)
 		}
@@ -1611,11 +1612,11 @@ func subscriptions_MustPauseUnpause(
 	}
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	var maybeSubscriptionUserId *models.UserId
 	var status models.SubscriptionStatus
 	var blogBestUrl string
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select user_id, status, (
 			select coalesce(url, feed_url) from blogs
 			where blogs.id = subscriptions_without_discarded.blog_id
@@ -1636,12 +1637,12 @@ func subscriptions_MustPauseUnpause(
 		return
 	}
 
-	err = models.Subscription_SetIsPaused(conn, subscriptionId, newIsPaused)
+	err = models.Subscription_SetIsPaused(pool, subscriptionId, newIsPaused)
 	if err != nil {
 		panic(err)
 	}
 
-	pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+	pc := models.NewProductEventContext(pool, r, rutil.CurrentProductUserId(r))
 	models.ProductEvent_MustEmitFromRequest(pc, eventName, map[string]any{
 		"subscription_id": subscriptionId,
 		"blog_url":        blogBestUrl,
@@ -1658,7 +1659,7 @@ func init() {
 }
 
 func Subscriptions_Update(w http.ResponseWriter, r *http.Request) {
-	tx, err := rutil.DBConn(r).Begin()
+	tx, err := rutil.DBPool(r).Begin()
 	if err != nil {
 		panic(err)
 	}
@@ -1741,7 +1742,7 @@ func Subscriptions_Update(w http.ResponseWriter, r *http.Request) {
 
 func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -1752,7 +1753,7 @@ func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
 	var maybeSubscriptionUserId *models.UserId
 	var status models.SubscriptionStatus
 	var blogBestUrl string
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select
 			user_id, status,
 			(
@@ -1777,18 +1778,18 @@ func Subscriptions_Delete(w http.ResponseWriter, r *http.Request) {
 			"Subscription %d with a custom blog requested got deleted, look into this asap!", subscriptionId,
 		)
 		logger.Warn().Msg(message)
-		err := jobs.NotifySlackJob_PerformNow(conn, message)
+		err := jobs.NotifySlackJob_PerformNow(pool, message)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	err = models.Subscription_Delete(conn, subscriptionId)
+	err = models.Subscription_Delete(pool, subscriptionId)
 	if err != nil {
 		panic(err)
 	}
 
-	pc := models.NewProductEventContext(conn, r, rutil.CurrentProductUserId(r))
+	pc := models.NewProductEventContext(pool, r, rutil.CurrentProductUserId(r))
 	models.ProductEvent_MustEmitFromRequest(pc, "delete subscription", map[string]any{
 		"subscription_id": subscriptionId,
 		"blog_url":        blogBestUrl,
@@ -1816,11 +1817,11 @@ type schedulePreview struct {
 }
 
 func subscriptions_MustGetSchedulePreview(
-	conn *pgw.Conn, subscriptionId models.SubscriptionId, subscriptionStatus models.SubscriptionStatus,
+	pool *pgw.Pool, subscriptionId models.SubscriptionId, subscriptionStatus models.SubscriptionStatus,
 	userId models.UserId, userSettings *models.UserSettings,
 ) schedulePreview {
-	logger := conn.Logger()
-	preview, err := models.Subscription_GetSchedulePreview(conn, subscriptionId)
+	logger := pool.Logger()
+	preview, err := models.Subscription_GetSchedulePreview(pool, subscriptionId)
 	if err != nil {
 		panic(err)
 	}
@@ -1850,7 +1851,7 @@ func subscriptions_MustGetSchedulePreview(
 		nextScheduleDate = localDate
 	} else {
 		var err error
-		nextScheduleDate, err = subscriptions_GetRealisticScheduleDate(conn, userId, localTime, localDate)
+		nextScheduleDate, err = subscriptions_GetRealisticScheduleDate(pool, userId, localTime, localDate)
 		if err != nil {
 			panic(err)
 		}
@@ -1873,10 +1874,10 @@ func subscriptions_MustGetSchedulePreview(
 }
 
 func subscriptions_GetRealisticScheduleDate(
-	conn *pgw.Conn, userId models.UserId, localTime schedule.Time, localDate schedule.Date,
+	pool *pgw.Pool, userId models.UserId, localTime schedule.Time, localDate schedule.Date,
 ) (schedule.Date, error) {
-	logger := conn.Logger()
-	nextScheduleDate, err := jobs.PublishPostsJob_GetNextScheduledDate(conn, userId)
+	logger := pool.Logger()
+	nextScheduleDate, err := jobs.PublishPostsJob_GetNextScheduledDate(pool, userId)
 	if err != nil {
 		return "", err
 	}
@@ -1909,7 +1910,7 @@ var notificationChannels map[models.BlogId]*blogNotificationChannel
 func Subscriptions_MustStartListeningForNotifications() {
 	notificationChannels = map[models.BlogId]*blogNotificationChannel{}
 	logger := log.BackgroundLogger{}
-	listenConn, err := db.Pool.AcquireBackground()
+	listenConn, err := db.RootPool.AcquireBackground()
 	if err != nil {
 		panic(err)
 	}
@@ -1933,23 +1934,14 @@ func Subscriptions_MustStartListeningForNotifications() {
 
 				if len(notificationChannels) > 0 {
 					func() {
-						conn, err := db.Pool.AcquireBackground()
-						if err != nil {
-							logger.Warn().Err(err).Msg(
-								"Couldn't acquire a db connection to check if any of the blogs are done",
-							)
-							return
-						}
-						defer conn.Release()
-
 						// Clean up the finished entries
 						for blogId, notificationChan := range notificationChannels {
 							if time.Since(notificationChan.LastNotificationTime) < cleanupExpiration {
 								continue
 							}
-							row := conn.QueryRow(`select status from blogs where id = $1`, blogId)
+							row := db.RootPool.QueryRow(`select status from blogs where id = $1`, blogId)
 							var status models.BlogStatus
-							err = row.Scan(&status)
+							err := row.Scan(&status)
 							if errors.Is(err, pgx.ErrNoRows) ||
 								(err == nil && status != models.BlogStatusCrawlInProgress) {
 								notificationChannelsLock.Lock()
@@ -2045,7 +2037,7 @@ func Subscriptions_MustStartListeningForNotifications() {
 
 func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	requestConn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -2056,7 +2048,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 	var maybeSubscriptionUserId *models.UserId
 	var blogId models.BlogId
 	var blogStatus models.BlogStatus
-	row := requestConn.QueryRow(`
+	row := pool.QueryRow(`
 		select user_id, blog_id, (select status from blogs where id = blog_id) as blog_status 
 		from subscriptions_without_discarded
 		where id = $1
@@ -2087,13 +2079,6 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-	requestConn.Release()
-	defer func() {
-		if err := requestConn.ReviveFrom(db.Pool); err != nil {
-			panic(err)
-		}
-	}()
 
 	var notificationChan *blogNotificationChannel
 	pollStartTime := time.Now()
@@ -2126,18 +2111,13 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 
 	// Guard against a race condition where the last NOTIFY happened before we
 	// started listening
-	oneOffConn, err := db.Pool.Acquire(requestConn.Context(), logger)
-	if err != nil {
-		panic(err)
-	}
 	var blogStatusRefresh models.BlogStatus
-	row = oneOffConn.QueryRow(`
+	row = pool.QueryRow(`
 		select (select status from blogs where id = blog_id) as blog_status 
 		from subscriptions_without_discarded
 		where id = $1
 	`, subscriptionId)
 	err = row.Scan(&blogStatusRefresh)
-	oneOffConn.Release()
 	if err != nil {
 		panic(err)
 	}
@@ -2187,7 +2167,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 }
 
 func Subscriptions_RequestCustomBlogPage(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -2199,7 +2179,7 @@ func Subscriptions_RequestCustomBlogPage(w http.ResponseWriter, r *http.Request)
 	var subscriptionName string
 	var blogStatus models.BlogStatus
 	var maybePatronCredits *int
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select
 			user_id, name,
 			(select status from blogs where id = blog_id),
@@ -2239,7 +2219,7 @@ func Subscriptions_RequestCustomBlogPage(w http.ResponseWriter, r *http.Request)
 		isPatron = true
 		patronCredits = *maybePatronCredits
 		if patronCredits == 0 {
-			row := conn.QueryRow(`
+			row := pool.QueryRow(`
 				select
 					stripe_cancel_at, stripe_current_period_end,
 					(select timezone from user_settings where user_id = $1)
@@ -2284,7 +2264,7 @@ func Subscriptions_RequestCustomBlogPage(w http.ResponseWriter, r *http.Request)
 }
 
 func Subscriptions_CheckoutCustomBlogRequest(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	currentUser := rutil.CurrentUser(r)
 	logger := rutil.Logger(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
@@ -2302,7 +2282,7 @@ func Subscriptions_CheckoutCustomBlogRequest(w http.ResponseWriter, r *http.Requ
 
 	subscriptionId := models.SubscriptionId(subscriptionIdInt)
 	var maybeSubscriptionUserId *models.UserId
-	row := conn.QueryRow(`select user_id from subscriptions_without_discarded where id = $1`, subscriptionId)
+	row := pool.QueryRow(`select user_id from subscriptions_without_discarded where id = $1`, subscriptionId)
 	err := row.Scan(&maybeSubscriptionUserId)
 	if errors.Is(err, pgx.ErrNoRows) {
 		subscriptions_RedirectNotFound(w, r)
@@ -2317,7 +2297,7 @@ func Subscriptions_CheckoutCustomBlogRequest(w http.ResponseWriter, r *http.Requ
 
 	var maybeCustomerEmail *string
 	var maybeStripeCustomerId *string
-	row = conn.QueryRow(`
+	row = pool.QueryRow(`
 		select stripe_customer_id from users_without_discarded
 		where id = $1
 	`, *maybeSubscriptionUserId)
@@ -2379,7 +2359,7 @@ func Subscriptions_CheckoutCustomBlogRequest(w http.ResponseWriter, r *http.Requ
 
 func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -2408,7 +2388,7 @@ func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Reques
 	var name string
 	var blogId models.BlogId
 	var blogStatus models.BlogStatus
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select user_id, name, blog_id, (select status from blogs where id = blog_id)
 		from subscriptions_without_discarded
 		where id = $1
@@ -2430,7 +2410,7 @@ func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		row := tx.QueryRow(`select status from subscriptions_without_discarded where id = $1`, subscriptionId)
 		var subscriptionStatus models.SubscriptionStatus
 		err := row.Scan(&subscriptionStatus)
@@ -2522,7 +2502,7 @@ func Subscriptions_SubmitCustomBlogRequest(w http.ResponseWriter, r *http.Reques
 
 func Subscriptions_NotifyWhenSupported(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	subscriptionIdInt, ok := util.URLParamInt64(r, "id")
 	if !ok {
 		subscriptions_RedirectNotFound(w, r)
@@ -2534,7 +2514,7 @@ func Subscriptions_NotifyWhenSupported(w http.ResponseWriter, r *http.Request) {
 	var feedUrl string
 	var blogName string
 	var blogBestUrl string
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select
 			user_id,
 			(select feed_url from blogs where id = blog_id),
@@ -2573,7 +2553,7 @@ func Subscriptions_NotifyWhenSupported(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	err = util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	err = util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		row := tx.QueryRow(`
 			select version from feed_waitlist_emails where feed_url = $1 and email = $2
 		`, feedUrl, email)

@@ -13,8 +13,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"ResetFailedBlogsJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 1 {
 				return oops.Newf("Expected 1 arg, got %d: %v", len(args), args)
 			}
@@ -24,21 +23,21 @@ func init() {
 				return oops.Newf("Failed to parse enqueueNext (expected boolean): %v", args[0])
 			}
 
-			return ResetFailedBlogsJob_Perform(ctx, conn, enqueueNext)
+			return ResetFailedBlogsJob_Perform(ctx, pool, enqueueNext)
 		},
 	)
 }
 
-func ResetFailedBlogsJob_PerformNow(tx pgw.Queryable, enqueueNext bool) error {
-	return performNow(tx, "ResetFailedBlogsJob", "reset_failed_blogs", boolToYaml(enqueueNext))
+func ResetFailedBlogsJob_PerformNow(qu pgw.Queryable, enqueueNext bool) error {
+	return performNow(qu, "ResetFailedBlogsJob", "reset_failed_blogs", boolToYaml(enqueueNext))
 }
 
-func ResetFailedBlogsJob_PerformAt(tx pgw.Queryable, runAt schedule.Time, enqueueNext bool) error {
-	return performAt(tx, runAt, "ResetFailedBlogsJob", "reset_failed_blogs", boolToYaml(enqueueNext))
+func ResetFailedBlogsJob_PerformAt(qu pgw.Queryable, runAt schedule.Time, enqueueNext bool) error {
+	return performAt(qu, runAt, "ResetFailedBlogsJob", "reset_failed_blogs", boolToYaml(enqueueNext))
 }
 
-func ResetFailedBlogsJob_Perform(ctx context.Context, conn *pgw.Conn, enqueueNext bool) error {
-	logger := conn.Logger()
+func ResetFailedBlogsJob_Perform(ctx context.Context, pool *pgw.Pool, enqueueNext bool) error {
+	logger := pool.Logger()
 	utcNow := schedule.UTCNow()
 	cutoffTime := utcNow.Add(-30 * 24 * time.Hour)
 
@@ -51,7 +50,7 @@ func ResetFailedBlogsJob_Perform(ctx context.Context, conn *pgw.Conn, enqueueNex
 		sb.WriteString(string(status))
 		sb.WriteString("'")
 	}
-	rows, err := conn.Query(`
+	rows, err := pool.Query(`
 		select id, feed_url from blogs
 		where status in (`+sb.String()+`) and
 			version = $1 and
@@ -79,7 +78,7 @@ func ResetFailedBlogsJob_Perform(ctx context.Context, conn *pgw.Conn, enqueueNex
 
 	logger.Info().Msgf("Resetting %d failed blogs", len(blogIds))
 	for i, blogId := range blogIds {
-		newVersion, err := models.Blog_Downgrade(conn, blogId)
+		newVersion, err := models.Blog_Downgrade(pool, blogId)
 		if err != nil {
 			return err
 		}
@@ -90,7 +89,7 @@ func ResetFailedBlogsJob_Perform(ctx context.Context, conn *pgw.Conn, enqueueNex
 	if enqueueNext {
 		tomorrow := utcNow.Add(24 * time.Hour)
 		runAt := tomorrow.BeginningOfDayIn(time.UTC)
-		err := ResetFailedBlogsJob_PerformAt(conn, runAt, true)
+		err := ResetFailedBlogsJob_PerformAt(pool, runAt, true)
 		if err != nil {
 			return err
 		}

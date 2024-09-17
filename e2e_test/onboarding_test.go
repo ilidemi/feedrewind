@@ -72,13 +72,13 @@ func TestOnboardingSuggestion(t *testing.T) {
 	require.Equal(t, "1", publishedCount)
 
 	// Cleanup
+	page = visitAdminf(browser, "destroy_user?email=%s", email)
+	require.Equal(t, "OK", mustPageText(page))
 	page = visitAdmin(browser, "travel_back")
 	serverTimeStr := mustPageText(page)
 	serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 	oops.RequireNoError(t, err)
 	require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60)
-	page = visitAdminf(browser, "destroy_user?email=%s", email)
-	require.Equal(t, "OK", mustPageText(page))
 
 	browser.MustClose()
 	l.Cleanup()
@@ -141,13 +141,13 @@ func TestOnboardingCustomLink(t *testing.T) {
 	require.Equal(t, "1", publishedCount)
 
 	// Cleanup
+	page = visitAdminf(browser, "destroy_user?email=%s", email)
+	require.Equal(t, "OK", mustPageText(page))
 	page = visitAdmin(browser, "travel_back")
 	serverTimeStr := mustPageText(page)
 	serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 	oops.RequireNoError(t, err)
 	require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60)
-	page = visitAdminf(browser, "destroy_user?email=%s", email)
-	require.Equal(t, "OK", mustPageText(page))
 
 	browser.MustClose()
 	l.Cleanup()

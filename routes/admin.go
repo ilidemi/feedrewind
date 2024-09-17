@@ -208,8 +208,8 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		conn := rutil.DBConn(r)
-		tx, err := conn.Begin()
+		pool := rutil.DBPool(r)
+		tx, err := pool.Begin()
 		if err != nil {
 			return nil, err
 		}
@@ -446,7 +446,7 @@ func admin_ParseUrlsLabels(text string) ([]urlLabel, error) {
 }
 
 func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 
 	type JobItem struct {
 		IsName                bool
@@ -469,7 +469,7 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 		Label   string
 		IsZero  bool
 	}
-	row := conn.QueryRow(`
+	row := pool.QueryRow(`
 		select
 			max(utc_now() - locked_at),
 			max(coalesce(locked_at, utc_now()) - run_at),
@@ -559,7 +559,7 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 			MaybeLockedBy *string
 			UtcNow        time.Time
 		}
-		rows, err := conn.Query(`
+		rows, err := pool.Query(`
 			select id, handler, run_at, attempts, locked_at, locked_by, utc_now() from delayed_jobs
 			where locked_at is not null or run_at < utc_now()
 		`)
@@ -633,7 +633,7 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 					}
 					blogId = int64(blogIdInt)
 				}
-				row := conn.QueryRow(`select feed_url from blogs where id = $1`, blogId)
+				row := pool.QueryRow(`select feed_url from blogs where id = $1`, blogId)
 				var feedUrl string
 				err := row.Scan(&feedUrl)
 				if err != nil {
@@ -745,7 +745,7 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	year, month, day := time.Now().UTC().AddDate(0, 0, -6).Date()
 	weekAgo := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
-	rows, err := conn.Query(`
+	rows, err := pool.Query(`
 		select key, value, extra, created_at from admin_telemetries
 		where created_at > $1
 		order by created_at asc
@@ -918,7 +918,7 @@ func Admin_Dashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func Admin_DeleteJob(w http.ResponseWriter, r *http.Request) {
-	conn := rutil.DBConn(r)
+	pool := rutil.DBPool(r)
 	logger := rutil.Logger(r)
 	session := rutil.Session(r)
 	jobId, ok := util.URLParamInt64(r, "id")
@@ -930,7 +930,7 @@ func Admin_DeleteJob(w http.ResponseWriter, r *http.Request) {
 		Session *util.Session
 		Message string
 	}
-	result, err := util.TxReturn(conn, func(tx *pgw.Tx, conn util.Clobber) (*Result, error) {
+	result, err := util.TxReturn(pool, func(tx *pgw.Tx, pool util.Clobber) (*Result, error) {
 		row := tx.QueryRow(`select handler from delayed_jobs where id = $1`, jobId)
 		var handlerStr string
 		err := row.Scan(&handlerStr)

@@ -17,8 +17,8 @@ func Logger(r *http.Request) log.Logger {
 	return middleware.GetLogger(r)
 }
 
-func DBConn(r *http.Request) *pgw.Conn {
-	return middleware.GetDBConn(r)
+func DBPool(r *http.Request) *pgw.Pool {
+	return middleware.GetDBPool(r)
 }
 
 func CurrentUser(r *http.Request) *models.User {

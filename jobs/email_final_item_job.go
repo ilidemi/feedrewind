@@ -15,8 +15,7 @@ import (
 func init() {
 	registerJobNameFunc(
 		"EmailFinalItemJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 3 {
 				return oops.Newf("Expected 3 args, got %d: %v", len(args), args)
 			}
@@ -46,26 +45,26 @@ func init() {
 				return oops.Newf("Failed to parse scheduledFor (expected string): %v", args[2])
 			}
 
-			return EmailFinalItemJob_Perform(ctx, conn, userId, subscriptionId, scheduledFor)
+			return EmailFinalItemJob_Perform(ctx, pool, userId, subscriptionId, scheduledFor)
 		},
 	)
 }
 
 func EmailFinalItemJob_PerformAt(
-	tx pgw.Queryable, runAt schedule.Time, userId models.UserId, subscriptionId models.SubscriptionId,
+	qu pgw.Queryable, runAt schedule.Time, userId models.UserId, subscriptionId models.SubscriptionId,
 	scheduledFor string,
 ) error {
 	return performAt(
-		tx, runAt, "EmailFinalItemJob", defaultQueue, int64ToYaml(int64(userId)),
+		qu, runAt, "EmailFinalItemJob", defaultQueue, int64ToYaml(int64(userId)),
 		int64ToYaml(int64(subscriptionId)), strToYaml(scheduledFor),
 	)
 }
 
 func EmailFinalItemJob_Perform(
-	ctx context.Context, conn *pgw.Conn, userId models.UserId, subscriptionId models.SubscriptionId,
+	ctx context.Context, pool *pgw.Pool, userId models.UserId, subscriptionId models.SubscriptionId,
 	scheduledFor string,
 ) error {
-	return util.Tx(conn, func(tx *pgw.Tx, conn util.Clobber) error {
+	return util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
 		logger := tx.Logger()
 
 		exists, err := models.User_Exists(tx, userId)

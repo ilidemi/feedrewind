@@ -60,14 +60,14 @@ func boolToYaml(value bool) yamlString {
 	return yamlString(fmt.Sprint(value))
 }
 
-func performNow(tx pgw.Queryable, class string, queue string, arguments ...yamlString) error {
-	return performAt(tx, schedule.UTCNow(), class, queue, arguments...)
+func performNow(qu pgw.Queryable, class string, queue string, arguments ...yamlString) error {
+	return performAt(qu, schedule.UTCNow(), class, queue, arguments...)
 }
 
 func performAt(
-	tx pgw.Queryable, runAt schedule.Time, class string, queue string, arguments ...yamlString,
+	qu pgw.Queryable, runAt schedule.Time, class string, queue string, arguments ...yamlString,
 ) error {
-	logger := tx.Logger()
+	logger := qu.Logger()
 	const format1 = `--- !ruby/object:ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper
 job_data:
   job_class: %s
@@ -94,7 +94,7 @@ job_data:
 	}
 	fmt.Fprintf(&handler, format2, schedule.UTCNow().Format(time.RFC3339))
 
-	row := tx.QueryRow(`
+	row := qu.QueryRow(`
 		insert into delayed_jobs (handler, run_at, queue)
 		values ($1, $2, $3)
 		returning id
@@ -117,8 +117,8 @@ func init() {
 	migrations.DeleteJobByName = DeleteByName
 }
 
-func DeleteByName(tx pgw.Queryable, name string) error {
-	result, err := tx.Exec(`delete from delayed_jobs where handler like E'%job_class: ` + name + `\n%'`)
+func DeleteByName(qu pgw.Queryable, name string) error {
+	result, err := qu.Exec(`delete from delayed_jobs where handler like E'%job_class: ` + name + `\n%'`)
 	if err != nil {
 		return err
 	}

@@ -128,13 +128,15 @@ func TestSignupRss(t *testing.T) {
 		require.Equal(t, "1", publishedCount)
 
 		// Cleanup
+		page = visitAdmin(browser, "destroy_user_subscriptions")
+		require.Equal(t, "OK", mustPageText(page))
 		page = visitAdmin(browser, "travel_back")
 		serverTimeStr := mustPageText(page)
 		serverTime, err := time.Parse(time.RFC3339, serverTimeStr)
 		oops.RequireNoError(t, err)
 		require.InDelta(t, time.Now().Unix(), serverTime.Unix(), 60)
-		page = visitAdminf(browser, "destroy_user?email=%s", tc.Email)
-		require.Equal(t, "OK", mustPageText(page))
+		page = visitAdmin(browser, "reschedule_user_job")
+		require.Equal(t, "OK", mustPageText(page), description)
 
 		browser.MustClose()
 		l.Cleanup()

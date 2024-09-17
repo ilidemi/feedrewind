@@ -13,23 +13,22 @@ import (
 func init() {
 	registerJobNameFunc(
 		"TestSubstackJob",
-		false,
-		func(ctx context.Context, id JobId, conn *pgw.Conn, args []any) error {
+		func(ctx context.Context, id JobId, pool *pgw.Pool, args []any) error {
 			if len(args) != 0 {
 				return oops.Newf("Expected 0 args, got %d: %v", len(args), args)
 			}
 
-			return TestSubstackJob_Perform(ctx, conn)
+			return TestSubstackJob_Perform(ctx, pool)
 		},
 	)
 }
 
-func TestSubstackJob_PerformAt(tx pgw.Queryable, runAt schedule.Time) error {
-	return performAt(tx, runAt, "TestSubstackJob", defaultQueue)
+func TestSubstackJob_PerformAt(qu pgw.Queryable, runAt schedule.Time) error {
+	return performAt(qu, runAt, "TestSubstackJob", defaultQueue)
 }
 
-func TestSubstackJob_Perform(ctx context.Context, conn *pgw.Conn) error {
-	logger := conn.Logger()
+func TestSubstackJob_Perform(ctx context.Context, pool *pgw.Pool) error {
+	logger := pool.Logger()
 
 	httpClient := crawler.NewHttpClientImplCtx(ctx, false)
 	dlogger := crawler.NewDummyLogger()
@@ -68,7 +67,7 @@ func TestSubstackJob_Perform(ctx context.Context, conn *pgw.Conn) error {
 	if runAt.Sub(utcNow) < 0 {
 		runAt = runAt.AddDate(0, 0, 1)
 	}
-	err = TestSubstackJob_PerformAt(conn, runAt)
+	err = TestSubstackJob_PerformAt(pool, runAt)
 	if err != nil {
 		return err
 	}
