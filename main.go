@@ -14,9 +14,13 @@ import (
 	"feedrewind/util"
 	"feedrewind/util/schedule"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	_ "net/http/pprof"
@@ -210,6 +214,12 @@ func runServer(port int) {
 
 	models.MustInit(db.RootPool)
 	routes.Subscriptions_MustStartListeningForNotifications()
+	parentCtx := context.Background()
+	signalCtx, signalCancel := signal.NotifyContext(parentCtx, syscall.SIGINT, syscall.SIGTERM)
+	defer signalCancel()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	models.ProductEvent_StartDummyEventsSync(signalCtx, &wg)
 
 	stripe.Key = config.Cfg.StripeApiKey
 	stripe.DefaultLeveledLogger = &log.StripeLogger{Logger: logger}
@@ -338,10 +348,19 @@ func runServer(port int) {
 	staticR.NotFound(routes.Misc_NotFound)
 
 	logger.Info().Msgf("Started on port %d", port)
-	addr := fmt.Sprintf(":%d", port)
-	if err := http.ListenAndServe(addr, staticR); err != nil {
+	server := http.Server{ //nolint:exhaustruct
+		Addr:        fmt.Sprintf(":%d", port),
+		BaseContext: func(net.Listener) context.Context { return parentCtx },
+		Handler:     staticR,
+	}
+	go server.ListenAndServe() //nolint:errcheck
+	<-signalCtx.Done()
+	shutdownCtx, shutdownCancel := context.WithTimeout(parentCtx, 5*time.Second)
+	defer shutdownCancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		panic(err)
 	}
+	wg.Wait()
 }
 
 func logStalledJobs() {
