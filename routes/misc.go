@@ -56,13 +56,11 @@ func Misc_Bot(w http.ResponseWriter, r *http.Request) {
 }
 
 func Misc_NotFound(w http.ResponseWriter, r *http.Request) {
-	logger := rutil.Logger(r)
-	pool := rutil.DBPool(r)
-	models.ProductEvent_DummyEmitOrLog(pool, r, false, "404", map[string]any{
+	models.ProductEvent_QueueDummyEmit(r, false, "404", map[string]any{
 		"path":    r.URL.Path,
 		"method":  r.Method,
 		"referer": util.CollapseReferer(r),
-	}, logger)
+	})
 	w.WriteHeader(http.StatusNotFound)
 	type Result struct {
 		Title string

@@ -1,12 +1,16 @@
 package models
 
 import (
+	"context"
+	"feedrewind/db"
 	"feedrewind/db/pgw"
 	"feedrewind/log"
 	"feedrewind/oops"
 	"feedrewind/util"
 	"fmt"
+	"math"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -51,36 +55,6 @@ func ProductEvent_Emit(
 		values ($1, $2, $3, $4)
 	`, eventType, eventProperties, userProperties, productUserId)
 	return err
-}
-
-func ProductEvent_DummyEmitOrLog(
-	qu pgw.Queryable, request *http.Request, allowBots bool, eventType string,
-	eventProperties map[string]any, errorLogger log.Logger,
-) {
-	uuid, err := uuid.NewRandom()
-	if err != nil {
-		err := oops.Wrap(err)
-		errorLogger.Error().Err(err).Msg("Product event emit error")
-	}
-	productUserId := fmt.Sprintf("dummy-%s", uuid.String())
-	userProperties := map[string]any{
-		"is_dummy":       true,
-		"bot_is_allowed": allowBots,
-	}
-	platform := resolveUserAgent(request.UserAgent())
-	anonIp := util.AnonUserIp(request)
-	_, err = qu.Exec(`
-		insert into product_events (
-			product_user_id, event_type, event_properties, user_properties, user_ip, browser, os_name,
-			os_version, bot_name
-		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, productUserId, eventType, eventProperties, userProperties, anonIp, platform.Browser, platform.OsName,
-		platform.OsVersion, platform.MaybeBotName,
-	)
-	if err != nil {
-		errorLogger.Error().Err(err).Msg("Product event emit error")
-	}
 }
 
 func ProductEvent_EmitToBatch(
@@ -172,6 +146,124 @@ func ProductEvent_MustEmitCreateSubscription(
 		"is_blog_crawled":   BlogCrawledStatuses[subscription.BlogStatus],
 		"user_is_anonymous": userIsAnonymous,
 	}, nil)
+}
+
+type dummyEvent struct {
+	EventType       string
+	EventProperties map[string]any
+	UserProperties  map[string]any
+	AnonIp          string
+	Platform        userPlatform
+}
+
+var dummyEmitChan = make(chan dummyEvent, 100000)
+
+func ProductEvent_QueueDummyEmit(
+	request *http.Request, allowBots bool, eventType string, eventProperties map[string]any,
+) {
+	userProperties := map[string]any{
+		"is_dummy":       true,
+		"bot_is_allowed": allowBots,
+	}
+	platform := resolveUserAgent(request.UserAgent())
+	anonIp := util.AnonUserIp(request)
+	dummyEmitChan <- dummyEvent{
+		EventType:       eventType,
+		EventProperties: eventProperties,
+		UserProperties:  userProperties,
+		AnonIp:          anonIp,
+		Platform:        platform,
+	}
+}
+
+func ProductEvent_StartDummyEventsSync(ctx context.Context, wg *sync.WaitGroup) {
+	go func() {
+		logger := &log.BackgroundLogger{}
+		ticker := time.NewTicker(time.Second)
+		errorCount := 0
+		backoffUntil := time.Now()
+		var maybeCanceledAt *time.Time
+		var events []dummyEvent
+		defer wg.Done()
+
+	tick:
+		for range ticker.C {
+			fmt.Println(ctx.Err())
+			if ctx.Err() != nil {
+				if maybeCanceledAt == nil {
+					now := time.Now()
+					maybeCanceledAt = &now
+				} else if time.Since(*maybeCanceledAt) >= 30*time.Second {
+					logger.Error().Msgf(
+						"Couldn't emit remaining events for 30 seconds, dropping (%d events)", len(events),
+					)
+					return
+				}
+			}
+
+			for {
+				select {
+				case event := <-dummyEmitChan:
+					events = append(events, event)
+					continue
+				default:
+				}
+				break
+			}
+
+			if ctx.Err() == nil && time.Now().Before(backoffUntil) {
+				continue
+			}
+
+			if len(events) > 0 {
+				pool := db.RootPool
+				batch := pool.NewBatch()
+				for _, e := range events {
+					uuid, err := uuid.NewRandom()
+					if err != nil {
+						// 1 5 25 125 600 600 600
+						backoffInterval := int(math.Min(math.Pow(5, float64(errorCount)), 600))
+						backoffUntil = time.Now().Add(time.Duration(backoffInterval) * time.Second)
+						errorCount++
+						err := oops.Wrap(err)
+						logger.Error().Err(err).Msgf(
+							"Product event generate id error (%d attempts)", errorCount,
+						)
+						continue tick
+					}
+					productUserId := fmt.Sprintf("dummy-%s", uuid.String())
+					// created_at will be a bit off (a lot off when db is down for a while) but that's ok
+					// for now
+					batch.Queue(`
+						insert into product_events (
+							product_user_id, event_type, event_properties, user_properties, user_ip, browser,
+							os_name, os_version, bot_name
+						)
+						values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+					`, productUserId, e.EventType, e.EventProperties, e.UserProperties, e.AnonIp,
+						e.Platform.Browser, e.Platform.OsName, e.Platform.OsVersion, e.Platform.MaybeBotName,
+					)
+				}
+				results := pool.SendBatch(batch)
+				err := results.Close()
+				if err != nil {
+					// 1 5 25 125 600 600 600
+					backoffInterval := int(math.Min(math.Pow(5, float64(errorCount)), 600))
+					backoffUntil = time.Now().Add(time.Duration(backoffInterval) * time.Second)
+					errorCount++
+					logger.Error().Err(err).Msgf("Product event emit error (%d attempts)", errorCount)
+					continue
+				}
+				logger.Info().Msgf("Emitted %d dummy events", len(events))
+				errorCount = 0
+				events = nil
+			}
+
+			if ctx.Err() != nil {
+				return
+			}
+		}
+	}()
 }
 
 type ProductEventId int64
