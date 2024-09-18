@@ -109,6 +109,7 @@ const maxPollFailures = 600 // One minute of sleeps with sleepDelay
 const maxAttempts = 25
 const maxRunTimeDeadline = 4 * time.Hour
 const maxRunTimeTimeout = maxRunTimeDeadline - 5*time.Minute
+const deploymentDuration = time.Minute
 
 type job struct {
 	Id         JobId
@@ -302,6 +303,7 @@ mainLoop:
 		var j job
 		jobPollTime := schedule.UTCNow()
 		lockExpiredTimestamp := jobPollTime.Add(-maxRunTimeDeadline)
+		deploymentProbablyFinishedTimestamp := jobPollTime.Add(-deploymentDuration)
 		row := conn.QueryRow(`
 			update delayed_jobs
 			set locked_at = $1, locked_by = `+lockedBySb.String()+`
@@ -310,14 +312,14 @@ mainLoop:
 				from delayed_jobs
 				where (
 					(run_at <= $1 and (locked_at is null or locked_at < $2)) or
-					locked_by in `+shouldNotBeLockedBySb.String()+`
+					(locked_by in `+shouldNotBeLockedBySb.String()+` and locked_at < $3)
 				) and failed_at is null and queue in `+queuesSb.String()+`
 				order by priority asc, run_at asc
 				limit 1
 				for update
 			)
 			returning id, attempts, handler, queue, locked_by
-		`, jobPollTime, lockExpiredTimestamp)
+		`, jobPollTime, lockExpiredTimestamp, deploymentProbablyFinishedTimestamp)
 		var assignedWorkerName string
 		err := row.Scan(&j.Id, &j.Attempts, &j.RawHandler, &j.Queue, &assignedWorkerName)
 		if errors.Is(err, pgx.ErrNoRows) {
