@@ -194,6 +194,11 @@ func startWorker(
 		time.Sleep(time.Second)
 	}
 
+	var lastStripeWebhookHoggedWarning time.Time
+	var lastGuidedCrawlingHoggedWarning time.Time
+	var defaultHoggedSince time.Time
+	var lastDefaultHoggedWarning time.Time
+
 	logger.Info().Msg("Worker started")
 
 	pollFailures := 0
@@ -236,6 +241,29 @@ mainLoop:
 					availableWorkerNameByQueue[queue] = workerName
 				}
 				availableWorkerNames = append(availableWorkerNames, workerName)
+			}
+		}
+		if _, ok := availableWorkerIdByQueue[stripeWebhookQueue]; !ok {
+			if time.Since(lastStripeWebhookHoggedWarning) > 30*time.Minute {
+				logger.Warn().Msgf("All %d stripe webhook workers are hogged", stripeWebhookWorkerCount)
+				lastStripeWebhookHoggedWarning = time.Now()
+			}
+		}
+		if _, ok := availableWorkerIdByQueue[defaultQueue]; !ok {
+			if defaultHoggedSince.IsZero() {
+				defaultHoggedSince = time.Now()
+			} else if time.Since(defaultHoggedSince) > 10*time.Minute &&
+				time.Since(lastDefaultHoggedWarning) > 30*time.Minute {
+				logger.Warn().Msgf("All %d default workers are hogged", defaultWorkerCount)
+				lastDefaultHoggedWarning = time.Now()
+			}
+		} else {
+			defaultHoggedSince = time.Time{}
+		}
+		if _, ok := availableWorkerIdByQueue[guidedCrawlingQueue]; !ok {
+			if time.Since(lastGuidedCrawlingHoggedWarning) > 30*time.Minute {
+				logger.Warn().Msgf("All %d guided crawling workers are hogged", guidedCrawlingWorkerCount)
+				lastGuidedCrawlingHoggedWarning = time.Now()
 			}
 		}
 		if len(availableWorkerIdByQueue) == 0 {
