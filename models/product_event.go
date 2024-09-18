@@ -178,7 +178,7 @@ func ProductEvent_QueueDummyEmit(
 
 func ProductEvent_StartDummyEventsSync(ctx context.Context, wg *sync.WaitGroup) {
 	go func() {
-		logger := &log.BackgroundLogger{}
+		logger := &log.TaskLogger{TaskName: "emit_dummy_events"}
 		ticker := time.NewTicker(time.Second)
 		errorCount := 0
 		backoffUntil := time.Now()

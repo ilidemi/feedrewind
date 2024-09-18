@@ -190,7 +190,7 @@ func runServer(port int) {
 		}()
 	}
 
-	logger := &log.BackgroundLogger{}
+	logger := log.NewBackgroundLogger()
 	if config.Cfg.IsHeroku {
 		// Adapted from https://github.com/heroku/x/blob/v0.1.0/hmetrics/onload/init.go
 		go func() {
@@ -364,7 +364,7 @@ func runServer(port int) {
 }
 
 func logStalledJobs() {
-	logger := &log.BackgroundLogger{}
+	logger := log.TaskLogger{TaskName: "log_stalled_jobs"}
 	logger.Info().Msg("Checking for stalled jobs")
 
 	hourAgo := schedule.UTCNow().Add(-1 * time.Hour)

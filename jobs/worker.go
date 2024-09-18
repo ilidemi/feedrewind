@@ -44,7 +44,7 @@ func init() {
 			dynoIdIdx := strings.LastIndex(config.Cfg.Dyno, ".") + 1
 			dynoId, err := strconv.Atoi(config.Cfg.Dyno[dynoIdIdx:])
 			if err != nil {
-				(&log.BackgroundLogger{}).Error().Err(err).Msg("Couldn't parse dyno id")
+				log.NewBackgroundLogger().Error().Err(err).Msg("Couldn't parse dyno id")
 				os.Exit(1)
 			}
 			workerRootName := fmt.Sprintf("%s-%d", workerNameBase, dynoId)

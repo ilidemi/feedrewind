@@ -1909,7 +1909,7 @@ var notificationChannels map[models.BlogId]*blogNotificationChannel
 
 func Subscriptions_MustStartListeningForNotifications() {
 	notificationChannels = map[models.BlogId]*blogNotificationChannel{}
-	logger := log.BackgroundLogger{}
+	logger := &log.TaskLogger{TaskName: "listen_to_crawl_progress"}
 	listenConn, err := db.RootPool.AcquireBackground()
 	if err != nil {
 		panic(err)
