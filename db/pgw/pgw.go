@@ -79,7 +79,7 @@ func (pool *Pool) AcquireBackground() (*Conn, error) {
 	}
 
 	return &Conn{
-		logger: &log.BackgroundLogger{},
+		logger: log.NewBackgroundLogger(),
 		impl:   conn,
 		ctx:    ctx,
 	}, nil

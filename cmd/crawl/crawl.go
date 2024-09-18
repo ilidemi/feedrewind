@@ -81,7 +81,7 @@ func connectDB() *pgw.Pool {
 	dbConfig.DBName = "rss_catchup_analysis"
 	dsn := dbConfig.DSN() + " pool_max_conns=" + fmt.Sprint(threads+1)
 	var err error
-	pool, err := pgw.NewPool(context.Background(), &log.BackgroundLogger{}, dsn) //nolint:gocritic
+	pool, err := pgw.NewPool(context.Background(), log.NewBackgroundLogger(), dsn) //nolint:gocritic
 	if err != nil {
 		panic(err)
 	}

@@ -13,7 +13,7 @@ var RootPool *pgw.Pool
 
 func init() {
 	var err error
-	RootPool, err = pgw.NewPool(context.Background(), &log.BackgroundLogger{}, config.Cfg.DB.DSN())
+	RootPool, err = pgw.NewPool(context.Background(), log.NewBackgroundLogger(), config.Cfg.DB.DSN())
 	if err != nil {
 		panic(err)
 	}

@@ -23,28 +23,36 @@ type Logger interface {
 	Error() *zerolog.Event
 }
 
-type BackgroundLogger struct{}
+type TaskLogger struct {
+	TaskName string
+}
 
-func (l *BackgroundLogger) Info() *zerolog.Event {
+func NewBackgroundLogger() *TaskLogger {
+	return &TaskLogger{
+		TaskName: "background",
+	}
+}
+
+func (l *TaskLogger) Info() *zerolog.Event {
 	event := Base.Info()
-	event = l.logBackgroundCommon(event)
+	event = l.logTaskCommon(event)
 	return event
 }
 
-func (l *BackgroundLogger) Warn() *zerolog.Event {
+func (l *TaskLogger) Warn() *zerolog.Event {
 	event := Base.Warn()
-	event = l.logBackgroundCommon(event)
+	event = l.logTaskCommon(event)
 	return event
 }
 
-func (l *BackgroundLogger) Error() *zerolog.Event {
+func (l *TaskLogger) Error() *zerolog.Event {
 	event := Base.Error()
-	event = l.logBackgroundCommon(event)
+	event = l.logTaskCommon(event)
 	return event
 }
 
-func (l *BackgroundLogger) logBackgroundCommon(event *zerolog.Event) *zerolog.Event {
-	event = event.Timestamp().Str("logger", "background")
+func (l *TaskLogger) logTaskCommon(event *zerolog.Event) *zerolog.Event {
+	event = event.Timestamp().Str("logger", l.TaskName)
 	return event
 }
 
