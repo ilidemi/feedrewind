@@ -150,13 +150,13 @@ func (l *StripeLogger) Debugf(format string, v ...interface{}) {
 }
 
 func (l *StripeLogger) Errorf(format string, v ...interface{}) {
-	l.Logger.Error().Msgf(format, v...)
+	l.Logger.Error().Str("logger", "stripe").Msgf(format, v...)
 }
 
 func (l *StripeLogger) Infof(format string, v ...interface{}) {
-	l.Logger.Info().Msgf(format, v...)
+	l.Logger.Info().Str("logger", "stripe").Msgf(format, v...)
 }
 
 func (l *StripeLogger) Warnf(format string, v ...interface{}) {
-	l.Logger.Warn().Msgf(format, v...)
+	l.Logger.Warn().Str("logger", "stripe").Msgf(format, v...)
 }
