@@ -62,7 +62,7 @@ func GuidedCrawlingJob_PerformNow(
 		return oops.Wrap(err)
 	}
 	return performNow(
-		qu, "GuidedCrawlingJob", defaultQueue, int64ToYaml(int64(blogId)), strToYaml(string(argsJson)),
+		qu, "GuidedCrawlingJob", guidedCrawlingQueue, int64ToYaml(int64(blogId)), strToYaml(string(argsJson)),
 	)
 }
 

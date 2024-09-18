@@ -47,8 +47,8 @@ func init() {
 				log.NewBackgroundLogger().Error().Err(err).Msg("Couldn't parse dyno id")
 				os.Exit(1)
 			}
-			workerRootName := fmt.Sprintf("%s-%d", workerNameBase, dynoId)
-			logger := &WorkerLogger{WorkerName: workerRootName}
+			workerNamePrefix := fmt.Sprintf("%s-%d", workerNameBase, dynoId)
+			logger := &WorkerLogger{WorkerName: workerNamePrefix}
 
 			conn, err := db.RootPool.AcquireBackground()
 			if err != nil {
@@ -56,16 +56,16 @@ func init() {
 				os.Exit(1)
 			}
 
-			availableWorkers := make([]bool, workerCount)
+			availableWorkers := make([]bool, totalWorkerCount)
 			for i := range availableWorkers {
 				availableWorkers[i] = true
 			}
-			finishedJobs := make(chan jobResult, workerCount)
+			finishedJobs := make(chan jobResult, totalWorkerCount)
 
 			stripe.Key = config.Cfg.StripeApiKey
 			stripe.DefaultLeveledLogger = &log.StripeLogger{Logger: logger}
 
-			err = startWorker(conn, dynoId, availableWorkers, finishedJobs, logger)
+			err = startWorker(conn, dynoId, workerNamePrefix, availableWorkers, finishedJobs, logger)
 			if errors.Is(err, context.Canceled) {
 				logger.Info().Msg("Context canceled, shutting down")
 				waitForJobs(conn, availableWorkers, finishedJobs, logger)
@@ -95,7 +95,13 @@ func registerJobNameFunc(className string, f jobFunc) {
 	})
 }
 
-const workerCount = 1000
+const stripeWebhookWorkerCount = 100
+const defaultWorkerCount = 100
+const guidedCrawlingWorkerCount = 100
+const totalWorkerCount = stripeWebhookWorkerCount + defaultWorkerCount + guidedCrawlingWorkerCount
+const stripeWebhookQueue = "stripe_webhook"
+const defaultQueue = "default"
+const guidedCrawlingQueue = "guided_crawling"
 
 const workerNameBase = "go-worker"
 const sleepDelay = 100 * time.Millisecond
@@ -108,6 +114,7 @@ type job struct {
 	Id         JobId
 	Attempts   int32
 	RawHandler string
+	Queue      string
 	JobData    JobData
 }
 
@@ -129,7 +136,8 @@ type jobResult struct {
 }
 
 func startWorker(
-	conn *pgw.Conn, dynoId int, availableWorkers []bool, finishedJobs chan jobResult, logger log.Logger,
+	conn *pgw.Conn, dynoId int, workerNamePrefix string, availableWorkers []bool, finishedJobs chan jobResult,
+	logger log.Logger,
 ) error {
 	jobDescsByClassName := make(map[string]jobDesc)
 	for _, jobDesc := range jobDescs {
@@ -208,39 +216,82 @@ mainLoop:
 			}
 		}
 
-		assignedWorkerId := -1
+		availableWorkerIdByQueue := map[string]int{}
+		availableWorkerNameByQueue := map[string]string{}
+		var availableWorkerNames []string
 		for workerId, isAvailable := range availableWorkers {
 			if isAvailable {
-				assignedWorkerId = workerId
-				break
+				var queue string
+				switch {
+				case workerId < stripeWebhookWorkerCount:
+					queue = stripeWebhookQueue
+				case workerId < stripeWebhookWorkerCount+defaultWorkerCount:
+					queue = defaultQueue
+				default:
+					queue = guidedCrawlingQueue
+				}
+				workerName := fmt.Sprintf("%s-%d", workerNamePrefix, workerId)
+				if _, ok := availableWorkerIdByQueue[queue]; !ok {
+					availableWorkerIdByQueue[queue] = workerId
+					availableWorkerNameByQueue[queue] = workerName
+				}
+				availableWorkerNames = append(availableWorkerNames, workerName)
 			}
 		}
-		if assignedWorkerId == -1 {
+		if len(availableWorkerIdByQueue) == 0 {
 			time.Sleep(sleepDelay)
 			continue
 		}
-		assignedWorkerName := fmt.Sprintf("%s-%d-%d", workerNameBase, dynoId, assignedWorkerId)
+
+		var queuesSb strings.Builder
+		var lockedBySb strings.Builder
+		var shouldNotBeLockedBySb strings.Builder
+		{
+			fmt.Fprint(&queuesSb, "(")
+			fmt.Fprint(&lockedBySb, "case")
+			isFirst := true
+			for queue, workerName := range availableWorkerNameByQueue {
+				if !isFirst {
+					fmt.Fprint(&queuesSb, ", ")
+				}
+				isFirst = false
+				fmt.Fprintf(&queuesSb, "'%s'", queue)
+				fmt.Fprintf(&lockedBySb, " when queue='%s' then '%s'", queue, workerName)
+			}
+			fmt.Fprint(&queuesSb, ")")
+			fmt.Fprint(&lockedBySb, " end")
+
+			fmt.Fprint(&shouldNotBeLockedBySb, "(")
+			for i, workerName := range availableWorkerNames {
+				if i > 0 {
+					fmt.Fprint(&shouldNotBeLockedBySb, ", ")
+				}
+				fmt.Fprintf(&shouldNotBeLockedBySb, "'%s'", workerName)
+			}
+			fmt.Fprint(&shouldNotBeLockedBySb, ")")
+		}
 
 		var j job
 		jobPollTime := schedule.UTCNow()
 		lockExpiredTimestamp := jobPollTime.Add(-maxRunTimeDeadline)
 		row := conn.QueryRow(`
 			update delayed_jobs
-			set locked_at = $1, locked_by = $3
+			set locked_at = $1, locked_by = `+lockedBySb.String()+`
 			where id in (
 				select id
 				from delayed_jobs
 				where (
 					(run_at <= $1 and (locked_at is null or locked_at < $2)) or
-					locked_by = $3
-				) and failed_at is null
+					locked_by in `+shouldNotBeLockedBySb.String()+`
+				) and failed_at is null and queue in `+queuesSb.String()+`
 				order by priority asc, run_at asc
 				limit 1
 				for update
 			)
-			returning id, attempts, handler
-		`, jobPollTime, lockExpiredTimestamp, assignedWorkerName)
-		err := row.Scan(&j.Id, &j.Attempts, &j.RawHandler)
+			returning id, attempts, handler, queue, locked_by
+		`, jobPollTime, lockExpiredTimestamp)
+		var assignedWorkerName string
+		err := row.Scan(&j.Id, &j.Attempts, &j.RawHandler, &j.Queue, &assignedWorkerName)
 		if errors.Is(err, pgx.ErrNoRows) {
 			time.Sleep(sleepDelay)
 			continue mainLoop
@@ -261,11 +312,11 @@ mainLoop:
 		}
 		pollFailures = 0
 
-		availableWorkers[assignedWorkerId] = false
-		if assignedWorkerId == -1 {
-			time.Sleep(sleepDelay)
-			continue
+		assignedWorkerId, ok := availableWorkerIdByQueue[j.Queue]
+		if !ok {
+			panic(fmt.Errorf("Unknown queue: %s", j.Queue))
 		}
+		availableWorkers[assignedWorkerId] = false
 
 		var h Handler
 		err = yaml.Unmarshal([]byte(j.RawHandler), &h)
