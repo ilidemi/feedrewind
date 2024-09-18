@@ -188,7 +188,6 @@ func ProductEvent_StartDummyEventsSync(ctx context.Context, wg *sync.WaitGroup) 
 
 	tick:
 		for range ticker.C {
-			fmt.Println(ctx.Err())
 			if ctx.Err() != nil {
 				if maybeCanceledAt == nil {
 					now := time.Now()
