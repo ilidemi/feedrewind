@@ -29,11 +29,11 @@ func init() {
 }
 
 func ResetFailedBlogsJob_PerformNow(qu pgw.Queryable, enqueueNext bool) error {
-	return performNow(qu, "ResetFailedBlogsJob", "reset_failed_blogs", boolToYaml(enqueueNext))
+	return performNow(qu, "ResetFailedBlogsJob", defaultQueue, boolToYaml(enqueueNext))
 }
 
 func ResetFailedBlogsJob_PerformAt(qu pgw.Queryable, runAt schedule.Time, enqueueNext bool) error {
-	return performAt(qu, runAt, "ResetFailedBlogsJob", "reset_failed_blogs", boolToYaml(enqueueNext))
+	return performAt(qu, runAt, "ResetFailedBlogsJob", defaultQueue, boolToYaml(enqueueNext))
 }
 
 func ResetFailedBlogsJob_Perform(ctx context.Context, pool *pgw.Pool, enqueueNext bool) error {

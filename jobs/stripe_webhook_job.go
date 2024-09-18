@@ -38,7 +38,7 @@ func init() {
 }
 
 func StripeWebhookJob_PerformNow(qu pgw.Queryable, eventId string) error {
-	return performNow(qu, "StripeWebhookJob", defaultQueue, strToYaml(eventId))
+	return performNow(qu, "StripeWebhookJob", stripeWebhookQueue, strToYaml(eventId))
 }
 
 func StripeWebhookJob_Perform(ctx context.Context, pool *pgw.Pool, eventId string) error {

@@ -15,8 +15,6 @@ import (
 
 type JobId int64
 
-const defaultQueue = "default"
-
 type yamlString string
 
 func int64ToYaml(value int64) yamlString {
