@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"feedrewind/config"
+	"feedrewind/crawler"
 	"feedrewind/db"
 	"feedrewind/db/pgw"
 	"feedrewind/log"
@@ -102,6 +103,7 @@ const totalWorkerCount = stripeWebhookWorkerCount + defaultWorkerCount + guidedC
 const stripeWebhookQueue = "stripe_webhook"
 const defaultQueue = "default"
 const guidedCrawlingQueue = "guided_crawling"
+const maxBrowserCount = 20
 
 const workerNameBase = "go-worker"
 const sleepDelay = 100 * time.Millisecond
@@ -195,6 +197,7 @@ func startWorker(
 		time.Sleep(time.Second)
 	}
 
+	crawler.SetMaxBrowserCount(maxBrowserCount)
 	var lastStripeWebhookHoggedWarning time.Time
 	var lastGuidedCrawlingHoggedWarning time.Time
 	var defaultHoggedSince time.Time
