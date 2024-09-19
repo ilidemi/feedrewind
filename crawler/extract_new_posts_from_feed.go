@@ -3,7 +3,9 @@ package crawler
 import (
 	"errors"
 	"feedrewind/oops"
+	"fmt"
 	neturl "net/url"
+	"strings"
 )
 
 var ErrExtractNewPostsNoMatch = errors.New("extract new posts no match")
@@ -64,6 +66,23 @@ func ExtractNewPostsFromFeed(
 	suffixLinks, _ := feedEntryLinks.sequenceSuffixMatch(expectedExistingPostCuris, curiEqCfg)
 	if suffixLinks == nil {
 		logger.Info("Can't update from feed because the existing posts don't match")
+		logger.Info("Feed buckets:")
+		for _, bucket := range feedEntryLinks.LinkBuckets {
+			var bucketSb strings.Builder
+			fmt.Fprint(&bucketSb, "[")
+			for i, link := range bucket {
+				if i > 0 {
+					fmt.Fprint(&bucketSb, " ")
+				}
+				fmt.Fprint(&bucketSb, link.maybeTitledLink.Url)
+			}
+			fmt.Fprintln(&bucketSb, "]")
+			logger.Info(bucketSb.String())
+		}
+		logger.Info("Expected curis:")
+		for _, curi := range expectedExistingPostCuris {
+			logger.Info(curi.String())
+		}
 		return nil, ErrExtractNewPostsNoMatch
 	}
 	suffixLinksSet := NewCanonicalUriSet(nil, curiEqCfg)
