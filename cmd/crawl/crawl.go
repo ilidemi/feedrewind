@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"feedrewind/config"
+	"feedrewind/crawler"
 	"feedrewind/db/pgw"
 	"feedrewind/log"
 	"feedrewind/oops"
@@ -257,6 +258,7 @@ func runAll() {
 
 	}
 
+	crawler.SetMaxBrowserCount(threads)
 	for threadIdx := range threads {
 		go func() {
 			threadConn, err := pool.AcquireBackground()

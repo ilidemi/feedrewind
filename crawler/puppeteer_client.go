@@ -26,12 +26,26 @@ type PuppeteerClientImpl struct {
 }
 
 func NewPuppeteerClientImpl() *PuppeteerClientImpl {
+	if maxBrowserCount == 0 {
+		panic("Set max browser count before invoking puppeteer")
+	}
 	launcher := launcher.New()
 	if config.Cfg.IsHeroku {
 		launcher = launcher.Bin("chrome").NoSandbox(true)
 	}
 	return &PuppeteerClientImpl{
 		Launcher: launcher,
+	}
+}
+
+var maxBrowserCount int
+var browserLimitCh chan struct{}
+
+func SetMaxBrowserCount(count int) {
+	maxBrowserCount = count
+	browserLimitCh = make(chan struct{}, count)
+	for range count {
+		browserLimitCh <- struct{}{}
 	}
 }
 
@@ -47,6 +61,18 @@ func (c *PuppeteerClientImpl) Fetch(
 	progressLogger.LogAndSavePuppeteerStart()
 	isInitialRequest := true
 	puppeteerStart := time.Now()
+
+	select {
+	case <-browserLimitCh:
+	default:
+		logger.Warn("Out of browser instances (%d)", maxBrowserCount)
+		<-browserLimitCh
+	}
+	defer func() {
+		browserLimitCh <- struct{}{}
+	}()
+	browserAcquiredTime := time.Now()
+	logger.Info("Browser acquired in %v", browserAcquiredTime.Sub(puppeteerStart))
 
 	browserUrl, err := c.Launcher.Launch()
 	if err != nil {
@@ -172,7 +198,10 @@ func (c *PuppeteerClientImpl) Fetch(
 			finishedRequests := scrollablePage.FinishedRequests
 			scrollablePage.Mutex.Unlock()
 			crawlCtx.PuppeteerRequestsMade += finishedRequests
-			logger.Info("Puppeteer done (%v, %d req)", time.Since(puppeteerStart), finishedRequests)
+			logger.Info(
+				"Puppeteer done (%v, %v wait, %d req)",
+				time.Since(puppeteerStart), browserAcquiredTime.Sub(puppeteerStart), finishedRequests,
+			)
 
 			return content, nil
 		}()
