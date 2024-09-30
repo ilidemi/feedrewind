@@ -20,8 +20,8 @@ type ProgressLogger struct {
 	MaybePrevRemainingCount   *int
 }
 
-func NewProgressLogger(progressSaver ProgressSaver) ProgressLogger {
-	return ProgressLogger{
+func NewProgressLogger(progressSaver ProgressSaver) *ProgressLogger {
+	return &ProgressLogger{
 		ProgressSaver:             progressSaver,
 		Status:                    "",
 		MaybePrevIsPostprocessing: nil,
@@ -30,7 +30,7 @@ func NewProgressLogger(progressSaver ProgressSaver) ProgressLogger {
 	}
 }
 
-func NewMockProgressLogger(logger Logger) ProgressLogger {
+func NewMockProgressLogger(logger Logger) *ProgressLogger {
 	return NewProgressLogger(NewMockProgressSaver(logger))
 }
 

@@ -379,7 +379,7 @@ func onboarding_MustDiscoverFeeds(
 	httpClient := crawler.NewHttpClientImplCtx(pool.Context(), false)
 	zlogger := crawler.ZeroLogger{Logger: logger}
 	progressLogger := crawler.NewMockProgressLogger(&zlogger)
-	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
+	crawlCtx := crawler.NewCrawlContext(httpClient, nil, progressLogger)
 	discoverFeedsResult := crawler.DiscoverFeedsAtUrl(startUrl, true, &crawlCtx, &zlogger)
 	switch result := discoverFeedsResult.(type) {
 	case *crawler.DiscoveredSingleFeed:
@@ -425,7 +425,7 @@ func onboarding_MustDiscoverFeeds(
 		logger.Info().Msgf("Discover feeds at %s - not a url", startUrl)
 		return &discoverError{}, models.TypedBlogUrlResultNotAUrl
 	case *crawler.DiscoverFeedsErrorCouldNotReach:
-		logger.Info().Msgf("Discover feeds at %s - could not reach", startUrl)
+		logger.Info().Msgf("Discover feeds at %s - could not reach (%v)", startUrl, result.Error)
 		return &discoverError{}, models.TypedBlogUrlResultCouldNotReach
 	case *crawler.DiscoverFeedsErrorNoFeeds:
 		logger.Info().Msgf("Discover feeds at %s - no feeds", startUrl)

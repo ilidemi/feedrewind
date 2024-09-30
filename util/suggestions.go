@@ -220,6 +220,11 @@ var SuggestedCategories = []SuggestedCategory{
 				FeedUrl: "https://bair.berkeley.edu/blog/feed.xml",
 				Name:    "BAIR",
 			},
+			{
+				Url:     "https://jalammar.github.io/",
+				FeedUrl: "https://jalammar.github.io/feed.xml",
+				Name:    "Jay Alammar",
+			},
 		},
 	},
 	{

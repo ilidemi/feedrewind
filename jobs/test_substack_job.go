@@ -33,7 +33,7 @@ func TestSubstackJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 	httpClient := crawler.NewHttpClientImplCtx(ctx, false)
 	dlogger := crawler.NewDummyLogger()
 	progressLogger := crawler.NewMockProgressLogger(dlogger)
-	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
+	crawlCtx := crawler.NewCrawlContext(httpClient, nil, progressLogger)
 
 	acxPublic, _, err := crawler.ExtractSubstackPublicAndTotalCounts(
 		"https://www.astralcodexten.com", &crawlCtx, dlogger,

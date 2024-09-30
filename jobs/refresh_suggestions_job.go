@@ -96,7 +96,7 @@ feeds:
 
 		discoverLogger := crawler.NewDummyLogger()
 		progressLogger := crawler.NewMockProgressLogger(discoverLogger)
-		crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
+		crawlCtx := crawler.NewCrawlContext(httpClient, nil, progressLogger)
 		var discoverFeedsResult crawler.DiscoverFeedsResult
 		for attempt := 1; ; attempt++ {
 			discoverFeedsResult = crawler.DiscoverFeedsAtUrl(feedUrl, true, &crawlCtx, discoverLogger)

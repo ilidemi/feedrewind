@@ -205,7 +205,7 @@ func runGuidedCrawl(
 	}
 
 	tempProgressLogger := crawler.NewMockProgressLogger(crawler.NewDummyLogger())
-	crawlCtx := crawler.NewCrawlContext(&mockHttpClient, puppeteerClient, &tempProgressLogger)
+	crawlCtx := crawler.NewCrawlContext(&mockHttpClient, puppeteerClient, tempProgressLogger)
 	startTime := time.Now()
 
 	defer func() {
@@ -292,7 +292,7 @@ tables:
 	case *crawler.DiscoverFeedsErrorBadFeed:
 		err = oops.Newf("Bad feed at %s", startUrl)
 	case *crawler.DiscoverFeedsErrorCouldNotReach:
-		err = oops.Newf("Could not reach feed at %s", startUrl)
+		err = oops.Newf("Could not reach feed at %s (%v)", startUrl, dResult.Error)
 	case *crawler.DiscoverFeedsErrorNoFeeds:
 		err = oops.Newf("No feeds at %s", startUrl)
 	case *crawler.DiscoverFeedsErrorNotAUrl:
@@ -314,8 +314,7 @@ tables:
 		return &result, newError(err, result)
 	}
 
-	mockProgressLogger := crawler.NewMockProgressLogger(logger)
-	crawlCtx.ProgressLogger = &mockProgressLogger
+	crawlCtx.ProgressLogger = crawler.NewMockProgressLogger(logger)
 	guidedCrawlResult, err := crawler.GuidedCrawl(maybeStartPage, feed, &crawlCtx, logger)
 	if err != nil {
 		return &result, newError(err, result)

@@ -339,7 +339,7 @@ func Subscriptions_Create(w http.ResponseWriter, r *http.Request) {
 	httpClient := crawler.NewHttpClientImplCtx(r.Context(), false)
 	zlogger := crawler.ZeroLogger{Logger: logger}
 	progressLogger := crawler.NewMockProgressLogger(&zlogger)
-	crawlCtx := crawler.NewCrawlContext(httpClient, nil, &progressLogger)
+	crawlCtx := crawler.NewCrawlContext(httpClient, nil, progressLogger)
 	fetchFeedResult := crawler.FetchFeedAtUrl(startFeed.Url, true, &crawlCtx, &zlogger)
 	switch fetchResult := fetchFeedResult.(type) {
 	case *crawler.FetchedPage:

@@ -45,6 +45,15 @@
             "args": ["crawl", "all"]
         },
         {
+            "name": "HN1000 - find feeds",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "./cmd/hn1000",
+            "cwd": "cmd/hn1000",
+            "args": ["find-feeds"]
+        },
+        {
             "name": "Test current package",
             "type": "go",
             "request": "launch",

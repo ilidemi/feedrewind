@@ -1,0 +1,29 @@
+1375	new.pythonforengineers.com		feed has 15, main page has 15, proper archives have more under javascript
+874		dotat.at						feed has 20, main page has 20, archives have more
+1477	132334H.github.io				feed has 10, main page has 10, missed link to page 2
+1248	honeycomb.io					feed has 10, first page has 12, missed paging
+1199	fev.al							feed has 8, first page has 9, missed paging
+945		cabel.com						missed paging
+900		antipope.org					feed has 15, main page has 15, weird archives
+857		servo.org						feed has 10, first page has 10, missed paging
+850		flak.tedunangst.com				missed paging with big numbers first
+842		practical.engineering			missed paging with offset in query
+815		eli.thegreenplace.net			two level archives
+806		stability.ai					missed javascript paging
+789		gwern.net						took substack archive for an archive
+786		frame.work						missed paging via query
+765		blog.cloudflare.com				missed paging
+1750	posixcafe.org					two level archives
+1733	andy-bell.co.uk					weird paging
+1496	crookedtimber.org				missed paging
+1446	census.dev						missed paging via query (squarespace)
+1422	anandsanwal.me					missed paging
+1381	berjon.com						two level archives
+1345	ericsink.com					many categories, took the latest one for archives
+1253	joeyh.name						weird website structure (ikiwiki), hidden three-level /archives
+1117	interconnected.org				two level archives
+1105	doublepulsar.com				medium javascript fail
+1101	uber.com						javascript fail
+1093	aphyr.com						missed paging via query
+1082	ersei.net						missed paging via /page:2
+1028	antirez.com						missed paging via /latest/100
