@@ -172,7 +172,7 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 		}
 
 		switch {
-		case resp.Code[0] == '3':
+		case resp.Code[0] == '3' && resp.MaybeLocation != nil:
 			redirectionUrl := *resp.MaybeLocation
 			redirectionLink, err := processRedirect(
 				redirectionUrl, initialLink, link, resp.Code, requestMs, duplicateFetchLog, seenUrls,
@@ -184,7 +184,7 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 
 			link = redirectionLink
 			shouldThrottle = false
-		case resp.Code == "200":
+		case resp.Code == "200" || (resp.Code[0] == '3' && resp.MaybeLocation == nil):
 			var contentType string
 			var body string
 			if resp.MaybeContentType != nil {

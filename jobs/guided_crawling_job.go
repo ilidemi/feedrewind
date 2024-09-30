@@ -158,7 +158,7 @@ func GuidedCrawlingJob_Perform(
 	puppeteerClient := crawler.NewPuppeteerClientImpl()
 	progressSaver := NewProgressSaver(blogId, blogFeedUrl, logger, pool)
 	progressLogger := crawler.NewProgressLogger(progressSaver)
-	crawlCtx := crawler.NewCrawlContext(httpClient, puppeteerClient, &progressLogger)
+	crawlCtx := crawler.NewCrawlContext(httpClient, puppeteerClient, progressLogger)
 	zLogger := crawler.ZeroLogger{
 		Logger: logger,
 	}

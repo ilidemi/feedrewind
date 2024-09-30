@@ -443,7 +443,7 @@ func groupLinksByMaskedXPath(
 		originalTitleMatchingCount := int32(0)
 		discoveredTitleMatchingCount := int32(0)
 		for _, link := range linksGrouping.Links {
-			if feedEntryTitle, ok := feedEntryCurisTitlesMap.Get(link.Curi); ok {
+			if feedEntryTitle, ok := feedEntryCurisTitlesMap.Get(link.Curi); ok && feedEntryTitle != nil {
 				linkEqualizedTitle := equalizeTitle(getElementTitle(link.Element))
 				feedEqualizedTitle := feedEntryTitle.EqualizedValue
 				if linkEqualizedTitle == feedEqualizedTitle {

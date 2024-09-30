@@ -40,7 +40,9 @@ type DiscoveredFeed struct {
 
 type DiscoverFeedsErrorNotAUrl struct{}
 
-type DiscoverFeedsErrorCouldNotReach struct{}
+type DiscoverFeedsErrorCouldNotReach struct {
+	Error error
+}
 
 type DiscoverFeedsErrorNoFeeds struct{}
 
@@ -87,7 +89,9 @@ func DiscoverFeedsAtUrl(
 	if !ok {
 		logger.Info("Bad start url: %s", startUrl)
 		if fullStartUrl == startUrl {
-			return &DiscoverFeedsErrorCouldNotReach{}
+			return &DiscoverFeedsErrorCouldNotReach{
+				Error: errors.New("couldn't canonicalize start url"),
+			}
 		} else {
 			return &DiscoverFeedsErrorNotAUrl{}
 		}
@@ -106,7 +110,9 @@ func DiscoverFeedsAtUrl(
 		return &DiscoverFeedsErrorNoFeeds{}
 	} else if err != nil {
 		logger.Info("Error while getting start_link: %v", err)
-		return &DiscoverFeedsErrorCouldNotReach{}
+		return &DiscoverFeedsErrorCouldNotReach{
+			Error: err,
+		}
 	}
 
 	curiEqCfg := NewCanonicalEqualityConfig()
@@ -252,7 +258,9 @@ func DiscoverFeedsAtUrl(
 			case *FetchFeedErrorBadFeed:
 				return &DiscoverFeedsErrorBadFeed{}
 			case *FetchFeedErrorCouldNotReach:
-				return &DiscoverFeedsErrorCouldNotReach{}
+				return &DiscoverFeedsErrorCouldNotReach{
+					Error: r.Error,
+				}
 			default:
 				panic("unknown fetch feed result type")
 			}
@@ -273,7 +281,9 @@ type FetchedPage struct {
 
 type FetchFeedErrorBadFeed struct{}
 
-type FetchFeedErrorCouldNotReach struct{}
+type FetchFeedErrorCouldNotReach struct {
+	Error error
+}
 
 type FetchFeedResult interface {
 	fetchedFeedTag()
@@ -298,7 +308,9 @@ func FetchFeedAtUrl(
 		return &FetchFeedErrorBadFeed{}
 	} else if err != nil {
 		logger.Info("Error when fetching a feed at %s: %v", feedLink.Url, err)
-		return &FetchFeedErrorCouldNotReach{}
+		return &FetchFeedErrorCouldNotReach{
+			Error: err,
+		}
 	} else if feedPage, ok := crawlResult.(*feedPage); ok {
 		return &FetchedPage{Page: feedPage}
 	} else {
