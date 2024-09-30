@@ -291,7 +291,7 @@ func BackupDbJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 		slices.SortFunc(objects, func(a, b types.Object) int {
 			return b.LastModified.Compare(*a.LastModified) // descending
 		})
-		const objectsToKeep = 30
+		const objectsToKeep = 10
 		if len(objects) <= objectsToKeep {
 			logger.Info().Msgf("No old backups to delete (total: %d)", len(objects))
 		} else {
