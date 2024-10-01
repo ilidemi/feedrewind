@@ -66,10 +66,14 @@ func init() {
 				go func() {
 					ticker := time.NewTicker(10 * time.Second)
 					for range ticker.C {
-						usageBytes, err := os.ReadFile("/sys/fs/cgroup/memory/memory.usage_in_bytes")
+						entries, err := os.ReadDir("/sys/fs/cgroup/memory")
 						if err != nil {
-							logger.Error().Err(err).Msg("Couldn't read usage_in_bytes")
+							logger.Error().Err(err).Msg("Couldn't list memory dir")
 							continue
+						}
+						var names []string
+						for _, entry := range entries {
+							names = append(names, entry.Name())
 						}
 						limitBytes, err := os.ReadFile("/sys/fs/cgroup/memory/memory.limit_in_bytes")
 						if err != nil {
@@ -77,7 +81,7 @@ func init() {
 							continue
 						}
 						logger.Info().Msgf(
-							"Worker memory usage: %s/%s", string(usageBytes), string(limitBytes),
+							"Worker memory usage: %v/%s", names, string(limitBytes),
 						)
 					}
 				}()
