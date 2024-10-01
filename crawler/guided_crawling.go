@@ -5,12 +5,15 @@ import (
 	"feedrewind/oops"
 	"feedrewind/util"
 	"fmt"
+	"net/url"
 	"reflect"
 	"regexp"
 	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/temoto/robotstxt"
 )
 
 type Feed struct {
@@ -97,6 +100,8 @@ func GuidedCrawl(
 	} else if parsedFeed.EntryLinks.Length == 1 {
 		return nil, oops.New("Feed only has 1 item")
 	}
+
+	crawlCtx.RobotsClient = NewRobotsClient(feedLink.Uri, crawlCtx.HttpClient, logger)
 
 	var startPageLink *Link
 	var startPageFinalLink *Link
@@ -453,7 +458,7 @@ func guidedCrawlHistorical(
 
 	var startPageOtherLinks []*Link
 	for _, link := range startPageAllowedHostsLinks {
-		if seenCurisSet.contains(link.Curi) {
+		if !isNewAndAllowed(link, &seenCurisSet, crawlCtx.RobotsClient, logger) {
 			continue
 		}
 
@@ -473,7 +478,7 @@ func guidedCrawlHistorical(
 
 	if feedGenerator == FeedGeneratorSubstack {
 		archiveLink, _ := ToCanonicalLink("/archive", logger, startPage.FetchUri)
-		if !seenCurisSet.contains(archiveLink.Curi) {
+		if isNewAndAllowed(archiveLink, &seenCurisSet, crawlCtx.RobotsClient, logger) {
 			logger.Info("Adding missing substack archives: %s", archiveLink.Url)
 			archivesQueue = append(archivesQueue, archiveLink)
 		}
@@ -554,7 +559,7 @@ func guidedCrawlHistorical(
 
 	var twoEntriesOtherLinks []*Link
 	for _, link := range twoEntriesLinks {
-		if seenCurisSet.contains(link.Curi) {
+		if !isNewAndAllowed(link, &seenCurisSet, crawlCtx.RobotsClient, logger) {
 			continue
 		}
 
@@ -625,7 +630,7 @@ func guidedCrawlHistorical(
 	}
 
 	for _, link := range twiceFilteredTwoEntriesOtherLinks {
-		if seenCurisSet.contains(link.Curi) {
+		if !isNewAndAllowed(link, &seenCurisSet, crawlCtx.RobotsClient, logger) {
 			continue
 		}
 		othersQueue = append(othersQueue, link)
@@ -649,7 +654,7 @@ func guidedCrawlHistorical(
 	} else {
 		phase1OthersCount := 0
 		for _, link := range filteredStartPageOtherLinks {
-			if seenCurisSet.contains(link.Curi) {
+			if !isNewAndAllowed(link, &seenCurisSet, crawlCtx.RobotsClient, logger) {
 				continue
 			}
 			othersQueue = append(othersQueue, link)
@@ -707,6 +712,78 @@ func removeQuery(curi CanonicalUri) CanonicalUri {
 		TrimmedPath: curi.TrimmedPath,
 		Query:       "",
 	}
+}
+
+type RobotsClient struct {
+	Group                 *robotstxt.Group
+	BackupGroup           *robotstxt.Group
+	FeedRewindBlockLogged bool
+	LastRequestTimestamp  time.Time
+}
+
+func NewRobotsClient(rootUri *url.URL, httpClient HttpClient, logger Logger) *RobotsClient {
+	robotsUri := *rootUri
+	robotsUri.Path = "/robots.txt"
+	robotsResp, err := httpClient.Request(&robotsUri, false, nil, logger)
+	if err != nil {
+		logger.Info("Couldn't reach robots.txt: %v", err)
+		return &RobotsClient{} //nolint:exhaustruct
+	} else if robotsResp.Code != "200" {
+		logger.Info("Couldn't fetch robots.txt: status %s", robotsResp.Code)
+		return &RobotsClient{} //nolint:exhaustruct
+	}
+
+	robotsData, err := robotstxt.FromBytes(robotsResp.Body)
+	if err != nil {
+		logger.Warn("Couldn't parse robots.txt: %v", err)
+		return &RobotsClient{} //nolint:exhaustruct
+	}
+
+	group := robotsData.FindGroup("FeedRewindBot")
+	backupGroup := robotsData.FindGroup("ACompletelyDifferentBot")
+	if group.CrawlDelay > 10*time.Second {
+		logger.Warn("Long crawl delay: %s", group.CrawlDelay.String())
+	} else {
+		logger.Info("Crawl delay: %s", group.CrawlDelay.String())
+	}
+
+	return &RobotsClient{
+		Group:                 group,
+		BackupGroup:           backupGroup,
+		LastRequestTimestamp:  time.Time{}, //nolint:exhaustruct
+		FeedRewindBlockLogged: false,
+	}
+}
+
+func (c *RobotsClient) Test(uri *url.URL, logger Logger) bool {
+	result := c.Group.Test(uri.Path)
+	if !c.FeedRewindBlockLogged && !result && c.BackupGroup.Test(uri.Path) {
+		logger.Warn("FeedRewindBot blocked: %s", uri.String())
+		c.FeedRewindBlockLogged = true
+	}
+	return result
+}
+
+func (c *RobotsClient) Throttle() {
+	now := time.Now().UTC()
+	if !c.LastRequestTimestamp.IsZero() {
+		timeDelta := now.Sub(c.LastRequestTimestamp)
+		crawlDelay := time.Second
+		if c.Group != nil && c.Group.CrawlDelay > time.Second {
+			crawlDelay = c.Group.CrawlDelay
+		}
+		if timeDelta < crawlDelay {
+			time.Sleep(crawlDelay - timeDelta)
+			now = time.Now().UTC()
+		}
+	}
+	c.LastRequestTimestamp = now
+}
+
+func isNewAndAllowed(
+	link *Link, seenCurisSet *guidedSeenCurisSet, robotsClient *RobotsClient, logger Logger,
+) bool {
+	return !seenCurisSet.contains(link.Curi) && robotsClient.Test(link.Uri, logger)
 }
 
 func guidedCrawlFetchLoop(
@@ -794,7 +871,7 @@ func guidedCrawlFetchLoop(
 				continue
 			}
 
-			if guidedCtx.SeenCurisSet.contains(pageLink.Curi) {
+			if !isNewAndAllowed(&pageLink.Link, &guidedCtx.SeenCurisSet, crawlCtx.RobotsClient, logger) {
 				continue
 			}
 

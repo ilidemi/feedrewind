@@ -30,7 +30,9 @@ func newHttpResponse(code string) *HttpResponse {
 }
 
 type HttpClient interface {
-	Request(uri *url.URL, shouldThrottle bool, logger Logger) (*HttpResponse, error)
+	Request(
+		uri *url.URL, shouldThrottle bool, maybeRobotsClient *RobotsClient, logger Logger,
+	) (*HttpResponse, error)
 	GetRetryDelay(attemptsMade int) float64
 }
 
@@ -72,21 +74,15 @@ const maxContentLength = 20 * 1024 * 1024
 const codeSSLError = "SSLError"
 const codeResponseBodyTooBig = "ResponseBodyTooBig"
 
-func (c *HttpClientImpl) Request(uri *url.URL, shouldThrottle bool, logger Logger) (*HttpResponse, error) {
+func (c *HttpClientImpl) Request(
+	uri *url.URL, shouldThrottle bool, maybeRobotsClient *RobotsClient, logger Logger,
+) (*HttpResponse, error) {
 	if err := c.CancellationFunc(); err != nil {
 		return nil, err
 	}
 
-	if c.EnableThrottling && shouldThrottle {
-		newTimestamp := time.Now().UTC()
-		if !c.PrevTimestamp.IsZero() {
-			timeDelta := newTimestamp.Sub(c.PrevTimestamp)
-			if timeDelta < time.Second {
-				time.Sleep(time.Second - timeDelta)
-				newTimestamp = time.Now().UTC()
-			}
-		}
-		c.PrevTimestamp = newTimestamp
+	if c.EnableThrottling && shouldThrottle && maybeRobotsClient != nil {
+		maybeRobotsClient.Throttle()
 	}
 
 	req, err := http.NewRequest(http.MethodGet, uri.String(), nil)

@@ -29,6 +29,7 @@ type CrawlContext struct {
 	HttpClient            HttpClient
 	MaybePuppeteerClient  PuppeteerClient
 	ProgressLogger        *ProgressLogger
+	RobotsClient          *RobotsClient // initialized by the crawler and not the caller
 }
 
 func NewCrawlContext(
@@ -47,6 +48,7 @@ func NewCrawlContext(
 		HttpClient:            httpClient,
 		MaybePuppeteerClient:  maybePuppeteerClient,
 		ProgressLogger:        progressLogger,
+		RobotsClient:          nil,
 	}
 }
 
@@ -154,7 +156,7 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 
 	for {
 		requestStart := time.Now()
-		resp, err := crawlCtx.HttpClient.Request(link.Uri, shouldThrottle, logger)
+		resp, err := crawlCtx.HttpClient.Request(link.Uri, shouldThrottle, crawlCtx.RobotsClient, logger)
 		if err != nil {
 			return nil, err
 		}

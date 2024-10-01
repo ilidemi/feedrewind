@@ -33,7 +33,7 @@ func getTumblrApiHistorical(
 		}
 
 		requestStart := time.Now()
-		resp, err := crawlCtx.HttpClient.Request(uri, true, logger)
+		resp, err := crawlCtx.HttpClient.Request(uri, true, crawlCtx.RobotsClient, logger)
 		if err != nil {
 			return nil, err
 		}
