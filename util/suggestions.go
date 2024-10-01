@@ -56,11 +56,11 @@ var ScreenshotLinks = []ScreenshotLink{
 		FeedUrl:  "https://www.inkandswitch.com/index.xml",
 	},
 	{
-		Url:      "https://feedrewind.com/static/PG-Having-Kids-https.html" + BypassHashSuffix,
+		Url:      "https://paulgraham.com/kids.html",
 		TitleStr: "Having Kids",
 		Slug:     "pg-having-kids",
 		BlogName: "Paul Graham: Essays",
-		FeedUrl:  "http://www.aaronsw.com/2002/feeds/pgessays.rss",
+		FeedUrl:  "https://paulgraham.com/articles.html",
 	},
 	{
 		Url:      "https://jvns.ca/blog/2020/07/14/when-your-coworker-does-great-work-tell-their-manager/",
@@ -304,8 +304,8 @@ var MiscellaneousBlogs = []MiscellaneousBlog{
 		Tag:     "urbanism",
 	},
 	{
-		Url:     "http://paulgraham.com/articles.html",
-		FeedUrl: "http://www.aaronsw.com/2002/feeds/pgessays.rss",
+		Url:     "https://paulgraham.com/articles.html",
+		FeedUrl: "https://paulgraham.com/articles.html",
 		Name:    "Paul Graham",
 		Tag:     "entrepreneurship",
 	},
