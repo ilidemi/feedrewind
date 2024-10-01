@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"encoding/xml"
 	"feedrewind/log"
 	"feedrewind/oops"
 	"fmt"
@@ -87,7 +88,7 @@ func init() {
 	hardcodedKalzumeus = hardcodedMustParse("https://www.kalzumeus.com/archive/")
 	hardcodedMrMoneyMustache = hardcodedMustParse("https://www.mrmoneymustache.com/blog")
 	HardcodedOvercomingBiasFeed = hardcodedMustParse("https://www.overcomingbias.com/feed")
-	hardcodedPaulGraham = hardcodedMustParse("http://www.aaronsw.com/2002/feeds/pgessays.rss")
+	hardcodedPaulGraham = hardcodedMustParse("https://paulgraham.com/articles.html")
 	HardcodedSlateStarCodexFeed = "https://slatestarcodex.com/feed/"
 }
 
@@ -202,48 +203,48 @@ func init() {
 	hardcodedMrMoneyMustacheCategories = makeTopCategory("Start Here", mrMoneyMustacheStartHereUrls)
 
 	paulGrahamTopUrls := []string{
-		"http://www.paulgraham.com/hs.html",
-		"http://www.paulgraham.com/essay.html",
-		"http://www.paulgraham.com/marginal.html",
-		"http://www.paulgraham.com/jessica.html",
-		"http://www.paulgraham.com/lies.html",
-		"http://www.paulgraham.com/wisdom.html",
-		"http://www.paulgraham.com/wealth.html",
-		"http://www.paulgraham.com/re.html",
-		"http://www.paulgraham.com/say.html",
-		"http://www.paulgraham.com/makersschedule.html",
-		"http://www.paulgraham.com/ds.html",
-		"http://www.paulgraham.com/vb.html",
-		"http://www.paulgraham.com/love.html",
-		"http://www.paulgraham.com/growth.html",
-		"http://www.paulgraham.com/startupideas.html",
-		"http://www.paulgraham.com/mean.html",
-		"http://www.paulgraham.com/kids.html",
-		"http://www.paulgraham.com/lesson.html",
-		"http://www.paulgraham.com/hwh.html",
-		"http://www.paulgraham.com/think.html",
-		"http://www.paulgraham.com/worked.html",
-		"http://www.paulgraham.com/heresy.html",
-		"http://www.paulgraham.com/newideas.html",
-		"http://www.paulgraham.com/useful.html",
-		"http://www.paulgraham.com/richnow.html",
-		"http://www.paulgraham.com/cred.html",
-		"http://www.paulgraham.com/own.html",
-		"http://www.paulgraham.com/smart.html",
-		"http://www.paulgraham.com/wtax.html",
-		"http://www.paulgraham.com/conformism.html",
-		"http://www.paulgraham.com/orth.html",
-		"http://www.paulgraham.com/noob.html",
-		"http://www.paulgraham.com/early.html",
-		"http://www.paulgraham.com/ace.html",
-		"http://www.paulgraham.com/simply.html",
-		"http://www.paulgraham.com/fn.html",
-		"http://www.paulgraham.com/earnest.html",
-		"http://www.paulgraham.com/genius.html",
-		"http://www.paulgraham.com/work.html",
-		"http://www.paulgraham.com/before.html",
-		"http://www.paulgraham.com/greatwork.html",
-		"http://www.paulgraham.com/cities.html",
+		"https://paulgraham.com/hs.html",
+		"https://paulgraham.com/essay.html",
+		"https://paulgraham.com/marginal.html",
+		"https://paulgraham.com/jessica.html",
+		"https://paulgraham.com/lies.html",
+		"https://paulgraham.com/wisdom.html",
+		"https://paulgraham.com/wealth.html",
+		"https://paulgraham.com/re.html",
+		"https://paulgraham.com/say.html",
+		"https://paulgraham.com/makersschedule.html",
+		"https://paulgraham.com/ds.html",
+		"https://paulgraham.com/vb.html",
+		"https://paulgraham.com/love.html",
+		"https://paulgraham.com/growth.html",
+		"https://paulgraham.com/startupideas.html",
+		"https://paulgraham.com/mean.html",
+		"https://paulgraham.com/kids.html",
+		"https://paulgraham.com/lesson.html",
+		"https://paulgraham.com/hwh.html",
+		"https://paulgraham.com/think.html",
+		"https://paulgraham.com/worked.html",
+		"https://paulgraham.com/heresy.html",
+		"https://paulgraham.com/newideas.html",
+		"https://paulgraham.com/useful.html",
+		"https://paulgraham.com/richnow.html",
+		"https://paulgraham.com/cred.html",
+		"https://paulgraham.com/own.html",
+		"https://paulgraham.com/smart.html",
+		"https://paulgraham.com/wtax.html",
+		"https://paulgraham.com/conformism.html",
+		"https://paulgraham.com/orth.html",
+		"https://paulgraham.com/noob.html",
+		"https://paulgraham.com/early.html",
+		"https://paulgraham.com/ace.html",
+		"https://paulgraham.com/simply.html",
+		"https://paulgraham.com/fn.html",
+		"https://paulgraham.com/earnest.html",
+		"https://paulgraham.com/genius.html",
+		"https://paulgraham.com/work.html",
+		"https://paulgraham.com/before.html",
+		"https://paulgraham.com/greatwork.html",
+		"https://paulgraham.com/cities.html",
 	}
 
 	hardcodedPaulGrahamCategories = makeTopCategory("Top", paulGrahamTopUrls)
@@ -561,4 +562,95 @@ func extractSubstackCategories(
 		}
 	}
 	return []HistoricalBlogPostCategory{publicCategory}
+}
+
+func generatePgFeed(
+	rootLink *Link, page *htmlPage, crawlCtx *CrawlContext, curiEqCfg *CanonicalEqualityConfig,
+	logger Logger,
+) DiscoverFeedsResult {
+	pageAllLinks := extractLinks(
+		page.Document, page.FetchUri, nil, crawlCtx.Redirects, logger, includeXPathOnly,
+	)
+	fakeFeedEntryUrls := []string{
+		"https://paulgraham.com/icad.html",
+		"https://paulgraham.com/power.html",
+		"https://paulgraham.com/fix.html",
+	}
+	fakeFeedEntryTitles := []string{
+		"Revenge of the Nerds",
+		"Succinctness is Power",
+		"What Languages Fix",
+	}
+	var linkBuckets [][]FeedEntryLink
+	feedEntryCurisTitlesMap := NewCanonicalUriMap[*LinkTitle](curiEqCfg)
+	for i, entryUrl := range fakeFeedEntryUrls {
+		entryLink, _ := ToCanonicalLink(entryUrl, logger, page.FetchUri)
+		linkBuckets = append(linkBuckets, []FeedEntryLink{
+			FeedEntryLink{
+				maybeTitledLink: maybeTitledLink{
+					Link:       *entryLink,
+					MaybeTitle: nil,
+				},
+				MaybeDate: nil,
+			},
+		})
+		title := NewLinkTitle(fakeFeedEntryTitles[i], LinkTitleSourceFeed, nil)
+		feedEntryCurisTitlesMap.Add(*entryLink, &title)
+	}
+	feedEntryLinks := FeedEntryLinks{
+		LinkBuckets:    linkBuckets,
+		Length:         3,
+		IsOrderCertain: true,
+	}
+	extractionsByStarCount := getExtractionsByStarCount(
+		pageAllLinks, "", &feedEntryLinks, &feedEntryCurisTitlesMap, curiEqCfg, 0, logger,
+	)
+	if len(extractionsByStarCount[0].Extractions) != 1 {
+		logger.Error(
+			"Couldn't parse PG essays: %d extractions", len(extractionsByStarCount[0].Extractions),
+		)
+		return &DiscoverFeedsErrorBadFeed{}
+	}
+	entryLinks := extractionsByStarCount[0].Extractions[0].LinksExtraction.Links
+	feedTitle := "Paul Graham: Essays"
+	var feedSb strings.Builder
+	fmt.Fprintln(&feedSb, `<?xml version="1.0" encoding="UTF-8"?>`)
+	fmt.Fprintln(&feedSb, `<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0">`)
+	fmt.Fprintln(&feedSb, `  <channel>`)
+	fmt.Fprintln(&feedSb, `    <atom:link href="http://www.paulgraham.com/articles.html" rel="self" type="application/rss+xml"/>`)
+	fmt.Fprintf(&feedSb, "    <title>%s</title>\n", feedTitle)
+	fmt.Fprintf(&feedSb, "    <link>%s</link>\n", rootLink)
+	for _, link := range entryLinks {
+		fmt.Fprint(&feedSb, "    <item>\n")
+		fmt.Fprint(&feedSb, "      <title>")
+		_ = xml.EscapeText(&feedSb, []byte(link.MaybeTitle.Value))
+		fmt.Fprint(&feedSb, "</title>\n")
+		fmt.Fprint(&feedSb, "      <link>")
+		_ = xml.EscapeText(&feedSb, []byte(link.Url))
+		fmt.Fprint(&feedSb, "</link>\n")
+		fmt.Fprint(&feedSb, "    </item>\n")
+	}
+	fmt.Fprintln(&feedSb, `  </channel>`)
+	fmt.Fprintln(&feedSb, `</rss>`)
+	feedContent := feedSb.String()
+	parsedFeed, err := ParseFeed(feedContent, rootLink.Uri, logger)
+	if err != nil {
+		logger.Error("Couldn't parse PG essays feed we just created: %v", err)
+		return &DiscoverFeedsErrorBadFeed{}
+	}
+
+	return &DiscoveredSingleFeed{
+		MaybeStartPage: &DiscoveredStartPage{
+			Url:      rootLink.Url,
+			FinalUrl: rootLink.Url,
+			Content:  page.Content,
+		},
+		Feed: DiscoveredFetchedFeed{
+			Title:      feedTitle,
+			Url:        rootLink.Url,
+			FinalUrl:   rootLink.Url,
+			Content:    feedContent,
+			ParsedFeed: parsedFeed,
+		},
+	}
 }

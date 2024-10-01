@@ -141,6 +141,10 @@ func DiscoverFeedsAtUrl(
 			Feed:           feed,
 		}
 	case *htmlPage:
+		if CanonicalUriEqual(startLink.Curi, hardcodedPaulGraham, &curiEqCfg) {
+			return generatePgFeed(startLink, p, crawlCtx, &curiEqCfg, logger)
+		}
+
 		startPage := DiscoveredStartPage{
 			Url:      startLink.Url,
 			FinalUrl: p.FetchUri.String(),

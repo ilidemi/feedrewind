@@ -120,20 +120,9 @@ func StaticHashedPath(filename string) (string, error) {
 	return "", fmt.Errorf("static file not found: %q", filename)
 }
 
-const BypassHashSuffix = ".bypasshash"
-
 func GetStaticFile(hashedPath string) (*StaticFile, error) {
 	if containsDotDot(hashedPath) {
 		return nil, fmt.Errorf("path contains '..': %q", hashedPath)
-	}
-
-	if strings.HasSuffix(hashedPath, BypassHashSuffix) {
-		filename := hashedPath[len(StaticUrlPrefix)+1 : len(hashedPath)-len(BypassHashSuffix)]
-		var ok bool
-		hashedPath, ok = hashedPathsByFilename[filename]
-		if !ok {
-			return nil, fmt.Errorf("static path with bypassed hash not found: %q", filename)
-		}
 	}
 
 	if file, ok := files[hashedPath]; ok {
