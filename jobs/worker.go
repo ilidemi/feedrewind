@@ -52,10 +52,35 @@ func init() {
 			workerNamePrefix := fmt.Sprintf("%s-%d", workerNameBase, dynoId)
 			logger := &WorkerLogger{WorkerName: workerNamePrefix}
 
+			if config.Cfg.IsHeroku {
+				go util.ReportHerokuMetrics(logger)
+			}
+
 			conn, err := db.RootPool.AcquireBackground()
 			if err != nil {
 				logger.Error().Err(err).Msg("Couldn't connect to db")
 				os.Exit(1)
+			}
+
+			if config.Cfg.IsHeroku {
+				go func() {
+					ticker := time.NewTicker(10 * time.Second)
+					for range ticker.C {
+						usageBytes, err := os.ReadFile("/sys/fs/cgroup/memory/memory.usage_in_bytes")
+						if err != nil {
+							logger.Error().Err(err).Msg("Couldn't read usage_in_bytes")
+							continue
+						}
+						limitBytes, err := os.ReadFile("/sys/fs/cgroup/memory/memory.limit_in_bytes")
+						if err != nil {
+							logger.Error().Err(err).Msg("Couldn't read limit_in_bytes")
+							continue
+						}
+						logger.Info().Msgf(
+							"Worker memory usage: %s/%s", string(usageBytes), string(limitBytes),
+						)
+					}
+				}()
 			}
 
 			availableWorkers := make([]bool, totalWorkerCount)
@@ -157,10 +182,6 @@ func startWorker(
 		<-signalCtx.Done()
 		logger.Info().Msg("Caught termination signal")
 	}()
-
-	if config.Cfg.IsHeroku {
-		go util.ReportHerokuMetrics(logger)
-	}
 
 	lockFailures := 0
 	for {
