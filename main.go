@@ -328,6 +328,7 @@ func runServer(port int) {
 	})
 
 	staticR.Get(util.StaticRouteTemplate, routes.Static_File)
+	staticR.Get("/robots.txt", routes.Static_RobotsTxt)
 	staticR.NotFound(routes.Misc_NotFound)
 
 	logger.Info().Msgf("Started on port %d", port)
