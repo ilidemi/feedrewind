@@ -28,7 +28,7 @@ func NewMockHttpClient(conn *pgw.Conn, startLinkId int) MockHttpClient {
 }
 
 func (c *MockHttpClient) Request(
-	uri *url.URL, shouldThrottle bool, logger crawler.Logger,
+	uri *url.URL, shouldThrottle bool, maybeRobotsClient *crawler.RobotsClient, logger crawler.Logger,
 ) (*crawler.HttpResponse, error) {
 	fetchUrl := uri.String()
 	row := c.conn.QueryRow(`
@@ -41,7 +41,7 @@ func (c *MockHttpClient) Request(
 	if errors.Is(err, pgx.ErrNoRows) {
 		logger.Info("URI not in mock tables, falling back on http client: %s", fetchUrl)
 		c.NetworkRequestsMade++
-		r, err := c.httpClient.Request(uri, shouldThrottle, logger)
+		r, err := c.httpClient.Request(uri, shouldThrottle, maybeRobotsClient, logger)
 		if err != nil {
 			return nil, err
 		}

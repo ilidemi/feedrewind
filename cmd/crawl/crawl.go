@@ -9,18 +9,23 @@ import (
 	"feedrewind/log"
 	"feedrewind/oops"
 	"fmt"
+	"io"
+	"net/http"
+	neturl "net/url"
 	"os"
 	"os/exec"
 	"runtime/debug"
 	"runtime/pprof"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
 )
 
 var Crawl *cobra.Command
+var CrawlRobots *cobra.Command
 
 func init() {
 	Crawl = &cobra.Command{
@@ -32,6 +37,13 @@ func init() {
 	}
 	Crawl.Flags().IntVar(&threads, "threads", 16, "(only used when crawling all)")
 	Crawl.Flags().BoolVar(&allowJS, "allow-js", false, "")
+
+	CrawlRobots = &cobra.Command{
+		Use: "crawl-robots",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return crawlRobots()
+		},
+	}
 }
 
 var defaultStartLinkId = 224
@@ -349,4 +361,80 @@ Loop:
 	if err != nil {
 		panic(err)
 	}
+}
+
+func crawlRobots() error {
+	pool := connectDB()
+
+	startUrlsById := map[int]string{}
+	rows, err := pool.Query(`select id, coalesce(url, rss_url) from start_links`)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var id int
+		var url string
+		err := rows.Scan(&id, &url)
+		if err != nil {
+			return err
+		}
+		startUrlsById[id] = url
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	const workerCount = 32
+	var wg sync.WaitGroup
+	wg.Add(workerCount)
+	idCh := make(chan int, len(startUrlsById))
+	err = os.Chdir("cmd/crawl")
+	if err != nil {
+		return oops.Wrap(err)
+	}
+	for id := range startUrlsById {
+		idCh <- id
+	}
+	close(idCh)
+	for range workerCount {
+		go func() {
+			defer wg.Done()
+			for id := range idCh {
+				url := startUrlsById[id]
+				uri, err := neturl.Parse(url)
+				if err != nil {
+					panic(err)
+				}
+				uri.Path = "/robots.txt"
+				resp, err := http.Get(uri.String())
+				if err != nil {
+					fmt.Println(id, "error:", err)
+					continue
+				}
+				if resp.StatusCode == http.StatusNotFound {
+					continue
+				} else if resp.StatusCode != http.StatusOK {
+					fmt.Printf("%d error: http %d (%d bytes)\n", id, resp.StatusCode, resp.ContentLength)
+					resp.Body.Close()
+					continue
+				}
+				filename := fmt.Sprintf("robots/%04d_%s.txt", id, uri.Hostname())
+				outFile, err := os.Create(filename)
+				if err != nil {
+					panic(err)
+				}
+				_, err = io.Copy(outFile, resp.Body)
+				if err != nil {
+					panic(err)
+				}
+				resp.Body.Close()
+				if err := outFile.Close(); err != nil {
+					panic(err)
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	fmt.Println("Done")
+	return nil
 }

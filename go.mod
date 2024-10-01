@@ -28,6 +28,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
 	github.com/stripe/stripe-go/v78 v78.2.0
+	github.com/temoto/robotstxt v1.1.2
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	golang.org/x/crypto v0.17.0
 	golang.org/x/net v0.17.0
