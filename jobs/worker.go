@@ -9,6 +9,7 @@ import (
 	"feedrewind/db/pgw"
 	"feedrewind/log"
 	"feedrewind/oops"
+	"feedrewind/util"
 	"feedrewind/util/schedule"
 	"fmt"
 	"math"
@@ -156,6 +157,10 @@ func startWorker(
 		<-signalCtx.Done()
 		logger.Info().Msg("Caught termination signal")
 	}()
+
+	if config.Cfg.IsHeroku {
+		go util.ReportHerokuMetrics(logger)
+	}
 
 	lockFailures := 0
 	for {

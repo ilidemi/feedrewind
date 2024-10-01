@@ -27,7 +27,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/heroku/x/hmetrics"
 	"github.com/spf13/cobra"
 	"github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/billingportal/configuration"
@@ -193,24 +192,7 @@ func runServer(port int) {
 
 	logger := log.NewBackgroundLogger()
 	if config.Cfg.IsHeroku {
-		// Adapted from https://github.com/heroku/x/blob/v0.1.0/hmetrics/onload/init.go
-		go func() {
-			var errorHandler hmetrics.ErrHandler = func(err error) error {
-				logger.Error().Err(err).Msg("Error sending heroku metrics")
-				return nil
-			}
-			for backoff := int64(1); ; backoff++ {
-				start := time.Now()
-				err := hmetrics.Report(context.Background(), hmetrics.DefaultEndpoint, errorHandler)
-				if time.Since(start) > 5*time.Minute {
-					backoff = 1
-				}
-				if err != nil {
-					_ = errorHandler(err)
-				}
-				time.Sleep(time.Duration(backoff*10) * time.Second)
-			}
-		}()
+		go util.ReportHerokuMetrics(logger)
 	}
 
 	models.MustInit(db.RootPool)
