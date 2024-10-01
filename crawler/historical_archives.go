@@ -138,7 +138,7 @@ func tryExtractArchives(
 		return []crawlHistoricalResult{
 			&archivesSortedResult{
 				MainLnk:        *fetchLink,
-				Pattern:        "archives_sorted",
+				Pattern:        "archives",
 				Links:          dropHtml(postLinks),
 				HasDates:       false,
 				PostCategories: nil,
