@@ -7,11 +7,23 @@ import (
 )
 
 func Static_File(w http.ResponseWriter, r *http.Request) {
+	static_Path(w, r, r.URL.Path)
+}
+
+func Static_RobotsTxt(w http.ResponseWriter, r *http.Request) {
+	hashedPath, err := util.StaticHashedPath("robots.txt")
+	if err != nil {
+		panic(err)
+	}
+	static_Path(w, r, hashedPath)
+}
+
+func static_Path(w http.ResponseWriter, r *http.Request, path string) {
 	models.ProductEvent_QueueDummyEmit(r, false, "static asset", map[string]any{
-		"path": r.URL.Path,
+		"path": path,
 	})
 
-	staticFile, err := util.GetStaticFile(r.URL.Path)
+	staticFile, err := util.GetStaticFile(path)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
