@@ -159,21 +159,7 @@ func GuidedCrawlingJob_Perform(
 	progressSaver := NewProgressSaver(blogId, blogFeedUrl, logger, pool)
 	progressLogger := crawler.NewProgressLogger(progressSaver)
 	crawlCtx := crawler.NewCrawlContext(httpClient, puppeteerClient, progressLogger)
-	zLogger := crawler.ZeroLogger{
-		Logger: logger,
-		MaybeLogBlob: func(key string, value []byte) {
-			row := pool.QueryRow(`
-				insert into debug (key, value) values ($1, $2) returning id
-			`, key, value)
-			var id int64
-			err := row.Scan(&id)
-			if err != nil {
-				logger.Error().Err(err).Msg("Couldn't insert a debug blob")
-				return
-			}
-			logger.Info().Msgf("Inserted debug blog %d (%s)", id, key)
-		},
-	}
+	zLogger := crawler.ZeroLogger{Logger: logger}
 
 	guidedCrawlResult, err := crawler.GuidedCrawl(maybeStartPage, startFeed, &crawlCtx, &zLogger)
 	if ctxErr := ctx.Err(); ctxErr != nil {

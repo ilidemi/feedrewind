@@ -147,7 +147,7 @@ func Blog_CreateOrUpdate(
 
 	// Update blog from feed
 	var blogPostCuris []crawler.CanonicalUri
-	zlogger := crawler.ZeroLogger{Logger: logger, MaybeLogBlob: nil}
+	zlogger := crawler.ZeroLogger{Logger: logger}
 	rows, err := qu.Query(`select url from blog_posts where blog_id = $1 order by index desc`, blog.Id)
 	if err != nil {
 		return nil, err
