@@ -50,7 +50,7 @@ func SetMaxBrowserCount(count int) {
 }
 
 const defaultMaxScrollTime = 30 * time.Second
-const extendedMaxScrollTime = 2 * time.Minute
+const extendedMaxScrollTime = 90 * time.Second
 
 func (c *PuppeteerClientImpl) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[*LinkTitle], crawlCtx *CrawlContext,
@@ -92,6 +92,7 @@ func (c *PuppeteerClientImpl) Fetch(
 	if extendedScrollTime {
 		maxScrollTime = extendedMaxScrollTime
 	}
+	maxInitialWaitTime := 30 * time.Second
 
 	errorsCount := 0
 	for {
@@ -102,7 +103,7 @@ func (c *PuppeteerClientImpl) Fetch(
 			if err != nil {
 				return "", oops.Wrap(err)
 			}
-			page := rawPage.Timeout(maxScrollTime + 1*time.Minute)
+			page := rawPage.Timeout(maxInitialWaitTime + maxScrollTime + 10*time.Second)
 
 			hijackRouter := page.HijackRequests()
 			err = hijackRouter.Add("*", proto.NetworkResourceTypeImage, func(h *rod.Hijack) {
@@ -134,7 +135,8 @@ func (c *PuppeteerClientImpl) Fetch(
 			err = page.Navigate(uri.String())
 			if err == nil {
 				logger.Info("Waiting till idle")
-				page.Timeout(30*time.Second).WaitRequestIdle(500*time.Millisecond, []string{".+"}, nil, nil)()
+				page.Timeout(maxInitialWaitTime).
+					WaitRequestIdle(500*time.Millisecond, []string{".+"}, nil, nil)()
 			}
 			progressLogger.LogAndSavePuppeteer()
 			if err != nil {
