@@ -553,6 +553,39 @@ ALTER SEQUENCE public.custom_blog_requests_id_seq OWNED BY public.custom_blog_re
 
 
 --
+-- Name: debug; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.debug (
+    id integer NOT NULL,
+    key text NOT NULL,
+    value bytea NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
+);
+
+
+--
+-- Name: debug_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.debug_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: debug_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.debug_id_seq OWNED BY public.debug.id;
+
+
+--
 -- Name: delayed_jobs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1231,6 +1264,13 @@ ALTER TABLE ONLY public.custom_blog_requests ALTER COLUMN id SET DEFAULT nextval
 
 
 --
+-- Name: debug id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.debug ALTER COLUMN id SET DEFAULT nextval('public.debug_id_seq'::regclass);
+
+
+--
 -- Name: delayed_jobs id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1389,6 +1429,14 @@ ALTER TABLE ONLY public.blogs
 
 ALTER TABLE ONLY public.custom_blog_requests
     ADD CONSTRAINT custom_blog_requests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: debug debug_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.debug
+    ADD CONSTRAINT debug_pkey PRIMARY KEY (id);
 
 
 --
@@ -1794,6 +1842,13 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.blogs FOR EACH ROW EXECUT
 --
 
 CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.custom_blog_requests FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
+
+
+--
+-- Name: debug bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.debug FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
 
 
 --
@@ -2453,4 +2508,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20240627193236'),
 ('20240705122055'),
 ('20240705185918'),
-('20240705190748');
+('20240705190748'),
+('20241002143639');

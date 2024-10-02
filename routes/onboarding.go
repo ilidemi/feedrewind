@@ -377,7 +377,7 @@ func onboarding_MustDiscoverFeeds(
 	}
 
 	httpClient := crawler.NewHttpClientImplCtx(pool.Context(), false)
-	zlogger := crawler.ZeroLogger{Logger: logger}
+	zlogger := crawler.ZeroLogger{Logger: logger, MaybeLogBlob: nil}
 	progressLogger := crawler.NewMockProgressLogger(&zlogger)
 	crawlCtx := crawler.NewCrawlContext(httpClient, nil, progressLogger)
 	discoverFeedsResult := crawler.DiscoverFeedsAtUrl(startUrl, true, &crawlCtx, &zlogger)

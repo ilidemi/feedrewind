@@ -95,12 +95,14 @@ func (c *PuppeteerClientImpl) Fetch(
 
 	errorsCount := 0
 	for {
+		var rawPage *rod.Page
 		content, err := func() (string, error) {
-			page, err := browser.Page(proto.TargetCreateTarget{}) //nolint:exhaustruct
+			var err error
+			rawPage, err = browser.Page(proto.TargetCreateTarget{}) //nolint:exhaustruct
 			if err != nil {
 				return "", oops.Wrap(err)
 			}
-			page = page.Timeout(maxScrollTime + 1*time.Minute)
+			page := rawPage.Timeout(maxScrollTime + 1*time.Minute)
 
 			hijackRouter := page.HijackRequests()
 			err = hijackRouter.Add("*", proto.NetworkResourceTypeImage, func(h *rod.Hijack) {
@@ -187,7 +189,7 @@ func (c *PuppeteerClientImpl) Fetch(
 				}
 				content, err = page.HTML()
 				if err != nil {
-					return "", err
+					return "", oops.Wrap(err)
 				}
 			} else {
 				logger.Info("Puppeteer didn't find any feed links on initial load")
@@ -208,6 +210,24 @@ func (c *PuppeteerClientImpl) Fetch(
 		if err != nil {
 			errorsCount++
 			logger.Info("Recovered Puppeteer error (%d): %v", errorsCount, err)
+			if rawPage != nil {
+				html, err := rawPage.HTML()
+				if err != nil {
+					logger.Warn("Couldn't get page html: %v", err)
+				} else {
+					pageInfo, err := rawPage.Info()
+					var pageUrl string
+					if err != nil {
+						logger.Warn("Couldn't get page url: %v", err)
+						pageUrl = "N/A"
+					} else {
+						pageUrl = pageInfo.URL
+					}
+					logger.Blob(pageUrl, []byte(html))
+				}
+			} else {
+				logger.Info("Puppeteer page is nil, not logging a blob")
+			}
 			progressLogger.LogAndSavePuppeteer()
 			if errorsCount >= 3 {
 				return "", oops.Wrapf(err, "Puppeteer error")
