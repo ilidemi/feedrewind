@@ -134,7 +134,7 @@ func (c *PuppeteerClientImpl) Fetch(
 			err = page.Navigate(uri.String())
 			if err == nil {
 				logger.Info("Waiting till idle")
-				page.WaitRequestIdle(500*time.Millisecond, []string{".+"}, nil, nil)()
+				page.Timeout(30*time.Second).WaitRequestIdle(500*time.Millisecond, []string{".+"}, nil, nil)()
 			}
 			progressLogger.LogAndSavePuppeteer()
 			if err != nil {
