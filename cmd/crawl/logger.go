@@ -26,10 +26,3 @@ func (l *FileLogger) Error(format string, args ...any) {
 	line := fmt.Sprintf("ERROR: %s", msg)
 	fmt.Fprintf(l.File, "%s %s\n", time.Now().Format(time.RFC3339), line)
 }
-
-func (l *FileLogger) Blob(key string, value []byte) {
-	fmt.Fprintf(l.File, "BLOB KEY: %s\n", key)
-	fmt.Fprintln(l.File, "BLOB VALUE:")
-	l.File.Write(value) //nolint:errcheck
-	fmt.Fprintln(l.File)
-}
