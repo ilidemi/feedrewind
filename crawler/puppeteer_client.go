@@ -130,8 +130,10 @@ func (c *PuppeteerClientImpl) Fetch(
 			} else {
 				progressLogger.LogAndSavePuppeteerStart()
 			}
+			logger.Info("Navigating")
 			err = page.Navigate(uri.String())
 			if err == nil {
+				logger.Info("Waiting till idle")
 				page.WaitRequestIdle(500*time.Millisecond, []string{".+"}, nil, nil)()
 			}
 			progressLogger.LogAndSavePuppeteer()
@@ -139,6 +141,7 @@ func (c *PuppeteerClientImpl) Fetch(
 				return "", oops.Wrap(err)
 			}
 
+			logger.Info("Getting html")
 			initialContent, err := page.HTML()
 			if err != nil {
 				return "", oops.Wrap(err)
@@ -161,6 +164,7 @@ func (c *PuppeteerClientImpl) Fetch(
 			var content string
 			if isScrollingAllowed {
 				if findLoadMoreButton != nil {
+					logger.Info("Finding load more button")
 					loadMoreButton, err := findLoadMoreButton(page)
 					if err != nil {
 						logger.Info("Find load more button error: %v", err)
@@ -173,6 +177,7 @@ func (c *PuppeteerClientImpl) Fetch(
 						if err != nil {
 							return "", err
 						}
+						logger.Info("Finding load more button")
 						loadMoreButton, err = findLoadMoreButton(page)
 						if err != nil {
 							logger.Info("Find load more button error: %v", err)
@@ -187,6 +192,7 @@ func (c *PuppeteerClientImpl) Fetch(
 						return "", err
 					}
 				}
+				logger.Info("Getting HTML")
 				content, err = page.HTML()
 				if err != nil {
 					return "", oops.Wrap(err)
