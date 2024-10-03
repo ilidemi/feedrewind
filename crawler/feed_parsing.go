@@ -20,7 +20,7 @@ func isFeed(body string, logger Logger) bool {
 		return false
 	}
 
-	xml, err := parseXML(body)
+	xml, err := parseXML(body, logger)
 	if err != nil {
 		return false
 	}
@@ -28,7 +28,36 @@ func isFeed(body string, logger Logger) bool {
 	return isRSS(xml) || isRDF(xml) || isAtom(xml)
 }
 
-func parseXML(body string) (*xmlquery.Node, error) {
+func parseXML(body string, logger Logger) (*xmlquery.Node, error) {
+	hasInvalidXmlCharacters := false
+	isInCharacterRange := func(r rune) bool {
+		return r == 0x09 ||
+			r == 0x0A ||
+			r == 0x0D ||
+			r >= 0x20 && r <= 0xD7FF ||
+			r >= 0xE000 && r <= 0xFFFD ||
+			r >= 0x10000 && r <= 0x10FFFF
+	}
+	for _, r := range body {
+		if !isInCharacterRange(r) {
+			hasInvalidXmlCharacters = true
+			break
+		}
+	}
+	if hasInvalidXmlCharacters {
+		invalidCount := 0
+		var sb strings.Builder
+		for _, r := range body {
+			if isInCharacterRange(r) {
+				sb.WriteRune(r)
+			} else {
+				invalidCount++
+			}
+		}
+		body = sb.String()
+		logger.Info("Removed %d out of range characters from the xml", invalidCount)
+	}
+
 	reader := strings.NewReader(body)
 	xml, err := xmlquery.ParseWithOptions(reader, xmlquery.ParserOptions{
 		Decoder: &xmlquery.DecoderOptions{ //nolint:exhaustruct
@@ -96,7 +125,7 @@ type feedEntry struct {
 }
 
 func ParseFeed(content string, fetchUri *neturl.URL, logger Logger) (*ParsedFeed, error) {
-	xml, err := parseXML(content)
+	xml, err := parseXML(content, logger)
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
