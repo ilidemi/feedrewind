@@ -108,7 +108,7 @@ const totalWorkerCount = stripeWebhookWorkerCount + defaultWorkerCount + guidedC
 const stripeWebhookQueue = "stripe_webhook"
 const defaultQueue = "default"
 const guidedCrawlingQueue = "guided_crawling"
-const maxBrowserCount = 20
+const maxBrowserCount = 4
 
 const workerNameBase = "go-worker"
 const sleepDelay = 100 * time.Millisecond

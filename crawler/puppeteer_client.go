@@ -83,6 +83,7 @@ func (c *PuppeteerClientImpl) Fetch(
 	if err != nil {
 		return "", oops.Wrap(err)
 	}
+	logger.Info("Connected to the browser")
 	defer func() {
 		if err := browser.Close(); err != nil {
 			logger.Error("Browser close error: %v", err)
