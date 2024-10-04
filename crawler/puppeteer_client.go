@@ -125,7 +125,7 @@ func (c *PuppeteerClientImpl) Fetch(
 					logger.Warn("Hijack stop error: %v", err)
 				}
 			}()
-			scrollablePage := newScrollablePage(page)
+			scrollablePage := newScrollablePage(page, logger)
 
 			if isInitialRequest {
 				isInitialRequest = false
@@ -235,7 +235,7 @@ type scrollablePage struct {
 	Mutex            sync.Mutex
 }
 
-func newScrollablePage(page *rod.Page) *scrollablePage {
+func newScrollablePage(page *rod.Page, logger Logger) *scrollablePage {
 	result := &scrollablePage{
 		Page:             page,
 		LastEventTime:    time.Now(),
@@ -244,22 +244,61 @@ func newScrollablePage(page *rod.Page) *scrollablePage {
 		Mutex:            sync.Mutex{},
 	}
 
+	// TODO remove
+	type Request struct {
+		Url       string
+		StartedAt time.Time
+	}
+	requestById := map[proto.NetworkRequestID]Request{}
 	go page.EachEvent(
 		func(e *proto.NetworkRequestWillBeSent) {
 			result.Mutex.Lock()
 			result.LastEventTime = time.Now()
 			result.OngoingRequests++
+			requestById[e.RequestID] = Request{
+				Url:       e.Request.URL,
+				StartedAt: time.Now(),
+			}
+			logger.Info("Request will be sent: %s (%s)", e.RequestID, e.Request.URL)
 			result.Mutex.Unlock()
 		}, func(e *proto.NetworkLoadingFinished) {
 			result.Mutex.Lock()
 			result.LastEventTime = time.Now()
 			result.OngoingRequests--
 			result.FinishedRequests++
+			elapsedTime := time.Since(requestById[e.RequestID].StartedAt).Round(time.Millisecond)
+			logger.Info(
+				"Request finished after %v: %s (%s)", elapsedTime, e.RequestID, requestById[e.RequestID].Url,
+			)
+			delete(requestById, e.RequestID)
+			if len(requestById) > 0 {
+				if len(requestById) <= 5 {
+					logger.Info("%d requests still running:", len(requestById))
+					for id, request := range requestById {
+						elapsedTime := time.Since(request.StartedAt).Round(time.Millisecond)
+						logger.Info("%s for %v: %s", id, elapsedTime, request.Url)
+					}
+				} else {
+					logger.Info("%d requests still running", len(requestById))
+				}
+			}
 			result.Mutex.Unlock()
 		}, func(e *proto.NetworkLoadingFailed) {
 			result.Mutex.Lock()
 			result.LastEventTime = time.Now()
 			result.OngoingRequests--
+			elapsedTime := time.Since(requestById[e.RequestID].StartedAt).Round(time.Millisecond)
+			logger.Info(
+				"Request failed after %v: %s (%s)", elapsedTime, e.RequestID, requestById[e.RequestID].Url,
+			)
+			delete(requestById, e.RequestID)
+			if len(requestById) > 0 && len(requestById) <= 5 {
+				logger.Info("%d requests still running:", len(requestById))
+				for id, request := range requestById {
+					elapsedTime := time.Since(request.StartedAt).Round(time.Millisecond)
+					logger.Info("%s for %v: %s", id, elapsedTime, request.Url)
+				}
+			}
 			result.Mutex.Unlock()
 		},
 	)()
