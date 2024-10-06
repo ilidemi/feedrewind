@@ -24,20 +24,13 @@ type PuppeteerClient interface {
 }
 
 type PuppeteerClientImpl struct {
-	Launcher *launcher.Launcher
 }
 
 func NewPuppeteerClientImpl() *PuppeteerClientImpl {
 	if maxBrowserCount == 0 {
 		panic("Set max browser count before invoking puppeteer")
 	}
-	launcher := launcher.New()
-	if config.Cfg.IsHeroku {
-		launcher = launcher.Bin("chrome").NoSandbox(true)
-	}
-	return &PuppeteerClientImpl{
-		Launcher: launcher,
-	}
+	return &PuppeteerClientImpl{}
 }
 
 var maxBrowserCount int
@@ -76,7 +69,12 @@ func (c *PuppeteerClientImpl) Fetch(
 	browserAcquiredTime := time.Now()
 	logger.Info("Browser acquired in %v", browserAcquiredTime.Sub(puppeteerStart))
 
-	browserUrl, err := c.Launcher.Launch()
+	launcher := launcher.New()
+	if config.Cfg.IsHeroku {
+		launcher = launcher.Bin("chrome").NoSandbox(true)
+	}
+	defer launcher.Kill()
+	browserUrl, err := launcher.Launch()
 	if err != nil {
 		return "", oops.Wrap(err)
 	}
@@ -86,14 +84,6 @@ func (c *PuppeteerClientImpl) Fetch(
 		return "", oops.Wrap(err)
 	}
 	logger.Info("Connected to the browser")
-	defer func() {
-		if err := browser.Close(); err != nil {
-			var opError *net.OpError
-			if !(errors.As(err, &opError) && errors.As(retErr, &opError)) {
-				logger.Error("Browser close error: %v", err)
-			}
-		}
-	}()
 	maxScrollTime := defaultMaxScrollTime
 	if extendedScrollTime {
 		maxScrollTime = extendedMaxScrollTime
