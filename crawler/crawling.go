@@ -365,7 +365,7 @@ func init() {
 }
 
 func crawlWithPuppeteerIfMatch(
-	page *htmlPage, feedGenerator FeedGenerator, feedEntryCurisTitlesMap CanonicalUriMap[*LinkTitle],
+	page *htmlPage, feedGenerator FeedGenerator, feedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle],
 	crawlCtx *CrawlContext, logger Logger,
 ) (*htmlPage, error) {
 	if crawlCtx.MaybePuppeteerClient == nil {

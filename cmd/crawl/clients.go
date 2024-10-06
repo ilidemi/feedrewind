@@ -88,7 +88,7 @@ func NewCachingPuppeteerClient(conn *pgw.Conn, startLinkId int) *CachingPuppetee
 }
 
 func (c *CachingPuppeteerClient) Fetch(
-	uri *url.URL, feedEntryCurisTitlesMap crawler.CanonicalUriMap[*crawler.LinkTitle],
+	uri *url.URL, feedEntryCurisTitlesMap crawler.CanonicalUriMap[crawler.MaybeLinkTitle],
 	crawlCtx *crawler.CrawlContext, logger crawler.Logger,
 	findLoadMoreButton crawler.PuppeteerFindLoadMoreButton, extendedScrollTime bool,
 ) (string, error) {
@@ -124,7 +124,7 @@ func NewMockPuppeteerClient(conn *pgw.Conn, startLinkId int) *MockPuppeteerClien
 }
 
 func (c *MockPuppeteerClient) Fetch(
-	uri *url.URL, feedEntryCurisTitlesMap crawler.CanonicalUriMap[*crawler.LinkTitle],
+	uri *url.URL, feedEntryCurisTitlesMap crawler.CanonicalUriMap[crawler.MaybeLinkTitle],
 	crawlCtx *crawler.CrawlContext, logger crawler.Logger,
 	findLoadMoreButton crawler.PuppeteerFindLoadMoreButton, extendedScrollTime bool,
 ) (string, error) {

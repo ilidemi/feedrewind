@@ -200,7 +200,7 @@ func GuidedCrawl(
 	crawlCtx.PptrFetchedCuris.updateEqualityConfig(&curiEqCfg)
 	guidedCrawlResult.CuriEqCfg = &curiEqCfg
 
-	feedEntryCurisTitlesMap := NewCanonicalUriMap[*LinkTitle](&curiEqCfg)
+	feedEntryCurisTitlesMap := NewCanonicalUriMap[MaybeLinkTitle](&curiEqCfg)
 	for _, entryLink := range parsedFeed.EntryLinks.ToSlice() {
 		feedEntryCurisTitlesMap.Add(entryLink.Link, entryLink.MaybeTitle)
 	}
@@ -418,9 +418,9 @@ func init() {
 var ErrPatternNotDetected = errors.New("pattern not detected")
 
 func guidedCrawlHistorical(
-	startPage *htmlPage, feedEntryLinks *FeedEntryLinks, feedEntryCurisTitlesMap CanonicalUriMap[*LinkTitle],
-	feedGenerator FeedGenerator, initialBlogLink *Link, crawlCtx *CrawlContext,
-	curiEqCfg *CanonicalEqualityConfig, logger Logger,
+	startPage *htmlPage, feedEntryLinks *FeedEntryLinks,
+	feedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle], feedGenerator FeedGenerator,
+	initialBlogLink *Link, crawlCtx *CrawlContext, curiEqCfg *CanonicalEqualityConfig, logger Logger,
 ) (*postprocessedResult, error) {
 	progressLogger := crawlCtx.ProgressLogger
 
@@ -679,7 +679,7 @@ type guidedCrawlContext struct {
 	SeenCurisSet            guidedSeenCurisSet
 	ArchivesCategoriesState *archivesCategoriesState
 	FeedEntryLinks          *FeedEntryLinks
-	FeedEntryCurisTitlesMap CanonicalUriMap[*LinkTitle]
+	FeedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle]
 	FeedGenerator           FeedGenerator
 	CuriEqCfg               *CanonicalEqualityConfig
 	AllowedHosts            map[string]bool
@@ -1567,7 +1567,7 @@ func compareWithFeed(
 
 func fetchMissingTitles(
 	links []*maybeTitledLink, feedEntryLinks *FeedEntryLinks,
-	feedEntryCurisTitlesMap *CanonicalUriMap[*LinkTitle], feedGenerator FeedGenerator,
+	feedEntryCurisTitlesMap *CanonicalUriMap[MaybeLinkTitle], feedGenerator FeedGenerator,
 	curiEqCfg *CanonicalEqualityConfig, crawlCtx *CrawlContext, logger Logger,
 ) []*titledLink {
 	progressLogger := crawlCtx.ProgressLogger
@@ -1878,7 +1878,7 @@ func ExtractSubstackPublicAndTotalCounts(
 	if err != nil {
 		return 0, 0, err
 	}
-	feedEntryCurisTitlesMap := NewCanonicalUriMap[*LinkTitle](curiEqCfg)
+	feedEntryCurisTitlesMap := NewCanonicalUriMap[MaybeLinkTitle](curiEqCfg)
 	for _, entryLink := range parsedFeed.EntryLinks.ToSlice() {
 		feedEntryCurisTitlesMap.Add(entryLink.Link, entryLink.MaybeTitle)
 	}
