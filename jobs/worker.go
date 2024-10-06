@@ -378,6 +378,8 @@ mainLoop:
 					err, ok := r.(error)
 					if !ok {
 						err = oops.Newf("%v", r)
+					} else if oopsErr := (*oops.Error)(nil); !errors.As(err, &oopsErr) {
+						err = oops.Wrap(err)
 					}
 					finishedJobs <- jobResult{
 						WorkerId: assignedWorkerId,

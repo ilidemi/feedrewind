@@ -1,8 +1,10 @@
 package crawler
 
 import (
+	"errors"
 	"feedrewind/config"
 	"feedrewind/oops"
+	"net"
 	"net/url"
 	"sync"
 	"time"
@@ -55,7 +57,7 @@ const extendedMaxScrollTime = 90 * time.Second
 func (c *PuppeteerClientImpl) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle], crawlCtx *CrawlContext,
 	logger Logger, findLoadMoreButton PuppeteerFindLoadMoreButton, extendedScrollTime bool,
-) (string, error) {
+) (content string, retErr error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Puppeteer start: %s", uri)
 	progressLogger.LogAndSavePuppeteerStart()
@@ -86,7 +88,10 @@ func (c *PuppeteerClientImpl) Fetch(
 	logger.Info("Connected to the browser")
 	defer func() {
 		if err := browser.Close(); err != nil {
-			logger.Error("Browser close error: %v", err)
+			var opError *net.OpError
+			if !(errors.As(err, &opError) && errors.As(retErr, &opError)) {
+				logger.Error("Browser close error: %v", err)
+			}
 		}
 	}()
 	maxScrollTime := defaultMaxScrollTime
@@ -122,7 +127,10 @@ func (c *PuppeteerClientImpl) Fetch(
 			go hijackRouter.Run()
 			defer func() {
 				if err := hijackRouter.Stop(); err != nil {
-					logger.Warn("Hijack stop error: %v", err)
+					var opError *net.OpError
+					if !(errors.As(err, &opError) && errors.As(retErr, &opError)) {
+						logger.Warn("Hijack stop error: %v", err)
+					}
 				}
 			}()
 			scrollablePage := newScrollablePage(page)
@@ -214,6 +222,10 @@ func (c *PuppeteerClientImpl) Fetch(
 			return content, nil
 		}()
 		if err != nil {
+			if opError := (&net.OpError{}); errors.As(err, &opError) { //nolint:exhaustruct
+				logger.Error("Unrecoverable Puppeteer error: %v", err)
+				return "", err
+			}
 			errorsCount++
 			logger.Info("Recovered Puppeteer error (%d): %v", errorsCount, err)
 			progressLogger.LogAndSavePuppeteer()

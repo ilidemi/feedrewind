@@ -1,10 +1,10 @@
 package middleware
 
 import (
+	"errors"
 	"feedrewind/oops"
 	"feedrewind/templates"
 	"feedrewind/util"
-	"fmt"
 	"net/http"
 )
 
@@ -14,7 +14,9 @@ func Recoverer(next http.Handler) http.Handler {
 			if rvr := recover(); rvr != nil && rvr != http.ErrAbortHandler {
 				err, ok := rvr.(error)
 				if !ok {
-					err = fmt.Errorf("%v", rvr)
+					err = oops.Newf("%v", rvr)
+				} else if oopsErr := (*oops.Error)(nil); !errors.As(err, &oopsErr) {
+					err = oops.Wrap(err)
 				}
 
 				status := http.StatusInternalServerError
