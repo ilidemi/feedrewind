@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"context"
 	"errors"
 	"feedrewind/config"
 	"feedrewind/oops"
@@ -117,10 +118,14 @@ func (c *PuppeteerClientImpl) Fetch(
 			go hijackRouter.Run()
 			defer func() {
 				if err := hijackRouter.Stop(); err != nil {
-					var opError *net.OpError
-					if !(errors.As(err, &opError) && errors.As(retErr, &opError)) {
-						logger.Warn("Hijack stop error: %v", err)
+					if errors.Is(err, context.DeadlineExceeded) {
+						return
 					}
+					var opError1, opError2 *net.OpError
+					if errors.As(err, &opError1) && errors.As(retErr, &opError2) {
+						return
+					}
+					logger.Warn("Hijack stop error: %v", err)
 				}
 			}()
 			scrollablePage := newScrollablePage(page)
@@ -315,7 +320,7 @@ func (p *scrollablePage) waitAndScroll(
 		)
 		var evalOptions rod.EvalOptions
 		evalOptions.JS = "() => window.scrollBy(0, document.body.scrollHeight)"
-		_, err := p.Page.Evaluate(&evalOptions)
+		_, err := p.Page.Timeout(3 * time.Second).Evaluate(&evalOptions)
 		if err != nil {
 			return oops.Wrap(err)
 		}
