@@ -74,7 +74,7 @@ type titleRelativeXPath struct {
 
 func getExtractionsByStarCount(
 	pageLinks []*xpathLink, feedGenerator FeedGenerator, feedEntryLinks *FeedEntryLinks,
-	feedEntryCurisTitlesMap *CanonicalUriMap[*LinkTitle], curiEqCfg *CanonicalEqualityConfig,
+	feedEntryCurisTitlesMap *CanonicalUriMap[MaybeLinkTitle], curiEqCfg *CanonicalEqualityConfig,
 	almostMatchThreshold int, logger Logger,
 ) []starCountExtractions {
 	var extractionsByStarCount []starCountExtractions
@@ -158,7 +158,7 @@ func init() {
 }
 
 func groupLinksByMaskedXPath(
-	pageLinks []*xpathLink, feedEntryCurisTitlesMap *CanonicalUriMap[*LinkTitle],
+	pageLinks []*xpathLink, feedEntryCurisTitlesMap *CanonicalUriMap[MaybeLinkTitle],
 	curiEqCfg *CanonicalEqualityConfig, starCount int,
 ) []maskedXPathLinksGrouping {
 	xpathToSegments := func(xpath string) []xpathSegment {
@@ -477,7 +477,7 @@ func useClassXPath(starCount int) bool {
 }
 
 func extractTitleRelativeXPaths(
-	linksMatchingFeed []*xpathLink, feedEntryCurisTitlesMap *CanonicalUriMap[*LinkTitle],
+	linksMatchingFeed []*xpathLink, feedEntryCurisTitlesMap *CanonicalUriMap[MaybeLinkTitle],
 	curiEqCfg *CanonicalEqualityConfig, distanceToTopParent int, relativeXPathToTopParent string,
 	logLines *[]string,
 ) []titleRelativeXPath {
@@ -682,7 +682,7 @@ func init() {
 
 func getMaskedXPathExtraction(
 	linksGrouping maskedXPathLinksGrouping, starCount int, feedGenerator FeedGenerator,
-	feedEntryLinks *FeedEntryLinks, feedEntryCurisTitlesMap *CanonicalUriMap[*LinkTitle],
+	feedEntryLinks *FeedEntryLinks, feedEntryCurisTitlesMap *CanonicalUriMap[MaybeLinkTitle],
 	curiEqCfg *CanonicalEqualityConfig, almostMatchThreshold int,
 ) maskedXPathExtraction {
 	links := linksGrouping.Links

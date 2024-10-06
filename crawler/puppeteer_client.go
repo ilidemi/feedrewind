@@ -16,7 +16,7 @@ type PuppeteerFindLoadMoreButton func(*rod.Page) (*rod.Element, error)
 
 type PuppeteerClient interface {
 	Fetch(
-		uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[*LinkTitle], crawlCtx *CrawlContext,
+		uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle], crawlCtx *CrawlContext,
 		logger Logger, findLoadMoreButton PuppeteerFindLoadMoreButton, extendedScrollTime bool,
 	) (string, error)
 }
@@ -53,7 +53,7 @@ const defaultMaxScrollTime = 30 * time.Second
 const extendedMaxScrollTime = 90 * time.Second
 
 func (c *PuppeteerClientImpl) Fetch(
-	uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[*LinkTitle], crawlCtx *CrawlContext,
+	uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle], crawlCtx *CrawlContext,
 	logger Logger, findLoadMoreButton PuppeteerFindLoadMoreButton, extendedScrollTime bool,
 ) (string, error) {
 	progressLogger := crawlCtx.ProgressLogger

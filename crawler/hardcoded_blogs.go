@@ -582,7 +582,7 @@ func generatePgFeed(
 		"What Languages Fix",
 	}
 	var linkBuckets [][]FeedEntryLink
-	feedEntryCurisTitlesMap := NewCanonicalUriMap[*LinkTitle](curiEqCfg)
+	feedEntryCurisTitlesMap := NewCanonicalUriMap[MaybeLinkTitle](curiEqCfg)
 	for i, entryUrl := range fakeFeedEntryUrls {
 		entryLink, _ := ToCanonicalLink(entryUrl, logger, page.FetchUri)
 		linkBuckets = append(linkBuckets, []FeedEntryLink{

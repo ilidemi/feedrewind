@@ -16,6 +16,8 @@ type LinkTitle struct {
 	AltValuesBySource map[linkTitleSource]string
 }
 
+type MaybeLinkTitle *LinkTitle
+
 type linkTitleSource string // relative xpath or a constant
 
 const (
