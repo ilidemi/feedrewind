@@ -479,8 +479,9 @@ func guidedCrawlHistorical(
 	if feedGenerator == FeedGeneratorSubstack {
 		archiveLink, _ := ToCanonicalLink("/archive", logger, startPage.FetchUri)
 		if isNewAndAllowed(archiveLink, &seenCurisSet, crawlCtx.RobotsClient, logger) {
-			logger.Info("Adding missing substack archives: %s", archiveLink.Url)
+			seenCurisSet.add(archiveLink.Curi)
 			archivesQueue = append(archivesQueue, archiveLink)
+			logger.Info("Added missing substack archives: %s", archiveLink.Url)
 		}
 	}
 
