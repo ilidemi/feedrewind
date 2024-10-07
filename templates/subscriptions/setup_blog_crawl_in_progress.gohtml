@@ -73,10 +73,12 @@
                   rects.push(createProgressRect(`w-5 h-5 rounded-sm ${bgClass}`));
                   filledCount++;
                 } else if (token === "p") {
-                  rects.push(createProgressRect("w-[4.25rem] h-5 rounded-sm border border-primary-400 loader-41"));
+                  rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-400 loader-41"));
                   needsTrailingLoader = false;
                 } else if (token === "pP") {
-                  rects.push(createProgressRect(`w-[4.25rem] h-5 rounded-sm ${bgClass}`));
+                  rects.push(createProgressRect(`w-5 h-5 rounded-sm ${bgClass}`));
+                  rects.push(createProgressRect(`w-5 h-5 rounded-sm ${bgClass}`));
+                  rects.push(createProgressRect(`w-5 h-5 rounded-sm ${bgClass}`));
                   filledCount++;
                 } else if (token.startsWith("hF")) {
                   rects.push(createProgressRect(`w-5 h-5 rounded-sm ${bgClass}`));
@@ -87,7 +89,7 @@
                       needsTrailingLoader = false;
                       let remainingCount = parseInt(remainingCountMatch[0]);
                       if (remainingCount >= 1) {
-                        rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-600 loader-41-dark"))
+                        rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-600 loader-41-dark"));
                       }
                       for (let i = 1; i < remainingCount; i++) {
                         rects.push(createProgressRect("w-5 h-5 rounded-sm border border-primary-600"));
@@ -136,7 +138,7 @@
             if (websocketStartTimestamp) {
               websocketWaitDuration = websocketStartTimestamp - pageLoadTimestamp;
             } else {
-              websocketWaitDuration = Infinity
+              websocketWaitDuration = Infinity;
             }
             let body = new URLSearchParams();
             body.append("client_token", crawlClientToken);
