@@ -10,6 +10,7 @@ import (
 	"feedrewind/oops"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
 	neturl "net/url"
 	"os"
@@ -21,11 +22,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/launcher/flags"
 	"github.com/spf13/cobra"
 )
 
 var Crawl *cobra.Command
 var CrawlRobots *cobra.Command
+var PuppeteerScaleTest *cobra.Command
 
 func init() {
 	Crawl = &cobra.Command{
@@ -44,9 +49,16 @@ func init() {
 			return crawlRobots()
 		},
 	}
+
+	PuppeteerScaleTest = &cobra.Command{
+		Use: "puppeteer-scale-test",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return puppeteerScaleTest()
+		},
+	}
 }
 
-var defaultStartLinkId = 224
+var defaultStartLinkId = 1357
 var threads int
 var allowJS bool
 
@@ -70,6 +82,7 @@ func crawl(args []string) error {
 	debug.SetMemoryLimit(8 * 1024 * 1024 * 1024)
 
 	if len(args) == 0 {
+		crawler.SetMaxBrowserCount(1)
 		runSingle(defaultStartLinkId)
 		return nil
 	}
@@ -436,5 +449,140 @@ func crawlRobots() error {
 	}
 	wg.Wait()
 	fmt.Println("Done")
+	return nil
+}
+
+func puppeteerScaleTest() error {
+	puppeteerIds := []int64{
+		1007, 1025, 1031, 1034, 1044, 1046, 1047, 1069, 1071, 1098, 1107, 1112, 1115, 1124, 1126, 1132, 1154,
+		1156, 1157, 1158, 1167, 1170, 1175, 1177, 1180, 1187, 1195, 1196, 1204, 1242, 1267, 1268, 1270,
+		1276, 1277, 1283, 1293, 1301, 1309, 1314, 1318, 1323, 1328, 1338, 1342, 1343, 1346, 1350, 1352, 1357,
+		1363, 1365, 1372, 1379, 1398, 1405, 1437, 1444, 1455, 1457, 1490, 1497, 1499, 1504, 1520, 1522, 1529,
+		1531, 1534, 1535, 1536, 1543, 1545, 1548, 1552, 1555, 1562, 1564, 1572, 1576, 1578, 1582, 1589, 1594,
+		1596, 1615, 1616, 1618, 1623, 1624, 1625, 1633, 1634, 1636, 1640, 1645, 1672, 1675, 1682, 1691, 1693,
+		1701, 1704, 1705, 1717, 1723, 1724, 1725, 1741, 1742, 1745, 1752, 1764, 1765, 772, 774, 776, 787, 789,
+		797, 801, 813, 826, 844, 845, 847, 855, 873, 878, 881, 884, 896, 917, 919, 941, 946, 948, 952, 986,
+		989, 995,
+	}
+	successfulIds := []int64{
+		1007, 1025, 1031, 1034, 1044, 1046, 1069, 1071, 1098, 1107, 1124, 1126, 1154,
+		1156, 1157, 1158, 1167, 1170, 1175, 1177, 1180, 1187, 1195, 1242, 1268, 1270,
+		1276, 1277, 1283, 1293, 1301, 1309, 1314, 1318, 1323, 1342, 1343, 1346, 1350, 1352,
+		1365, 1372, 1379, 1398, 1405, 1437, 1444, 1455, 1457, 1490, 1499, 1504, 1520, 1522, 1529,
+		1535, 1536, 1543, 1545, 1548, 1552, 1555, 1562, 1564, 1572, 1576, 1578, 1582, 1589, 1594,
+		1596, 1615, 1616, 1618, 1623, 1624, 1625, 1633, 1634, 1636, 1672, 1675, 1691, 1693,
+		1701, 1704, 1705, 1717, 1723, 1724, 1725, 1741, 1742, 1745, 1764, 1765, 772, 774, 776, 787, 789,
+		797, 813, 826, 844, 847, 855, 873, 878, 881, 884, 896, 917, 919, 941, 946, 948, 952,
+		989, 995,
+	}
+	successfulIdsSet := map[int64]bool{}
+	for _, id := range successfulIds {
+		successfulIdsSet[id] = true
+	}
+	email := ""
+	password := ""
+	if email == "" || password == "" {
+		return errors.New("missing credentials")
+	}
+
+	const windowCount = 4
+	rand.Shuffle(len(puppeteerIds), func(i, j int) {
+		puppeteerIds[i], puppeteerIds[j] = puppeteerIds[j], puppeteerIds[i]
+	})
+	idCount := len(puppeteerIds)
+	idCh := make(chan int64, idCount)
+	for _, id := range puppeteerIds[:idCount] {
+		idCh <- id
+	}
+	close(idCh)
+	var wg sync.WaitGroup
+	wg.Add(windowCount)
+	pool := connectDB()
+	successes := 0
+	var falsePositives []int64
+	var falseNegatives []int64
+	var outputLock sync.Mutex
+	for windowIdx := range windowCount {
+		go func() {
+			defer wg.Done()
+
+			width := 548
+			height := 230
+			left := (windowIdx % 7) * width
+			var top int
+			if windowIdx/7 < 9 {
+				top = (windowIdx / 7) * height
+			} else {
+				top = 2160 + ((windowIdx/7 - 9) * height)
+			}
+			l := launcher.New().Append(flags.Arguments, "--force-device-scale-factor").Headless(false)
+			browserUrl := l.MustLaunch()
+			browser := rod.New().ControlURL(browserUrl).MustConnect()
+			page := browser.MustPage("https://feedrewind.com/login")
+			page.MustSetWindow(left, top, width, height)
+			page.MustElement("#email").MustInput(email)
+			page.MustElement("#current-password").MustInput(password)
+			page.MustElementR("input", "Sign in").MustClick()
+			page.MustWaitLoad()
+			isFirst := true
+
+			for startLinkId := range idCh {
+				row := pool.QueryRow(`
+					select coalesce(url, rss_url) from start_links where id = $1
+				`, startLinkId)
+				var startUrl string
+				err := row.Scan(&startUrl)
+				if err != nil {
+					panic(err)
+				}
+				if !isFirst {
+					page = browser.MustPage("https://feedrewind.com/subscriptions/add")
+				} else {
+					page.MustNavigate("https://feedrewind.com/subscriptions/add")
+				}
+				isFirst = false
+				page.MustElement("#start_url").MustInput(startUrl)
+				page.MustElementR("button", "Go").MustClick()
+				page.MustWaitLoad()
+				page.MustSetViewport(width, height, 0.33, false)
+				scrolled := false
+				for range time.Tick(time.Second) {
+					_, err := page.Timeout(time.Second).Element("#progress_count")
+					if err != nil {
+						break
+					}
+					if !scrolled {
+						page.Mouse.MustScroll(0, 120)
+						scrolled = true
+					}
+				}
+				page.MustWaitLoad()
+				_, err = page.Timeout(time.Second).Element("#select_posts")
+				crawlSucceeded := err == nil
+				outputLock.Lock()
+				if crawlSucceeded == successfulIdsSet[startLinkId] {
+					fmt.Printf("As expected: %d (%s)\n", startLinkId, startUrl)
+					successes++
+				} else if crawlSucceeded {
+					fmt.Printf("Previously failed, now succeeded: %d (%s)\n", startLinkId, startUrl)
+					falsePositives = append(falsePositives, startLinkId)
+				} else {
+					fmt.Printf("Previously succeeded, now failed: %d (%s)\n", startLinkId, startUrl)
+					falseNegatives = append(falseNegatives, startLinkId)
+				}
+				outputLock.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+	fmt.Println("Done")
+	fmt.Printf("Went as expected: %d/%d\n", successes, idCount)
+	if len(falsePositives) > 0 {
+		fmt.Printf("Previously failed, now succeeded: %v\n", falsePositives)
+	}
+	if len(falseNegatives) > 0 {
+		fmt.Printf("Previously succeeded, now failed: %v\n", falseNegatives)
+	}
+
 	return nil
 }
