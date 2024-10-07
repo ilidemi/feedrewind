@@ -1006,7 +1006,10 @@ func Subscriptions_Progress(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 
-		logger.Info().Msgf("Blog %d crawl in progress (epoch %d)", blogId, blogCrawlProgress.Epoch)
+		logger.Info().Msgf(
+			"Blog %d crawl in progress epoch: %d status: %s",
+			blogId, blogCrawlProgress.Epoch, blogCrawlProgress.Progress,
+		)
 		progressMap = map[string]any{
 			"epoch":  blogCrawlProgress.Epoch,
 			"status": blogCrawlProgress.Progress,
