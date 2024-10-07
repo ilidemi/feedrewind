@@ -17,11 +17,17 @@ import (
 
 type PuppeteerFindLoadMoreButton func(*rod.Page) (*rod.Element, error)
 
+type PuppeteerPage struct {
+	Content               string
+	MaybeTopScreenshot    []byte
+	MaybeBottomScreenshot []byte
+}
+
 type PuppeteerClient interface {
 	Fetch(
 		uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle], crawlCtx *CrawlContext,
 		logger Logger, findLoadMoreButton PuppeteerFindLoadMoreButton, extendedScrollTime bool,
-	) (string, error)
+	) (*PuppeteerPage, error)
 }
 
 type PuppeteerClientImpl struct {
@@ -51,7 +57,7 @@ const extendedMaxScrollTime = 90 * time.Second
 func (c *PuppeteerClientImpl) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle], crawlCtx *CrawlContext,
 	logger Logger, findLoadMoreButton PuppeteerFindLoadMoreButton, extendedScrollTime bool,
-) (content string, retErr error) {
+) (result *PuppeteerPage, retErr error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Puppeteer start: %s", uri)
 	progressLogger.LogAndSavePuppeteerStart()
@@ -77,12 +83,12 @@ func (c *PuppeteerClientImpl) Fetch(
 	defer launcher.Kill()
 	browserUrl, err := launcher.Launch()
 	if err != nil {
-		return "", oops.Wrap(err)
+		return nil, oops.Wrap(err)
 	}
 	browser := rod.New().ControlURL(browserUrl)
 	err = browser.Connect()
 	if err != nil {
-		return "", oops.Wrap(err)
+		return nil, oops.Wrap(err)
 	}
 	logger.Info("Connected to the browser")
 	maxScrollTime := defaultMaxScrollTime
@@ -94,11 +100,11 @@ func (c *PuppeteerClientImpl) Fetch(
 	errorsCount := 0
 	for {
 		var rawPage *rod.Page
-		content, err := func() (string, error) {
+		result, err := func() (*PuppeteerPage, error) {
 			var err error
 			rawPage, err = browser.Page(proto.TargetCreateTarget{}) //nolint:exhaustruct
 			if err != nil {
-				return "", oops.Wrap(err)
+				return nil, oops.Wrap(err)
 			}
 			page := rawPage.Timeout(maxInitialWaitTime + maxScrollTime + 10*time.Second)
 
@@ -107,13 +113,13 @@ func (c *PuppeteerClientImpl) Fetch(
 				h.Response.Fail(proto.NetworkErrorReasonBlockedByClient)
 			})
 			if err != nil {
-				return "", oops.Wrap(err)
+				return nil, oops.Wrap(err)
 			}
 			err = hijackRouter.Add("*", proto.NetworkResourceTypeFont, func(h *rod.Hijack) {
 				h.Response.Fail(proto.NetworkErrorReasonBlockedByClient)
 			})
 			if err != nil {
-				return "", oops.Wrap(err)
+				return nil, oops.Wrap(err)
 			}
 			go hijackRouter.Run()
 			defer func() {
@@ -145,16 +151,16 @@ func (c *PuppeteerClientImpl) Fetch(
 			}
 			progressLogger.LogAndSavePuppeteer()
 			if err != nil {
-				return "", oops.Wrap(err)
+				return nil, oops.Wrap(err)
 			}
 
 			initialContent, err := page.HTML()
 			if err != nil {
-				return "", oops.Wrap(err)
+				return nil, oops.Wrap(err)
 			}
 			initialDocument, err := parseHtml(initialContent, logger)
 			if err != nil {
-				return "", oops.Wrap(err)
+				return nil, oops.Wrap(err)
 			}
 			initialLinks := extractLinks(
 				initialDocument, uri, nil, map[string]*Link{}, logger, includeXPathNone,
@@ -168,6 +174,7 @@ func (c *PuppeteerClientImpl) Fetch(
 			}
 
 			var content string
+			var maybeTopScreenshot, maybeBottomScreenshot []byte
 			if isScrollingAllowed {
 				if findLoadMoreButton != nil {
 					loadMoreButton, err := findLoadMoreButton(page)
@@ -180,7 +187,7 @@ func (c *PuppeteerClientImpl) Fetch(
 						err := scrollablePage.waitAndScroll(logger, loadMoreButton, maxScrollTime)
 						progressLogger.LogAndSavePuppeteer()
 						if err != nil {
-							return "", err
+							return nil, err
 						}
 						loadMoreButton, err = findLoadMoreButton(page)
 						if err != nil {
@@ -193,12 +200,37 @@ func (c *PuppeteerClientImpl) Fetch(
 					err := scrollablePage.waitAndScroll(logger, nil, maxScrollTime)
 					progressLogger.LogAndSavePuppeteer()
 					if err != nil {
-						return "", err
+						return nil, err
 					}
 				}
 				content, err = page.HTML()
 				if err != nil {
-					return "", oops.Wrap(err)
+					return nil, oops.Wrap(err)
+				}
+				//nolint:exhaustruct
+				maybeBottomScreenshot, err = page.Screenshot(false, &proto.PageCaptureScreenshot{
+					Format:           proto.PageCaptureScreenshotFormatPng,
+					OptimizeForSpeed: true,
+				})
+				if err != nil {
+					maybeBottomScreenshot = nil
+					logger.Warn("Couldn't capture bottom screenshot: %v", err)
+				}
+				var evalOptions rod.EvalOptions
+				evalOptions.JS = "() => window.scroll(0, 0)"
+				_, err := page.Timeout(3 * time.Second).Evaluate(&evalOptions)
+				if err != nil {
+					logger.Warn("Couldn't scroll up: %v", err)
+				} else {
+					//nolint:exhaustruct
+					maybeTopScreenshot, err = page.Screenshot(false, &proto.PageCaptureScreenshot{
+						Format:           proto.PageCaptureScreenshotFormatPng,
+						OptimizeForSpeed: true,
+					})
+					if err != nil {
+						maybeTopScreenshot = nil
+						logger.Warn("Couldn't capture top screenshot: %v", err)
+					}
 				}
 			} else {
 				logger.Info("Puppeteer didn't find any feed links on initial load")
@@ -214,23 +246,27 @@ func (c *PuppeteerClientImpl) Fetch(
 				time.Since(puppeteerStart), browserAcquiredTime.Sub(puppeteerStart), finishedRequests,
 			)
 
-			return content, nil
+			return &PuppeteerPage{
+				Content:               content,
+				MaybeTopScreenshot:    maybeTopScreenshot,
+				MaybeBottomScreenshot: maybeBottomScreenshot,
+			}, nil
 		}()
 		if err != nil {
 			if opError := (&net.OpError{}); errors.As(err, &opError) { //nolint:exhaustruct
 				logger.Error("Unrecoverable Puppeteer error: %v", err)
-				return "", err
+				return nil, err
 			}
 			errorsCount++
 			logger.Info("Recovered Puppeteer error (%d): %v", errorsCount, err)
 			progressLogger.LogAndSavePuppeteer()
 			if errorsCount >= 3 {
-				return "", oops.Wrapf(err, "Puppeteer error")
+				return nil, oops.Wrapf(err, "Puppeteer error")
 			}
 			continue
 		}
 
-		return content, nil
+		return result, nil
 	}
 }
 
@@ -324,7 +360,7 @@ func (p *scrollablePage) waitAndScroll(
 		if err != nil {
 			return oops.Wrap(err)
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(time.Second)
 	}
 
 	return nil

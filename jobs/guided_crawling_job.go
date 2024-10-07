@@ -159,7 +159,27 @@ func GuidedCrawlingJob_Perform(
 	progressSaver := NewProgressSaver(blogId, blogFeedUrl, logger, pool)
 	progressLogger := crawler.NewProgressLogger(progressSaver)
 	crawlCtx := crawler.NewCrawlContext(httpClient, puppeteerClient, progressLogger)
-	zLogger := crawler.ZeroLogger{Logger: logger}
+	zLogger := crawler.ZeroLogger{
+		Logger: logger,
+		MaybeLogScreenshotFunc: func(url, source string, data []byte) {
+			_, err := pool.Exec(`
+				insert into page_screenshots (url, source, data) values ($1, $2, $3)
+			`, url, source, data)
+			if err != nil {
+				logger.Warn().Err(err).Msg("Couldn't save the page screenshot")
+			} else {
+				logger.Info().Msgf("Saved the page screenshot: %s %s (%d bytes)", url, source, len(data))
+
+				cleanupThreshold := time.Now().UTC().AddDate(0, 0, -7)
+				tag, err := pool.Exec(`delete from page_screenshots where created_at < $1`, cleanupThreshold)
+				if err != nil {
+					logger.Warn().Err(err).Msg("Couldn't delete old page screenshots")
+				} else if tag.RowsAffected() > 0 {
+					logger.Info().Msgf("Deleted %d old page screenshots", tag.RowsAffected())
+				}
+			}
+		},
+	}
 
 	guidedCrawlResult, err := crawler.GuidedCrawl(maybeStartPage, startFeed, &crawlCtx, &zLogger)
 	if ctxErr := ctx.Err(); ctxErr != nil {

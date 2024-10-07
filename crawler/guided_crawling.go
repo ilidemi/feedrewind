@@ -126,8 +126,10 @@ func GuidedCrawl(
 				Curi:     startPageFinalLink.Curi,
 				FetchUri: startPageFinalLink.Uri,
 			},
-			Content:  maybeStartPage.Content,
-			Document: startPageDocument,
+			Content:               maybeStartPage.Content,
+			Document:              startPageDocument,
+			MaybeTopScreenshot:    nil,
+			MaybeBottomScreenshot: nil,
 		}
 	} else {
 		logger.Info("Discovered start page is absent")
@@ -219,8 +221,7 @@ func GuidedCrawl(
 		var postprocessedResult *postprocessedResult
 		if parsedFeed.Generator != FeedGeneratorTumblr {
 			postprocessedResult, historicalError = guidedCrawlHistorical(
-				startPage, &parsedFeed.EntryLinks, feedEntryCurisTitlesMap, parsedFeed.Generator,
-				initialBlogLink, crawlCtx, &curiEqCfg, logger,
+				startPage, parsedFeed, feedEntryCurisTitlesMap, initialBlogLink, crawlCtx, &curiEqCfg, logger,
 			)
 		} else {
 			postprocessedResult, historicalError = getTumblrApiHistorical(
@@ -418,8 +419,7 @@ func init() {
 var ErrPatternNotDetected = errors.New("pattern not detected")
 
 func guidedCrawlHistorical(
-	startPage *htmlPage, feedEntryLinks *FeedEntryLinks,
-	feedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle], feedGenerator FeedGenerator,
+	startPage *htmlPage, parsedFeed *ParsedFeed, feedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle],
 	initialBlogLink *Link, crawlCtx *CrawlContext, curiEqCfg *CanonicalEqualityConfig, logger Logger,
 ) (*postprocessedResult, error) {
 	progressLogger := crawlCtx.ProgressLogger
@@ -476,8 +476,8 @@ func guidedCrawlHistorical(
 		}
 	}
 
-	if feedGenerator == FeedGeneratorSubstack {
-		archiveLink, _ := ToCanonicalLink("/archive", logger, startPage.FetchUri)
+	if parsedFeed.Generator == FeedGeneratorSubstack && parsedFeed.RootLink != nil {
+		archiveLink, _ := ToCanonicalLink("/archive", logger, parsedFeed.RootLink.Uri)
 		if isNewAndAllowed(archiveLink, &seenCurisSet, crawlCtx.RobotsClient, logger) {
 			seenCurisSet.add(archiveLink.Curi)
 			archivesQueue = append(archivesQueue, archiveLink)
@@ -493,9 +493,9 @@ func guidedCrawlHistorical(
 	guidedCtx := guidedCrawlContext{
 		SeenCurisSet:            seenCurisSet,
 		ArchivesCategoriesState: &archivesCategoriesState,
-		FeedEntryLinks:          feedEntryLinks,
+		FeedEntryLinks:          &parsedFeed.EntryLinks,
 		FeedEntryCurisTitlesMap: feedEntryCurisTitlesMap,
-		FeedGenerator:           feedGenerator,
+		FeedGenerator:           parsedFeed.Generator,
 		CuriEqCfg:               curiEqCfg,
 		AllowedHosts:            allowedHosts,
 		HardcodedError:          nil,
@@ -520,11 +520,11 @@ func guidedCrawlHistorical(
 		}
 	}
 
-	if feedEntryLinks.Length < 2 {
-		return nil, oops.Newf("Too few entries in feed: %d", feedEntryLinks.Length)
+	if parsedFeed.EntryLinks.Length < 2 {
+		return nil, oops.Newf("Too few entries in feed: %d", parsedFeed.EntryLinks.Length)
 	}
 
-	feedEntryLinksSlice := feedEntryLinks.ToSlice()
+	feedEntryLinksSlice := parsedFeed.EntryLinks.ToSlice()
 	entry1Page, err := crawlHtmlPage(&feedEntryLinksSlice[0].Link, crawlCtx, logger)
 	progressLogger.SaveStatus()
 	if err != nil {
@@ -598,7 +598,7 @@ func guidedCrawlHistorical(
 		}
 	}
 
-	if feedGenerator == FeedGeneratorMedium {
+	if parsedFeed.Generator == FeedGeneratorMedium {
 		logger.Info("Skipping phase 3 because Medium")
 		if resultOk {
 			return result, nil
@@ -646,7 +646,7 @@ func guidedCrawlHistorical(
 		}
 	}
 	areAnyFeedEntriesTopLevel := slices.ContainsFunc(
-		feedEntryLinks.ToSlice(), func(entryLink *FeedEntryLink) bool {
+		parsedFeed.EntryLinks.ToSlice(), func(entryLink *FeedEntryLink) bool {
 			return strings.Count(entryLink.Curi.TrimmedPath, "/") <= 1
 		},
 	)
@@ -971,6 +971,14 @@ func tryExtractHistorical(
 		guidedCtx, logger,
 	)
 	results = append(results, archivesResults...)
+	if len(archivesResults) == 0 {
+		if page.MaybeTopScreenshot != nil {
+			logger.Screenshot(page.FetchUri.String(), "top", page.MaybeTopScreenshot)
+		}
+		if page.MaybeBottomScreenshot != nil {
+			logger.Screenshot(page.FetchUri.String(), "bottom", page.MaybeBottomScreenshot)
+		}
+	}
 
 	if archivesCategoriesResult, ok := tryExtractArchivesCategories(
 		page, pageCurisSet, extractionsByStarCount, guidedCtx, logger,

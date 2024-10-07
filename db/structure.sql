@@ -619,6 +619,40 @@ CREATE TABLE public.ignored_suggestion_feeds (
 
 
 --
+-- Name: page_screenshots; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.page_screenshots (
+    id integer NOT NULL,
+    url text NOT NULL,
+    source text NOT NULL,
+    data bytea NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
+);
+
+
+--
+-- Name: page_screenshots_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.page_screenshots_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: page_screenshots_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.page_screenshots_id_seq OWNED BY public.page_screenshots.id;
+
+
+--
 -- Name: patron_credits; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -961,6 +995,7 @@ CREATE TABLE public.subscriptions (
     id bigint NOT NULL,
     blog_id bigint NOT NULL,
     name character varying NOT NULL,
+    status public.subscription_status NOT NULL,
     is_paused boolean NOT NULL,
     is_added_past_midnight boolean,
     discarded_at timestamp without time zone,
@@ -973,7 +1008,6 @@ CREATE TABLE public.subscriptions (
     final_item_publish_status public.post_publish_status,
     schedule_version integer NOT NULL,
     anon_product_user_id uuid,
-    status public.subscription_status NOT NULL,
     CONSTRAINT subscriptions_refers_to_user CHECK ((NOT ((user_id IS NULL) AND (anon_product_user_id IS NULL))))
 );
 
@@ -986,6 +1020,7 @@ CREATE VIEW public.subscriptions_with_discarded AS
  SELECT subscriptions.id,
     subscriptions.blog_id,
     subscriptions.name,
+    subscriptions.status,
     subscriptions.is_paused,
     subscriptions.is_added_past_midnight,
     subscriptions.discarded_at,
@@ -997,8 +1032,7 @@ CREATE VIEW public.subscriptions_with_discarded AS
     subscriptions.initial_item_publish_status,
     subscriptions.final_item_publish_status,
     subscriptions.schedule_version,
-    subscriptions.anon_product_user_id,
-    subscriptions.status
+    subscriptions.anon_product_user_id
    FROM public.subscriptions
   WITH CASCADED CHECK OPTION;
 
@@ -1011,6 +1045,7 @@ CREATE VIEW public.subscriptions_without_discarded AS
  SELECT subscriptions.id,
     subscriptions.blog_id,
     subscriptions.name,
+    subscriptions.status,
     subscriptions.is_paused,
     subscriptions.is_added_past_midnight,
     subscriptions.discarded_at,
@@ -1022,8 +1057,7 @@ CREATE VIEW public.subscriptions_without_discarded AS
     subscriptions.initial_item_publish_status,
     subscriptions.final_item_publish_status,
     subscriptions.schedule_version,
-    subscriptions.anon_product_user_id,
-    subscriptions.status
+    subscriptions.anon_product_user_id
    FROM public.subscriptions
   WHERE (subscriptions.discarded_at IS NULL)
   WITH CASCADED CHECK OPTION;
@@ -1238,6 +1272,13 @@ ALTER TABLE ONLY public.delayed_jobs ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
+-- Name: page_screenshots id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.page_screenshots ALTER COLUMN id SET DEFAULT nextval('public.page_screenshots_id_seq'::regclass);
+
+
+--
 -- Name: product_events id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1413,6 +1454,14 @@ ALTER TABLE ONLY public.feed_waitlist_emails
 
 ALTER TABLE ONLY public.ignored_suggestion_feeds
     ADD CONSTRAINT ignored_suggestion_feeds_pkey PRIMARY KEY (feed_url);
+
+
+--
+-- Name: page_screenshots page_screenshots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.page_screenshots
+    ADD CONSTRAINT page_screenshots_pkey PRIMARY KEY (id);
 
 
 --
@@ -1815,6 +1864,13 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.feed_waitlist_emails FOR 
 --
 
 CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.ignored_suggestion_feeds FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
+
+
+--
+-- Name: page_screenshots bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.page_screenshots FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
 
 
 --
@@ -2455,4 +2511,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20240705185918'),
 ('20240705190748'),
 ('20241002143639'),
-('20241002163413');
+('20241002163413'),
+('20241007122317');

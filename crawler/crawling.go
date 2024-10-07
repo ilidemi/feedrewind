@@ -66,8 +66,10 @@ type feedPage struct {
 
 type htmlPage struct {
 	pageBase
-	Content  string
-	Document *html.Node
+	Content               string
+	Document              *html.Node
+	MaybeTopScreenshot    []byte
+	MaybeBottomScreenshot []byte
 }
 
 type page interface {
@@ -224,9 +226,11 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 					return nil, err
 				}
 				page = &htmlPage{
-					pageBase: pageBase,
-					Content:  body,
-					Document: document,
+					pageBase:              pageBase,
+					Content:               body,
+					Document:              document,
+					MaybeTopScreenshot:    nil,
+					MaybeBottomScreenshot: nil,
 				}
 			default:
 				page = (*nonHtmlPage)(&pageBase)
@@ -401,7 +405,7 @@ func crawlWithPuppeteerIfMatch(
 		return page, nil
 	}
 
-	content, err := crawlCtx.MaybePuppeteerClient.Fetch(
+	puppeteerPage, err := crawlCtx.MaybePuppeteerClient.Fetch(
 		page.FetchUri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton, extendedScrollTime,
 	)
 	if err != nil {
@@ -415,7 +419,7 @@ func crawlWithPuppeteerIfMatch(
 		logger.Info("Puppeteer page saved - canonical uri already seen")
 	}
 
-	document, err := parseHtml(content, logger)
+	document, err := parseHtml(puppeteerPage.Content, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -424,7 +428,9 @@ func crawlWithPuppeteerIfMatch(
 			Curi:     page.Curi,
 			FetchUri: page.FetchUri,
 		},
-		Content:  content,
-		Document: document,
+		Content:               puppeteerPage.Content,
+		Document:              document,
+		MaybeTopScreenshot:    puppeteerPage.MaybeTopScreenshot,
+		MaybeBottomScreenshot: puppeteerPage.MaybeBottomScreenshot,
 	}, nil
 }

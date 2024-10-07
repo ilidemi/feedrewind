@@ -91,22 +91,22 @@ func (c *CachingPuppeteerClient) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap crawler.CanonicalUriMap[crawler.MaybeLinkTitle],
 	crawlCtx *crawler.CrawlContext, logger crawler.Logger,
 	findLoadMoreButton crawler.PuppeteerFindLoadMoreButton, extendedScrollTime bool,
-) (string, error) {
-	content, err := c.Impl.Fetch(
+) (*crawler.PuppeteerPage, error) {
+	page, err := c.Impl.Fetch(
 		uri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton, extendedScrollTime,
 	)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	_, err = c.Conn.Exec(`
 		insert into mock_puppeteer_pages (start_link_id, fetch_url, body) values ($1, $2, $3)
-	`, c.StartLinkId, uri.String(), []byte(content))
+	`, c.StartLinkId, uri.String(), []byte(page.Content))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return content, nil
+	return page, nil
 }
 
 type MockPuppeteerClient struct {
@@ -127,7 +127,7 @@ func (c *MockPuppeteerClient) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap crawler.CanonicalUriMap[crawler.MaybeLinkTitle],
 	crawlCtx *crawler.CrawlContext, logger crawler.Logger,
 	findLoadMoreButton crawler.PuppeteerFindLoadMoreButton, extendedScrollTime bool,
-) (string, error) {
+) (*crawler.PuppeteerPage, error) {
 	fetchUrl := uri.String()
 	row := c.Conn.QueryRow(`
 		select body from mock_puppeteer_pages
@@ -141,8 +141,12 @@ func (c *MockPuppeteerClient) Fetch(
 			uri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton, extendedScrollTime,
 		)
 	} else if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(body), nil
+	return &crawler.PuppeteerPage{
+		Content:               string(body),
+		MaybeTopScreenshot:    nil,
+		MaybeBottomScreenshot: nil,
+	}, nil
 }
