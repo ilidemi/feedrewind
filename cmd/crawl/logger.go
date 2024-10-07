@@ -26,3 +26,10 @@ func (l *FileLogger) Error(format string, args ...any) {
 	line := fmt.Sprintf("ERROR: %s", msg)
 	fmt.Fprintf(l.File, "%s %s\n", time.Now().Format(time.RFC3339), line)
 }
+
+func (l *FileLogger) Screenshot(url string, source string, data []byte) {
+	fmt.Fprintf(
+		l.File, "%s Skipped screenshot: %s %s (%d bytes)\n",
+		time.Now().Format(time.RFC3339), url, source, len(data),
+	)
+}

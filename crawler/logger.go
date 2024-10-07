@@ -11,10 +11,12 @@ type Logger interface {
 	Info(format string, args ...any)
 	Warn(format string, args ...any)
 	Error(format string, args ...any)
+	Screenshot(url string, source string, data []byte)
 }
 
 type ZeroLogger struct {
-	Logger log.Logger
+	Logger                 log.Logger
+	MaybeLogScreenshotFunc func(url string, source string, data []byte)
 }
 
 func (l *ZeroLogger) Info(format string, args ...any) {
@@ -27,6 +29,14 @@ func (l *ZeroLogger) Warn(format string, args ...any) {
 
 func (l *ZeroLogger) Error(format string, args ...any) {
 	l.Logger.Error().Msgf(format, args...)
+}
+
+func (l *ZeroLogger) Screenshot(url string, source string, data []byte) {
+	if l.MaybeLogScreenshotFunc != nil {
+		l.MaybeLogScreenshotFunc(url, source, data)
+	} else {
+		l.Logger.Info().Msgf("Skipped screenshot: %s %s (%d bytes)", url, source, len(data))
+	}
 }
 
 type DummyLogger struct {
@@ -71,6 +81,10 @@ func (d *DummyLogger) log(level logLevel, format string, args ...any) {
 		Format: format,
 		Args:   args,
 	})
+}
+
+func (d *DummyLogger) Screenshot(url string, source string, data []byte) {
+	d.log(logLevelInfo, "Skipped screenshot: %s %s (%d bytes)", url, source, len(data))
 }
 
 func (d *DummyLogger) Replay(logger log.Logger) {
