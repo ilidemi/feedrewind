@@ -716,8 +716,8 @@ func removeQuery(curi CanonicalUri) CanonicalUri {
 }
 
 type RobotsClient struct {
-	Group                 *robotstxt.Group
-	BackupGroup           *robotstxt.Group
+	MaybeGroup            *robotstxt.Group
+	MaybeBackupGroup      *robotstxt.Group
 	FeedRewindBlockLogged bool
 	LastRequestTimestamp  time.Time
 }
@@ -749,16 +749,19 @@ func NewRobotsClient(rootUri *url.URL, httpClient HttpClient, logger Logger) *Ro
 	}
 
 	return &RobotsClient{
-		Group:                 group,
-		BackupGroup:           backupGroup,
+		MaybeGroup:            group,
+		MaybeBackupGroup:      backupGroup,
 		LastRequestTimestamp:  time.Time{}, //nolint:exhaustruct
 		FeedRewindBlockLogged: false,
 	}
 }
 
 func (c *RobotsClient) Test(uri *url.URL, logger Logger) bool {
-	result := c.Group.Test(uri.Path)
-	if !c.FeedRewindBlockLogged && !result && c.BackupGroup.Test(uri.Path) {
+	if c.MaybeGroup == nil {
+		return true
+	}
+	result := c.MaybeGroup.Test(uri.Path)
+	if !c.FeedRewindBlockLogged && !result && c.MaybeBackupGroup.Test(uri.Path) {
 		logger.Warn("FeedRewindBot blocked: %s", uri.String())
 		c.FeedRewindBlockLogged = true
 	}
@@ -770,8 +773,8 @@ func (c *RobotsClient) Throttle() {
 	if !c.LastRequestTimestamp.IsZero() {
 		timeDelta := now.Sub(c.LastRequestTimestamp)
 		crawlDelay := time.Second
-		if c.Group != nil && c.Group.CrawlDelay > time.Second {
-			crawlDelay = c.Group.CrawlDelay
+		if c.MaybeGroup != nil && c.MaybeGroup.CrawlDelay > time.Second {
+			crawlDelay = c.MaybeGroup.CrawlDelay
 		}
 		if timeDelta < crawlDelay {
 			time.Sleep(crawlDelay - timeDelta)
