@@ -387,6 +387,7 @@ func crawlWithPuppeteerIfMatch(
 
 		logger.Info("Spotted Medium page, rerunning with puppeteer")
 		puppeteerMatch = true
+		extendedScrollTime = true
 	case strings.HasSuffix(page.Curi.TrimmedPath, "/archive") && feedGenerator == FeedGeneratorSubstack:
 		logger.Info("Spotted Substack archives, rerunning with puppeteer")
 		puppeteerMatch = true
