@@ -291,10 +291,13 @@ func GuidedCrawl(
 	}
 
 	if historicalResult != nil {
-		historicalResult.Links = fetchMissingTitles(
+		historicalResult.Links, err = fetchMissingTitles(
 			historicalMaybeTitledLinks, &parsedFeed.EntryLinks, &feedEntryCurisTitlesMap,
 			parsedFeed.Generator, &curiEqCfg, crawlCtx, logger,
 		)
+		if err != nil {
+			return nil, err
+		}
 		titleSources := countLinkTitleSources(historicalResult.Links)
 		historicalResult.Extra = append(historicalResult.Extra, fmt.Sprintf("title_xpaths: %s", titleSources))
 		historicalCuris := ToCanonicalUris(historicalMaybeTitledLinks)
@@ -1593,7 +1596,7 @@ func fetchMissingTitles(
 	links []*maybeTitledLink, feedEntryLinks *FeedEntryLinks,
 	feedEntryCurisTitlesMap *CanonicalUriMap[MaybeLinkTitle], feedGenerator FeedGenerator,
 	curiEqCfg *CanonicalEqualityConfig, crawlCtx *CrawlContext, logger Logger,
-) []*titledLink {
+) ([]*titledLink, error) {
 	progressLogger := crawlCtx.ProgressLogger
 	startTime := time.Now()
 	presentTitlesCount := 0
@@ -1614,7 +1617,7 @@ func fetchMissingTitles(
 				Title: *link.MaybeTitle,
 			}
 		}
-		return titledLinks
+		return titledLinks, nil
 	}
 
 	logger.Info("Fetch missing titles start: %d", missingTitlesCount)
@@ -1654,7 +1657,7 @@ func fetchMissingTitles(
 					Title: *link.MaybeTitle,
 				}
 			}
-			return titledLinks
+			return titledLinks, nil
 		}
 	} else {
 		linksWithFeedTitles = links
@@ -1676,7 +1679,9 @@ func fetchMissingTitles(
 		} else {
 			// Always making a request may produce some duplicate requests, but hopefully not too many
 			page, err := crawlHtmlPage(&link.Link, crawlCtx, logger)
-			if err != nil {
+			if errors.Is(err, ErrCrawlCanceled) {
+				return nil, err
+			} else if err != nil {
 				logger.Info("Couldn't fetch link title, going with url: %s (%v)", link.Link.Url, err)
 				title = NewLinkTitle(link.Link.Url, LinkTitleSourceUrl, nil)
 			} else {
@@ -1705,7 +1710,7 @@ func fetchMissingTitles(
 	if len(pageTitles) == 0 {
 		logger.Info("Page titles are empty, skipped the prefix/suffix discovery")
 		logger.Info("Fetch missing titles finish")
-		return titledLinks
+		return titledLinks, nil
 	}
 
 	// Find out if page titles have a common prefix/suffix that needs to be removed
@@ -1831,7 +1836,7 @@ func fetchMissingTitles(
 	}
 
 	logger.Info("Fetch missing titles finish")
-	return titledLinks
+	return titledLinks, nil
 }
 
 func countLinkTitles(links []*maybeTitledLink) int {

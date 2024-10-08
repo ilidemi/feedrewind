@@ -36,6 +36,8 @@ type HttpClient interface {
 	GetRetryDelay(attemptsMade int) float64
 }
 
+var ErrCrawlCanceled = errors.New("crawl canceled")
+
 type CancellationFunc func() error
 
 type HttpClientImpl struct {

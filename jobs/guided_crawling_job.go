@@ -139,7 +139,7 @@ func GuidedCrawlingJob_Perform(
 		var one int
 		err = row.Scan(&one)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return err
+			return crawler.ErrCrawlCanceled
 		} else if err != nil {
 			logger.Warn().Err(err).Msg("Couldn't check if the job was deleted")
 			return nil
@@ -147,7 +147,7 @@ func GuidedCrawlingJob_Perform(
 		row = pool.QueryRow(`select 1 from blogs where id = $1`, blogId)
 		err = row.Scan(&one)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return err
+			return crawler.ErrCrawlCanceled
 		} else if err != nil {
 			logger.Warn().Err(err).Msg("Couldn't check if the blog was deleted")
 			return nil
@@ -184,6 +184,9 @@ func GuidedCrawlingJob_Perform(
 	guidedCrawlResult, err := crawler.GuidedCrawl(maybeStartPage, startFeed, &crawlCtx, &zLogger)
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return ctxErr
+	}
+	if errors.Is(err, crawler.ErrCrawlCanceled) {
+		return err
 	}
 	if err != nil {
 		logger.Info().Err(err).Msg("Guided crawl failed")
