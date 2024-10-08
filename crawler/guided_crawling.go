@@ -758,9 +758,9 @@ func NewRobotsClient(rootUri *url.URL, httpClient HttpClient, logger Logger) *Ro
 	group := robotsData.FindGroup("FeedRewindBot")
 	backupGroup := robotsData.FindGroup("ACompletelyDifferentBot")
 	if group.CrawlDelay > 10*time.Second {
-		logger.Warn("Long crawl delay: %s", group.CrawlDelay.String())
+		logger.Warn("Long crawl delay: %s (%s)", group.CrawlDelay.String(), robotsUri.String())
 	} else {
-		logger.Info("Crawl delay: %s", group.CrawlDelay.String())
+		logger.Info("Crawl delay: %s (%s)", group.CrawlDelay.String(), robotsUri.String())
 	}
 
 	return &RobotsClient{
