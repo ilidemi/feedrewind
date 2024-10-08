@@ -42,18 +42,22 @@ func (s sortState) String() string {
 	return sb.String()
 }
 
-func historicalArchivesSortAdd(
-	page *htmlPage, feedGenerator FeedGenerator, maybeSortState *sortState, logger Logger,
-) (*sortState, bool) {
-	logger.Info("Archives sort add start")
+type dateXPathSource struct {
+	XPath      string
+	Date       date
+	DateSource dateSourceKind
+}
 
-	type DateXPathSource struct {
-		XPath      string
-		Date       date
-		DateSource dateSourceKind
-	}
-	var pageDatesXPathsSources []DateXPathSource
+type sortablePage struct {
+	Url                string
+	Title              string
+	DatesXPathsSources []dateXPathSource
+}
 
+func historicalArchivesToSortablePage(
+	page *htmlPage, feedGenerator FeedGenerator, logger Logger,
+) sortablePage {
+	var datesXPathsSources []dateXPathSource
 	var traverse func(element *html.Node, xpathSegments []string)
 	traverse = func(element *html.Node, xpathSegments []string) {
 		tagCounts := make(map[string]int)
@@ -71,7 +75,7 @@ func historicalArchivesSortAdd(
 			if tag == "meta" && findAttr(child, "property") == "article:published_time" {
 				if content := findAttr(child, "content"); content != "" {
 					if metaDate := tryExtractTextDate(content, false); metaDate != nil {
-						pageDatesXPathsSources = append(pageDatesXPathsSources, DateXPathSource{
+						datesXPathsSources = append(datesXPathsSources, dateXPathSource{
 							XPath:      strings.Join(childXPathSegments, ""),
 							Date:       *metaDate,
 							DateSource: dateSourceKindMeta,
@@ -81,7 +85,7 @@ func historicalArchivesSortAdd(
 			}
 
 			if dateSource := tryExtractElementDate(child, false); dateSource != nil {
-				pageDatesXPathsSources = append(pageDatesXPathsSources, DateXPathSource{
+				datesXPathsSources = append(datesXPathsSources, dateXPathSource{
 					XPath:      strings.Join(childXPathSegments, ""),
 					Date:       dateSource.Date,
 					DateSource: dateSource.SourceKind,
@@ -94,17 +98,30 @@ func historicalArchivesSortAdd(
 
 	traverse(page.Document, nil)
 
-	pageTitle := getPageTitle(page, feedGenerator, logger)
+	pageTitle := strings.Clone(getPageTitle(page, feedGenerator, logger))
+
+	// The resulting memory is not referencing the html
+	return sortablePage{
+		Url:                page.FetchUri.String(),
+		Title:              pageTitle,
+		DatesXPathsSources: datesXPathsSources,
+	}
+}
+
+func historicalArchivesSortAdd(
+	page sortablePage, feedGenerator FeedGenerator, maybeSortState *sortState, logger Logger,
+) (*sortState, bool) {
+	logger.Info("Archives sort add start")
 
 	var newSortState sortState
 	if maybeSortState != nil {
 		pageDatesByXPathSource := make(map[xpathDateSource]date)
-		for _, xds := range pageDatesXPathsSources {
+		for _, xds := range page.DatesXPathsSources {
 			xs := xpathDateSource{XPath: xds.XPath, DateSource: xds.DateSource}
 			pageDatesByXPathSource[xs] = xds.Date
 		}
 		pageTitles := slices.Clone(maybeSortState.PageTitles)
-		pageTitles = append(pageTitles, pageTitle)
+		pageTitles = append(pageTitles, page.Title)
 		newSortState = sortState{
 			DatesByXPathSource: make(map[xpathDateSource]*[]date),
 			PageTitles:         pageTitles,
@@ -118,28 +135,28 @@ func historicalArchivesSortAdd(
 		}
 	} else {
 		datesByXPathSource := make(map[xpathDateSource]*[]date)
-		for _, xds := range pageDatesXPathsSources {
+		for _, xds := range page.DatesXPathsSources {
 			xs := xpathDateSource{XPath: xds.XPath, DateSource: xds.DateSource}
 			dates := []date{xds.Date}
 			datesByXPathSource[xs] = &dates
 		}
 		newSortState = sortState{
 			DatesByXPathSource: datesByXPathSource,
-			PageTitles:         []string{pageTitle},
+			PageTitles:         []string{page.Title},
 		}
 	}
 
 	keys := util.Keys(newSortState.DatesByXPathSource)
-	logger.Info("Sort state after %s: %v (%d total)", page.FetchUri, keys, len(newSortState.PageTitles))
+	logger.Info("Sort state after %s: %v (%d total)", page.Url, keys, len(newSortState.PageTitles))
 
 	if len(newSortState.DatesByXPathSource) == 0 {
 		if maybeSortState != nil {
-			logger.Info("Pages don't have a common date path after %s:", page.FetchUri)
+			logger.Info("Pages don't have a common date path after %s:", page.Url)
 			for xs, dates := range maybeSortState.DatesByXPathSource {
 				logger.Info("%s -> %v", xs, *dates)
 			}
 		} else {
-			logger.Info("Page doesn't have a date at %s", page.FetchUri)
+			logger.Info("Page doesn't have a date at %s", page.Url)
 		}
 		return nil, false
 	}
