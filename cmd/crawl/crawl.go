@@ -31,6 +31,7 @@ import (
 var Crawl *cobra.Command
 var CrawlRobots *cobra.Command
 var PuppeteerScaleTest *cobra.Command
+var HN1000ScaleTest *cobra.Command
 
 func init() {
 	Crawl = &cobra.Command{
@@ -54,6 +55,13 @@ func init() {
 		Use: "puppeteer-scale-test",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return puppeteerScaleTest()
+		},
+	}
+
+	HN1000ScaleTest = &cobra.Command{
+		Use: "hn1000-scale-test",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return hn1000ScaleTest()
 		},
 	}
 }
@@ -475,45 +483,123 @@ func puppeteerScaleTest() error {
 		797, 813, 826, 844, 847, 855, 873, 878, 881, 884, 896, 917, 919, 941, 946, 948, 952,
 		989, 995,
 	}
+	pool := connectDB()
+	return runScaleTest(puppeteerIds, successfulIds, 4, pool)
+}
+
+func hn1000ScaleTest() error {
+	successfulIds := []int64{
+		764, 765, 766, 767, 770, 771, 772, 773, 774, 775, 776, 777, 779, 780, 781, 782, 783, 786, 787, 788,
+		789, 791, 792, 793, 797, 799, 802, 803, 806, 807, 809, 810, 811, 812, 813, 814, 815, 817, 818, 819,
+		820, 821, 822, 823, 824, 826, 828, 829, 830, 831, 832, 834, 839, 840, 841, 842, 844, 846, 847, 848,
+		849, 850, 851, 852, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869,
+		870, 872, 873, 874, 875, 876, 877, 878, 881, 882, 883, 884, 885, 888, 889, 890, 892, 893, 894, 895,
+		896, 897, 898, 899, 900, 901, 903, 904, 905, 906, 908, 909, 910, 911, 913, 914, 915, 916, 917, 918,
+		919, 920, 921, 923, 924, 925, 927, 929, 930, 931, 932, 933, 934, 935, 936, 937, 938, 939, 940, 941,
+		945, 946, 947, 948, 949, 950, 951, 952, 953, 954, 955, 958, 960, 961, 962, 963, 965, 966, 968, 969,
+		970, 971, 972, 973, 974, 976, 977, 978, 979, 980, 981, 982, 983, 985, 987, 988, 989, 990, 991, 992,
+		993, 995, 996, 997, 999, 1002, 1003, 1004, 1005, 1006, 1007, 1009, 1010, 1012, 1013, 1014, 1015, 1016,
+		1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033,
+		1034, 1035, 1036, 1037, 1038, 1039, 1040, 1041, 1044, 1045, 1046, 1048, 1049, 1050, 1052, 1053, 1054,
+		1056, 1058, 1060, 1061, 1062, 1063, 1064, 1066, 1067, 1068, 1069, 1070, 1071, 1073, 1076, 1077, 1078,
+		1079, 1081, 1082, 1085, 1086, 1087, 1088, 1089, 1090, 1092, 1093, 1095, 1096, 1097, 1098, 1099, 1100,
+		1101, 1102, 1103, 1105, 1106, 1107, 1108, 1109, 1111, 1114, 1115, 1116, 1117, 1119, 1121, 1122, 1124,
+		1125, 1126, 1127, 1128, 1129, 1130, 1131, 1133, 1134, 1135, 1136, 1137, 1138, 1139, 1140, 1141, 1142,
+		1143, 1145, 1146, 1148, 1149, 1150, 1151, 1152, 1153, 1154, 1156, 1157, 1158, 1161, 1162, 1164, 1166,
+		1167, 1168, 1169, 1170, 1171, 1172, 1173, 1174, 1175, 1176, 1177, 1178, 1179, 1180, 1181, 1183, 1184,
+		1185, 1186, 1187, 1188, 1189, 1190, 1191, 1192, 1193, 1194, 1195, 1197, 1198, 1199, 1200, 1201, 1202,
+		1203, 1205, 1208, 1210, 1211, 1212, 1213, 1214, 1215, 1216, 1218, 1219, 1221, 1222, 1223, 1224, 1225,
+		1226, 1227, 1229, 1230, 1232, 1233, 1234, 1236, 1237, 1238, 1239, 1240, 1242, 1243, 1246, 1247, 1248,
+		1249, 1250, 1251, 1252, 1253, 1254, 1255, 1256, 1258, 1260, 1261, 1262, 1263, 1264, 1265, 1266,
+		1268, 1269, 1270, 1271, 1272, 1273, 1274, 1275, 1276, 1277, 1278, 1280, 1281, 1282, 1283, 1284, 1285,
+		1286, 1287, 1288, 1289, 1290, 1291, 1292, 1293, 1294, 1295, 1296, 1297, 1298, 1299, 1300, 1301, 1302,
+		1303, 1304, 1305, 1306, 1307, 1308, 1309, 1310, 1311, 1312, 1313, 1314, 1315, 1316, 1317, 1318, 1319,
+		1320, 1321, 1322, 1323, 1324, 1325, 1326, 1330, 1331, 1332, 1334, 1335, 1336, 1337, 1339, 1340, 1341,
+		1342, 1343, 1344, 1345, 1346, 1347, 1348, 1349, 1350, 1351, 1352, 1354, 1355, 1356, 1358, 1360, 1362,
+		1364, 1365, 1366, 1368, 1369, 1370, 1372, 1374, 1375, 1376, 1377, 1378, 1379, 1380, 1381, 1382, 1383,
+		1384, 1386, 1387, 1388, 1389, 1390, 1391, 1393, 1394, 1395, 1398, 1399, 1400, 1401, 1402, 1403, 1404,
+		1405, 1406, 1407, 1408, 1409, 1410, 1411, 1413, 1414, 1416, 1417, 1418, 1419, 1421, 1422, 1423, 1424,
+		1425, 1426, 1427, 1428, 1431, 1432, 1433, 1435, 1436, 1437, 1438, 1440, 1441, 1442, 1443, 1444, 1445,
+		1446, 1447, 1448, 1449, 1450, 1451, 1452, 1455, 1456, 1457, 1458, 1460, 1462, 1463, 1464, 1465, 1466,
+		1468, 1469, 1470, 1471, 1473, 1474, 1475, 1476, 1477, 1478, 1479, 1480, 1481, 1483, 1484, 1486, 1488,
+		1489, 1490, 1491, 1492, 1493, 1495, 1496, 1498, 1499, 1500, 1502, 1503, 1504, 1505, 1506, 1508, 1509,
+		1511, 1512, 1513, 1515, 1516, 1519, 1520, 1522, 1523, 1524, 1525, 1527, 1528, 1529, 1530, 1535, 1536,
+		1537, 1538, 1539, 1541, 1542, 1543, 1545, 1546, 1547, 1548, 1549, 1550, 1551, 1552, 1553, 1554, 1555,
+		1556, 1557, 1558, 1559, 1560, 1561, 1562, 1564, 1565, 1566, 1567, 1568, 1569, 1570, 1571, 1572, 1574,
+		1575, 1576, 1577, 1578, 1579, 1580, 1581, 1582, 1584, 1585, 1586, 1587, 1588, 1589, 1590, 1591, 1592,
+		1593, 1594, 1595, 1596, 1598, 1599, 1600, 1601, 1602, 1603, 1604, 1605, 1607, 1608, 1609, 1610, 1611,
+		1612, 1613, 1614, 1615, 1616, 1617, 1618, 1619, 1620, 1621, 1622, 1623, 1624, 1625, 1626, 1627, 1628,
+		1629, 1630, 1631, 1632, 1633, 1634, 1635, 1636, 1637, 1638, 1639, 1641, 1642, 1643, 1644, 1645, 1646,
+		1647, 1648, 1649, 1650, 1652, 1653, 1654, 1655, 1656, 1657, 1659, 1660, 1661, 1663, 1664, 1665, 1666,
+		1667, 1668, 1669, 1670, 1671, 1672, 1673, 1674, 1675, 1677, 1678, 1680, 1681, 1683, 1684, 1686, 1687,
+		1688, 1689, 1690, 1691, 1692, 1693, 1694, 1696, 1697, 1698, 1699, 1700, 1701, 1702, 1703, 1704, 1705,
+		1706, 1707, 1708, 1709, 1710, 1711, 1712, 1713, 1714, 1715, 1716, 1717, 1718, 1719, 1720, 1721, 1722,
+		1723, 1724, 1725, 1726, 1727, 1729, 1730, 1731, 1732, 1733, 1734, 1735, 1736, 1737, 1738, 1740, 1741,
+		1742, 1744, 1745, 1746, 1748, 1749, 1750, 1751, 1753, 1754, 1755, 1756, 1757, 1758, 1759, 1761, 1762,
+		1763, 1764, 1765, 1766,
+	}
+
+	pool := connectDB()
+	var ids []int64
+	rows, err := pool.Query(`select id from start_links where source = 'hn1000'`)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var id int64
+		err := rows.Scan(&id)
+		if err != nil {
+			return err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	return runScaleTest(ids, successfulIds, 10, pool)
+}
+
+func runScaleTest(ids []int64, successfulIds []int64, windowCount int, pool *pgw.Pool) error {
+	email := ""
+	password := ""
+	if email == "" || password == "" {
+		return oops.New("missing credentials")
+	}
+
 	successfulIdsSet := map[int64]bool{}
 	for _, id := range successfulIds {
 		successfulIdsSet[id] = true
 	}
-	email := ""
-	password := ""
-	if email == "" || password == "" {
-		return errors.New("missing credentials")
-	}
-
-	const windowCount = 4
-	rand.Shuffle(len(puppeteerIds), func(i, j int) {
-		puppeteerIds[i], puppeteerIds[j] = puppeteerIds[j], puppeteerIds[i]
+	rand.Shuffle(len(ids), func(i, j int) {
+		ids[i], ids[j] = ids[j], ids[i]
 	})
-	idCount := len(puppeteerIds)
-	idCh := make(chan int64, idCount)
-	for _, id := range puppeteerIds[:idCount] {
+
+	idCh := make(chan int64, len(ids))
+	for _, id := range ids {
 		idCh <- id
 	}
 	close(idCh)
 	var wg sync.WaitGroup
 	wg.Add(windowCount)
-	pool := connectDB()
 	successes := 0
 	var falsePositives []int64
 	var falseNegatives []int64
 	var outputLock sync.Mutex
+	startTime := time.Now()
 	for windowIdx := range windowCount {
 		go func() {
 			defer wg.Done()
 
-			width := 548
-			height := 230
-			left := (windowIdx % 7) * width
+			windowsWide := 4
+			width := 3840 / windowsWide
+			height := 500
+			left := (windowIdx % windowsWide) * width
 			var top int
-			if windowIdx/7 < 9 {
-				top = (windowIdx / 7) * height
+			if windowIdx/7 < (2120 / height) {
+				top = (windowIdx / windowsWide) * height
 			} else {
-				top = 2160 + ((windowIdx/7 - 9) * height)
+				top = 2160 + ((windowIdx/windowsWide - (2120 / height)) * height)
 			}
 			l := launcher.New().Append(flags.Arguments, "--force-device-scale-factor").Headless(false)
 			browserUrl := l.MustLaunch()
@@ -524,7 +610,6 @@ func puppeteerScaleTest() error {
 			page.MustElement("#current-password").MustInput(password)
 			page.MustElementR("input", "Sign in").MustClick()
 			page.MustWaitLoad()
-			isFirst := true
 
 			for startLinkId := range idCh {
 				row := pool.QueryRow(`
@@ -535,12 +620,7 @@ func puppeteerScaleTest() error {
 				if err != nil {
 					panic(err)
 				}
-				if !isFirst {
-					page = browser.MustPage("https://feedrewind.com/subscriptions/add")
-				} else {
-					page.MustNavigate("https://feedrewind.com/subscriptions/add")
-				}
-				isFirst = false
+				page.MustNavigate("https://feedrewind.com/subscriptions/add")
 				page.MustElement("#start_url").MustInput(startUrl)
 				page.MustElementR("button", "Go").MustClick()
 				page.MustWaitLoad()
@@ -557,26 +637,35 @@ func puppeteerScaleTest() error {
 					}
 				}
 				page.MustWaitLoad()
-				_, err = page.Timeout(time.Second).Element("#select_posts")
+				_, err = page.Timeout(3 * time.Second).Element("#select_posts")
 				crawlSucceeded := err == nil
 				outputLock.Lock()
+				var status string
 				if crawlSucceeded == successfulIdsSet[startLinkId] {
-					fmt.Printf("As expected: %d (%s)\n", startLinkId, startUrl)
+					status = "As expected"
 					successes++
 				} else if crawlSucceeded {
-					fmt.Printf("Previously failed, now succeeded: %d (%s)\n", startLinkId, startUrl)
+					status = "Previously failed, now succeeded"
 					falsePositives = append(falsePositives, startLinkId)
 				} else {
-					fmt.Printf("Previously succeeded, now failed: %d (%s)\n", startLinkId, startUrl)
+					status = "Previously succeeded, now failed"
 					falseNegatives = append(falseNegatives, startLinkId)
 				}
+				progressFrac := float64(successes+len(falsePositives)+len(falseNegatives)) / float64(len(ids))
+				progressPercent := progressFrac * 100
+				eta := time.Duration(float64(time.Since(startTime)) / progressFrac * (1 - progressFrac)).
+					Round(time.Second)
+				fmt.Printf(
+					"%s: %d (%s) (%.1f%%, eta %v)\n",
+					status, startLinkId, startUrl, progressPercent, eta,
+				)
 				outputLock.Unlock()
 			}
 		}()
 	}
 	wg.Wait()
 	fmt.Println("Done")
-	fmt.Printf("Went as expected: %d/%d\n", successes, idCount)
+	fmt.Printf("Went as expected: %d/%d\n", successes, len(ids))
 	if len(falsePositives) > 0 {
 		fmt.Printf("Previously failed, now succeeded: %v\n", falsePositives)
 	}

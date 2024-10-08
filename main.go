@@ -57,6 +57,7 @@ func main() {
 	rootCmd.AddCommand(crawl.Crawl)
 	rootCmd.AddCommand(crawl.CrawlRobots)
 	rootCmd.AddCommand(crawl.PuppeteerScaleTest)
+	rootCmd.AddCommand(crawl.HN1000ScaleTest)
 	rootCmd.AddCommand(&cobra.Command{
 		Use: "log-stalled-jobs",
 		Run: func(_ *cobra.Command, _ []string) {
