@@ -63,6 +63,18 @@ type HistoricalBlogPostCategory struct {
 	PostLinks []Link
 }
 
+func (c HistoricalBlogPostCategory) DeepCopy() HistoricalBlogPostCategory {
+	postLinks := make([]Link, len(c.PostLinks))
+	for i, link := range c.PostLinks {
+		postLinks[i] = link.DeepCopy()
+	}
+	return HistoricalBlogPostCategory{
+		Name:      strings.Clone(c.Name),
+		IsTop:     c.IsTop,
+		PostLinks: postLinks,
+	}
+}
+
 func categoryCountsString(categories []HistoricalBlogPostCategory) string {
 	var sb strings.Builder
 	for i, category := range categories {
