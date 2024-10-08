@@ -666,9 +666,16 @@ func tryExtractPage2(
 	entryCuris := ToCanonicalUris(entryLinks)
 	knownEntryCurisSet := NewCanonicalUriSet(entryCuris, curiEqCfg)
 
+	// Ensure partialPagedResult doesn't hold any references to html bytes apart from page 1
+	linkToNextPage := linksToPage3[0].DeepCopy()
+	entryLinks = MaybeTitledLinksDeepCopy(entryLinks)
+	knownEntryCurisSet = knownEntryCurisSet.DeepCopy()
+	postCategoriesMap = postCategoriesMap.DeepCopy()
+	postTagsMap = postTagsMap.DeepCopy()
+
 	return &partialPagedResult{
 		MainLnk:        page2State.MainLnk,
-		LinkToNextPage: *linksToPage3[0],
+		LinkToNextPage: linkToNextPage,
 		NextPageNumber: 3,
 		Lnks:           entryLinks,
 		PagedState: nextPageState{
@@ -774,18 +781,23 @@ func tryExtractNextPage(
 	}
 
 	pagePostCategories, pagePostTags := getPostCategoriesTags(pageXPathLinks, maskedXPath)
-	postCategoriesMap := pagedState.PostCategories.merge(pagePostCategories)
-	postTagsMap := pagedState.PostTags.merge(pagePostTags)
+	postCategoriesMap := pagedState.PostCategories.merge(pagePostCategories.DeepCopy())
+	postTagsMap := pagedState.PostTags.merge(pagePostTags.DeepCopy())
 
-	nextEntryLinks := append(slices.Clone(entryLinks), dropHtml(pageXPathLinks)...)
+	newEntryLinks := MaybeTitledLinksDeepCopy(dropHtml(pageXPathLinks))
+	nextEntryLinks := append(slices.Clone(entryLinks), newEntryLinks...)
 	nextKnownEntryCurisSet := knownEntryCurisSet.clone()
-	nextKnownEntryCurisSet.addMany(pageEntryCuris)
+	nextKnownEntryCurisSet.addMany(CanonicalUrisDeepCopy(pageEntryCuris))
 	pageSizes := append(slices.Clone(pagedState.PageSizes), len(pageXPathLinks))
 
 	if curisToNextPageSet.Length == 1 {
+		// Ensure partialPagedResult doesn't hold any references to html bytes apart from page 1
+		linkToNextPage := linksToNextPage[0].DeepCopy()
+		// nextEntryLinks, nextKnownEntryCurisSet, postCategoriesMap and postTagsMap are already clean
+
 		return &partialPagedResult{
 			MainLnk:        pagedState.MainLnk,
-			LinkToNextPage: *linksToNextPage[0],
+			LinkToNextPage: linkToNextPage,
 			NextPageNumber: nextPageNumber,
 			Lnks:           nextEntryLinks,
 			PagedState: nextPageState{
@@ -1210,6 +1222,17 @@ func (c postCategoriesMap) flatten() []HistoricalBlogPostCategory {
 		return len(b.PostLinks) - len(a.PostLinks) // descending
 	})
 	return categories
+}
+
+func (c postCategoriesMap) DeepCopy() postCategoriesMap {
+	categories := map[string]*HistoricalBlogPostCategory{}
+	for name, category := range c.CategoriesByLowercaseName {
+		categoryVal := category.DeepCopy()
+		categories[strings.Clone(name)] = &categoryVal
+	}
+	return postCategoriesMap{
+		CategoriesByLowercaseName: categories,
+	}
 }
 
 func getPostCategoriesTags(
