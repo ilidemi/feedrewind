@@ -551,25 +551,28 @@ func guidedCrawlHistorical(
 		return nil, oops.Wrap(err)
 	}
 
-	entry1Links := extractLinks(
-		entry1Page.Document, entry1Page.FetchUri, allowedHosts, crawlCtx.Redirects, logger, includeXPathNone,
-	)
-	entry2Links := extractLinks(
-		entry2Page.Document, entry2Page.FetchUri, allowedHosts, crawlCtx.Redirects, logger, includeXPathNone,
-	)
-	entry1Curis := ToCanonicalUris(entry1Links)
-	entry1CurisSet := NewCanonicalUriSet(entry1Curis, curiEqCfg)
-
 	var twoEntriesLinks []*Link
-	entry2CurisSet := NewCanonicalUriSet(nil, curiEqCfg)
-	for _, entry2Link := range entry2Links {
-		if entry2CurisSet.Contains(entry2Link.Curi) {
-			continue
-		}
+	{
+		entry1Links := extractLinks(
+			entry1Page.Document, entry1Page.FetchUri, allowedHosts, crawlCtx.Redirects, logger, includeXPathNone,
+		)
+		entry2Links := extractLinks(
+			entry2Page.Document, entry2Page.FetchUri, allowedHosts, crawlCtx.Redirects, logger, includeXPathNone,
+		)
+		entry1Curis := ToCanonicalUris(entry1Links)
+		entry1CurisSet := NewCanonicalUriSet(entry1Curis, curiEqCfg)
 
-		entry2CurisSet.add(entry2Link.Curi)
-		if entry1CurisSet.Contains(entry2Link.Curi) {
-			twoEntriesLinks = append(twoEntriesLinks, &entry2Link.Link)
+		entry2CurisSet := NewCanonicalUriSet(nil, curiEqCfg)
+		for _, entry2Link := range entry2Links {
+			if entry2CurisSet.Contains(entry2Link.Curi) {
+				continue
+			}
+
+			entry2CurisSet.add(entry2Link.Curi)
+			if entry1CurisSet.Contains(entry2Link.Curi) {
+				link := entry2Link.Link.DeepCopy()
+				twoEntriesLinks = append(twoEntriesLinks, &link)
+			}
 		}
 	}
 
@@ -1202,12 +1205,12 @@ func postprocessArchivesShuffledResults(
 
 	var bestResult *postprocessedResult
 	bestResultOk := false
-	pagesByCanonicalUrl := make(map[string]*htmlPage)
+	sortablePagesByCanonicalUrl := make(map[string]sortablePage)
 	for _, tentativeResult := range sortedTentativeResults {
 		logger.Info("Postprocessing archives shuffled result of %d", tentativeResult.SpeculativeCount())
 		sortedLinks, ok := postprocessSortLinksMaybeDates(
-			tentativeResult.Links, tentativeResult.MaybeDates, pagesByCanonicalUrl, guidedCtx, crawlCtx,
-			logger,
+			tentativeResult.Links, tentativeResult.MaybeDates, sortablePagesByCanonicalUrl, guidedCtx,
+			crawlCtx, logger,
 		)
 		if !ok {
 			logger.Info("Postprocess archives shuffled results finish (iteration failed)")
@@ -1299,7 +1302,7 @@ func postprocessArchviesCategoriesResult(
 ) (*postprocessedResult, bool) {
 	logger.Info("Postprocess archives categories results start")
 	sortedLinks, ok := postprocessSortLinksMaybeDates(
-		archivesCategoriesResult.Links, archivesCategoriesResult.MaybeDates, make(map[string]*htmlPage),
+		archivesCategoriesResult.Links, archivesCategoriesResult.MaybeDates, make(map[string]sortablePage),
 		guidedCtx, crawlCtx, logger,
 	)
 	if !ok {
@@ -1476,7 +1479,7 @@ type sortedLinks struct {
 }
 
 func postprocessSortLinksMaybeDates(
-	links []*maybeTitledLink, maybeDates []*date, pagesByCanonicalUrl map[string]*htmlPage,
+	links []*maybeTitledLink, maybeDates []*date, sortablePagesByCanonicalUrl map[string]sortablePage,
 	guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext, logger Logger,
 ) (*sortedLinks, bool) {
 	feedGenerator := guidedCtx.FeedGenerator
@@ -1505,7 +1508,7 @@ func postprocessSortLinksMaybeDates(
 	var crawledLinks []*maybeTitledLink
 	var linksToCrawl []*maybeTitledLink
 	for _, link := range linksWithoutDates {
-		if pagesByCanonicalUrl[link.Curi.String()] != nil {
+		if _, ok := sortablePagesByCanonicalUrl[link.Curi.String()]; ok {
 			crawledLinks = append(crawledLinks, link)
 		} else {
 			linksToCrawl = append(linksToCrawl, link)
@@ -1514,7 +1517,7 @@ func postprocessSortLinksMaybeDates(
 
 	var sortState *sortState
 	for _, link := range crawledLinks {
-		page := pagesByCanonicalUrl[link.Curi.String()]
+		page := sortablePagesByCanonicalUrl[link.Curi.String()]
 		var ok bool
 		sortState, ok = historicalArchivesSortAdd(page, feedGenerator, sortState, logger)
 		if !ok {
@@ -1530,9 +1533,10 @@ func postprocessSortLinksMaybeDates(
 			logger.Info("Couldn't fetch link during result postprocess: %s (%v)", link.Url, err)
 			return nil, false
 		}
+		sortablePage := historicalArchivesToSortablePage(page, feedGenerator, logger)
 
 		var ok bool
-		sortState, ok = historicalArchivesSortAdd(page, feedGenerator, sortState, logger)
+		sortState, ok = historicalArchivesSortAdd(sortablePage, feedGenerator, sortState, logger)
 		if !ok {
 			progressLogger.LogAndSavePostprocessingResetCount()
 			logger.Info("Postprocess sort links, maybe dates failed during add")
@@ -1542,7 +1546,7 @@ func postprocessSortLinksMaybeDates(
 		fetchedCount := alreadyFetchedTitlesCount + len(crawledLinks) + linkIdx + 1
 		remainingCount := remainingTitlesCount + len(linksToCrawl) - linkIdx - 1
 		progressLogger.LogAndSavePostprocessingCounts(fetchedCount, remainingCount)
-		pagesByCanonicalUrl[page.Curi.String()] = page
+		sortablePagesByCanonicalUrl[page.Curi.String()] = sortablePage
 	}
 
 	resultLinks, dateSource, ok := historicalArchivesSortFinish(
@@ -1685,7 +1689,7 @@ func fetchMissingTitles(
 				logger.Info("Couldn't fetch link title, going with url: %s (%v)", link.Link.Url, err)
 				title = NewLinkTitle(link.Link.Url, LinkTitleSourceUrl, nil)
 			} else {
-				pageTitle := getPageTitle(page, feedGenerator, logger)
+				pageTitle := strings.Clone(getPageTitle(page, feedGenerator, logger))
 				pageTitles = append(pageTitles, pageTitle)
 				pageTitleLinks = append(pageTitleLinks, &link.Link)
 				title = NewLinkTitle(pageTitle, LinkTitleSourcePageTitle, nil)
