@@ -190,7 +190,10 @@ func GuidedCrawl(
 		})
 		entryLinkFromPopularHost := feedEntryLinksByHost[sortedFeedEntryHosts[0]][0]
 		entryPage, err := crawlPage(&entryLinkFromPopularHost, false, crawlCtx, logger)
-		crawlCtx.ProgressLogger.SaveStatus()
+		err2 := crawlCtx.ProgressLogger.SaveStatus()
+		if err2 != nil {
+			return nil, err2
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -361,7 +364,10 @@ func getFeedStartPage(
 	if parsedFeed.RootLink != nil {
 		startPageLink := parsedFeed.RootLink
 		startPage, err := crawlHtmlPage(startPageLink, crawlCtx, logger)
-		crawlCtx.ProgressLogger.SaveStatus()
+		err2 := crawlCtx.ProgressLogger.SaveStatus()
+		if err2 != nil {
+			return nil, nil, err2
+		}
 		if err != nil {
 			logger.Info("Couldn't fetch root link: %v", err)
 		} else {
@@ -381,7 +387,10 @@ func getFeedStartPage(
 		possibleStartPageLink, _ := ToCanonicalLink(possibleStartUri.String(), logger, nil)
 		logger.Info("Possible start link: %s", possibleStartPageLink.Url)
 		possibleStartPage, err := crawlHtmlPage(possibleStartPageLink, crawlCtx, logger)
-		crawlCtx.ProgressLogger.SaveStatus()
+		err2 := crawlCtx.ProgressLogger.SaveStatus()
+		if err2 != nil {
+			return nil, nil, err2
+		}
 		if err != nil {
 			logger.Info("Couldn't fetch: %v", err)
 			continue
@@ -516,10 +525,12 @@ func guidedCrawlHistorical(
 		HardcodedError:          nil,
 	}
 
-	result, resultOk := guidedCrawlFetchLoop(
+	result, err := guidedCrawlFetchLoop(
 		[]*guidedCrawlQueue{&archivesQueue, &mainPageQueue}, nil, 1, &guidedCtx, crawlCtx, logger,
 	)
-	if resultOk {
+	if errors.Is(err, ErrCrawlCanceled) {
+		return nil, err
+	} else if err == nil {
 		if len(result.Links) >= 11 {
 			logger.Info("Phase 1 succeeded")
 			return result, nil
@@ -531,7 +542,10 @@ func guidedCrawlHistorical(
 
 			// NOTE: count will be out of sync with the next progress rect but it will also show up on the
 			// admin dashboard
-			progressLogger.LogAndSaveFetchedCount(nil)
+			err := progressLogger.LogAndSaveFetchedCount(nil)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -541,12 +555,18 @@ func guidedCrawlHistorical(
 
 	feedEntryLinksSlice := parsedFeed.EntryLinks.ToSlice()
 	entry1Page, err := crawlHtmlPage(&feedEntryLinksSlice[0].Link, crawlCtx, logger)
-	progressLogger.SaveStatus()
+	err2 := progressLogger.SaveStatus()
+	if err2 != nil {
+		return nil, err2
+	}
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
 	entry2Page, err := crawlHtmlPage(&feedEntryLinksSlice[1].Link, crawlCtx, logger)
-	progressLogger.SaveStatus()
+	err2 = progressLogger.SaveStatus()
+	if err2 != nil {
+		return nil, err2
+	}
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
@@ -597,10 +617,13 @@ func guidedCrawlHistorical(
 		len(archivesQueue), len(mainPageQueue), len(twoEntriesOtherLinks),
 	)
 
-	result, resultOk = guidedCrawlFetchLoop(
+	result, err = guidedCrawlFetchLoop(
 		[]*guidedCrawlQueue{&archivesQueue, &mainPageQueue}, result, 2, &guidedCtx, crawlCtx, logger,
 	)
-	if resultOk {
+	phase2Ok := err == nil
+	if errors.Is(err, ErrCrawlCanceled) {
+		return nil, err
+	} else if phase2Ok {
 		if len(result.Links) >= 11 {
 			logger.Info("Phase 2 succeeded")
 			return result, nil
@@ -612,13 +635,16 @@ func guidedCrawlHistorical(
 
 			// NOTE: count will be out of sync with the next progress rect but it will also show up on the
 			// admin dashboard
-			progressLogger.LogAndSaveFetchedCount(nil)
+			err := progressLogger.LogAndSaveFetchedCount(nil)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	if parsedFeed.Generator == FeedGeneratorMedium {
 		logger.Info("Skipping phase 3 because Medium")
-		if resultOk {
+		if phase2Ok {
 			return result, nil
 		} else {
 			return nil, ErrPatternNotDetected
@@ -682,11 +708,13 @@ func guidedCrawlHistorical(
 		logger.Info("Phase 3 links from phase 1: %d", phase1OthersCount)
 	}
 
-	result, resultOk = guidedCrawlFetchLoop(
+	result, err = guidedCrawlFetchLoop(
 		[]*guidedCrawlQueue{&archivesQueue, &mainPageQueue, &othersQueue}, result, 3, &guidedCtx, crawlCtx,
 		logger,
 	)
-	if resultOk {
+	if errors.Is(err, ErrCrawlCanceled) {
+		return nil, err
+	} else if err == nil {
 		logger.Info("Phase 3 succeeded")
 		return result, nil
 	}
@@ -811,7 +839,7 @@ func isNewAndAllowed(
 func guidedCrawlFetchLoop(
 	queues []*guidedCrawlQueue, maybeInitialResult *postprocessedResult, phaseNumber int,
 	guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext, logger Logger,
-) (*postprocessedResult, bool) {
+) (*postprocessedResult, error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Guided crawl loop started (phase %d)", phaseNumber)
 
@@ -857,7 +885,10 @@ func guidedCrawlFetchLoop(
 
 			var err error
 			page, err = crawlHtmlPage(link, crawlCtx, logger)
-			progressLogger.SaveStatus()
+			err2 := progressLogger.SaveStatus()
+			if err2 != nil {
+				return nil, err2
+			}
 			if err != nil {
 				logger.Info("Couldn't fetch link: %v", err)
 				continue
@@ -881,7 +912,10 @@ func guidedCrawlFetchLoop(
 			continue
 		}
 		if puppeteerPage != page {
-			progressLogger.SaveStatus()
+			err := progressLogger.SaveStatus()
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		pageAllLinks := extractLinks(
@@ -925,7 +959,11 @@ func guidedCrawlFetchLoop(
 		}
 
 		if hadArchives && len(*archivesQueue) == 0 && len(sortedResults) > 0 {
-			if ppResult, ok := postprocessResults(&sortedResults, guidedCtx, crawlCtx, logger); ok {
+			ppResult, err := postprocessResults(&sortedResults, guidedCtx, crawlCtx, logger)
+			if errors.Is(err, ErrCrawlCanceled) {
+				return nil, err
+			}
+			if err == nil {
 				if len(ppResult.Links) >= 21 {
 					logger.Info(
 						"Processed/seen: archives %d/%d, main pages %d/%d",
@@ -937,7 +975,7 @@ func guidedCrawlFetchLoop(
 						"Guided crawl loop finished (phase %d) after archives with best result of %d links",
 						phaseNumber, len(ppResult.Links),
 					)
-					return ppResult, true
+					return ppResult, nil
 				} else {
 					logger.Info(
 						"Best result after archives only has %d links. Checking others just in case",
@@ -951,22 +989,24 @@ func guidedCrawlFetchLoop(
 		}
 	}
 
-	ppResult, ok := postprocessResults(&sortedResults, guidedCtx, crawlCtx, logger)
+	ppResult, err := postprocessResults(&sortedResults, guidedCtx, crawlCtx, logger)
 	logger.Info(
 		"Processed/seen: archives %d/%d, main pages %d/%d",
 		archivesProcessedCount, archivesSeenCount, mainPagesProcessedCount, mainPagesSeenCount,
 	)
 	logger.Info("Historical matches: %d", historicalMatchesCount)
-	if ok {
-		logger.Info(
-			"Guided crawl loop finished (phase %d) with best result of %d links",
-			phaseNumber, len(ppResult.Links),
-		)
-		return ppResult, true
+	if errors.Is(err, ErrCrawlCanceled) {
+		return nil, err
+	} else if err != nil {
+		logger.Info("Guided crawl loop finished (phase %d), no result", phaseNumber)
+		return nil, err
 	}
 
-	logger.Info("Guided crawl loop finished (phase %d), no result", phaseNumber)
-	return nil, false
+	logger.Info(
+		"Guided crawl loop finished (phase %d) with best result of %d links",
+		phaseNumber, len(ppResult.Links),
+	)
+	return ppResult, nil
 }
 
 type crawlHistoricalResult interface {
@@ -1056,10 +1096,12 @@ func speculativeCountEqual(result1, result2 crawlHistoricalResult) bool {
 		result1.speculativeCount() == result2.speculativeCount()
 }
 
+var errPostprocessingFailed = errors.New("postprocessing failed")
+
 func postprocessResults(
 	sortedResults *[]crawlHistoricalResult, guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext,
 	logger Logger,
-) (*postprocessedResult, bool) {
+) (*postprocessedResult, error) {
 	var sortedResultsLog []string
 	for _, result := range *sortedResults {
 		sortedResultsLog = append(sortedResultsLog, printResult(result))
@@ -1072,34 +1114,36 @@ func postprocessResults(
 		logger.Info("Postprocessing %v", printResult(result))
 
 		var ppResult *postprocessedResult
-		var ppOk bool
+		var ppErr error
 		switch res := result.(type) {
 		case *postprocessedResult:
 			if res.MaybePartialPagedResult == nil {
-				ppResult, ppOk = res, true
+				ppResult, ppErr = res, nil
 			} else {
-				ppResult, ppOk = postprocessPartialPagedResult(
+				ppResult, ppErr = postprocessPartialPagedResult(
 					res.MaybePartialPagedResult, guidedCtx, crawlCtx, logger,
 				)
 			}
 		case *archivesSortedResult:
-			ppResult, ppOk = postprocessArchivesSortedResult(res, guidedCtx, crawlCtx, logger)
+			ppResult, ppErr = postprocessArchivesSortedResult(res, guidedCtx, crawlCtx, logger)
 		case *archivesShuffledResults:
-			ppResult, ppOk = postprocessArchivesShuffledResults(res, guidedCtx, crawlCtx, logger)
+			ppResult, ppErr = postprocessArchivesShuffledResults(res, guidedCtx, crawlCtx, logger)
 		case *archivesMediumPinnedEntryResult:
-			ppResult, ppOk = postprocessArchivesMediumPinnedEntryResult(res, guidedCtx, crawlCtx, logger)
+			ppResult, ppErr = postprocessArchivesMediumPinnedEntryResult(res, guidedCtx, crawlCtx, logger)
 		case *archivesLongFeedResult:
-			ppResult, ppOk = postprocessArchivesLongFeedResult(res), true
+			ppResult, ppErr = postprocessArchivesLongFeedResult(res), nil
 		case *ArchivesCategoriesResult:
-			ppResult, ppOk = postprocessArchviesCategoriesResult(res, guidedCtx, crawlCtx, logger)
+			ppResult, ppErr = postprocessArchviesCategoriesResult(res, guidedCtx, crawlCtx, logger)
 		case *page1Result:
 			// If page 1 result looks the best, check just the page 2 in case it was a scam
-			ppResult, ppOk = postprocessPage1Result(res, guidedCtx, crawlCtx, logger)
+			ppResult, ppErr = postprocessPage1Result(res, guidedCtx, crawlCtx, logger)
 		default:
 			panic("Unknown result type")
 		}
 
-		if !ppOk {
+		if errors.Is(ppErr, ErrCrawlCanceled) {
+			return nil, ppErr
+		} else if ppErr != nil {
 			logger.Info("Postprocessing failed for %s, continuing", result.mainLink().Url)
 			continue
 		}
@@ -1110,18 +1154,20 @@ func postprocessResults(
 				speculativeCountEqual(ppResult, (*sortedResults)[0])) {
 
 			if ppResult.MaybePartialPagedResult != nil {
-				var ok bool
-				ppResult, ok = postprocessPartialPagedResult(
+				var err error
+				ppResult, err = postprocessPartialPagedResult(
 					ppResult.MaybePartialPagedResult, guidedCtx, crawlCtx, logger,
 				)
-				if !ok {
+				if errors.Is(err, ErrCrawlCanceled) {
+					return nil, err
+				} else if err != nil {
 					logger.Info("Postprocessing failed for %s, continuing", result.mainLink().Url)
 					continue
 				}
 			}
 
 			logger.Info("Postprocessing succeeded")
-			return ppResult, true
+			return ppResult, nil
 		}
 
 		ppNotMatchingFeed := ""
@@ -1133,7 +1179,7 @@ func postprocessResults(
 	}
 
 	logger.Info("Postprocessing failed")
-	return nil, false
+	return nil, errPostprocessingFailed
 }
 
 func printResult(result crawlHistoricalResult) string {
@@ -1144,15 +1190,21 @@ func printResult(result crawlHistoricalResult) string {
 func postprocessArchivesSortedResult(
 	archivesSortedResult *archivesSortedResult, guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext,
 	logger Logger,
-) (*postprocessedResult, bool) {
+) (*postprocessedResult, error) {
 	progressLogger := crawlCtx.ProgressLogger
 	if CanonicalUriEqual(archivesSortedResult.MainLnk.Curi, hardcodedBenKuhnArchives, guidedCtx.CuriEqCfg) {
 		logger.Info("Postprocess archives sorted result start")
 		logger.Info("Extra request for Ben Kuhn categories")
 		titleCount := countLinkTitles(archivesSortedResult.Links)
-		progressLogger.LogAndSaveFetchedCount(&titleCount)
+		err := progressLogger.LogAndSaveFetchedCount(&titleCount)
+		if err != nil {
+			return nil, err
+		}
 		page, err := crawlHtmlPage(hardcodedBenKuhn, crawlCtx, logger)
-		progressLogger.LogAndSavePostprocessing()
+		err2 := progressLogger.LogAndSavePostprocessing()
+		if err2 != nil {
+			return nil, err2
+		}
 		if err != nil {
 			logger.Info("Ben Kuhn categories fetch error: %v", err)
 			guidedCtx.HardcodedError = oops.Wrapf(err, "Ben Kuhn categories fetch error")
@@ -1172,7 +1224,7 @@ func postprocessArchivesSortedResult(
 					PostCategories:          postCategories,
 					Extra:                   archivesSortedResult.Extra,
 					MaybePartialPagedResult: nil,
-				}, true
+				}, nil
 			}
 		}
 	}
@@ -1185,13 +1237,13 @@ func postprocessArchivesSortedResult(
 		PostCategories:          archivesSortedResult.PostCategories,
 		Extra:                   archivesSortedResult.Extra,
 		MaybePartialPagedResult: nil,
-	}, true
+	}, nil
 }
 
 func postprocessArchivesShuffledResults(
 	archivesShuffledResults *archivesShuffledResults, guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext,
 	logger Logger,
-) (*postprocessedResult, bool) {
+) (*postprocessedResult, error) {
 	logger.Info("Postprocess archives shuffled results start")
 	sortedTentativeResults := slices.Clone(archivesShuffledResults.Results)
 	slices.SortFunc(sortedTentativeResults, func(a, b *archivesShuffledResult) int {
@@ -1204,17 +1256,19 @@ func postprocessArchivesShuffledResults(
 	logger.Info("Archives shuffled counts: %v", archivesShuffledCounts)
 
 	var bestResult *postprocessedResult
-	bestResultOk := false
+	bestResultErr := errPostprocessingFailed
 	sortablePagesByCanonicalUrl := make(map[string]sortablePage)
 	for _, tentativeResult := range sortedTentativeResults {
 		logger.Info("Postprocessing archives shuffled result of %d", tentativeResult.SpeculativeCount())
-		sortedLinks, ok := postprocessSortLinksMaybeDates(
+		sortedLinks, err := postprocessSortLinksMaybeDates(
 			tentativeResult.Links, tentativeResult.MaybeDates, sortablePagesByCanonicalUrl, guidedCtx,
 			crawlCtx, logger,
 		)
-		if !ok {
+		if errors.Is(err, ErrCrawlCanceled) {
+			return nil, err
+		} else if err != nil {
 			logger.Info("Postprocess archives shuffled results finish (iteration failed)")
-			return bestResult, bestResultOk
+			return bestResult, bestResultErr
 		}
 
 		extra := slices.Clone(tentativeResult.Extra)
@@ -1229,27 +1283,30 @@ func postprocessArchivesShuffledResults(
 			Extra:                   extra,
 			MaybePartialPagedResult: nil,
 		}
-		bestResultOk = true
+		bestResultErr = nil
 	}
 
 	logger.Info("Postprocess archives shuffled results finish")
-	return bestResult, bestResultOk
+	return bestResult, bestResultErr
 }
 
 func postprocessArchivesMediumPinnedEntryResult(
 	mediumResult *archivesMediumPinnedEntryResult, guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext,
 	logger Logger,
-) (*postprocessedResult, bool) {
+) (*postprocessedResult, error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Postprocess archives medium pinned entry result start")
 	pinnedEntryPage, err := crawlHtmlPage(&mediumResult.PinnedEntryLink.Link, crawlCtx, logger)
-	progressLogger.LogAndSavePostprocessing()
+	err2 := progressLogger.LogAndSavePostprocessing()
+	if err2 != nil {
+		return nil, err2
+	}
 	if err != nil {
 		logger.Info(
 			"Couldn't fetch first Medium link during result postprocess: %s (%v)",
 			mediumResult.PinnedEntryLink.Curi, err,
 		)
-		return nil, false
+		return nil, errPostprocessingFailed
 	}
 
 	allowedHosts := map[string]bool{pinnedEntryPage.FetchUri.Host: true}
@@ -1264,12 +1321,12 @@ func postprocessArchivesMediumPinnedEntryResult(
 	)
 	if !ok {
 		logger.Info("Couldn't sort links during postprocess archives medium pinned entry result finish")
-		return nil, false
+		return nil, errPostprocessingFailed
 	}
 
 	if !compareWithFeed(sortedLinks, guidedCtx.FeedEntryLinks, guidedCtx.CuriEqCfg, logger) {
 		logger.Info("Postprocess archives medium pinned entry result not matching feed")
-		return nil, false
+		return nil, errPostprocessingFailed
 	}
 
 	logger.Info("Postprocess archives medium pinned entry result finish")
@@ -1281,7 +1338,7 @@ func postprocessArchivesMediumPinnedEntryResult(
 		PostCategories:          nil,
 		Extra:                   mediumResult.Extra,
 		MaybePartialPagedResult: nil,
-	}, true
+	}, nil
 }
 
 func postprocessArchivesLongFeedResult(archivesLongFeedResult *archivesLongFeedResult) *postprocessedResult {
@@ -1299,15 +1356,18 @@ func postprocessArchivesLongFeedResult(archivesLongFeedResult *archivesLongFeedR
 func postprocessArchviesCategoriesResult(
 	archivesCategoriesResult *ArchivesCategoriesResult, guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext,
 	logger Logger,
-) (*postprocessedResult, bool) {
+) (*postprocessedResult, error) {
 	logger.Info("Postprocess archives categories results start")
-	sortedLinks, ok := postprocessSortLinksMaybeDates(
+
+	sortedLinks, err := postprocessSortLinksMaybeDates(
 		archivesCategoriesResult.Links, archivesCategoriesResult.MaybeDates, make(map[string]sortablePage),
 		guidedCtx, crawlCtx, logger,
 	)
-	if !ok {
+	if errors.Is(err, ErrCrawlCanceled) {
+		return nil, err
+	} else if err != nil {
 		logger.Info("Postporcess archives categories results failed")
-		return nil, false
+		return nil, errPostprocessingFailed
 	}
 
 	logger.Info("Postprocess archives categories results finish")
@@ -1322,25 +1382,31 @@ func postprocessArchviesCategoriesResult(
 		IsMatchingFeed:          sortedLinks.AreMatchingFeed,
 		Extra:                   extra,
 		MaybePartialPagedResult: nil,
-	}, true
+	}, nil
 }
 
 func postprocessPage1Result(
 	page1Result *page1Result, guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext, logger Logger,
-) (*postprocessedResult, bool) {
+) (*postprocessedResult, error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Postprocess page1 result start")
 	page2, err := crawlHtmlPage(&page1Result.LinkToPage2, crawlCtx, logger)
-	progressLogger.LogAndSavePostprocessing()
+	err2 := progressLogger.LogAndSavePostprocessing()
+	if err2 != nil {
+		return nil, err2
+	}
 	if err != nil {
 		logger.Info("Page 2 is not a page: %s (%v)", page1Result.LinkToPage2, err)
-		return nil, false
+		return nil, errPostprocessingFailed
 	}
 
 	pagedResult, ok := tryExtractPage2(page2, &page1Result.PagedState, guidedCtx, logger)
 	if ok {
 		titleCount := countLinkTitles(pagedResult.links())
-		progressLogger.LogAndSaveFetchedCount(&titleCount)
+		err := progressLogger.LogAndSaveFetchedCount(&titleCount)
+		if err != nil {
+			return nil, err
+		}
 		logger.Info("Postprocess page1 result finish")
 
 		switch r := pagedResult.(type) {
@@ -1353,7 +1419,7 @@ func postprocessPage1Result(
 				PostCategories:          nil,
 				Extra:                   nil,
 				MaybePartialPagedResult: r,
-			}, true
+			}, nil
 		case *fullPagedResult:
 			return &postprocessedResult{
 				MainLnk:                 r.MainLnk,
@@ -1363,39 +1429,45 @@ func postprocessPage1Result(
 				PostCategories:          r.PostCategories,
 				Extra:                   r.Extra,
 				MaybePartialPagedResult: nil,
-			}, true
+			}, nil
 		default:
 			panic("Unknown paged result type")
 		}
 	}
 
 	logger.Info("Postprocess page1 result finish (failed)")
-	return nil, false
+	return nil, errPostprocessingFailed
 }
 
 func postprocessPartialPagedResult(
 	partialResult *partialPagedResult, guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext, logger Logger,
-) (*postprocessedResult, bool) {
+) (*postprocessedResult, error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Postprocess paged result start")
 	var fullResult *fullPagedResult
 	for {
 		titleCount := countLinkTitles(partialResult.links())
-		progressLogger.LogAndSaveFetchedCount(&titleCount)
+		err := progressLogger.LogAndSaveFetchedCount(&titleCount)
+		if err != nil {
+			return nil, err
+		}
 		page, err := crawlHtmlPage(&partialResult.LinkToNextPage, crawlCtx, logger)
-		progressLogger.LogAndSavePostprocessing()
+		err2 := progressLogger.LogAndSavePostprocessing()
+		if err2 != nil {
+			return nil, err2
+		}
 		if err != nil {
 			logger.Info(
 				"Postprocess paged result failed, page %d is not a page: %s (%v)",
 				partialResult.PagedState.PageNumber, partialResult.LinkToNextPage, err,
 			)
-			return nil, false
+			return nil, errPostprocessingFailed
 		}
 
 		pagedResult, ok := tryExtractNextPage(page, partialResult, guidedCtx, logger)
 		if !ok {
 			logger.Info("Postprocess paged result failed")
-			return nil, false
+			return nil, errPostprocessingFailed
 		}
 		switch r := pagedResult.(type) {
 		case *fullPagedResult:
@@ -1422,7 +1494,10 @@ func postprocessPartialPagedResult(
 	}
 
 	titleCount := countLinkTitles(fullResult.Lnks)
-	progressLogger.LogAndSaveFetchedCount(&titleCount)
+	err := progressLogger.LogAndSaveFetchedCount(&titleCount)
+	if err != nil {
+		return nil, err
+	}
 	logger.Info("Postprocess paged result finish")
 	return &postprocessedResult{
 		MainLnk:                 fullResult.MainLnk,
@@ -1432,7 +1507,7 @@ func postprocessPartialPagedResult(
 		PostCategories:          fullResult.PostCategories,
 		Extra:                   fullResult.Extra,
 		MaybePartialPagedResult: nil,
-	}, true
+	}, nil
 }
 
 func crawlCaseyHandmerCategories(
@@ -1441,22 +1516,34 @@ func crawlCaseyHandmerCategories(
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Extra requests for Casey Handmer categories")
 	titleCount := countLinkTitles(pagedResult.Lnks)
-	progressLogger.LogAndSaveFetchedCount(&titleCount)
+	err := progressLogger.LogAndSaveFetchedCount(&titleCount)
+	if err != nil {
+		return nil, err
+	}
 
 	spaceMisconceptions, err := crawlHtmlPage(hardcodedCaseyHandmerSpaceMisconceptions, crawlCtx, logger)
-	progressLogger.LogAndSavePostprocessing()
+	err2 := progressLogger.LogAndSavePostprocessing()
+	if err2 != nil {
+		return nil, err2
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	marsTrilogy, err := crawlHtmlPage(hardcodedCaseyHandmerMarsTrilogy, crawlCtx, logger)
-	progressLogger.LogAndSavePostprocessing()
+	err2 = progressLogger.LogAndSavePostprocessing()
+	if err2 != nil {
+		return nil, err2
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	futureOfEnergy, err := crawlHtmlPage(hardcodedCaseyHandmerFutureOfEnergy, crawlCtx, logger)
-	progressLogger.LogAndSavePostprocessing()
+	err2 = progressLogger.LogAndSavePostprocessing()
+	if err2 != nil {
+		return nil, err2
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -1478,10 +1565,12 @@ type sortedLinks struct {
 	DateSource      dateSourceKind
 }
 
+var errSortFailed = errors.New("sort failed")
+
 func postprocessSortLinksMaybeDates(
 	links []*maybeTitledLink, maybeDates []*date, sortablePagesByCanonicalUrl map[string]sortablePage,
 	guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext, logger Logger,
-) (*sortedLinks, bool) {
+) (*sortedLinks, error) {
 	feedGenerator := guidedCtx.FeedGenerator
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Postprocess sort links, maybe dates start")
@@ -1522,30 +1611,39 @@ func postprocessSortLinksMaybeDates(
 		sortState, ok = historicalArchivesSortAdd(page, feedGenerator, sortState, logger)
 		if !ok {
 			logger.Info("Postprocess sort links, maybe dates failed during add already crawled")
-			return nil, false
+			return nil, errSortFailed
 		}
 	}
 
 	for linkIdx, link := range linksToCrawl {
 		page, err := crawlHtmlPage(&link.Link, crawlCtx, logger)
 		if err != nil {
-			progressLogger.LogAndSavePostprocessingResetCount()
+			err2 := progressLogger.LogAndSavePostprocessingResetCount()
+			if err2 != nil {
+				return nil, err2
+			}
 			logger.Info("Couldn't fetch link during result postprocess: %s (%v)", link.Url, err)
-			return nil, false
+			return nil, errSortFailed
 		}
 		sortablePage := historicalArchivesToSortablePage(page, feedGenerator, logger)
 
 		var ok bool
 		sortState, ok = historicalArchivesSortAdd(sortablePage, feedGenerator, sortState, logger)
 		if !ok {
-			progressLogger.LogAndSavePostprocessingResetCount()
+			err := progressLogger.LogAndSavePostprocessingResetCount()
+			if err != nil {
+				return nil, err
+			}
 			logger.Info("Postprocess sort links, maybe dates failed during add")
-			return nil, false
+			return nil, errSortFailed
 		}
 
 		fetchedCount := alreadyFetchedTitlesCount + len(crawledLinks) + linkIdx + 1
 		remainingCount := remainingTitlesCount + len(linksToCrawl) - linkIdx - 1
-		progressLogger.LogAndSavePostprocessingCounts(fetchedCount, remainingCount)
+		err = progressLogger.LogAndSavePostprocessingCounts(fetchedCount, remainingCount)
+		if err != nil {
+			return nil, err
+		}
 		sortablePagesByCanonicalUrl[page.Curi.String()] = sortablePage
 	}
 
@@ -1554,7 +1652,7 @@ func postprocessSortLinksMaybeDates(
 	)
 	if !ok {
 		logger.Info("Postprocess sort links, maybe dates failed during finish")
-		return nil, false
+		return nil, errSortFailed
 	}
 
 	areMatchingFeed := compareWithFeed(resultLinks, guidedCtx.FeedEntryLinks, guidedCtx.CuriEqCfg, logger)
@@ -1565,7 +1663,7 @@ func postprocessSortLinksMaybeDates(
 		AreMatchingFeed: areMatchingFeed,
 		DateXPath:       dateSource.XPath,
 		DateSource:      dateSource.DateSource,
-	}, true
+	}, nil
 }
 
 func compareWithFeed(
@@ -1669,7 +1767,10 @@ func fetchMissingTitles(
 		feedMissingTitlesCount = missingTitlesCount
 	}
 
-	progressLogger.LogAndSaveFetchedCount(&feedPresentTitlesCount)
+	err := progressLogger.LogAndSaveFetchedCount(&feedPresentTitlesCount)
+	if err != nil {
+		return nil, err
+	}
 	requestsMadeStart := crawlCtx.RequestsMade
 
 	titledLinks := make([]*titledLink, len(linksWithFeedTitles))
@@ -1696,9 +1797,12 @@ func fetchMissingTitles(
 			}
 
 			fetchedTitlesCount++
-			progressLogger.LogAndSavePostprocessingCounts(
+			err = progressLogger.LogAndSavePostprocessingCounts(
 				feedPresentTitlesCount+fetchedTitlesCount, feedMissingTitlesCount-fetchedTitlesCount,
 			)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		titledLinks[linkIdx] = &titledLink{
@@ -1806,9 +1910,16 @@ func fetchMissingTitles(
 			)
 			arePrefixSuffixValid = true
 		} else {
-			progressLogger.LogAndSavePostprocessingCounts(feedPresentTitlesCount+fetchedTitlesCount+1, 1)
+			fetchedCount := feedPresentTitlesCount + fetchedTitlesCount + 1
+			err := progressLogger.LogAndSavePostprocessingCounts(fetchedCount, 1)
+			if err != nil {
+				return nil, err
+			}
 			page, err := crawlHtmlPage(&testLink, crawlCtx, logger)
-			progressLogger.LogAndSavePostprocessingCounts(feedPresentTitlesCount+fetchedTitlesCount+1, 0)
+			err2 := progressLogger.LogAndSavePostprocessingCounts(fetchedCount, 0)
+			if err2 != nil {
+				return nil, err2
+			}
 			if err != nil {
 				logger.Info("Couldn't fetch first link title: %s (%v)", testLink.Uri, err)
 			} else {

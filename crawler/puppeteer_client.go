@@ -60,7 +60,10 @@ func (c *PuppeteerClientImpl) Fetch(
 ) (result *PuppeteerPage, retErr error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Puppeteer start: %s", uri)
-	progressLogger.LogAndSavePuppeteerStart()
+	err := progressLogger.LogAndSavePuppeteerStart()
+	if err != nil {
+		return nil, err
+	}
 	isInitialRequest := true
 	puppeteerStart := time.Now()
 
@@ -139,7 +142,10 @@ func (c *PuppeteerClientImpl) Fetch(
 			if isInitialRequest {
 				isInitialRequest = false
 			} else {
-				progressLogger.LogAndSavePuppeteerStart()
+				err := progressLogger.LogAndSavePuppeteerStart()
+				if err != nil {
+					return nil, err
+				}
 			}
 			err = page.Navigate(uri.String())
 			if err == nil {
@@ -149,7 +155,10 @@ func (c *PuppeteerClientImpl) Fetch(
 					WaitRequestIdle(500*time.Millisecond, []string{".+"}, nil, nil)()
 				logger.Info("Waiting till idle took %v", time.Since(waitRequestIdleStart).Round(time.Second))
 			}
-			progressLogger.LogAndSavePuppeteer()
+			err2 := progressLogger.LogAndSavePuppeteer()
+			if err2 != nil {
+				return nil, err2
+			}
 			if err != nil {
 				return nil, oops.Wrap(err)
 			}
@@ -183,9 +192,15 @@ func (c *PuppeteerClientImpl) Fetch(
 					}
 					for loadMoreButton != nil {
 						logger.Info("Clicking load more button")
-						progressLogger.LogAndSavePuppeteerStart()
-						err := scrollablePage.waitAndScroll(logger, loadMoreButton, maxScrollTime)
-						progressLogger.LogAndSavePuppeteer()
+						err := progressLogger.LogAndSavePuppeteerStart()
+						if err != nil {
+							return nil, err
+						}
+						err = scrollablePage.waitAndScroll(logger, loadMoreButton, maxScrollTime)
+						err2 := progressLogger.LogAndSavePuppeteer()
+						if err2 != nil {
+							return nil, err2
+						}
 						if err != nil {
 							return nil, err
 						}
@@ -196,9 +211,15 @@ func (c *PuppeteerClientImpl) Fetch(
 					}
 				} else {
 					logger.Info("Scrolling")
-					progressLogger.LogAndSavePuppeteerStart()
-					err := scrollablePage.waitAndScroll(logger, nil, maxScrollTime)
-					progressLogger.LogAndSavePuppeteer()
+					err := progressLogger.LogAndSavePuppeteerStart()
+					if err != nil {
+						return nil, err
+					}
+					err = scrollablePage.waitAndScroll(logger, nil, maxScrollTime)
+					err2 := progressLogger.LogAndSavePuppeteer()
+					if err2 != nil {
+						return nil, err2
+					}
 					if err != nil {
 						return nil, err
 					}
@@ -259,7 +280,10 @@ func (c *PuppeteerClientImpl) Fetch(
 			}
 			errorsCount++
 			logger.Info("Recovered Puppeteer error (%d): %v", errorsCount, err)
-			progressLogger.LogAndSavePuppeteer()
+			err2 := progressLogger.LogAndSavePuppeteer()
+			if err2 != nil {
+				return nil, err2
+			}
 			if errorsCount >= 3 {
 				return nil, oops.Wrapf(err, "Puppeteer error")
 			}

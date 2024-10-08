@@ -5,10 +5,11 @@ import (
 	"strings"
 )
 
+// The error can only be ErrCrawlCanceled
 type ProgressSaver interface {
-	SaveStatusAndCount(status string, maybeCount *int)
-	SaveStatus(status string)
-	SaveCount(maybeCount *int)
+	SaveStatusAndCount(status string, maybeCount *int) error
+	SaveStatus(status string) error
+	SaveCount(maybeCount *int) error
 	EmitTelemetry(regressions string, extra map[string]any)
 }
 
@@ -39,50 +40,85 @@ func (l *ProgressLogger) LogHtml() {
 }
 
 // Supposed to be called after LogHtml() but not any others
-func (l *ProgressLogger) SaveStatus() {
-	l.ProgressSaver.SaveStatus(l.Status)
+// The error can only be ErrCrawlCanceled
+func (l *ProgressLogger) SaveStatus() error {
+	err := l.ProgressSaver.SaveStatus(l.Status)
+	if err != nil {
+		return err
+	}
 	isPostprocessing := false
 	l.trackRegressions(true, &isPostprocessing, true, nil, false, nil)
+	return nil
 }
 
-func (l *ProgressLogger) LogAndSavePuppeteerStart() {
+// The error can only be ErrCrawlCanceled
+func (l *ProgressLogger) LogAndSavePuppeteerStart() error {
 	l.Status += "p"
-	l.ProgressSaver.SaveStatus(l.Status)
+	err := l.ProgressSaver.SaveStatus(l.Status)
+	if err != nil {
+		return err
+	}
 	isPostprocessing := false
 	l.trackRegressions(true, &isPostprocessing, true, nil, false, nil)
+	return nil
 }
 
-func (l *ProgressLogger) LogAndSavePuppeteer() {
+// The error can only be ErrCrawlCanceled
+func (l *ProgressLogger) LogAndSavePuppeteer() error {
 	l.Status += "P"
-	l.ProgressSaver.SaveStatus(l.Status)
+	err := l.ProgressSaver.SaveStatus(l.Status)
+	if err != nil {
+		return err
+	}
 	isPostprocessing := false
 	l.trackRegressions(true, &isPostprocessing, true, nil, false, nil)
+	return nil
 }
 
-func (l *ProgressLogger) LogAndSavePostprocessing() {
+// The error can only be ErrCrawlCanceled
+func (l *ProgressLogger) LogAndSavePostprocessing() error {
 	l.Status += "F"
-	l.ProgressSaver.SaveStatus(l.Status)
+	err := l.ProgressSaver.SaveStatus(l.Status)
+	if err != nil {
+		return err
+	}
 	isPostprocessing := true
 	l.trackRegressions(true, &isPostprocessing, true, nil, false, nil)
+	return nil
 }
 
-func (l *ProgressLogger) LogAndSavePostprocessingResetCount() {
+// The error can only be ErrCrawlCanceled
+func (l *ProgressLogger) LogAndSavePostprocessingResetCount() error {
 	l.Status += "F"
-	l.ProgressSaver.SaveStatusAndCount(l.Status, nil)
+	err := l.ProgressSaver.SaveStatusAndCount(l.Status, nil)
+	if err != nil {
+		return err
+	}
 	isPostprocessing := true
 	l.trackRegressions(true, &isPostprocessing, true, nil, true, nil)
+	return nil
 }
 
-func (l *ProgressLogger) LogAndSavePostprocessingCounts(fetchedCount, remainingCount int) {
+// The error can only be ErrCrawlCanceled
+func (l *ProgressLogger) LogAndSavePostprocessingCounts(fetchedCount, remainingCount int) error {
 	l.Status += fmt.Sprintf("F%d", remainingCount)
-	l.ProgressSaver.SaveStatusAndCount(l.Status, &fetchedCount)
+	err := l.ProgressSaver.SaveStatusAndCount(l.Status, &fetchedCount)
+	if err != nil {
+		return err
+	}
 	isPostprocessing := true
 	l.trackRegressions(true, &isPostprocessing, true, &remainingCount, true, &fetchedCount)
+	return nil
 }
 
-func (l *ProgressLogger) LogAndSaveFetchedCount(maybeFetchedCount *int) {
-	l.ProgressSaver.SaveCount(maybeFetchedCount)
+// The error can only be ErrCrawlCanceled
+func (l *ProgressLogger) LogAndSaveFetchedCount(maybeFetchedCount *int) error {
+	err := l.ProgressSaver.SaveCount(maybeFetchedCount)
+	if err != nil {
+		return err
+	}
 	l.trackRegressions(false, nil, false, nil, true, maybeFetchedCount)
+	return nil
 }
 
 func (l *ProgressLogger) trackRegressions(
@@ -151,20 +187,23 @@ func NewMockProgressSaver(logger Logger) *MockProgressSaver {
 	}
 }
 
-func (s *MockProgressSaver) SaveStatusAndCount(status string, maybeCount *int) {
+func (s *MockProgressSaver) SaveStatusAndCount(status string, maybeCount *int) error {
 	s.Logger.Info("Progress save status: %s count: %s", status, SprintIntPtr(maybeCount))
 	s.Status = status
 	s.MaybeCount = maybeCount
+	return nil
 }
 
-func (s *MockProgressSaver) SaveStatus(status string) {
+func (s *MockProgressSaver) SaveStatus(status string) error {
 	s.Logger.Info("Progress save status: %s", status)
 	s.Status = status
+	return nil
 }
 
-func (s *MockProgressSaver) SaveCount(maybeCount *int) {
+func (s *MockProgressSaver) SaveCount(maybeCount *int) error {
 	s.Logger.Info("Progress save count: %s", SprintIntPtr(maybeCount))
 	s.MaybeCount = maybeCount
+	return nil
 }
 
 func (s *MockProgressSaver) EmitTelemetry(regressions string, extra map[string]any) {
