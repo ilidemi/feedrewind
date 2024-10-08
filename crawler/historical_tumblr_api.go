@@ -149,7 +149,10 @@ func getTumblrApiHistorical(
 		}
 
 		requestsRemaining := int(math.Ceil(float64(expectedCount-len(links)) / 20))
-		progressLogger.LogAndSavePostprocessingCounts(len(links), requestsRemaining)
+		err = progressLogger.LogAndSavePostprocessingCounts(len(links), requestsRemaining)
+		if err != nil {
+			return nil, err
+		}
 
 		nextUrl := tumblrResp.Response.Links.Next.Href
 		if nextUrl == "" {

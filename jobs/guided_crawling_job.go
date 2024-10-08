@@ -466,7 +466,8 @@ func NewProgressSaver(
 	}
 }
 
-func (s *ProgressSaver) SaveStatusAndCount(status string, maybeCount *int) {
+// The error can only be crawler.ErrCrawlCanceled
+func (s *ProgressSaver) SaveStatusAndCount(status string, maybeCount *int) error {
 	err := util.Tx(s.Pool, func(tx *pgw.Tx, _ util.Clobber) error {
 		row := tx.QueryRow(`
 			update blog_crawl_progresses
@@ -477,7 +478,9 @@ func (s *ProgressSaver) SaveStatusAndCount(status string, maybeCount *int) {
 		var newEpoch int32
 		var maybeEpochTimes *string
 		err := row.Scan(&newEpoch, &maybeEpochTimes)
-		if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return oops.Wrap(crawler.ErrCrawlCanceled)
+		} else if err != nil {
 			return err
 		}
 
@@ -511,9 +514,14 @@ func (s *ProgressSaver) SaveStatusAndCount(status string, maybeCount *int) {
 	if err != nil {
 		s.Logger.Warn().Err(err).Msg("Couldn't save status and count")
 	}
+	if errors.Is(err, crawler.ErrCrawlCanceled) {
+		return err
+	}
+	return nil
 }
 
-func (s *ProgressSaver) SaveStatus(status string) {
+// The error can only be crawler.ErrCrawlCanceled
+func (s *ProgressSaver) SaveStatus(status string) error {
 	err := util.Tx(s.Pool, func(tx *pgw.Tx, _ util.Clobber) error {
 		row := tx.QueryRow(`
 			update blog_crawl_progresses
@@ -524,7 +532,9 @@ func (s *ProgressSaver) SaveStatus(status string) {
 		var newEpoch int32
 		var maybeEpochTimes *string
 		err := row.Scan(&newEpoch, &maybeEpochTimes)
-		if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return oops.Wrap(crawler.ErrCrawlCanceled)
+		} else if err != nil {
 			return err
 		}
 
@@ -556,9 +566,14 @@ func (s *ProgressSaver) SaveStatus(status string) {
 	if err != nil {
 		s.Logger.Warn().Err(err).Msg("Couldn't save status")
 	}
+	if errors.Is(err, crawler.ErrCrawlCanceled) {
+		return err
+	}
+	return nil
 }
 
-func (s *ProgressSaver) SaveCount(maybeCount *int) {
+// The error can only be crawler.ErrCrawlCanceled
+func (s *ProgressSaver) SaveCount(maybeCount *int) error {
 	err := util.Tx(s.Pool, func(tx *pgw.Tx, _ util.Clobber) error {
 		row := tx.QueryRow(`
 			update blog_crawl_progresses
@@ -569,7 +584,9 @@ func (s *ProgressSaver) SaveCount(maybeCount *int) {
 		var newEpoch int32
 		var maybeEpochTimes *string
 		err := row.Scan(&newEpoch, &maybeEpochTimes)
-		if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return oops.Wrap(crawler.ErrCrawlCanceled)
+		} else if err != nil {
 			return err
 		}
 
@@ -602,6 +619,10 @@ func (s *ProgressSaver) SaveCount(maybeCount *int) {
 	if err != nil {
 		s.Logger.Warn().Err(err).Msg("Couldn't save count")
 	}
+	if errors.Is(err, crawler.ErrCrawlCanceled) {
+		return err
+	}
+	return nil
 }
 
 func (s *ProgressSaver) EmitTelemetry(regressions string, extra map[string]any) {
@@ -632,7 +653,9 @@ func (s *ProgressSaver) updateEpochTimes(tx *pgw.Tx, maybeEpochTimes *string) er
 	_, err := tx.Exec(`
 		update blog_crawl_progresses set epoch_times = $1 where blog_id = $2
 	`, newEpochTimes, s.BlogId)
-	if err != nil {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return oops.Wrap(crawler.ErrCrawlCanceled)
+	} else if err != nil {
 		return err
 	}
 	s.LastEpochTimestamp = newEpochTimestamp
