@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"context"
 	"errors"
 	"feedrewind/oops"
 	"feedrewind/util"
@@ -73,6 +74,34 @@ func (c HistoricalBlogPostCategory) DeepCopy() HistoricalBlogPostCategory {
 		IsTop:     c.IsTop,
 		PostLinks: postLinks,
 	}
+}
+
+func areCategoriesEqual(
+	categories1, categories2 []HistoricalBlogPostCategory, curiEqCfg *CanonicalEqualityConfig,
+) bool {
+	if len(categories1) != len(categories2) {
+		return false
+	}
+	for i, category := range categories1 {
+		otherCategory := categories2[i]
+		if category.Name != otherCategory.Name {
+			return false
+		}
+		if category.IsTop != otherCategory.IsTop {
+			return false
+		}
+		if len(category.PostLinks) != len(otherCategory.PostLinks) {
+			return false
+		}
+		for j, link := range category.PostLinks {
+			otherLink := otherCategory.PostLinks[j]
+			if !CanonicalUriEqual(link.Curi, otherLink.Curi, curiEqCfg) {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func categoryCountsString(categories []HistoricalBlogPostCategory) string {
@@ -400,6 +429,33 @@ func getFeedStartPage(
 	}
 }
 
+type crawlHistoricalResult interface {
+	mainLink() Link
+	speculativeCount() int
+	isSame(other crawlHistoricalResult, curiEqCfg *CanonicalEqualityConfig) bool
+}
+
+func areLinksEqual(links1, links2 []*maybeTitledLink, curiEqCfg *CanonicalEqualityConfig) bool {
+	if len(links1) != len(links2) {
+		return false
+	}
+	for i, link := range links1 {
+		otherLink := links2[i]
+		if !CanonicalUriEqual(link.Curi, otherLink.Curi, curiEqCfg) {
+			return false
+		}
+		if (link.MaybeTitle == nil) != (otherLink.MaybeTitle == nil) {
+			return false
+		}
+		if link.MaybeTitle != nil && otherLink.MaybeTitle != nil &&
+			link.MaybeTitle.EqualizedValue != otherLink.MaybeTitle.EqualizedValue {
+			return false
+		}
+	}
+
+	return true
+}
+
 type postprocessedResult struct {
 	MainLnk                 Link
 	Pattern                 string
@@ -419,6 +475,18 @@ func (r *postprocessedResult) speculativeCount() int {
 		return r.MaybePartialPagedResult.SpeculativeCount()
 	}
 	return len(r.Links)
+}
+
+func (r *postprocessedResult) isSame(other crawlHistoricalResult, curiEqCfg *CanonicalEqualityConfig) bool {
+	ppOther, ok := other.(*postprocessedResult)
+	if !ok {
+		return false
+	}
+	return areLinksEqual(r.Links, ppOther.Links, curiEqCfg) &&
+		r.IsMatchingFeed == ppOther.IsMatchingFeed &&
+		areCategoriesEqual(r.PostCategories, ppOther.PostCategories, curiEqCfg) &&
+		r.MaybePartialPagedResult == nil &&
+		ppOther.MaybePartialPagedResult == nil
 }
 
 type linkOrHtmlPage interface {
@@ -889,7 +957,9 @@ func guidedCrawlFetchLoop(
 			if err2 != nil {
 				return nil, err2
 			}
-			if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil, ErrCrawlCanceled
+			} else if err != nil {
 				logger.Info("Couldn't fetch link: %v", err)
 				continue
 			}
@@ -953,12 +1023,20 @@ func guidedCrawlFetchLoop(
 		pageResults := tryExtractHistorical(
 			link, puppeteerPage, pageAllLinks, &pageCurisSet, guidedCtx, logger,
 		)
+	pgResults:
 		for _, pageResult := range pageResults {
 			historicalMatchesCount++
+			for _, sortedResult := range sortedResults {
+				if sortedResult.isSame(pageResult, guidedCtx.CuriEqCfg) {
+					continue pgResults
+				}
+			}
 			insertSortedResult(&sortedResults, pageResult)
 		}
 
-		if hadArchives && len(*archivesQueue) == 0 && len(sortedResults) > 0 {
+		if (hadArchives || crawlCtx.RequestsMade >= 60) &&
+			len(*archivesQueue) == 0 && len(sortedResults) > 0 {
+
 			ppResult, err := postprocessResults(&sortedResults, guidedCtx, crawlCtx, logger)
 			if errors.Is(err, ErrCrawlCanceled) {
 				return nil, err
@@ -1007,11 +1085,6 @@ func guidedCrawlFetchLoop(
 		phaseNumber, len(ppResult.Links),
 	)
 	return ppResult, nil
-}
-
-type crawlHistoricalResult interface {
-	mainLink() Link
-	speculativeCount() int
 }
 
 func tryExtractHistorical(
