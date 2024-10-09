@@ -31,6 +31,10 @@ func (r *page1Result) speculativeCount() int {
 	return 2*r.MaxPage1Size + 1
 }
 
+func (r *page1Result) isSame(other crawlHistoricalResult, curiEqCfg *CanonicalEqualityConfig) bool {
+	return false
+}
+
 type page2State struct {
 	IsCertain        bool
 	PagingPattern    pagingPattern

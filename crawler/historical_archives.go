@@ -25,6 +25,16 @@ func (r *archivesSortedResult) speculativeCount() int {
 	return len(r.Links)
 }
 
+func (r *archivesSortedResult) isSame(other crawlHistoricalResult, curiEqCfg *CanonicalEqualityConfig) bool {
+	aOther, ok := other.(*archivesSortedResult)
+	if !ok {
+		return false
+	}
+	return areLinksEqual(r.Links, aOther.Links, curiEqCfg) &&
+		r.HasDates == aOther.HasDates &&
+		areCategoriesEqual(r.PostCategories, aOther.PostCategories, curiEqCfg)
+}
+
 type archivesMediumPinnedEntryResult struct {
 	MainLnk         Link
 	Pattern         string
@@ -39,6 +49,39 @@ func (r *archivesMediumPinnedEntryResult) mainLink() Link {
 
 func (r *archivesMediumPinnedEntryResult) speculativeCount() int {
 	return len(r.OtherLinksDates) + 1
+}
+
+func (r *archivesMediumPinnedEntryResult) isSame(
+	other crawlHistoricalResult, curiEqCfg *CanonicalEqualityConfig,
+) bool {
+	aOther, ok := other.(*archivesMediumPinnedEntryResult)
+	if !ok {
+		return false
+	}
+	if !CanonicalUriEqual(r.PinnedEntryLink.Curi, aOther.PinnedEntryLink.Curi, curiEqCfg) {
+		return false
+	}
+	if len(r.OtherLinksDates) != len(aOther.OtherLinksDates) {
+		return false
+	}
+	for i, linkDate := range r.OtherLinksDates {
+		otherLinkDate := aOther.OtherLinksDates[i]
+		if !CanonicalUriEqual(linkDate.Link.Curi, otherLinkDate.Link.Curi, curiEqCfg) {
+			return false
+		}
+		if (linkDate.Link.MaybeTitle == nil) != (otherLinkDate.Link.MaybeTitle == nil) {
+			return false
+		}
+		if linkDate.Link.MaybeTitle != nil && otherLinkDate.Link.MaybeTitle != nil &&
+			linkDate.Link.MaybeTitle.EqualizedValue != otherLinkDate.Link.MaybeTitle.EqualizedValue {
+			return false
+		}
+		if linkDate.Date.Compare(otherLinkDate.Date) != 0 {
+			return false
+		}
+	}
+
+	return true
 }
 
 type archivesShuffledResult struct {
@@ -72,6 +115,42 @@ func (r *archivesShuffledResults) speculativeCount() int {
 	return r.SpeculativeCnt
 }
 
+func (r *archivesShuffledResults) isSame(
+	other crawlHistoricalResult, curiEqCfg *CanonicalEqualityConfig,
+) bool {
+	aOther, ok := other.(*archivesShuffledResults)
+	if !ok {
+		return false
+	}
+	if len(r.Results) != len(aOther.Results) {
+		return false
+	}
+	for i, result := range r.Results {
+		otherResult := aOther.Results[i]
+		if len(result.Links) != len(otherResult.Links) {
+			return false
+		}
+		for j, link := range result.Links {
+			otherLink := otherResult.Links[j]
+			if !CanonicalUriEqual(link.Curi, otherLink.Curi, curiEqCfg) {
+				return false
+			}
+			date := result.MaybeDates[j]
+			otherDate := otherResult.MaybeDates[j]
+			if (date == nil) != (otherDate == nil) {
+				return false
+			}
+			if date != nil && otherDate != nil && date.Compare(*otherDate) != 0 {
+				return false
+			}
+		}
+		if !areCategoriesEqual(result.PostCategories, otherResult.PostCategories, curiEqCfg) {
+			return false
+		}
+	}
+	return true
+}
+
 type archivesLongFeedResult struct {
 	MainLnk Link
 	Pattern string
@@ -85,6 +164,16 @@ func (r *archivesLongFeedResult) mainLink() Link {
 
 func (r *archivesLongFeedResult) speculativeCount() int {
 	return len(r.Links)
+}
+
+func (r *archivesLongFeedResult) isSame(
+	other crawlHistoricalResult, curiEqCfg *CanonicalEqualityConfig,
+) bool {
+	aOther, ok := other.(*archivesLongFeedResult)
+	if !ok {
+		return false
+	}
+	return areLinksEqual(r.Links, aOther.Links, curiEqCfg)
 }
 
 func getArchivesAlmostMatchThreshold(feedLength int) int {

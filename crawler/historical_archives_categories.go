@@ -48,6 +48,28 @@ func (r *ArchivesCategoriesResult) speculativeCount() int {
 	return len(r.Links)
 }
 
+func (r *ArchivesCategoriesResult) isSame(
+	other crawlHistoricalResult, curiEqCfg *CanonicalEqualityConfig,
+) bool {
+	aOther, ok := other.(*ArchivesCategoriesResult)
+	if !ok {
+		return false
+	}
+	if !areLinksEqual(r.Links, aOther.Links, curiEqCfg) {
+		return false
+	}
+	for i, maybeDate := range r.MaybeDates {
+		maybeOtherDate := aOther.MaybeDates[i]
+		if (maybeDate == nil) != (maybeOtherDate == nil) {
+			return false
+		}
+		if maybeDate != nil && maybeOtherDate != nil && maybeDate.Compare(*maybeOtherDate) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func tryExtractArchivesCategories(
 	page *htmlPage, pageCurisSet *CanonicalUriSet, extractionsByStarCount []starCountExtractions,
 	guidedCtx *guidedCrawlContext, logger Logger,
