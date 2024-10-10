@@ -183,7 +183,7 @@ func StartFeed_UpdateFetched(
 ) (*StartFeed, error) {
 	_, err := qu.Exec(`
 		update start_feeds set final_url = $1, content = $2 where id = $3
-	`, finalUrl, content, startFeed.Id)
+	`, finalUrl, []byte(content), startFeed.Id)
 	if err != nil {
 		return nil, err
 	}
