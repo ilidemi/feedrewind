@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"fmt"
-	"net/url"
 	"slices"
 	"strings"
 
@@ -25,22 +24,22 @@ type archivesCategoryResult struct {
 	Level           int
 	FeedMatchBitmap string
 	MaskedXPath     string
-	Links           []*maybeTitledLink
+	Links           []*pristineMaybeTitledLink
 	MaybeDates      []*date
-	Curi            CanonicalUri
-	FetchUri        *url.URL
+	Curi            pristineCanonicalUri
+	FetchUri        *pristineUri
 	LogStr          string
 }
 
 type ArchivesCategoriesResult struct {
-	MainLnk    Link
+	MainLnk    pristineLink
 	Pattern    string
-	Links      []*maybeTitledLink
+	Links      []*pristineMaybeTitledLink
 	MaybeDates []*date
 	Extra      []string
 }
 
-func (r *ArchivesCategoriesResult) mainLink() Link {
+func (r *ArchivesCategoriesResult) mainLink() pristineLink {
 	return r.MainLnk
 }
 
@@ -188,10 +187,10 @@ func tryExtractArchivesCategories(
 			Level:           level,
 			FeedMatchBitmap: feedMatchBitmap,
 			MaskedXPath:     bestXPath,
-			Links:           bestLinks,
+			Links:           NewPristineMaybeTitledLinks(bestLinks),
 			MaybeDates:      bestMaybeDates,
-			Curi:            page.Curi,
-			FetchUri:        page.FetchUri,
+			Curi:            NewPristineCanonicalUri(page.Curi),
+			FetchUri:        NewPristineUri(page.FetchUri),
 			LogStr:          bestLogStr,
 		})
 	}
@@ -293,7 +292,9 @@ func checkCombination(
 	mergedLinks := make([]*maybeTitledLink, 0, sumLength)
 	mergedMaybeDates := make([]*date, 0, sumLength)
 	for _, category := range categories {
-		mergedLinks = append(mergedLinks, category.Links...)
+		for _, link := range category.Links {
+			mergedLinks = append(mergedLinks, link.Unwrap())
+		}
 		mergedMaybeDates = append(mergedMaybeDates, category.MaybeDates...)
 	}
 	mergedLinks = append(mergedLinks, missingLinks...)
@@ -337,9 +338,9 @@ func checkCombination(
 	appendLogLinef(&extra, "total: %s", totalLogStr)
 
 	return &ArchivesCategoriesResult{
-		MainLnk:    *mainLink,
+		MainLnk:    *NewPristineLink(mainLink),
 		Pattern:    fmt.Sprintf("archives_categories%s", almostSuffix),
-		Links:      dedupLinks,
+		Links:      NewPristineMaybeTitledLinks(dedupLinks),
 		MaybeDates: dedupMaybeDates,
 		Extra:      extra,
 	}, true

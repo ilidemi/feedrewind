@@ -9,15 +9,15 @@ import (
 )
 
 type archivesSortedResult struct {
-	MainLnk        Link
+	MainLnk        pristineLink
 	Pattern        string
-	Links          []*maybeTitledLink
+	Links          []*pristineMaybeTitledLink
 	HasDates       bool
-	PostCategories []HistoricalBlogPostCategory
+	PostCategories []pristineHistoricalBlogPostCategory
 	Extra          []string
 }
 
-func (r *archivesSortedResult) mainLink() Link {
+func (r *archivesSortedResult) mainLink() pristineLink {
 	return r.MainLnk
 }
 
@@ -36,14 +36,14 @@ func (r *archivesSortedResult) isSame(other crawlHistoricalResult, curiEqCfg *Ca
 }
 
 type archivesMediumPinnedEntryResult struct {
-	MainLnk         Link
+	MainLnk         pristineLink
 	Pattern         string
-	PinnedEntryLink maybeTitledLink
-	OtherLinksDates []linkDate
+	PinnedEntryLink *pristineMaybeTitledLink
+	OtherLinksDates []linkDate[pristineMaybeTitledLink]
 	Extra           []string
 }
 
-func (r *archivesMediumPinnedEntryResult) mainLink() Link {
+func (r *archivesMediumPinnedEntryResult) mainLink() pristineLink {
 	return r.MainLnk
 }
 
@@ -58,7 +58,7 @@ func (r *archivesMediumPinnedEntryResult) isSame(
 	if !ok {
 		return false
 	}
-	if !CanonicalUriEqual(r.PinnedEntryLink.Curi, aOther.PinnedEntryLink.Curi, curiEqCfg) {
+	if !CanonicalUriEqual(r.PinnedEntryLink.Curi(), aOther.PinnedEntryLink.Curi(), curiEqCfg) {
 		return false
 	}
 	if len(r.OtherLinksDates) != len(aOther.OtherLinksDates) {
@@ -66,14 +66,15 @@ func (r *archivesMediumPinnedEntryResult) isSame(
 	}
 	for i, linkDate := range r.OtherLinksDates {
 		otherLinkDate := aOther.OtherLinksDates[i]
-		if !CanonicalUriEqual(linkDate.Link.Curi, otherLinkDate.Link.Curi, curiEqCfg) {
+		if !CanonicalUriEqual(linkDate.Link.Curi(), otherLinkDate.Link.Curi(), curiEqCfg) {
 			return false
 		}
 		if (linkDate.Link.MaybeTitle == nil) != (otherLinkDate.Link.MaybeTitle == nil) {
 			return false
 		}
 		if linkDate.Link.MaybeTitle != nil && otherLinkDate.Link.MaybeTitle != nil &&
-			linkDate.Link.MaybeTitle.EqualizedValue != otherLinkDate.Link.MaybeTitle.EqualizedValue {
+			linkDate.Link.MaybeTitle.Title.EqualizedValue !=
+				otherLinkDate.Link.MaybeTitle.Title.EqualizedValue {
 			return false
 		}
 		if linkDate.Date.Compare(otherLinkDate.Date) != 0 {
@@ -85,15 +86,15 @@ func (r *archivesMediumPinnedEntryResult) isSame(
 }
 
 type archivesShuffledResult struct {
-	MainLnk        Link
+	MainLnk        pristineLink
 	Pattern        string
-	Links          []*maybeTitledLink
+	Links          []*pristineMaybeTitledLink
 	MaybeDates     []*date
-	PostCategories []HistoricalBlogPostCategory
+	PostCategories []pristineHistoricalBlogPostCategory
 	Extra          []string
 }
 
-func (r *archivesShuffledResult) MainLink() Link {
+func (r *archivesShuffledResult) MainLink() pristineLink {
 	return r.MainLnk
 }
 
@@ -102,12 +103,12 @@ func (r *archivesShuffledResult) SpeculativeCount() int {
 }
 
 type archivesShuffledResults struct {
-	MainLnk        Link
+	MainLnk        pristineLink
 	Results        []*archivesShuffledResult
 	SpeculativeCnt int
 }
 
-func (r *archivesShuffledResults) mainLink() Link {
+func (r *archivesShuffledResults) mainLink() pristineLink {
 	return r.MainLnk
 }
 
@@ -132,7 +133,7 @@ func (r *archivesShuffledResults) isSame(
 		}
 		for j, link := range result.Links {
 			otherLink := otherResult.Links[j]
-			if !CanonicalUriEqual(link.Curi, otherLink.Curi, curiEqCfg) {
+			if !CanonicalUriEqual(link.Curi(), otherLink.Curi(), curiEqCfg) {
 				return false
 			}
 			date := result.MaybeDates[j]
@@ -152,13 +153,13 @@ func (r *archivesShuffledResults) isSame(
 }
 
 type archivesLongFeedResult struct {
-	MainLnk Link
+	MainLnk pristineLink
 	Pattern string
-	Links   []*maybeTitledLink
+	Links   []*pristineMaybeTitledLink
 	Extra   []string
 }
 
-func (r *archivesLongFeedResult) mainLink() Link {
+func (r *archivesLongFeedResult) mainLink() pristineLink {
 	return r.MainLnk
 }
 
@@ -192,16 +193,16 @@ func getArchivesAlmostMatchThreshold(feedLength int) int {
 }
 
 func tryExtractArchives(
-	fetchLink *Link, page *htmlPage, pageLinks []*xpathLink, pageCurisSet *CanonicalUriSet,
+	fetchLink *pristineLink, page *htmlPage, pageLinks []*xpathLink, pageCurisSet *CanonicalUriSet,
 	extractionsByStarCount []starCountExtractions, almostMatchThreshold int,
 	guidedCtx *guidedCrawlContext, logger Logger,
 ) []crawlHistoricalResult {
 	if guidedCtx.FeedEntryLinks.countIncluded(pageCurisSet) < almostMatchThreshold &&
-		!CanonicalUriEqual(fetchLink.Curi, hardcodedDanLuu, guidedCtx.CuriEqCfg) {
+		!CanonicalUriEqual(fetchLink.Curi(), hardcodedDanLuu, guidedCtx.CuriEqCfg) {
 		return nil
 	}
 
-	if CanonicalUriEqual(fetchLink.Curi, hardcodedCryptographyEngineeringAll, guidedCtx.CuriEqCfg) {
+	if CanonicalUriEqual(fetchLink.Curi(), hardcodedCryptographyEngineeringAll, guidedCtx.CuriEqCfg) {
 		logger.Info("Skipping archives for Cryptography Engineering to pick up categories from paged")
 		return nil
 	}
@@ -211,7 +212,7 @@ func tryExtractArchives(
 	var mainResult crawlHistoricalResult
 	minLinksCount := 1
 
-	if CanonicalUriEqual(fetchLink.Curi, hardcodedDanLuu, guidedCtx.CuriEqCfg) {
+	if CanonicalUriEqual(fetchLink.Curi(), hardcodedDanLuu, guidedCtx.CuriEqCfg) {
 		logger.Info("Extracting archives for Dan Luu")
 		links := extractionsByStarCount[0].Extractions[0].LinksExtraction.Links
 		firstIdx := 0
@@ -228,7 +229,7 @@ func tryExtractArchives(
 			&archivesSortedResult{
 				MainLnk:        *fetchLink,
 				Pattern:        "archives",
-				Links:          dropHtml(postLinks),
+				Links:          NewPristineMaybeTitledLinks(dropHtml(postLinks)),
 				HasDates:       false,
 				PostCategories: nil,
 				Extra:          nil,
@@ -236,7 +237,7 @@ func tryExtractArchives(
 		}
 	}
 
-	if CanonicalUriEqual(fetchLink.Curi, hardcodedJuliaEvans, guidedCtx.CuriEqCfg) {
+	if CanonicalUriEqual(fetchLink.Curi(), hardcodedJuliaEvans, guidedCtx.CuriEqCfg) {
 		logger.Info("Extracting archives for Julia Evans")
 		starCountExtractions := extractionsByStarCount[1] // 2 stars
 		if shuffledResult, ok := tryExtractShuffled(
@@ -400,7 +401,8 @@ func tryExtractArchives(
 
 func tryExtractSorted(
 	starCountExtractions starCountExtractions, almostMatchThreshold int, fewerStarsCuris []CanonicalUri,
-	fewerStarsHaveDates bool, minLinksCount int, mainLink *Link, guidedCtx *guidedCrawlContext, logger Logger,
+	fewerStarsHaveDates bool, minLinksCount int, mainLink *pristineLink, guidedCtx *guidedCrawlContext,
+	logger Logger,
 ) (*archivesSortedResult, bool) {
 	isAlmost := almostMatchThreshold != -1
 	almostSuffix := ""
@@ -545,7 +547,7 @@ func tryExtractSorted(
 		}
 
 		if maybeDates != nil {
-			var uniqueLinksDates []linkDate
+			var uniqueLinksDates []linkDate[maybeTitledLink]
 			curisSetByDate := make(map[date]*CanonicalUriSet)
 			for i, link := range links {
 				date := maybeDates[i]
@@ -555,7 +557,7 @@ func tryExtractSorted(
 				}
 
 				if !curisSetByDate[date].Contains(link.Curi) {
-					uniqueLinksDates = append(uniqueLinksDates, linkDate{
+					uniqueLinksDates = append(uniqueLinksDates, linkDate[maybeTitledLink]{
 						Link: link.maybeTitledLink,
 						Date: date,
 					})
@@ -630,8 +632,8 @@ func tryExtractSorted(
 	if bestLinks != nil {
 		extra := []string{fmt.Sprintf("xpath: %s%s", bestXPath, bestLogStr)}
 
-		var postCategories []HistoricalBlogPostCategory
-		if CanonicalUriEqual(mainLink.Curi, hardcodedKalzumeus, curiEqCfg) {
+		var postCategories []pristineHistoricalBlogPostCategory
+		if CanonicalUriEqual(mainLink.Curi(), hardcodedKalzumeus, curiEqCfg) {
 			postCategories = hardcodedKalzumeusCategories
 		} else if guidedCtx.FeedGenerator == FeedGeneratorSubstack && bestHtmlLinks != nil {
 			postCategories = extractSubstackCategories(bestHtmlLinks, bestDistanceToTopParent)
@@ -645,7 +647,7 @@ func tryExtractSorted(
 		return &archivesSortedResult{
 			MainLnk:        *mainLink,
 			Pattern:        bestPattern,
-			Links:          bestLinks,
+			Links:          NewPristineMaybeTitledLinks(bestLinks),
 			HasDates:       bestHasDates,
 			PostCategories: postCategories,
 			Extra:          extra,
@@ -658,7 +660,7 @@ func tryExtractSorted(
 
 func tryExtractSortedHighlightFirstLink(
 	starCountExtractions starCountExtractions, pageCurisSet *CanonicalUriSet,
-	fewerStarsCuris []CanonicalUri, minLinksCount int, mainLink *Link, guidedCtx *guidedCrawlContext,
+	fewerStarsCuris []CanonicalUri, minLinksCount int, mainLink *pristineLink, guidedCtx *guidedCrawlContext,
 	logger Logger,
 ) (*archivesSortedResult, bool) {
 	feedEntryLinks := guidedCtx.FeedEntryLinks
@@ -745,10 +747,11 @@ func tryExtractSortedHighlightFirstLink(
 	}
 
 	if bestLinks != nil && bestFirstLink != nil {
+		resultLinks := append([]*maybeTitledLink{bestFirstLink}, bestLinks...)
 		return &archivesSortedResult{
 			MainLnk:        *mainLink,
 			Pattern:        "archives_2xpaths",
-			Links:          append([]*maybeTitledLink{bestFirstLink}, bestLinks...),
+			Links:          NewPristineMaybeTitledLinks(resultLinks),
 			HasDates:       false,
 			PostCategories: nil,
 			Extra: []string{
@@ -765,7 +768,7 @@ func tryExtractSortedHighlightFirstLink(
 }
 
 func tryExtractMediumPinnedEntry(
-	extractions []maskedXPathExtraction, pageLinks []*xpathLink, minLinksCount int, fetchLink *Link,
+	extractions []maskedXPathExtraction, pageLinks []*xpathLink, minLinksCount int, fetchLink *pristineLink,
 	guidedCtx *guidedCrawlContext, logger Logger,
 ) (*archivesMediumPinnedEntryResult, bool) {
 	feedEntryLinks := guidedCtx.FeedEntryLinks
@@ -810,11 +813,11 @@ func tryExtractMediumPinnedEntry(
 		}
 		pinnedEntryLink := pageLinks[pinnedEntryLinkIdx]
 
-		otherLinksDates := make([]linkDate, len(links))
+		otherLinksDates := make([]linkDate[pristineMaybeTitledLink], len(links))
 		for i, link := range links {
 			date := mediumMarkupDatesExtraction.MaybeDates[i]
-			otherLinksDates = append(otherLinksDates, linkDate{
-				Link: *link,
+			otherLinksDates = append(otherLinksDates, linkDate[pristineMaybeTitledLink]{
+				Link: *NewPristineMaybeTitledLink(link),
 				Date: date,
 			})
 		}
@@ -829,10 +832,10 @@ func tryExtractMediumPinnedEntry(
 		return &archivesMediumPinnedEntryResult{
 			MainLnk: *fetchLink,
 			Pattern: "archives_shuffled_2xpaths",
-			PinnedEntryLink: maybeTitledLink{
+			PinnedEntryLink: NewPristineMaybeTitledLink(&maybeTitledLink{
 				Link:       pinnedEntryLink.Link,
 				MaybeTitle: &pinnedTitle,
-			},
+			}),
 			OtherLinksDates: otherLinksDates,
 			Extra: []string{
 				fmt.Sprintf("counts: 1 + %d", len(otherLinksDates)),
@@ -848,7 +851,7 @@ func tryExtractMediumPinnedEntry(
 
 func tryExtractSorted2XPaths(
 	oneStarExtractions []maskedXPathExtraction, starCountExtractions starCountExtractions,
-	fewerStarsCuris []CanonicalUri, minLinksCount int, mainLink *Link, guidedCtx *guidedCrawlContext,
+	fewerStarsCuris []CanonicalUri, minLinksCount int, mainLink *pristineLink, guidedCtx *guidedCrawlContext,
 	logger Logger,
 ) (*archivesSortedResult, bool) {
 	feedEntryLinks := guidedCtx.FeedEntryLinks
@@ -989,7 +992,7 @@ func tryExtractSorted2XPaths(
 		return &archivesSortedResult{
 			MainLnk:        *mainLink,
 			Pattern:        "archives_2xpaths",
-			Links:          bestLinks,
+			Links:          NewPristineMaybeTitledLinks(bestLinks),
 			HasDates:       false,
 			PostCategories: nil,
 			Extra: []string{
@@ -1007,7 +1010,7 @@ func tryExtractSorted2XPaths(
 
 func tryExtractAlmostMatchingFeed(
 	starCountExtractions starCountExtractions, almostMatchThreshold int, fewerStarsCuris []CanonicalUri,
-	mainLink *Link, guidedCtx *guidedCrawlContext, logger Logger,
+	mainLink *pristineLink, guidedCtx *guidedCrawlContext, logger Logger,
 ) (*archivesSortedResult, bool) {
 	feedEntryLinks := guidedCtx.FeedEntryLinks
 	logger.Info("Trying almost feed match with %d stars", starCountExtractions.StarCount)
@@ -1070,10 +1073,11 @@ func tryExtractAlmostMatchingFeed(
 	}
 
 	if bestLinks != nil {
+		resultLinks := feedEntryLinks.ToMaybeTitledSlice()
 		return &archivesSortedResult{
 			MainLnk:        *mainLink,
 			Pattern:        "archives_feed_almost",
-			Links:          feedEntryLinks.ToMaybeTitledSlice(),
+			Links:          NewPristineMaybeTitledLinks(resultLinks),
 			HasDates:       false,
 			PostCategories: nil,
 			Extra: []string{
@@ -1088,7 +1092,7 @@ func tryExtractAlmostMatchingFeed(
 
 func tryExtractShuffled(
 	page *htmlPage, starCountExtractions starCountExtractions, almostMatchThreshold int,
-	minLinksCount int, mainLink *Link, guidedCtx *guidedCrawlContext, logger Logger,
+	minLinksCount int, mainLink *pristineLink, guidedCtx *guidedCrawlContext, logger Logger,
 ) (*archivesShuffledResult, bool) {
 	isAlmost := almostMatchThreshold != -1
 	almostSuffix := ""
@@ -1189,8 +1193,8 @@ func tryExtractShuffled(
 			fmt.Sprintf("dates_present: %d/%d", datesPresent, len(bestLinks)),
 		}
 
-		var postCategories []HistoricalBlogPostCategory
-		if CanonicalUriEqual(mainLink.Curi, hardcodedJuliaEvans, curiEqCfg) {
+		var postCategories []pristineHistoricalBlogPostCategory
+		if CanonicalUriEqual(mainLink.Curi(), hardcodedJuliaEvans, curiEqCfg) {
 			jvnsCategories, err := extractJuliaEvansCategories(page, logger)
 			if err != nil {
 				logger.Info("Couldn't extract Julia Evans categories: %v", err)
@@ -1206,7 +1210,7 @@ func tryExtractShuffled(
 		return &archivesShuffledResult{
 			MainLnk:        *mainLink,
 			Pattern:        fmt.Sprintf("archives_shuffled%s", almostSuffix),
-			Links:          bestLinks,
+			Links:          NewPristineMaybeTitledLinks(bestLinks),
 			MaybeDates:     bestMaybeDates,
 			PostCategories: postCategories,
 			Extra:          extra,
@@ -1218,7 +1222,7 @@ func tryExtractShuffled(
 }
 
 func tryExtractLongFeed(
-	feedEntryLinks *FeedEntryLinks, pageCurisSet *CanonicalUriSet, minLinksCount int, mainLink *Link,
+	feedEntryLinks *FeedEntryLinks, pageCurisSet *CanonicalUriSet, minLinksCount int, mainLink *pristineLink,
 	logger Logger,
 ) (*archivesLongFeedResult, bool) {
 	logger.Info("Trying archives long feed match")
@@ -1228,10 +1232,11 @@ func tryExtractLongFeed(
 		feedEntryLinks.allIncluded(pageCurisSet) {
 
 		logger.Info("Long feed is matching (%d links)", feedEntryLinks.Length)
+		resultLinks := feedEntryLinks.ToMaybeTitledSlice()
 		return &archivesLongFeedResult{
 			MainLnk: *mainLink,
 			Pattern: "archives_long_feed",
-			Links:   feedEntryLinks.ToMaybeTitledSlice(),
+			Links:   NewPristineMaybeTitledLinks(resultLinks),
 			Extra:   nil,
 		}, true
 	} else {

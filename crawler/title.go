@@ -52,22 +52,6 @@ func (t *LinkTitle) PrintString() string {
 	return fmt.Sprintf("%q (%s)%s", t.Value, t.Source, alternatives)
 }
 
-func (t *LinkTitle) DeepCopy() LinkTitle {
-	var altValuesBySource map[linkTitleSource]string
-	if t.AltValuesBySource != nil {
-		altValuesBySource = map[linkTitleSource]string{}
-		for source, value := range t.AltValuesBySource {
-			altValuesBySource[source] = strings.Clone(value)
-		}
-	}
-	return LinkTitle{
-		Value:             strings.Clone(t.Value),
-		EqualizedValue:    strings.Clone(t.EqualizedValue),
-		Source:            t.Source,
-		AltValuesBySource: altValuesBySource,
-	}
-}
-
 func getPageTitle(page *htmlPage, feedGenerator FeedGenerator, logger Logger) string {
 	ogTitleElement := htmlquery.FindOne(page.Document, "/html/head/meta[@property='og:title'][@content]")
 	var title string

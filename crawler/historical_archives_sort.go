@@ -166,11 +166,12 @@ func historicalArchivesSortAdd(
 }
 
 func historicalArchivesSortFinish(
-	linksWithKnownDates []linkDate, links []*maybeTitledLink, maybeSortState *sortState, logger Logger,
-) (sortedLinks []*maybeTitledLink, dateSource *xpathDateSource, ok bool) {
+	linksWithKnownDates []linkDate[pristineMaybeTitledLink], links []*pristineMaybeTitledLink,
+	maybeSortState *sortState, logger Logger,
+) (sortedLinks []*pristineMaybeTitledLink, dateSource *xpathDateSource, ok bool) {
 	logger.Info("Archives sort finish start")
 
-	var linksDates []linkDate
+	var linksDates []linkDate[pristineMaybeTitledLink]
 	if maybeSortState != nil {
 		datesByXPathFromMeta := make(map[string]*[]date)
 		datesByXPathFromTime := make(map[string]*[]date)
@@ -215,16 +216,18 @@ func historicalArchivesSortFinish(
 		}
 
 		titleCount := 0
-		titledLinks := make([]*maybeTitledLink, len(links))
+		titledLinks := make([]*pristineMaybeTitledLink, len(links))
 		for i, link := range links {
 			if link.MaybeTitle != nil {
 				titledLinks[i] = link
 				continue
 			}
 
-			title := NewLinkTitle(maybeSortState.PageTitles[i], LinkTitleSourcePageTitle, nil)
+			title := NewPristineLinkTitle(NewLinkTitle(
+				maybeSortState.PageTitles[i], LinkTitleSourcePageTitle, nil,
+			))
 			titleCount++
-			titledLinks[i] = &maybeTitledLink{
+			titledLinks[i] = &pristineMaybeTitledLink{
 				Link:       link.Link,
 				MaybeTitle: &title,
 			}
@@ -233,7 +236,7 @@ func historicalArchivesSortFinish(
 
 		linksDates = slices.Clone(linksWithKnownDates)
 		for i, link := range links {
-			linksDates = append(linksDates, linkDate{
+			linksDates = append(linksDates, linkDate[pristineMaybeTitledLink]{
 				Link: *link,
 				Date: resultDates[i],
 			})
@@ -247,7 +250,7 @@ func historicalArchivesSortFinish(
 	}
 
 	sortedLinksDates := sortLinksDates(linksDates)
-	sortedLinks = make([]*maybeTitledLink, len(sortedLinksDates))
+	sortedLinks = make([]*pristineMaybeTitledLink, len(sortedLinksDates))
 	for i := range sortedLinksDates {
 		sortedLinks[i] = &sortedLinksDates[i].Link
 	}
@@ -257,13 +260,13 @@ func historicalArchivesSortFinish(
 }
 
 func historicalArchivesMediumSortFinish(
-	pinnedEntryLink *maybeTitledLink, pinnedEntryPageLinks []*xpathLink, otherLinksDates []linkDate,
-	curiEqCfg *CanonicalEqualityConfig, logger Logger,
-) ([]*maybeTitledLink, bool) {
+	pinnedEntryLink *pristineMaybeTitledLink, pinnedEntryPageLinks []*xpathLink,
+	otherLinksDates []linkDate[pristineMaybeTitledLink], curiEqCfg *CanonicalEqualityConfig, logger Logger,
+) ([]*pristineMaybeTitledLink, bool) {
 	logger.Info("Archives medium sort finish start")
 	var pinnedDate *date
 	for _, link := range pinnedEntryPageLinks {
-		if !CanonicalUriEqual(pinnedEntryLink.Curi, link.Curi, curiEqCfg) {
+		if !CanonicalUriEqual(pinnedEntryLink.Link.Curi(), link.Curi, curiEqCfg) {
 			continue
 		}
 
@@ -282,13 +285,13 @@ func historicalArchivesMediumSortFinish(
 		return nil, false
 	}
 
-	pinnedLinkDate := linkDate{
+	pinnedLinkDate := linkDate[pristineMaybeTitledLink]{
 		Link: *pinnedEntryLink,
 		Date: *pinnedDate,
 	}
 	linksDates := append(slices.Clone(otherLinksDates), pinnedLinkDate)
 	sortedLinksDates := sortLinksDates(linksDates)
-	sortedLinks := make([]*maybeTitledLink, len(sortedLinksDates))
+	sortedLinks := make([]*pristineMaybeTitledLink, len(sortedLinksDates))
 	for i, linkDate := range sortedLinksDates {
 		sortedLinks[i] = &linkDate.Link
 	}
@@ -297,15 +300,15 @@ func historicalArchivesMediumSortFinish(
 	return sortedLinks, true
 }
 
-type linkDate struct {
-	Link maybeTitledLink
+type linkDate[Link any] struct {
+	Link Link
 	Date date
 }
 
 // Sort newest to oldest, preserve link order within the same date
-func sortLinksDates(linksDates []linkDate) []linkDate {
+func sortLinksDates[Link any](linksDates []linkDate[Link]) []linkDate[Link] {
 	sortedLinksDates := slices.Clone(linksDates)
-	slices.SortStableFunc(sortedLinksDates, func(a, b linkDate) int {
+	slices.SortStableFunc(sortedLinksDates, func(a, b linkDate[Link]) int {
 		return b.Date.Compare(a.Date)
 	})
 	return sortedLinksDates

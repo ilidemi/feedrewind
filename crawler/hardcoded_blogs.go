@@ -100,15 +100,15 @@ func hardcodedMustParse(url string) CanonicalUri {
 	return CanonicalUriFromUri(uri)
 }
 
-var hardcodedCryptographyEngineeringCategories []HistoricalBlogPostCategory
-var hardcodedKalzumeusCategories []HistoricalBlogPostCategory
-var hardcodedMrMoneyMustacheCategories []HistoricalBlogPostCategory
-var hardcodedPaulGrahamCategories []HistoricalBlogPostCategory
+var hardcodedCryptographyEngineeringCategories []pristineHistoricalBlogPostCategory
+var hardcodedKalzumeusCategories []pristineHistoricalBlogPostCategory
+var hardcodedMrMoneyMustacheCategories []pristineHistoricalBlogPostCategory
+var hardcodedPaulGrahamCategories []pristineHistoricalBlogPostCategory
 
 func init() {
 	logger := NewDummyLogger()
 
-	makeTopCategory := func(name string, topUrls []string) []HistoricalBlogPostCategory {
+	makeTopCategory := func(name string, topUrls []string) []pristineHistoricalBlogPostCategory {
 		topLinks := make([]Link, len(topUrls))
 		for i, url := range topUrls {
 			link, ok := ToCanonicalLink(url, logger, nil)
@@ -117,12 +117,8 @@ func init() {
 			}
 			topLinks[i] = *link
 		}
-		category := HistoricalBlogPostCategory{
-			Name:      name,
-			IsTop:     true,
-			PostLinks: topLinks,
-		}
-		return []HistoricalBlogPostCategory{category}
+		category := NewPristineHistoricalBlogPostCategory(name, true, topLinks)
+		return []pristineHistoricalBlogPostCategory{category}
 	}
 
 	cryptographyEngineeringTopUrls := []string{
@@ -256,17 +252,19 @@ func init() {
 	acoupNonArticleRegex = regexp.MustCompile(`/\d+/\d+/\d+/(gap-week|fireside)-`)
 }
 
-func extractACOUPCategories(postLinks []*maybeTitledLink) ([]HistoricalBlogPostCategory, error) {
-	var articlesLinks []Link
+func extractACOUPCategories(
+	postLinks []*pristineMaybeTitledLink,
+) ([]pristineHistoricalBlogPostCategory, error) {
+	var articlesLinks []pristineLink
 	for _, link := range postLinks {
-		if !acoupNonArticleRegex.MatchString(link.Curi.Path) {
+		if !acoupNonArticleRegex.MatchString(link.Curi().Path) {
 			articlesLinks = append(articlesLinks, link.Link)
 		}
 	}
 	if len(articlesLinks) == 0 {
 		return nil, oops.Newf("ACOUP categories not found")
 	}
-	return []HistoricalBlogPostCategory{{
+	return []pristineHistoricalBlogPostCategory{{
 		Name:      "Articles",
 		IsTop:     true,
 		PostLinks: articlesLinks,
@@ -306,7 +304,9 @@ func ExtractACXCategories(postLink *FeedEntryLink, logger log.Logger) []string {
 	return categories
 }
 
-func extractBenKuhnCategories(mainPage *htmlPage, logger Logger) ([]HistoricalBlogPostCategory, error) {
+func extractBenKuhnCategories(
+	mainPage *htmlPage, logger Logger,
+) ([]pristineHistoricalBlogPostCategory, error) {
 	essaysElements := htmlquery.Find(mainPage.Document, "/html/body/div[1]/div[1]/div[*]/h2/a")
 	essaysLinks := make([]Link, len(essaysElements))
 	for i, element := range essaysElements {
@@ -318,24 +318,22 @@ func extractBenKuhnCategories(mainPage *htmlPage, logger Logger) ([]HistoricalBl
 		essaysLinks[i] = *link
 	}
 
-	return []HistoricalBlogPostCategory{{
-		Name:      "Essays",
-		IsTop:     true,
-		PostLinks: essaysLinks,
-	}}, nil
+	return []pristineHistoricalBlogPostCategory{
+		NewPristineHistoricalBlogPostCategory("Essays", true, essaysLinks),
+	}, nil
 }
 
 func extractCaseyHandmerCategories(
-	spaceMisconceptionsPage, marsTrilogyPage, futureOfEnergyPage *htmlPage, links []*maybeTitledLink,
+	spaceMisconceptionsPage, marsTrilogyPage, futureOfEnergyPage *htmlPage, links []*pristineMaybeTitledLink,
 	curiEqCfg *CanonicalEqualityConfig, logger Logger,
-) ([]HistoricalBlogPostCategory, error) {
+) ([]pristineHistoricalBlogPostCategory, error) {
 	logger.Info("Extracting Casey Handmer categories")
 
 	spaceMisconceptionsElements := htmlquery.Find(
 		spaceMisconceptionsPage.Document,
 		"/html/body/div[1]/div/div/div[1]/main/article/div[1]/ul[*]/li[*]/a",
 	)
-	var spaceMisconceptionsLinks []Link
+	var spaceMisconceptionsLinks []pristineLink
 	for _, element := range spaceMisconceptionsElements {
 		href := findAttr(element, "href")
 		if strings.HasSuffix(href, ".pdf") {
@@ -345,7 +343,7 @@ func extractCaseyHandmerCategories(
 		if !ok {
 			return nil, oops.Newf("Casey Handmer categories bad link: %q", href)
 		}
-		spaceMisconceptionsLinks = append(spaceMisconceptionsLinks, *link)
+		spaceMisconceptionsLinks = append(spaceMisconceptionsLinks, *NewPristineLink(link))
 	}
 	if len(spaceMisconceptionsLinks) == 0 {
 		return nil, oops.Newf("Casey Handmer space misconceptions category not found")
@@ -355,7 +353,7 @@ func extractCaseyHandmerCategories(
 		marsTrilogyPage.Document,
 		"/html/body/div[1]/div/div/div[1]/main/article/div[1]/p[*]/a",
 	)
-	var marsTrilogyLinks []Link
+	var marsTrilogyLinks []pristineLink
 	seenFirstLink := false
 	for _, element := range marsTrilogyElements {
 		href := findAttr(element, "href")
@@ -370,7 +368,7 @@ func extractCaseyHandmerCategories(
 			seenFirstLink = true
 		}
 		if seenFirstLink {
-			marsTrilogyLinks = append(marsTrilogyLinks, *link)
+			marsTrilogyLinks = append(marsTrilogyLinks, *NewPristineLink(link))
 		}
 	}
 	if len(marsTrilogyLinks) == 0 {
@@ -381,7 +379,7 @@ func extractCaseyHandmerCategories(
 		futureOfEnergyPage.Document,
 		"/html/body/div[1]/div/div/div[1]/main/article/div[1]//a",
 	)
-	var futureOfEnergyLinks []Link
+	var futureOfEnergyLinks []pristineLink
 	for _, element := range futureOfEnergyElements {
 		href := findAttr(element, "href")
 		if strings.HasSuffix(href, ".pdf") {
@@ -394,28 +392,28 @@ func extractCaseyHandmerCategories(
 		if link.Curi.Host == hardcodedCaseyHandmer.Host &&
 			!CanonicalUriEqual(link.Curi, hardcodedCaseyHandmerBookReviews.Curi, curiEqCfg) {
 
-			futureOfEnergyLinks = append(futureOfEnergyLinks, *link)
+			futureOfEnergyLinks = append(futureOfEnergyLinks, *NewPristineLink(link))
 		}
 	}
 	if len(futureOfEnergyLinks) == 0 {
 		return nil, oops.Newf("Casey Handmer future of energy category not found")
 	}
 
-	categorizedLinksLists := [][]Link{spaceMisconceptionsLinks, marsTrilogyLinks, futureOfEnergyLinks}
+	categorizedLinksLists := [][]pristineLink{spaceMisconceptionsLinks, marsTrilogyLinks, futureOfEnergyLinks}
 	categorizedLinksSet := NewCanonicalUriSet(nil, curiEqCfg)
 	for _, categorizedLinks := range categorizedLinksLists {
 		for _, link := range categorizedLinks {
-			categorizedLinksSet.add(link.Curi)
+			categorizedLinksSet.add(link.Curi())
 		}
 	}
-	var uncategorizedLinks []Link
+	var uncategorizedLinks []pristineLink
 	for _, link := range links {
-		if !categorizedLinksSet.Contains(link.Curi) {
+		if !categorizedLinksSet.Contains(link.Curi()) {
 			uncategorizedLinks = append(uncategorizedLinks, link.Link)
 		}
 	}
 
-	return []HistoricalBlogPostCategory{
+	return []pristineHistoricalBlogPostCategory{
 		{
 			Name:      "Top",
 			IsTop:     true,
@@ -462,24 +460,28 @@ func ExtractDontWorryAboutTheVaseCategories(postLink *FeedEntryLink, logger log.
 	return categories
 }
 
-func extractFactorioCategories(postLinks []*maybeTitledLink) ([]HistoricalBlogPostCategory, error) {
-	var fffLinks []Link
+func extractFactorioCategories(
+	postLinks []*pristineMaybeTitledLink,
+) ([]pristineHistoricalBlogPostCategory, error) {
+	var fffLinks []pristineLink
 	for _, link := range postLinks {
-		if strings.HasPrefix(link.Curi.Path, "/blog/post/fff-") {
+		if strings.HasPrefix(link.Curi().Path, "/blog/post/fff-") {
 			fffLinks = append(fffLinks, link.Link)
 		}
 	}
 	if len(fffLinks) == 0 {
 		return nil, oops.Newf("Factorio categories not found")
 	}
-	return []HistoricalBlogPostCategory{{
+	return []pristineHistoricalBlogPostCategory{{
 		Name:      "Friday Facts",
 		IsTop:     true,
 		PostLinks: fffLinks,
 	}}, nil
 }
 
-func extractJuliaEvansCategories(page *htmlPage, logger Logger) ([]HistoricalBlogPostCategory, error) {
+func extractJuliaEvansCategories(
+	page *htmlPage, logger Logger,
+) ([]pristineHistoricalBlogPostCategory, error) {
 	logger.Info("Extracting Julia Evans categories")
 
 	headings := htmlquery.Find(page.Document, "//article/a/h3")
@@ -487,7 +489,7 @@ func extractJuliaEvansCategories(page *htmlPage, logger Logger) ([]HistoricalBlo
 		return nil, oops.Newf("Julia Evans categories not found")
 	}
 
-	categories := make([]HistoricalBlogPostCategory, 1+len(headings))
+	categories := make([]pristineHistoricalBlogPostCategory, 1+len(headings))
 	for categoryIdx, heading := range headings {
 		categoryName := innerText(heading)
 		postLinkElements := htmlquery.Find(heading.Parent.NextSibling, ".//a")
@@ -501,21 +503,17 @@ func extractJuliaEvansCategories(page *htmlPage, logger Logger) ([]HistoricalBlo
 			postLinks[i] = *link
 		}
 
-		categories[1+categoryIdx] = HistoricalBlogPostCategory{
-			Name:      categoryName,
-			IsTop:     false,
-			PostLinks: postLinks,
-		}
+		categories[1+categoryIdx] = NewPristineHistoricalBlogPostCategory(categoryName, false, postLinks)
 	}
 
-	var postLinksExceptRC []Link
+	var postLinksExceptRC []pristineLink
 	for _, category := range categories {
 		if strings.Contains(category.Name, "Recurse center") || category.Name == "Conferences" {
 			continue
 		}
 		postLinksExceptRC = append(postLinksExceptRC, category.PostLinks...)
 	}
-	categories[0] = HistoricalBlogPostCategory{
+	categories[0] = pristineHistoricalBlogPostCategory{
 		Name:      "Blog posts",
 		IsTop:     true,
 		PostLinks: postLinksExceptRC,
@@ -545,12 +543,8 @@ func init() {
 
 func extractSubstackCategories(
 	htmlLinks []*maybeTitledHtmlLink, distanceToTopParent int,
-) []HistoricalBlogPostCategory {
-	publicCategory := HistoricalBlogPostCategory{
-		Name:      "Public",
-		IsTop:     true,
-		PostLinks: []Link{},
-	}
+) []pristineHistoricalBlogPostCategory {
+	publicCategory := NewPristineHistoricalBlogPostCategory("Public", true, nil)
 	for _, htmlLink := range htmlLinks {
 		topParent := htmlLink.Element
 		for i := 0; i < distanceToTopParent; i++ {
@@ -558,10 +552,10 @@ func extractSubstackCategories(
 		}
 		lockNode := htmlquery.QuerySelector(topParent, lockXPath)
 		if lockNode == nil {
-			publicCategory.PostLinks = append(publicCategory.PostLinks, htmlLink.Link)
+			publicCategory.PostLinks = append(publicCategory.PostLinks, *NewPristineLink(&htmlLink.Link))
 		}
 	}
-	return []HistoricalBlogPostCategory{publicCategory}
+	return []pristineHistoricalBlogPostCategory{publicCategory}
 }
 
 func generatePgFeed(

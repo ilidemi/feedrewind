@@ -64,20 +64,8 @@ type HistoricalBlogPostCategory struct {
 	PostLinks []Link
 }
 
-func (c HistoricalBlogPostCategory) DeepCopy() HistoricalBlogPostCategory {
-	postLinks := make([]Link, len(c.PostLinks))
-	for i, link := range c.PostLinks {
-		postLinks[i] = link.DeepCopy()
-	}
-	return HistoricalBlogPostCategory{
-		Name:      strings.Clone(c.Name),
-		IsTop:     c.IsTop,
-		PostLinks: postLinks,
-	}
-}
-
 func areCategoriesEqual(
-	categories1, categories2 []HistoricalBlogPostCategory, curiEqCfg *CanonicalEqualityConfig,
+	categories1, categories2 []pristineHistoricalBlogPostCategory, curiEqCfg *CanonicalEqualityConfig,
 ) bool {
 	if len(categories1) != len(categories2) {
 		return false
@@ -95,28 +83,13 @@ func areCategoriesEqual(
 		}
 		for j, link := range category.PostLinks {
 			otherLink := otherCategory.PostLinks[j]
-			if !CanonicalUriEqual(link.Curi, otherLink.Curi, curiEqCfg) {
+			if !CanonicalUriEqual(link.Curi(), otherLink.Curi(), curiEqCfg) {
 				return false
 			}
 		}
 	}
 
 	return true
-}
-
-func categoryCountsString(categories []HistoricalBlogPostCategory) string {
-	var sb strings.Builder
-	for i, category := range categories {
-		if i > 0 {
-			sb.WriteString(", ")
-		}
-		if category.IsTop {
-			sb.WriteRune('!')
-		}
-		sb.WriteString(category.Name)
-		fmt.Fprintf(&sb, " (%d)", len(category.PostLinks))
-	}
-	return sb.String()
 }
 
 func GuidedCrawl(
@@ -276,7 +249,7 @@ func GuidedCrawl(
 		if postprocessedResult != nil {
 			var historicalCuris []CanonicalUri
 			for _, link := range postprocessedResult.Links {
-				historicalCuris = append(historicalCuris, link.Curi)
+				historicalCuris = append(historicalCuris, link.Curi())
 			}
 			historicalCurisSet := NewCanonicalUriSet(historicalCuris, &curiEqCfg)
 
@@ -287,21 +260,25 @@ func GuidedCrawl(
 				}
 			}
 
-			historicalMaybeTitledLinks = postprocessedResult.Links
+			historicalMaybeTitledLinks = make([]*maybeTitledLink, len(postprocessedResult.Links))
+			for i, link := range postprocessedResult.Links {
+				historicalMaybeTitledLinks[i] = link.Unwrap()
+			}
+			postCategories := PristineHistoricalBlogPostCategoriesUnwrap(postprocessedResult.PostCategories)
 			historicalResult = &HistoricalResult{
-				BlogLink:               postprocessedResult.MainLnk,
-				MainLink:               postprocessedResult.MainLnk,
+				BlogLink:               *postprocessedResult.MainLnk.Unwrap(),
+				MainLink:               *postprocessedResult.MainLnk.Unwrap(),
 				Pattern:                postprocessedResult.Pattern,
 				Links:                  nil,
 				DiscardedFeedEntryUrls: discardedFeedEntryUrls,
-				PostCategories:         postprocessedResult.PostCategories,
+				PostCategories:         postCategories,
 				Extra:                  postprocessedResult.Extra,
 			}
 		}
 	} else {
 		logger.Info("Feed is long with %d entries", parsedFeed.EntryLinks.Length)
 
-		var postCategories []HistoricalBlogPostCategory
+		var postCategories []pristineHistoricalBlogPostCategory
 		var postCategoriesExtra []string
 		if CanonicalUriEqual(feedLink.Curi, hardcodedPaulGraham, &curiEqCfg) {
 			postCategories = hardcodedPaulGrahamCategories
@@ -316,7 +293,7 @@ func GuidedCrawl(
 			Pattern:                "long_feed",
 			Links:                  nil,
 			DiscardedFeedEntryUrls: nil,
-			PostCategories:         postCategories,
+			PostCategories:         PristineHistoricalBlogPostCategoriesUnwrap(postCategories),
 			Extra:                  postCategoriesExtra,
 		}
 		historicalMaybeTitledLinks = parsedFeed.EntryLinks.ToMaybeTitledSlice()
@@ -430,25 +407,25 @@ func getFeedStartPage(
 }
 
 type crawlHistoricalResult interface {
-	mainLink() Link
+	mainLink() pristineLink
 	speculativeCount() int
 	isSame(other crawlHistoricalResult, curiEqCfg *CanonicalEqualityConfig) bool
 }
 
-func areLinksEqual(links1, links2 []*maybeTitledLink, curiEqCfg *CanonicalEqualityConfig) bool {
+func areLinksEqual(links1, links2 []*pristineMaybeTitledLink, curiEqCfg *CanonicalEqualityConfig) bool {
 	if len(links1) != len(links2) {
 		return false
 	}
 	for i, link := range links1 {
 		otherLink := links2[i]
-		if !CanonicalUriEqual(link.Curi, otherLink.Curi, curiEqCfg) {
+		if !CanonicalUriEqual(link.Curi(), otherLink.Curi(), curiEqCfg) {
 			return false
 		}
 		if (link.MaybeTitle == nil) != (otherLink.MaybeTitle == nil) {
 			return false
 		}
 		if link.MaybeTitle != nil && otherLink.MaybeTitle != nil &&
-			link.MaybeTitle.EqualizedValue != otherLink.MaybeTitle.EqualizedValue {
+			link.MaybeTitle.Title.EqualizedValue != otherLink.MaybeTitle.Title.EqualizedValue {
 			return false
 		}
 	}
@@ -457,16 +434,16 @@ func areLinksEqual(links1, links2 []*maybeTitledLink, curiEqCfg *CanonicalEquali
 }
 
 type postprocessedResult struct {
-	MainLnk                 Link
+	MainLnk                 pristineLink
 	Pattern                 string
-	Links                   []*maybeTitledLink
+	Links                   []*pristineMaybeTitledLink
 	IsMatchingFeed          bool
-	PostCategories          []HistoricalBlogPostCategory
+	PostCategories          []pristineHistoricalBlogPostCategory
 	Extra                   []string
 	MaybePartialPagedResult *partialPagedResult
 }
 
-func (r *postprocessedResult) mainLink() Link {
+func (r *postprocessedResult) mainLink() pristineLink {
 	return r.MainLnk
 }
 
@@ -493,8 +470,8 @@ type linkOrHtmlPage interface {
 	linkOrHtmlPageTag()
 }
 
-func (*Link) linkOrHtmlPageTag()     {}
-func (*htmlPage) linkOrHtmlPageTag() {}
+func (*pristineLink) linkOrHtmlPageTag() {}
+func (*htmlPage) linkOrHtmlPageTag()     {}
 
 type guidedCrawlQueue []linkOrHtmlPage
 
@@ -557,11 +534,11 @@ func guidedCrawlHistorical(
 		switch {
 		case archivesRegex.MatchString(link.Curi.TrimmedPath):
 			seenCurisSet.add(link.Curi)
-			archivesQueue = append(archivesQueue, link)
+			archivesQueue = append(archivesQueue, NewPristineLink(link))
 			logger.Info("Enqueued archives: %s", link.Url)
 		case mainPageRegex.MatchString(link.Curi.TrimmedPath):
 			seenCurisSet.add(link.Curi)
-			mainPageQueue = append(mainPageQueue, link)
+			mainPageQueue = append(mainPageQueue, NewPristineLink(link))
 			logger.Info("Enqueued main page: %s", link.Url)
 		default:
 			startPageOtherLinks = append(startPageOtherLinks, link)
@@ -572,7 +549,7 @@ func guidedCrawlHistorical(
 		archiveLink, _ := ToCanonicalLink("/archive", logger, parsedFeed.RootLink.Uri)
 		if isNewAndAllowed(archiveLink, &seenCurisSet, crawlCtx.RobotsClient, logger) {
 			seenCurisSet.add(archiveLink.Curi)
-			archivesQueue = append(archivesQueue, archiveLink)
+			archivesQueue = append(archivesQueue, NewPristineLink(archiveLink))
 			logger.Info("Added missing substack archives: %s", archiveLink.Url)
 		}
 	}
@@ -639,7 +616,7 @@ func guidedCrawlHistorical(
 		return nil, oops.Wrap(err)
 	}
 
-	var twoEntriesLinks []*Link
+	var twoEntriesLinks []*pristineLink
 	{
 		entry1Links := extractLinks(
 			entry1Page.Document, entry1Page.FetchUri, allowedHosts, crawlCtx.Redirects, logger, includeXPathNone,
@@ -658,22 +635,21 @@ func guidedCrawlHistorical(
 
 			entry2CurisSet.add(entry2Link.Curi)
 			if entry1CurisSet.Contains(entry2Link.Curi) {
-				link := entry2Link.Link.DeepCopy()
-				twoEntriesLinks = append(twoEntriesLinks, &link)
+				twoEntriesLinks = append(twoEntriesLinks, NewPristineLink(&entry2Link.Link))
 			}
 		}
 	}
 
-	var twoEntriesOtherLinks []*Link
+	var twoEntriesOtherLinks []*pristineLink
 	for _, link := range twoEntriesLinks {
-		if !isNewAndAllowed(link, &seenCurisSet, crawlCtx.RobotsClient, logger) {
+		if !isNewAndAllowed(link.Unwrap(), &seenCurisSet, crawlCtx.RobotsClient, logger) {
 			continue
 		}
 
 		switch {
-		case archivesRegex.MatchString(link.Curi.TrimmedPath):
+		case archivesRegex.MatchString(link.Curi().TrimmedPath):
 			archivesQueue = append(archivesQueue, link)
-		case mainPageRegex.MatchString(link.Curi.TrimmedPath):
+		case mainPageRegex.MatchString(link.Curi().TrimmedPath):
 			mainPageQueue = append(mainPageQueue, link)
 		default:
 			twoEntriesOtherLinks = append(twoEntriesOtherLinks, link)
@@ -720,16 +696,16 @@ func guidedCrawlHistorical(
 	}
 
 	var othersQueue guidedCrawlQueue
-	var filteredTwoEntriesOtherLinks []*Link
+	var filteredTwoEntriesOtherLinks []*pristineLink
 	for _, link := range twoEntriesOtherLinks {
-		if !feedEntryCurisTitlesMap.Contains(link.Curi) {
+		if !feedEntryCurisTitlesMap.Contains(link.Curi()) {
 			filteredTwoEntriesOtherLinks = append(filteredTwoEntriesOtherLinks, link)
 		}
 	}
-	var twiceFilteredTwoEntriesOtherLinks []*Link
+	var twiceFilteredTwoEntriesOtherLinks []*pristineLink
 	if len(filteredTwoEntriesOtherLinks) > 10 {
 		for _, link := range filteredTwoEntriesOtherLinks {
-			if !likelyPostRegex.MatchString(link.Curi.TrimmedPath) {
+			if !likelyPostRegex.MatchString(link.Curi().TrimmedPath) {
 				twiceFilteredTwoEntriesOtherLinks = append(twiceFilteredTwoEntriesOtherLinks, link)
 			}
 		}
@@ -743,7 +719,7 @@ func guidedCrawlHistorical(
 	}
 
 	for _, link := range twiceFilteredTwoEntriesOtherLinks {
-		if !isNewAndAllowed(link, &seenCurisSet, crawlCtx.RobotsClient, logger) {
+		if !isNewAndAllowed(link.Unwrap(), &seenCurisSet, crawlCtx.RobotsClient, logger) {
 			continue
 		}
 		othersQueue = append(othersQueue, link)
@@ -770,7 +746,7 @@ func guidedCrawlHistorical(
 			if !isNewAndAllowed(link, &seenCurisSet, crawlCtx.RobotsClient, logger) {
 				continue
 			}
-			othersQueue = append(othersQueue, link)
+			othersQueue = append(othersQueue, NewPristineLink(link))
 			phase1OthersCount++
 		}
 		logger.Info("Phase 3 links from phase 1: %d", phase1OthersCount)
@@ -942,17 +918,17 @@ func guidedCrawlFetchLoop(
 
 		var linkOrPage linkOrHtmlPage
 		linkOrPage, *activeQueue = (*activeQueue)[0], (*activeQueue)[1:]
-		var link *Link
+		var link *pristineLink
 		var page *htmlPage
 		switch lop := linkOrPage.(type) {
-		case *Link:
+		case *pristineLink:
 			link = lop
-			if crawlCtx.FetchedCuris.Contains(link.Curi) {
+			if crawlCtx.FetchedCuris.Contains(link.Curi()) {
 				continue
 			}
 
 			var err error
-			page, err = crawlHtmlPage(link, crawlCtx, logger)
+			page, err = crawlHtmlPage(link.Unwrap(), crawlCtx, logger)
 			err2 := progressLogger.SaveStatus()
 			if err2 != nil {
 				return nil, err2
@@ -965,11 +941,11 @@ func guidedCrawlFetchLoop(
 			}
 		case *htmlPage:
 			page = lop
-			var ok bool
-			link, ok = ToCanonicalLink(page.FetchUri.String(), logger, nil)
+			rawLink, ok := ToCanonicalLink(page.FetchUri.String(), logger, nil)
 			if !ok {
 				panic("Couldn't parse page fetch uri as a link")
 			}
+			link = NewPristineLink(rawLink)
 		default:
 			panic("Unknown link or page type")
 		}
@@ -1003,13 +979,13 @@ func guidedCrawlFetchLoop(
 
 			if archivesRegex.MatchString(pageLink.Curi.TrimmedPath) {
 				guidedCtx.SeenCurisSet.add(pageLink.Curi)
-				*archivesQueue = append(*archivesQueue, &pageLink.Link)
+				*archivesQueue = append(*archivesQueue, NewPristineLink(&pageLink.Link))
 				hadArchives = true
 				archivesSeenCount++
 				logger.Info("Enqueueing archives link: %s", pageLink.Curi)
 			} else if mainPageRegex.MatchString(pageLink.Curi.TrimmedPath) {
 				guidedCtx.SeenCurisSet.add(pageLink.Curi)
-				*mainPageQueue = append(*mainPageQueue, &pageLink.Link)
+				*mainPageQueue = append(*mainPageQueue, NewPristineLink(&pageLink.Link))
 				mainPagesSeenCount++
 				logger.Info("Enqueueing main page link: %s", pageLink.Curi)
 			}
@@ -1088,7 +1064,7 @@ func guidedCrawlFetchLoop(
 }
 
 func tryExtractHistorical(
-	fetchLink *Link, page *htmlPage, pageLinks []*xpathLink, pageCurisSet *CanonicalUriSet,
+	fetchLink *pristineLink, page *htmlPage, pageLinks []*xpathLink, pageCurisSet *CanonicalUriSet,
 	guidedCtx *guidedCrawlContext, logger Logger,
 ) []crawlHistoricalResult {
 	logger.Info("Trying to extract historical from %s", page.FetchUri)
@@ -1265,7 +1241,7 @@ func postprocessArchivesSortedResult(
 	logger Logger,
 ) (*postprocessedResult, error) {
 	progressLogger := crawlCtx.ProgressLogger
-	if CanonicalUriEqual(archivesSortedResult.MainLnk.Curi, hardcodedBenKuhnArchives, guidedCtx.CuriEqCfg) {
+	if CanonicalUriEqual(archivesSortedResult.MainLnk.Curi(), hardcodedBenKuhnArchives, guidedCtx.CuriEqCfg) {
 		logger.Info("Postprocess archives sorted result start")
 		logger.Info("Extra request for Ben Kuhn categories")
 		titleCount := countLinkTitles(archivesSortedResult.Links)
@@ -1369,7 +1345,7 @@ func postprocessArchivesMediumPinnedEntryResult(
 ) (*postprocessedResult, error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Postprocess archives medium pinned entry result start")
-	pinnedEntryPage, err := crawlHtmlPage(&mediumResult.PinnedEntryLink.Link, crawlCtx, logger)
+	pinnedEntryPage, err := crawlHtmlPage(mediumResult.PinnedEntryLink.Link.Unwrap(), crawlCtx, logger)
 	err2 := progressLogger.LogAndSavePostprocessing()
 	if err2 != nil {
 		return nil, err2
@@ -1389,7 +1365,7 @@ func postprocessArchivesMediumPinnedEntryResult(
 	)
 
 	sortedLinks, ok := historicalArchivesMediumSortFinish(
-		&mediumResult.PinnedEntryLink, pinnedEntryPageLinks, mediumResult.OtherLinksDates,
+		mediumResult.PinnedEntryLink, pinnedEntryPageLinks, mediumResult.OtherLinksDates,
 		guidedCtx.CuriEqCfg, logger,
 	)
 	if !ok {
@@ -1524,7 +1500,7 @@ func postprocessPartialPagedResult(
 		if err != nil {
 			return nil, err
 		}
-		page, err := crawlHtmlPage(&partialResult.LinkToNextPage, crawlCtx, logger)
+		page, err := crawlHtmlPage(partialResult.LinkToNextPage.Unwrap(), crawlCtx, logger)
 		err2 := progressLogger.LogAndSavePostprocessing()
 		if err2 != nil {
 			return nil, err2
@@ -1555,7 +1531,7 @@ func postprocessPartialPagedResult(
 		}
 	}
 
-	if CanonicalUriEqual(fullResult.MainLnk.Curi, hardcodedCaseyHandmer, guidedCtx.CuriEqCfg) {
+	if CanonicalUriEqual(fullResult.MainLnk.Curi(), hardcodedCaseyHandmer, guidedCtx.CuriEqCfg) {
 		postCategories, err := crawlCaseyHandmerCategories(fullResult, guidedCtx, crawlCtx, logger)
 		if err != nil {
 			logger.Info("Couldn't fetch Casey Handmer categories: %v", err)
@@ -1585,7 +1561,7 @@ func postprocessPartialPagedResult(
 
 func crawlCaseyHandmerCategories(
 	pagedResult *fullPagedResult, guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext, logger Logger,
-) ([]HistoricalBlogPostCategory, error) {
+) ([]pristineHistoricalBlogPostCategory, error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Extra requests for Casey Handmer categories")
 	titleCount := countLinkTitles(pagedResult.Lnks)
@@ -1632,7 +1608,7 @@ func crawlCaseyHandmerCategories(
 }
 
 type sortedLinks struct {
-	Links           []*maybeTitledLink
+	Links           []*pristineMaybeTitledLink
 	AreMatchingFeed bool
 	DateXPath       string
 	DateSource      dateSourceKind
@@ -1641,20 +1617,20 @@ type sortedLinks struct {
 var errSortFailed = errors.New("sort failed")
 
 func postprocessSortLinksMaybeDates(
-	links []*maybeTitledLink, maybeDates []*date, sortablePagesByCanonicalUrl map[string]sortablePage,
+	links []*pristineMaybeTitledLink, maybeDates []*date, sortablePagesByCanonicalUrl map[string]sortablePage,
 	guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext, logger Logger,
 ) (*sortedLinks, error) {
 	feedGenerator := guidedCtx.FeedGenerator
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Postprocess sort links, maybe dates start")
 
-	var linksWithDates []linkDate
-	var linksWithoutDates []*maybeTitledLink
+	var linksWithDates []linkDate[pristineMaybeTitledLink]
+	var linksWithoutDates []*pristineMaybeTitledLink
 	alreadyFetchedTitlesCount := 0
 	for i, link := range links {
 		date := maybeDates[i]
 		if date != nil {
-			linksWithDates = append(linksWithDates, linkDate{
+			linksWithDates = append(linksWithDates, linkDate[pristineMaybeTitledLink]{
 				Link: *link,
 				Date: *date,
 			})
@@ -1667,10 +1643,10 @@ func postprocessSortLinksMaybeDates(
 	}
 	remainingTitlesCount := len(linksWithDates) - alreadyFetchedTitlesCount
 
-	var crawledLinks []*maybeTitledLink
-	var linksToCrawl []*maybeTitledLink
+	var crawledLinks []*pristineMaybeTitledLink
+	var linksToCrawl []*pristineMaybeTitledLink
 	for _, link := range linksWithoutDates {
-		if _, ok := sortablePagesByCanonicalUrl[link.Curi.String()]; ok {
+		if _, ok := sortablePagesByCanonicalUrl[link.Curi().String()]; ok {
 			crawledLinks = append(crawledLinks, link)
 		} else {
 			linksToCrawl = append(linksToCrawl, link)
@@ -1679,7 +1655,7 @@ func postprocessSortLinksMaybeDates(
 
 	var sortState *sortState
 	for _, link := range crawledLinks {
-		page := sortablePagesByCanonicalUrl[link.Curi.String()]
+		page := sortablePagesByCanonicalUrl[link.Curi().String()]
 		var ok bool
 		sortState, ok = historicalArchivesSortAdd(page, feedGenerator, sortState, logger)
 		if !ok {
@@ -1689,13 +1665,13 @@ func postprocessSortLinksMaybeDates(
 	}
 
 	for linkIdx, link := range linksToCrawl {
-		page, err := crawlHtmlPage(&link.Link, crawlCtx, logger)
+		page, err := crawlHtmlPage(link.Link.Unwrap(), crawlCtx, logger)
 		if err != nil {
 			err2 := progressLogger.LogAndSavePostprocessingResetCount()
 			if err2 != nil {
 				return nil, err2
 			}
-			logger.Info("Couldn't fetch link during result postprocess: %s (%v)", link.Url, err)
+			logger.Info("Couldn't fetch link during result postprocess: %s (%v)", link.Unwrap().Url, err)
 			return nil, errSortFailed
 		}
 		sortablePage := historicalArchivesToSortablePage(page, feedGenerator, logger)
@@ -1740,8 +1716,8 @@ func postprocessSortLinksMaybeDates(
 }
 
 func compareWithFeed(
-	sortedLinks []*maybeTitledLink, feedEntryLinks *FeedEntryLinks, curiEqCfg *CanonicalEqualityConfig,
-	logger Logger,
+	sortedLinks []*pristineMaybeTitledLink, feedEntryLinks *FeedEntryLinks,
+	curiEqCfg *CanonicalEqualityConfig, logger Logger,
 ) bool {
 	if !feedEntryLinks.IsOrderCertain {
 		return true
@@ -2027,7 +2003,7 @@ func fetchMissingTitles(
 	return titledLinks, nil
 }
 
-func countLinkTitles(links []*maybeTitledLink) int {
+func countLinkTitles(links []*pristineMaybeTitledLink) int {
 	titleCount := 0
 	for _, link := range links {
 		if link.MaybeTitle != nil {
@@ -2112,6 +2088,7 @@ func ExtractSubstackPublicAndTotalCounts(
 
 	archivesUrl := rootUrl + "/archive"
 	archivesLink, ok := ToCanonicalLink(archivesUrl, logger, nil)
+	pristineArchivesLink := NewPristineLink(archivesLink)
 	if !ok {
 		return 0, 0, oops.Newf("Couldn't parse archives url: %s", feedUrl)
 	}
@@ -2154,7 +2131,7 @@ func ExtractSubstackPublicAndTotalCounts(
 		archivesAlmostMatchThreshold, logger,
 	)
 	historicalResults := tryExtractArchives(
-		archivesLink, archivesHtmlPage, pageAllLinks, &pageCurisSet, extractionsByStarCount,
+		pristineArchivesLink, archivesHtmlPage, pageAllLinks, &pageCurisSet, extractionsByStarCount,
 		archivesAlmostMatchThreshold, &guidedCtx, logger,
 	)
 	if len(historicalResults) != 1 {

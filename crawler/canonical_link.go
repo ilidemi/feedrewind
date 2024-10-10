@@ -3,11 +3,9 @@ package crawler
 import (
 	"fmt"
 	neturl "net/url"
-	"reflect"
 	"regexp"
 	"slices"
 	"strings"
-	"unsafe"
 
 	"golang.org/x/net/html"
 )
@@ -18,66 +16,9 @@ type Link struct {
 	Url  string
 }
 
-func (l *Link) DeepCopy() Link {
-	var userInfo *neturl.Userinfo
-	if l.Uri.User != nil {
-		val := reflect.ValueOf(l.Uri.User).Elem()
-		typeOfUserinfo := val.Type()
-		userInfoValue := reflect.New(typeOfUserinfo).Elem()
-		for i := 0; i < val.NumField(); i++ {
-			field := val.Field(i)
-			if field.CanSet() {
-				userInfoValue.Field(i).Set(field)
-			} else {
-				reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem().Set(field)
-			}
-		}
-		userInfo = userInfoValue.Addr().Interface().(*neturl.Userinfo)
-	}
-
-	return Link{
-		Curi: l.Curi.DeepCopy(),
-		Uri: &neturl.URL{
-			Scheme:      strings.Clone(l.Uri.Scheme),
-			Opaque:      strings.Clone(l.Uri.Opaque),
-			User:        userInfo,
-			Host:        strings.Clone(l.Uri.Host),
-			Path:        strings.Clone(l.Uri.Path),
-			RawPath:     strings.Clone(l.Uri.RawPath),
-			OmitHost:    l.Uri.OmitHost,
-			ForceQuery:  l.Uri.ForceQuery,
-			RawQuery:    strings.Clone(l.Uri.RawQuery),
-			Fragment:    strings.Clone(l.Uri.Fragment),
-			RawFragment: strings.Clone(l.Uri.RawFragment),
-		},
-		Url: string(l.Url),
-	}
-}
-
 type maybeTitledLink struct {
 	Link
 	MaybeTitle *LinkTitle
-}
-
-func (l *maybeTitledLink) DeepCopy() maybeTitledLink {
-	var maybeTitle *LinkTitle
-	if l.MaybeTitle != nil {
-		maybeTitleVal := l.MaybeTitle.DeepCopy()
-		maybeTitle = &maybeTitleVal
-	}
-	return maybeTitledLink{
-		Link:       l.Lnk().DeepCopy(),
-		MaybeTitle: maybeTitle,
-	}
-}
-
-func MaybeTitledLinksDeepCopy(links []*maybeTitledLink) []*maybeTitledLink {
-	copy := make([]*maybeTitledLink, len(links))
-	for i, link := range links {
-		linkVal := link.DeepCopy()
-		copy[i] = &linkVal
-	}
-	return copy
 }
 
 type maybeTitledHtmlLink struct {
@@ -109,11 +50,13 @@ type ilink interface {
 	Lnk() *Link
 }
 
-func (l *Link) Lnk() *Link                { return l }
-func (l *maybeTitledLink) Lnk() *Link     { return &l.Link }
-func (l *maybeTitledHtmlLink) Lnk() *Link { return &l.Link }
-func (l *titledLink) Lnk() *Link          { return &l.Link }
-func (l *xpathLink) Lnk() *Link           { return &l.Link }
+func (l *Link) Lnk() *Link                    { return l }
+func (l *maybeTitledLink) Lnk() *Link         { return &l.Link }
+func (l *maybeTitledHtmlLink) Lnk() *Link     { return &l.Link }
+func (l *titledLink) Lnk() *Link              { return &l.Link }
+func (l *xpathLink) Lnk() *Link               { return &l.Link }
+func (l *pristineLink) Lnk() *Link            { return l.Unwrap() }
+func (l *pristineMaybeTitledLink) Lnk() *Link { return l.Link.Unwrap() }
 
 func ToCanonicalUris[L ilink](links []L) []CanonicalUri {
 	curis := make([]CanonicalUri, len(links))
@@ -293,24 +236,6 @@ func (c CanonicalUri) String() string {
 	return fmt.Sprintf("%s%s%s%s", c.Host, c.Port, c.Path, c.Query)
 }
 
-func (c CanonicalUri) DeepCopy() CanonicalUri {
-	return CanonicalUri{
-		Host:        strings.Clone(c.Host),
-		Port:        strings.Clone(c.Port),
-		Path:        strings.Clone(c.Path),
-		TrimmedPath: strings.Clone(c.TrimmedPath),
-		Query:       strings.Clone(c.Query), // technically not needed but just in case
-	}
-}
-
-func CanonicalUrisDeepCopy(curis []CanonicalUri) []CanonicalUri {
-	copy := make([]CanonicalUri, len(curis))
-	for i, curi := range curis {
-		copy[i] = curi.DeepCopy()
-	}
-	return copy
-}
-
 type CanonicalEqualityConfig struct {
 	SameHosts         map[string]bool
 	ExpectTumblrPaths bool
@@ -467,15 +392,6 @@ func (s *CanonicalUriSet) add(curi CanonicalUri) {
 	s.keys[key] = true
 	s.Curis = append(s.Curis, curi)
 	s.Length++
-}
-
-func (s *CanonicalUriSet) DeepCopy() CanonicalUriSet {
-	return CanonicalUriSet{
-		Curis:     CanonicalUrisDeepCopy(s.Curis),
-		Length:    s.Length,
-		curiEqCfg: s.curiEqCfg,
-		keys:      s.keys,
-	}
 }
 
 func canonicalUriGetKey(curi CanonicalUri, curiEqCfg *CanonicalEqualityConfig) string {
