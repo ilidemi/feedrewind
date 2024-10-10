@@ -19,13 +19,13 @@ func getTumblrApiHistorical(
 	logger.Info("Get Tumblr historical start")
 	apiKey := "REDACTED_TUMBLR_API_KEY"
 
-	var links []*maybeTitledLink
+	var links []*pristineMaybeTitledLink
 	var timestamps []int64
 	url := fmt.Sprintf("https://api.tumblr.com/v2/blog/%s/posts?api_key=%s", hostname, apiKey)
-	var blogLink *Link
+	var blogLink *pristineLink
 	var blogTitle string
 	var expectedCount int
-	categoriesByName := make(map[string]*HistoricalBlogPostCategory)
+	categoriesByName := make(map[string]*pristineHistoricalBlogPostCategory)
 	for {
 		uri, err := neturl.Parse(url)
 		if err != nil {
@@ -84,11 +84,11 @@ func getTumblrApiHistorical(
 				return nil, oops.New("No blog url in Tumblr response")
 			}
 
-			var ok bool
-			blogLink, ok = ToCanonicalLink(blogUrl, logger, nil)
+			rawBlogLink, ok := ToCanonicalLink(blogUrl, logger, nil)
 			if !ok {
 				return nil, oops.Newf("Couldn't parse Tumblr blog link: %s", blogUrl)
 			}
+			blogLink = NewPristineLink(rawBlogLink)
 
 			maybeTitle := tumblrResp.Response.Blog.Title
 			if maybeTitle == nil {
@@ -118,33 +118,29 @@ func getTumblrApiHistorical(
 				return nil, oops.Newf("Couldn't parse Tumble post link: %s", postUrl)
 			}
 			linkTitle := NewLinkTitle(normalizedPostTitle, LinkTitleSourceTumblr, nil)
-			links = append(links, &maybeTitledLink{
+			pristineLink := NewPristineMaybeTitledLink(&maybeTitledLink{
 				Link:       *postLink,
 				MaybeTitle: &linkTitle,
 			})
+			links = append(links, pristineLink)
 			timestamps = append(timestamps, post.Timestamp)
 			for _, tag := range post.Tags {
 				tagLower := strings.ToLower(tag)
 				if _, ok := categoriesByName[tagLower]; !ok {
-					categoriesByName[tagLower] = &HistoricalBlogPostCategory{
-						Name:      tag,
-						IsTop:     false,
-						PostLinks: nil,
-					}
+					category := NewPristineHistoricalBlogPostCategory(tag, false, nil)
+					categoriesByName[tagLower] = &category
 				}
-				categoriesByName[tagLower].PostLinks = append(categoriesByName[tagLower].PostLinks, *postLink)
+				categoriesByName[tagLower].PostLinks =
+					append(categoriesByName[tagLower].PostLinks, *NewPristineLink(postLink))
 			}
 			if len(post.Tags) == 0 {
 				uncategorizedLower := strings.ToLower(uncategorized)
 				if _, ok := categoriesByName[uncategorizedLower]; !ok {
-					categoriesByName[uncategorizedLower] = &HistoricalBlogPostCategory{
-						Name:      uncategorized,
-						IsTop:     false,
-						PostLinks: nil,
-					}
+					category := NewPristineHistoricalBlogPostCategory(uncategorized, false, nil)
+					categoriesByName[uncategorizedLower] = &category
 				}
 				categoriesByName[uncategorizedLower].PostLinks =
-					append(categoriesByName[uncategorizedLower].PostLinks, *postLink)
+					append(categoriesByName[uncategorizedLower].PostLinks, *NewPristineLink(postLink))
 			}
 		}
 
@@ -173,11 +169,11 @@ func getTumblrApiHistorical(
 		return nil, oops.Newf("Tumblr posts are not sorted: %v", timestamps)
 	}
 
-	categories := make([]HistoricalBlogPostCategory, 0, len(categoriesByName))
+	categories := make([]pristineHistoricalBlogPostCategory, 0, len(categoriesByName))
 	for _, category := range categoriesByName {
 		categories = append(categories, *category)
 	}
-	slices.SortFunc(categories, func(a, b HistoricalBlogPostCategory) int {
+	slices.SortFunc(categories, func(a, b pristineHistoricalBlogPostCategory) int {
 		count1 := len(a.PostLinks)
 		count2 := len(b.PostLinks)
 		if count1 != count2 {

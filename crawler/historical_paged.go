@@ -16,14 +16,17 @@ import (
 // Paged extraction supports xpaths and class xpaths but actually is only using xpaths
 // Paging with class xpaths came out of one weird blog but keeping it just in case
 
+// Page 1 is allowed to refer to the htmls, as we're still deciding then and making everything pristine from
+// the page 2 onwards
+
 type page1Result struct {
-	MainLnk      Link
+	MainLnk      pristineLink
 	LinkToPage2  Link
 	MaxPage1Size int
 	PagedState   page2State
 }
 
-func (r *page1Result) mainLink() Link {
+func (r *page1Result) mainLink() pristineLink {
 	return r.MainLnk
 }
 
@@ -41,7 +44,7 @@ type page2State struct {
 	Page1            *htmlPage
 	Page1Links       []*xpathLink
 	Page1Extractions []page1Extraction
-	MainLnk          Link
+	MainLnk          pristineLink
 }
 
 type page1Extraction struct {
@@ -63,7 +66,7 @@ func init() {
 }
 
 func tryExtractPage1(
-	page1Link *Link, page1 *htmlPage, page1Links []*xpathLink, page1CurisSet *CanonicalUriSet,
+	page1Link *pristineLink, page1 *htmlPage, page1Links []*xpathLink, page1CurisSet *CanonicalUriSet,
 	extractionsByStarCount []starCountExtractions, guidedCtx *guidedCrawlContext, logger Logger,
 ) (crawlHistoricalResult, bool) {
 	feedEntryLinks := guidedCtx.FeedEntryLinks
@@ -180,7 +183,7 @@ func tryExtractPage1(
 	for _, extraction := range maskedXPathExtractions {
 		links := extraction.UnfilteredLinks
 
-		if CanonicalUriEqual(page1Link.Curi, hardcodedCaseyHandmer, curiEqCfg) {
+		if CanonicalUriEqual(page1Link.Curi(), hardcodedCaseyHandmer, curiEqCfg) {
 			for i, link := range links {
 				if CanonicalUriEqual(link.Link.Curi, feedEntryLinks.LinkBuckets[0][0].Curi, curiEqCfg) {
 					links = links[i:]
@@ -265,19 +268,19 @@ func tryExtractPage1(
 const uncategorized = "Uncategorized"
 
 type pagedResult interface {
-	links() []*maybeTitledLink
+	links() []*pristineMaybeTitledLink
 	pagedResultTag()
 }
 
 type fullPagedResult struct {
-	MainLnk        Link
+	MainLnk        pristineLink
 	Pattern        string
-	Lnks           []*maybeTitledLink
-	PostCategories []HistoricalBlogPostCategory
+	Lnks           []*pristineMaybeTitledLink
+	PostCategories []pristineHistoricalBlogPostCategory
 	Extra          []string
 }
 
-func (r *fullPagedResult) MainLink() Link {
+func (r *fullPagedResult) MainLink() pristineLink {
 	return r.MainLnk
 }
 
@@ -285,21 +288,21 @@ func (r *fullPagedResult) SpeculativeCount() int {
 	return len(r.Lnks)
 }
 
-func (r *fullPagedResult) links() []*maybeTitledLink {
+func (r *fullPagedResult) links() []*pristineMaybeTitledLink {
 	return r.Lnks
 }
 
 func (r *fullPagedResult) pagedResultTag() {}
 
 type partialPagedResult struct {
-	MainLnk        Link
-	LinkToNextPage Link
+	MainLnk        pristineLink
+	LinkToNextPage pristineLink
 	NextPageNumber int
-	Lnks           []*maybeTitledLink
+	Lnks           []*pristineMaybeTitledLink
 	PagedState     nextPageState
 }
 
-func (r *partialPagedResult) MainLink() Link {
+func (r *partialPagedResult) MainLink() pristineLink {
 	return r.MainLnk
 }
 
@@ -307,7 +310,7 @@ func (r *partialPagedResult) SpeculativeCount() int {
 	return len(r.Lnks) + 1
 }
 
-func (r *partialPagedResult) links() []*maybeTitledLink {
+func (r *partialPagedResult) links() []*pristineMaybeTitledLink {
 	return r.Lnks
 }
 
@@ -316,14 +319,14 @@ func (r *partialPagedResult) pagedResultTag() {}
 type nextPageState struct {
 	PagingPattern       pagingPattern
 	PageNumber          int
-	KnownEntryCurisSet  CanonicalUriSet
+	KnownEntryCurisSet  pristineCanonicalUriSet
 	MaskedXPath         string
 	TitleRelativeXPaths []titleRelativeXPath
 	XPathExtra          []string
 	PageSizes           []int
 	Page1               *htmlPage
 	Page1Links          []*xpathLink
-	MainLnk             Link
+	MainLnk             pristineLink
 	PostCategories      postCategoriesMap
 	PostTags            postCategoriesMap
 }
@@ -365,7 +368,7 @@ func tryExtractPage2(
 		return nil, false
 	}
 
-	neighborPageLinks := []Link{page1Link}
+	neighborPageLinks := []Link{*page1Link.Unwrap()}
 	if curisToPage3Set.Length == 1 {
 		neighborPageLinks = append(neighborPageLinks, *linksToPage3[0])
 	}
@@ -632,7 +635,7 @@ func tryExtractPage2(
 		logger.Info("Best count: %d with 2 pages of %v", len(entryLinks), pageSizes)
 		pageSizeCountStr := countPageSizesStr(pageSizes)
 
-		var postCategoriesOrTags []HistoricalBlogPostCategory
+		var postCategoriesOrTags []pristineHistoricalBlogPostCategory
 		postCategories := postCategoriesMap.flatten()
 		postTags := postTagsMap.flatten()
 		var postCategoriesExtra []string
@@ -661,27 +664,20 @@ func tryExtractPage2(
 		return &fullPagedResult{
 			MainLnk:        page2State.MainLnk,
 			Pattern:        "paged_last",
-			Lnks:           entryLinks,
+			Lnks:           NewPristineMaybeTitledLinks(entryLinks),
 			PostCategories: postCategoriesOrTags,
 			Extra:          extra,
 		}, true
 	}
 
 	entryCuris := ToCanonicalUris(entryLinks)
-	knownEntryCurisSet := NewCanonicalUriSet(entryCuris, curiEqCfg)
-
-	// Ensure partialPagedResult doesn't hold any references to html bytes apart from page 1
-	linkToNextPage := linksToPage3[0].DeepCopy()
-	entryLinks = MaybeTitledLinksDeepCopy(entryLinks)
-	knownEntryCurisSet = knownEntryCurisSet.DeepCopy()
-	postCategoriesMap = postCategoriesMap.DeepCopy()
-	postTagsMap = postTagsMap.DeepCopy()
+	knownEntryCurisSet := NewPristineCanonicalUriSet(NewCanonicalUriSet(entryCuris, curiEqCfg))
 
 	return &partialPagedResult{
 		MainLnk:        page2State.MainLnk,
-		LinkToNextPage: linkToNextPage,
+		LinkToNextPage: *NewPristineLink(linksToPage3[0]),
 		NextPageNumber: 3,
-		Lnks:           entryLinks,
+		Lnks:           NewPristineMaybeTitledLinks(entryLinks),
 		PagedState: nextPageState{
 			PagingPattern:       pagingPattern,
 			PageNumber:          3,
@@ -785,23 +781,19 @@ func tryExtractNextPage(
 	}
 
 	pagePostCategories, pagePostTags := getPostCategoriesTags(pageXPathLinks, maskedXPath)
-	postCategoriesMap := pagedState.PostCategories.merge(pagePostCategories.DeepCopy())
-	postTagsMap := pagedState.PostTags.merge(pagePostTags.DeepCopy())
+	postCategoriesMap := pagedState.PostCategories.merge(pagePostCategories)
+	postTagsMap := pagedState.PostTags.merge(pagePostTags)
 
-	newEntryLinks := MaybeTitledLinksDeepCopy(dropHtml(pageXPathLinks))
+	newEntryLinks := NewPristineMaybeTitledLinks(dropHtml(pageXPathLinks))
 	nextEntryLinks := append(slices.Clone(entryLinks), newEntryLinks...)
 	nextKnownEntryCurisSet := knownEntryCurisSet.clone()
-	nextKnownEntryCurisSet.addMany(CanonicalUrisDeepCopy(pageEntryCuris))
+	nextKnownEntryCurisSet.addMany(pageEntryCuris)
 	pageSizes := append(slices.Clone(pagedState.PageSizes), len(pageXPathLinks))
 
 	if curisToNextPageSet.Length == 1 {
-		// Ensure partialPagedResult doesn't hold any references to html bytes apart from page 1
-		linkToNextPage := linksToNextPage[0].DeepCopy()
-		// nextEntryLinks, nextKnownEntryCurisSet, postCategoriesMap and postTagsMap are already clean
-
 		return &partialPagedResult{
 			MainLnk:        pagedState.MainLnk,
-			LinkToNextPage: linkToNextPage,
+			LinkToNextPage: *NewPristineLink(linksToNextPage[0]),
 			NextPageNumber: nextPageNumber,
 			Lnks:           nextEntryLinks,
 			PagedState: nextPageState{
@@ -835,13 +827,13 @@ func tryExtractNextPage(
 	logger.Info("Best count: %d with %d pages of %v", len(nextEntryLinks), pageCount, pageSizes)
 	pageSizeCountsStr := countPageSizesStr(pageSizes)
 
-	var postCategoriesOrTags []HistoricalBlogPostCategory
+	var postCategoriesOrTags []pristineHistoricalBlogPostCategory
 	var postCategoriesSource string
 	switch {
-	case CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedMrMoneyMustache, curiEqCfg):
+	case CanonicalUriEqual(pagedState.MainLnk.Curi(), hardcodedMrMoneyMustache, curiEqCfg):
 		postCategoriesOrTags = hardcodedMrMoneyMustacheCategories
 		postCategoriesSource = " hardcoded"
-	case CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedFactorio, curiEqCfg):
+	case CanonicalUriEqual(pagedState.MainLnk.Curi(), hardcodedFactorio, curiEqCfg):
 		factorioCategories, err := extractFactorioCategories(nextEntryLinks)
 		if err != nil {
 			logger.Info("Couldn't extract Factorio categories: %v", err)
@@ -850,7 +842,7 @@ func tryExtractNextPage(
 			postCategoriesOrTags = factorioCategories
 			postCategoriesSource = " hardcoded"
 		}
-	case CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedACOUP, curiEqCfg):
+	case CanonicalUriEqual(pagedState.MainLnk.Curi(), hardcodedACOUP, curiEqCfg):
 		acoupCategoires, err := extractACOUPCategories(nextEntryLinks)
 		if err != nil {
 			logger.Info("Couldn't extract ACOUP categories: %v", err)
@@ -861,7 +853,7 @@ func tryExtractNextPage(
 		}
 		postCategoriesOrTags = append(postCategoriesOrTags, postTagsMap.flatten()...)
 		postCategoriesSource += " from tags"
-	case CanonicalUriEqual(pagedState.MainLnk.Curi, hardcodedCryptographyEngineering, curiEqCfg):
+	case CanonicalUriEqual(pagedState.MainLnk.Curi(), hardcodedCryptographyEngineering, curiEqCfg):
 		postCategoriesOrTags = append(
 			slices.Clone(hardcodedCryptographyEngineeringCategories),
 			postTagsMap.flatten()...,
@@ -1176,36 +1168,33 @@ func init() {
 }
 
 type postCategoriesMap struct {
-	CategoriesByLowercaseName map[string]*HistoricalBlogPostCategory
+	CategoriesByLowercaseName map[string]*pristineHistoricalBlogPostCategory
 }
 
 func NewPostCategoriesMap() postCategoriesMap {
 	return postCategoriesMap{
-		CategoriesByLowercaseName: make(map[string]*HistoricalBlogPostCategory),
+		CategoriesByLowercaseName: make(map[string]*pristineHistoricalBlogPostCategory),
 	}
 }
 
 func (c *postCategoriesMap) add(categoryName string, links ...Link) {
 	lowercaseName := strings.ToLower(categoryName)
 	if category, ok := c.CategoriesByLowercaseName[lowercaseName]; ok {
-		category.PostLinks = append(category.PostLinks, links...)
-	} else {
-		c.CategoriesByLowercaseName[lowercaseName] = &HistoricalBlogPostCategory{
-			Name:      categoryName,
-			IsTop:     false,
-			PostLinks: links,
+		pristineLinks := make([]pristineLink, len(links))
+		for i, link := range links {
+			pristineLinks[i] = *NewPristineLink(&link)
 		}
+		category.PostLinks = append(category.PostLinks, pristineLinks...)
+	} else {
+		pristineCategory := NewPristineHistoricalBlogPostCategory(categoryName, false, links)
+		c.CategoriesByLowercaseName[lowercaseName] = &pristineCategory
 	}
 }
 
 func (c postCategoriesMap) merge(other postCategoriesMap) postCategoriesMap {
 	result := NewPostCategoriesMap()
 	for lowercaseName, category := range c.CategoriesByLowercaseName {
-		result.CategoriesByLowercaseName[lowercaseName] = &HistoricalBlogPostCategory{
-			Name:      category.Name,
-			IsTop:     category.IsTop,
-			PostLinks: slices.Clone(category.PostLinks),
-		}
+		result.CategoriesByLowercaseName[lowercaseName] = category.Clone()
 	}
 	for lowercaseName, category := range other.CategoriesByLowercaseName {
 		if existingCategory, ok := result.CategoriesByLowercaseName[lowercaseName]; ok {
@@ -1217,26 +1206,15 @@ func (c postCategoriesMap) merge(other postCategoriesMap) postCategoriesMap {
 	return result
 }
 
-func (c postCategoriesMap) flatten() []HistoricalBlogPostCategory {
-	categories := make([]HistoricalBlogPostCategory, 0, len(c.CategoriesByLowercaseName))
+func (c postCategoriesMap) flatten() []pristineHistoricalBlogPostCategory {
+	categories := make([]pristineHistoricalBlogPostCategory, 0, len(c.CategoriesByLowercaseName))
 	for _, category := range c.CategoriesByLowercaseName {
 		categories = append(categories, *category)
 	}
-	slices.SortFunc(categories, func(a, b HistoricalBlogPostCategory) int {
+	slices.SortFunc(categories, func(a, b pristineHistoricalBlogPostCategory) int {
 		return len(b.PostLinks) - len(a.PostLinks) // descending
 	})
 	return categories
-}
-
-func (c postCategoriesMap) DeepCopy() postCategoriesMap {
-	categories := map[string]*HistoricalBlogPostCategory{}
-	for name, category := range c.CategoriesByLowercaseName {
-		categoryVal := category.DeepCopy()
-		categories[strings.Clone(name)] = &categoryVal
-	}
-	return postCategoriesMap{
-		CategoriesByLowercaseName: categories,
-	}
 }
 
 func getPostCategoriesTags(
