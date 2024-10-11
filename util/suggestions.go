@@ -319,7 +319,7 @@ var MiscellaneousBlogs = []MiscellaneousBlog{
 		Url:     "https://waitbutwhy.com/archive",
 		FeedUrl: "https://waitbutwhy.com/feed",
 		Name:    "Wait But Why",
-		Tag:     "life",
+		Tag:     "explainers",
 	},
 	{
 		Url:     "https://www.mrmoneymustache.com/",
