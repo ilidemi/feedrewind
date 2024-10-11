@@ -45,6 +45,8 @@ var hardcodedMrMoneyMustache CanonicalUri
 var HardcodedOvercomingBiasFeed CanonicalUri
 var hardcodedPaulGraham CanonicalUri
 var HardcodedSlateStarCodexFeed string
+var hardcodedTransformerCircuits CanonicalUri
+var hardcodedTransformerCircuitsEntryToExclude CanonicalUri
 
 func init() {
 	logger := NewDummyLogger()
@@ -90,6 +92,8 @@ func init() {
 	HardcodedOvercomingBiasFeed = hardcodedMustParse("https://www.overcomingbias.com/feed")
 	hardcodedPaulGraham = hardcodedMustParse("https://paulgraham.com/articles.html")
 	HardcodedSlateStarCodexFeed = "https://slatestarcodex.com/feed/"
+	hardcodedTransformerCircuits = hardcodedMustParse("https://transformer-circuits.pub")
+	hardcodedTransformerCircuitsEntryToExclude = hardcodedMustParse("https://distill.pub/2020/circuits/")
 }
 
 func hardcodedMustParse(url string) CanonicalUri {
@@ -562,22 +566,56 @@ func generatePgFeed(
 	rootLink *Link, page *htmlPage, crawlCtx *CrawlContext, curiEqCfg *CanonicalEqualityConfig,
 	logger Logger,
 ) DiscoverFeedsResult {
-	pageAllLinks := extractLinks(
-		page.Document, page.FetchUri, nil, crawlCtx.Redirects, logger, includeXPathOnly,
-	)
-	fakeFeedEntryUrls := []string{
+	feedTitle := "Paul Graham: Essays"
+	sampleFeedEntryUrls := []string{
 		"https://paulgraham.com/icad.html",
 		"https://paulgraham.com/power.html",
 		"https://paulgraham.com/fix.html",
 	}
-	fakeFeedEntryTitles := []string{
+	sampleFeedEntryTitles := []string{
 		"Revenge of the Nerds",
 		"Succinctness is Power",
 		"What Languages Fix",
 	}
+	return generateFakeFeed(
+		rootLink, feedTitle, sampleFeedEntryUrls, sampleFeedEntryTitles, nil, page, crawlCtx, curiEqCfg,
+		logger,
+	)
+}
+
+func generateTransformerCircuitsFeed(
+	rootLink *Link, page *htmlPage, crawlCtx *CrawlContext, curiEqCfg *CanonicalEqualityConfig,
+	logger Logger,
+) DiscoverFeedsResult {
+	feedTitle := "Transformer Circuits"
+	sampleFeedEntryUrls := []string{
+		"https://transformer-circuits.pub/2022/solu/index.html",
+		"https://transformer-circuits.pub/2022/mech-interp-essay/index.html",
+		"https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html",
+	}
+	sampleFeedEntryTitles := []string{
+		"Softmax Linear Units",
+		"Mechanistic Interpretability, Variables, and the Importance of Interpretable Bases",
+		"In-Context Learning and Induction Heads",
+	}
+	curisToExclude := []CanonicalUri{hardcodedTransformerCircuitsEntryToExclude}
+	return generateFakeFeed(
+		rootLink, feedTitle, sampleFeedEntryUrls, sampleFeedEntryTitles, curisToExclude, page, crawlCtx,
+		curiEqCfg, logger,
+	)
+}
+
+func generateFakeFeed(
+	rootLink *Link, feedTitle string, sampleFeedEntryUrls, sampleFeedEntryTitles []string,
+	curisToExclude []CanonicalUri, page *htmlPage, crawlCtx *CrawlContext, curiEqCfg *CanonicalEqualityConfig,
+	logger Logger,
+) DiscoverFeedsResult {
+	pageAllLinks := extractLinks(
+		page.Document, page.FetchUri, nil, crawlCtx.Redirects, logger, includeXPathOnly,
+	)
 	var linkBuckets [][]FeedEntryLink
 	feedEntryCurisTitlesMap := NewCanonicalUriMap[MaybeLinkTitle](curiEqCfg)
-	for i, entryUrl := range fakeFeedEntryUrls {
+	for i, entryUrl := range sampleFeedEntryUrls {
 		entryLink, _ := ToCanonicalLink(entryUrl, logger, page.FetchUri)
 		linkBuckets = append(linkBuckets, []FeedEntryLink{
 			FeedEntryLink{
@@ -588,7 +626,7 @@ func generatePgFeed(
 				MaybeDate: nil,
 			},
 		})
-		title := NewLinkTitle(fakeFeedEntryTitles[i], LinkTitleSourceFeed, nil)
+		title := NewLinkTitle(sampleFeedEntryTitles[i], LinkTitleSourceFeed, nil)
 		feedEntryCurisTitlesMap.Add(*entryLink, &title)
 	}
 	feedEntryLinks := FeedEntryLinks{
@@ -601,20 +639,26 @@ func generatePgFeed(
 	)
 	if len(extractionsByStarCount[0].Extractions) != 1 {
 		logger.Error(
-			"Couldn't parse PG essays: %d extractions", len(extractionsByStarCount[0].Extractions),
+			"Couldn't parse %s: %d extractions", rootLink.Url, len(extractionsByStarCount[0].Extractions),
 		)
 		return &DiscoverFeedsErrorBadFeed{}
 	}
 	entryLinks := extractionsByStarCount[0].Extractions[0].LinksExtraction.Links
-	feedTitle := "Paul Graham: Essays"
+	filteredEntryLinks := make([]*maybeTitledHtmlLink, 0, len(entryLinks))
+	curisSetToExclude := NewCanonicalUriSet(curisToExclude, curiEqCfg)
+	for _, entryLink := range entryLinks {
+		if !curisSetToExclude.Contains(entryLink.Curi) {
+			filteredEntryLinks = append(filteredEntryLinks, entryLink)
+		}
+	}
 	var feedSb strings.Builder
 	fmt.Fprintln(&feedSb, `<?xml version="1.0" encoding="UTF-8"?>`)
 	fmt.Fprintln(&feedSb, `<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0">`)
 	fmt.Fprintln(&feedSb, `  <channel>`)
-	fmt.Fprintln(&feedSb, `    <atom:link href="http://www.paulgraham.com/articles.html" rel="self" type="application/rss+xml"/>`)
+	fmt.Fprintf(&feedSb, "    <atom:link href=\"%s\" rel=\"self\" type=\"application/rss+xml\"/>\n", rootLink.Url)
 	fmt.Fprintf(&feedSb, "    <title>%s</title>\n", feedTitle)
-	fmt.Fprintf(&feedSb, "    <link>%s</link>\n", rootLink)
-	for _, link := range entryLinks {
+	fmt.Fprintf(&feedSb, "    <link>%s</link>\n", rootLink.Url)
+	for _, link := range filteredEntryLinks {
 		fmt.Fprint(&feedSb, "    <item>\n")
 		fmt.Fprint(&feedSb, "      <title>")
 		_ = xml.EscapeText(&feedSb, []byte(link.MaybeTitle.Value))
@@ -629,7 +673,7 @@ func generatePgFeed(
 	feedContent := feedSb.String()
 	parsedFeed, err := ParseFeed(feedContent, rootLink.Uri, logger)
 	if err != nil {
-		logger.Error("Couldn't parse PG essays feed we just created: %v", err)
+		logger.Error("Couldn't parse %s feed we just created: %v", rootLink.Url, err)
 		return &DiscoverFeedsErrorBadFeed{}
 	}
 

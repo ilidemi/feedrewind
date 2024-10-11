@@ -202,6 +202,11 @@ var SuggestedCategories = []SuggestedCategory{
 				FeedUrl: "https://distill.pub/rss.xml",
 				Name:    "Distill",
 			},
+			{
+				Url:     "https://transformer-circuits.pub",
+				FeedUrl: "https://transformer-circuits.pub",
+				Name:    "Transformer Circuits",
+			},
 			// TODO: reenable when/if they fix the 403 from cloudflare
 			// {
 			// 	Url:     "https://openai.com/news/",
