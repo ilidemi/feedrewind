@@ -1276,6 +1276,27 @@ func postprocessArchivesSortedResult(
 				}, nil
 			}
 		}
+	} else if CanonicalUriEqual(
+		archivesSortedResult.MainLnk.Curi(), hardcodedTransformerCircuits, guidedCtx.CuriEqCfg,
+	) {
+		logger.Info("Removing an extra Transformer Circuits link")
+		filteredLinks := make([]*pristineMaybeTitledLink, 0, len(archivesSortedResult.Links))
+		for _, link := range archivesSortedResult.Links {
+			if !CanonicalUriEqual(
+				link.Curi(), hardcodedTransformerCircuitsEntryToExclude, guidedCtx.CuriEqCfg,
+			) {
+				filteredLinks = append(filteredLinks, link)
+			}
+		}
+		return &postprocessedResult{
+			MainLnk:                 archivesSortedResult.MainLnk,
+			Pattern:                 archivesSortedResult.Pattern,
+			Links:                   filteredLinks,
+			IsMatchingFeed:          true,
+			PostCategories:          archivesSortedResult.PostCategories,
+			Extra:                   archivesSortedResult.Extra,
+			MaybePartialPagedResult: nil,
+		}, nil
 	}
 
 	return &postprocessedResult{

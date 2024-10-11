@@ -143,6 +143,8 @@ func DiscoverFeedsAtUrl(
 	case *htmlPage:
 		if CanonicalUriEqual(startLink.Curi, hardcodedPaulGraham, &curiEqCfg) {
 			return generatePgFeed(startLink, p, crawlCtx, &curiEqCfg, logger)
+		} else if CanonicalUriEqual(startLink.Curi, hardcodedTransformerCircuits, &curiEqCfg) {
+			return generateTransformerCircuitsFeed(startLink, p, crawlCtx, &curiEqCfg, logger)
 		}
 
 		startPage := DiscoveredStartPage{
