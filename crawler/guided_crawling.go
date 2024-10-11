@@ -1282,9 +1282,7 @@ func postprocessArchivesSortedResult(
 		logger.Info("Removing an extra Transformer Circuits link")
 		filteredLinks := make([]*pristineMaybeTitledLink, 0, len(archivesSortedResult.Links))
 		for _, link := range archivesSortedResult.Links {
-			if !CanonicalUriEqual(
-				link.Curi(), hardcodedTransformerCircuitsEntryToExclude, guidedCtx.CuriEqCfg,
-			) {
+			if !hardcodedTransformerCircuitsEntriesToExclude.Contains(link.Curi()) {
 				filteredLinks = append(filteredLinks, link)
 			}
 		}

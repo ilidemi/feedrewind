@@ -46,7 +46,7 @@ var HardcodedOvercomingBiasFeed CanonicalUri
 var hardcodedPaulGraham CanonicalUri
 var HardcodedSlateStarCodexFeed string
 var hardcodedTransformerCircuits CanonicalUri
-var hardcodedTransformerCircuitsEntryToExclude CanonicalUri
+var hardcodedTransformerCircuitsEntriesToExclude CanonicalUriSet
 
 func init() {
 	logger := NewDummyLogger()
@@ -93,7 +93,18 @@ func init() {
 	hardcodedPaulGraham = hardcodedMustParse("https://paulgraham.com/articles.html")
 	HardcodedSlateStarCodexFeed = "https://slatestarcodex.com/feed/"
 	hardcodedTransformerCircuits = hardcodedMustParse("https://transformer-circuits.pub")
-	hardcodedTransformerCircuitsEntryToExclude = hardcodedMustParse("https://distill.pub/2020/circuits/")
+	curiEqCfg := NewCanonicalEqualityConfig()
+	hardcodedTransformerCircuitsEntriesToExclude = NewCanonicalUriSet(
+		[]CanonicalUri{
+			hardcodedMustParse("https://distill.pub/2020/circuits/"),
+			hardcodedMustParse("https://transformer-circuits.pub/2021/garcon/index.html"),
+			hardcodedMustParse("https://github.com/anthropics/PySvelte"),
+			hardcodedMustParse("https://transformer-circuits.pub/2021/videos/index.html"),
+			hardcodedMustParse("https://transformer-circuits.pub/2021/exercises/index.html"),
+		},
+		&curiEqCfg,
+	)
+
 }
 
 func hardcodedMustParse(url string) CanonicalUri {
@@ -577,9 +588,10 @@ func generatePgFeed(
 		"Succinctness is Power",
 		"What Languages Fix",
 	}
+	curisToExclude := NewCanonicalUriSet(nil, curiEqCfg)
 	return generateFakeFeed(
-		rootLink, feedTitle, sampleFeedEntryUrls, sampleFeedEntryTitles, nil, page, crawlCtx, curiEqCfg,
-		logger,
+		rootLink, feedTitle, sampleFeedEntryUrls, sampleFeedEntryTitles, curisToExclude, page, crawlCtx,
+		curiEqCfg, logger,
 	)
 }
 
@@ -598,17 +610,16 @@ func generateTransformerCircuitsFeed(
 		"Mechanistic Interpretability, Variables, and the Importance of Interpretable Bases",
 		"In-Context Learning and Induction Heads",
 	}
-	curisToExclude := []CanonicalUri{hardcodedTransformerCircuitsEntryToExclude}
 	return generateFakeFeed(
-		rootLink, feedTitle, sampleFeedEntryUrls, sampleFeedEntryTitles, curisToExclude, page, crawlCtx,
-		curiEqCfg, logger,
+		rootLink, feedTitle, sampleFeedEntryUrls, sampleFeedEntryTitles,
+		hardcodedTransformerCircuitsEntriesToExclude, page, crawlCtx, curiEqCfg, logger,
 	)
 }
 
 func generateFakeFeed(
 	rootLink *Link, feedTitle string, sampleFeedEntryUrls, sampleFeedEntryTitles []string,
-	curisToExclude []CanonicalUri, page *htmlPage, crawlCtx *CrawlContext, curiEqCfg *CanonicalEqualityConfig,
-	logger Logger,
+	curisToExclude CanonicalUriSet, page *htmlPage, crawlCtx *CrawlContext,
+	curiEqCfg *CanonicalEqualityConfig, logger Logger,
 ) DiscoverFeedsResult {
 	pageAllLinks := extractLinks(
 		page.Document, page.FetchUri, nil, crawlCtx.Redirects, logger, includeXPathOnly,
@@ -645,9 +656,8 @@ func generateFakeFeed(
 	}
 	entryLinks := extractionsByStarCount[0].Extractions[0].LinksExtraction.Links
 	filteredEntryLinks := make([]*maybeTitledHtmlLink, 0, len(entryLinks))
-	curisSetToExclude := NewCanonicalUriSet(curisToExclude, curiEqCfg)
 	for _, entryLink := range entryLinks {
-		if !curisSetToExclude.Contains(entryLink.Curi) {
+		if !curisToExclude.Contains(entryLink.Curi) {
 			filteredEntryLinks = append(filteredEntryLinks, entryLink)
 		}
 	}
