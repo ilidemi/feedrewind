@@ -177,7 +177,7 @@ var SuggestedCategories = []SuggestedCategory{
 				Name:    "Yossi Krenin",
 			},
 			{
-				Url:     "https://www.reddit.com/r/gamedev/comments/wd4qoh/our_machinery_extensible_engine_made_in_c_just/",
+				Url:     "https://github.com/ruby0x1/machinery_blog_archive",
 				FeedUrl: "https://ourmachinery.com",
 				Name:    "Our Machinery",
 			},
