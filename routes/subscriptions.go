@@ -1126,6 +1126,7 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
+	logger.Info().Msgf("Durations: %d", len(serverDurations))
 
 	if len(clientDurations) < 3 {
 		logger.Info().Msg("Too few client durations to compute anything")
