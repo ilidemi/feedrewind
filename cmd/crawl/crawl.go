@@ -66,7 +66,7 @@ func init() {
 	}
 }
 
-var defaultStartLinkId = 1357
+var defaultStartLinkId = 1655
 var threads int
 var allowJS bool
 
@@ -180,8 +180,8 @@ func runAll() {
 	rows, err := conn.Query(`
 		select id from start_links
 		where id not in (select start_link_id from known_issues where severity = 'discard')
-		order by (id = 603) desc, id asc
-	`) // 603 is slow and starts late otherwise
+		order by (id in (603, 1321, 1010, 1501, 1132, 1271)) desc, id asc
+	`) // these special ids are slow and start late otherwise
 	if err != nil {
 		panic(err)
 	}
@@ -623,21 +623,25 @@ func runScaleTest(ids []int64, successfulIds []int64, windowCount int, pool *pgw
 				page.MustNavigate("https://feedrewind.com/subscriptions/add")
 				page.MustElement("#start_url").MustInput(startUrl)
 				page.MustElementR("button", "Go").MustClick()
-				page.MustWaitLoad()
-				page.MustSetViewport(width, height, 0.33, false)
-				scrolled := false
-				for range time.Tick(time.Second) {
-					_, err := page.Timeout(time.Second).Element("#progress_count")
-					if err != nil {
-						break
+				err = page.WaitLoad()
+				if err != nil {
+					fmt.Printf("!!! WaitLoad failed for %d (%s): %v\n", startLinkId, startUrl, err)
+				} else {
+					page.MustSetViewport(width, height, 0.33, false)
+					scrolled := false
+					for range time.Tick(time.Second) {
+						_, err := page.Timeout(time.Second).Element("#progress_count")
+						if err != nil {
+							break
+						}
+						if !scrolled {
+							page.Mouse.MustScroll(0, 120)
+							scrolled = true
+						}
 					}
-					if !scrolled {
-						page.Mouse.MustScroll(0, 120)
-						scrolled = true
-					}
+					page.MustWaitLoad()
+					_, err = page.Timeout(3 * time.Second).Element("#select_posts")
 				}
-				page.MustWaitLoad()
-				_, err = page.Timeout(3 * time.Second).Element("#select_posts")
 				crawlSucceeded := err == nil
 				outputLock.Lock()
 				var status string
