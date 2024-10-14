@@ -376,14 +376,15 @@ func crawlWithPuppeteerIfMatch(
 		return page, nil
 	}
 
-	var findLoadMoreButton PuppeteerFindLoadMoreButton
+	var maybeFindLoadMoreButton PuppeteerFindLoadMoreButton
+	var maybeValidate PuppeteerValidate
 	puppeteerMatch := false
 	extendedScrollTime := false
 	switch {
 	case htmlquery.QuerySelector(page.Document, loadMoreXPath) != nil:
 		logger.Info("Found load more button, rerunning with puppeteer")
 		puppeteerMatch = true
-		findLoadMoreButton = func(page *rod.Page) (*rod.Element, error) {
+		maybeFindLoadMoreButton = func(page *rod.Page) (*rod.Element, error) {
 			element, err := page.Sleeper(rod.NotFoundSleeper).ElementX(loadMoreXPathStr)
 			if err != nil {
 				return nil, err
@@ -406,6 +407,20 @@ func crawlWithPuppeteerIfMatch(
 	case strings.HasSuffix(page.Curi.TrimmedPath, "/archive") && feedGenerator == FeedGeneratorSubstack:
 		logger.Info("Spotted Substack archives, rerunning with puppeteer")
 		puppeteerMatch = true
+		maybeValidate = func(page *rod.Page) error {
+			element, err := page.Sleeper(rod.NotFoundSleeper).Element(".portable-archive")
+			if err != nil {
+				return errors.Join(fmt.Errorf("Substack archive element not found"), err)
+			}
+			links, err := element.Sleeper(rod.NotFoundSleeper).ElementsX("//a")
+			if err != nil {
+				return errors.Join(fmt.Errorf("Substack archive couldn't query links"), err)
+			}
+			if len(links) == 0 {
+				return errors.New("Substack empty archive")
+			}
+			return nil
+		}
 		extendedScrollTime = true
 	case htmlquery.QuerySelector(page.Document, buttondownTwitterXPath) != nil:
 		logger.Info("Spotted Buttondown page, rerunning with puppeteer")
@@ -417,7 +432,8 @@ func crawlWithPuppeteerIfMatch(
 	}
 
 	puppeteerPage, err := crawlCtx.MaybePuppeteerClient.Fetch(
-		page.FetchUri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton, extendedScrollTime,
+		page.FetchUri, feedEntryCurisTitlesMap, crawlCtx, logger, maybeFindLoadMoreButton, maybeValidate,
+		extendedScrollTime,
 	)
 	if err != nil {
 		return nil, err

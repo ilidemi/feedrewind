@@ -17,6 +17,8 @@ import (
 
 type PuppeteerFindLoadMoreButton func(*rod.Page) (*rod.Element, error)
 
+type PuppeteerValidate func(*rod.Page) error
+
 type PuppeteerPage struct {
 	Content               string
 	MaybeTopScreenshot    []byte
@@ -26,7 +28,8 @@ type PuppeteerPage struct {
 type PuppeteerClient interface {
 	Fetch(
 		uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle], crawlCtx *CrawlContext,
-		logger Logger, findLoadMoreButton PuppeteerFindLoadMoreButton, extendedScrollTime bool,
+		logger Logger, maybeFindLoadMoreButton PuppeteerFindLoadMoreButton, maybeValidate PuppeteerValidate,
+		extendedScrollTime bool,
 	) (*PuppeteerPage, error)
 }
 
@@ -56,7 +59,8 @@ const extendedMaxScrollTime = 90 * time.Second
 
 func (c *PuppeteerClientImpl) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle], crawlCtx *CrawlContext,
-	logger Logger, findLoadMoreButton PuppeteerFindLoadMoreButton, extendedScrollTime bool,
+	logger Logger, maybeFindLoadMoreButton PuppeteerFindLoadMoreButton, maybeValidate PuppeteerValidate,
+	extendedScrollTime bool,
 ) (result *PuppeteerPage, retErr error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Puppeteer start: %s", uri)
@@ -185,8 +189,8 @@ func (c *PuppeteerClientImpl) Fetch(
 			var content string
 			var maybeTopScreenshot, maybeBottomScreenshot []byte
 			if isScrollingAllowed {
-				if findLoadMoreButton != nil {
-					loadMoreButton, err := findLoadMoreButton(page)
+				if maybeFindLoadMoreButton != nil {
+					loadMoreButton, err := maybeFindLoadMoreButton(page)
 					if err != nil {
 						logger.Info("Find load more button error: %v", err)
 					}
@@ -204,7 +208,7 @@ func (c *PuppeteerClientImpl) Fetch(
 						if err != nil {
 							return nil, err
 						}
-						loadMoreButton, err = findLoadMoreButton(page)
+						loadMoreButton, err = maybeFindLoadMoreButton(page)
 						if err != nil {
 							logger.Info("Find load more button error: %v", err)
 						}
@@ -222,6 +226,12 @@ func (c *PuppeteerClientImpl) Fetch(
 					}
 					if err != nil {
 						return nil, err
+					}
+				}
+				if maybeValidate != nil {
+					err := maybeValidate(page)
+					if err != nil {
+						return nil, oops.Wrap(err)
 					}
 				}
 				content, err = page.HTML()
