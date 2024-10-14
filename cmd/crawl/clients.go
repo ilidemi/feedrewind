@@ -90,10 +90,12 @@ func NewCachingPuppeteerClient(conn *pgw.Conn, startLinkId int) *CachingPuppetee
 func (c *CachingPuppeteerClient) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap crawler.CanonicalUriMap[crawler.MaybeLinkTitle],
 	crawlCtx *crawler.CrawlContext, logger crawler.Logger,
-	findLoadMoreButton crawler.PuppeteerFindLoadMoreButton, extendedScrollTime bool,
+	maybeFindLoadMoreButton crawler.PuppeteerFindLoadMoreButton, maybeValidate crawler.PuppeteerValidate,
+	extendedScrollTime bool,
 ) (*crawler.PuppeteerPage, error) {
 	page, err := c.Impl.Fetch(
-		uri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton, extendedScrollTime,
+		uri, feedEntryCurisTitlesMap, crawlCtx, logger, maybeFindLoadMoreButton, maybeValidate,
+		extendedScrollTime,
 	)
 	if err != nil {
 		logger.Warn("Not saving puppeteer page: %v", err)
@@ -127,7 +129,8 @@ func NewMockPuppeteerClient(conn *pgw.Conn, startLinkId int) *MockPuppeteerClien
 func (c *MockPuppeteerClient) Fetch(
 	uri *url.URL, feedEntryCurisTitlesMap crawler.CanonicalUriMap[crawler.MaybeLinkTitle],
 	crawlCtx *crawler.CrawlContext, logger crawler.Logger,
-	findLoadMoreButton crawler.PuppeteerFindLoadMoreButton, extendedScrollTime bool,
+	maybeFindLoadMoreButton crawler.PuppeteerFindLoadMoreButton, maybeValidate crawler.PuppeteerValidate,
+	extendedScrollTime bool,
 ) (*crawler.PuppeteerPage, error) {
 	fetchUrl := uri.String()
 	row := c.Conn.QueryRow(`
@@ -139,7 +142,8 @@ func (c *MockPuppeteerClient) Fetch(
 	err := row.Scan(&body)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return c.Impl.Fetch(
-			uri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton, extendedScrollTime,
+			uri, feedEntryCurisTitlesMap, crawlCtx, logger, maybeFindLoadMoreButton, maybeValidate,
+			extendedScrollTime,
 		)
 	} else if err != nil {
 		return nil, err
