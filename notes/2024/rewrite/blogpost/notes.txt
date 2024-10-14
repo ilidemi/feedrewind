@@ -57,6 +57,8 @@ Missed:
 	http to https upgrade that was a production config option (the only relevant one)
 	enforce db timestamps and updated_at trigger
 	moving contraints from activerecord to db made transactions fail and me need to think about them
+	db conversion bug in handling multiple feeds (not tested at all)
+	bug in displaying the initial progress (not validated at all)
 
 
 ## Hours
