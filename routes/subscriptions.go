@@ -1904,7 +1904,7 @@ func subscriptions_GetRealisticScheduleDate(
 }
 
 type blogNotificationChannel struct {
-	Chans                map[uuid.UUID]chan string
+	Chans                map[uuid.UUID]chan map[string]any
 	LastNotificationTime time.Time
 }
 
@@ -2010,11 +2010,27 @@ func Subscriptions_MustStartListeningForNotifications() {
 			}
 			blogId := models.BlogId(blogIdInt)
 
+			if payload["is_truncated"] == true {
+				blogCrawlProgress, err := models.BlogCrawlProgress_Get(db.RootPool, blogId)
+				if err != nil {
+					logger.Error().Err(err).Msg("Coulnd't fetch the non-truncated progress")
+					continue
+				}
+
+				payload = map[string]any{
+					"blog_id":       blogIdStr,
+					"epoch":         blogCrawlProgress.Epoch,
+					"status":        blogCrawlProgress.Progress,
+					"count":         blogCrawlProgress.Count,
+					"was_truncated": true,
+				}
+			}
+
 			notificationTime := time.Now()
 			notificationChan, ok := notificationChannels[blogId]
 			if !ok {
 				notificationChan = &blogNotificationChannel{
-					Chans:                map[uuid.UUID]chan string{},
+					Chans:                map[uuid.UUID]chan map[string]any{},
 					LastNotificationTime: notificationTime,
 				}
 				notificationChannelsLock.Lock()
@@ -2024,7 +2040,7 @@ func Subscriptions_MustStartListeningForNotifications() {
 
 			for _, ch := range notificationChan.Chans {
 				select {
-				case ch <- notification.Payload:
+				case ch <- payload:
 				default:
 					// The previous value hasn't been consumed, pop it to write the new one,
 					// but it's ok if it got consumed in between
@@ -2032,7 +2048,7 @@ func Subscriptions_MustStartListeningForNotifications() {
 					case <-ch:
 					default:
 					}
-					ch <- notification.Payload
+					ch <- payload
 				}
 			}
 		}
@@ -2103,7 +2119,7 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	consumerId := uuid.New()
-	ch := make(chan string, 1)
+	ch := make(chan map[string]any, 1)
 	notificationChannelsLock.Lock()
 	notificationChan.Chans[consumerId] = ch
 	notificationChannelsLock.Unlock()
@@ -2139,14 +2155,32 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		select {
-		case notification := <-ch:
-			var payload map[string]any
-			err := json.Unmarshal([]byte(notification), &payload)
+		case payload := <-ch:
+			wasTruncated := payload["was_truncated"] == true
+			if wasTruncated {
+				delete(payload, "was_truncated")
+			}
+			payloadBytes, err := json.Marshal(payload)
 			if err != nil {
 				panic(err)
 			}
-			logger.Info().Msgf("%s %d: %s", jobs.CrawlProgressChannelName, blogId, notification)
-			err = ws.WriteMessage(websocket.TextMessage, []byte(notification))
+			logPayloadStr := string(payloadBytes)
+			if statusAny, ok := payload["status"]; ok {
+				status := statusAny.(string)
+				if len(status) > 100 {
+					payload["status"] = "..." + status[len(status)-100:]
+					logPayloadBytes, err := json.Marshal(payload)
+					if err != nil {
+						panic(err)
+					}
+					logPayloadStr = string(logPayloadBytes)
+				}
+			}
+			logger.Info().Msgf(
+				"%s %d: %s was_truncated: %t",
+				jobs.CrawlProgressChannelName, blogId, logPayloadStr, wasTruncated,
+			)
+			err = ws.WriteMessage(websocket.TextMessage, payloadBytes)
 			if err != nil {
 				panic(err)
 			}
