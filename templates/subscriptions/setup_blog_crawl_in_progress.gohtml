@@ -280,7 +280,7 @@
           {{if .BlogCrawlProgress.Count}}
           count: "{{.BlogCrawlProgress.Count}}",
           {{end}}
-          {{if not .BlogCrawlProgress.Progress}}
+          {{if .BlogCrawlProgress.Progress}}
           status: "{{.BlogCrawlProgress.Progress}}",
           {{end}}
           epoch: {{.BlogCrawlProgress.Epoch}}

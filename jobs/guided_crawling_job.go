@@ -500,14 +500,32 @@ func (s *ProgressSaver) SaveStatusAndCount(status string, maybeCount *int) error
 			return oops.Wrap(err)
 		}
 
+		isTruncated := false
+		if len(payloadBytes) > 4000 {
+			isTruncated = true
+			payload = map[string]any{
+				"blog_id":      fmt.Sprint(s.BlogId),
+				"is_truncated": true,
+			}
+			payloadBytes, err = json.Marshal(&payload)
+			if err != nil {
+				return oops.Wrap(err)
+			}
+		}
+
 		_, err = tx.Exec(`select pg_notify($1, $2)`, CrawlProgressChannelName, string(payloadBytes))
 		if err != nil {
 			return err
 		}
 
+		logStatus := status
+		if len(logStatus) > 100 {
+			logStatus = "..." + logStatus[len(logStatus)-100:]
+		}
 		tx.Logger().Info().Msgf(
-			"%s %d epoch: %d status: %s count: %s",
-			CrawlProgressChannelName, s.BlogId, newEpoch, status, crawler.SprintIntPtr(maybeCount),
+			"%s %d epoch: %d status: %s count: %s is_truncated: %t",
+			CrawlProgressChannelName, s.BlogId, newEpoch, logStatus, crawler.SprintIntPtr(maybeCount),
+			isTruncated,
 		)
 		return nil
 	})
@@ -553,13 +571,31 @@ func (s *ProgressSaver) SaveStatus(status string) error {
 			return oops.Wrap(err)
 		}
 
+		isTruncated := false
+		if len(payloadBytes) > 4000 {
+			isTruncated = true
+			payload = map[string]any{
+				"blog_id":      fmt.Sprint(s.BlogId),
+				"is_truncated": true,
+			}
+			payloadBytes, err = json.Marshal(&payload)
+			if err != nil {
+				return oops.Wrap(err)
+			}
+		}
+
 		_, err = tx.Exec(`select pg_notify($1, $2)`, CrawlProgressChannelName, string(payloadBytes))
 		if err != nil {
 			return err
 		}
 
+		logStatus := status
+		if len(logStatus) > 100 {
+			logStatus = "..." + logStatus[len(logStatus)-100:]
+		}
 		tx.Logger().Info().Msgf(
-			"%s %d epoch: %d status: %s", CrawlProgressChannelName, s.BlogId, newEpoch, status,
+			"%s %d epoch: %d status: %s is_truncated: %t",
+			CrawlProgressChannelName, s.BlogId, newEpoch, logStatus, isTruncated,
 		)
 		return nil
 	})
