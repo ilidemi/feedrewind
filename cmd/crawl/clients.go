@@ -96,6 +96,7 @@ func (c *CachingPuppeteerClient) Fetch(
 		uri, feedEntryCurisTitlesMap, crawlCtx, logger, findLoadMoreButton, extendedScrollTime,
 	)
 	if err != nil {
+		logger.Warn("Not saving puppeteer page: %v", err)
 		return nil, err
 	}
 
