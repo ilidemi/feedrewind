@@ -1087,6 +1087,10 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info().Msgf("Server: %s", *maybeBlogCrawlEpochTimes)
 	logger.Info().Msgf("Client: %s", epochDurations)
+	logger.Info().Msgf(
+		"Counts: server %d, client %d",
+		strings.Count(*maybeBlogCrawlEpochTimes, ";")+1, strings.Count(epochDurations, ";")+1,
+	)
 	adminTelemetryExtra := map[string]any{
 		"feed_url":        blogFeedUrl,
 		"subscription_id": subscriptionId,
@@ -1126,7 +1130,6 @@ func Subscriptions_SubmitProgressTimes(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-	logger.Info().Msgf("Durations: %d", len(serverDurations))
 
 	if len(clientDurations) < 3 {
 		logger.Info().Msg("Too few client durations to compute anything")
