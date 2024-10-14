@@ -2160,8 +2160,10 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 		select {
 		case payload := <-ch:
 			wasTruncated := payload["was_truncated"] == true
+			wasTruncatedLog := ""
 			if wasTruncated {
 				delete(payload, "was_truncated")
+				wasTruncatedLog = " was_truncated: true"
 			}
 			payloadBytes, err := json.Marshal(payload)
 			if err != nil {
@@ -2180,8 +2182,8 @@ func Subscriptions_ProgressStream(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			logger.Info().Msgf(
-				"%s %d: %s was_truncated: %t",
-				jobs.CrawlProgressChannelName, blogId, logPayloadStr, wasTruncated,
+				"%s %d: %s%s",
+				jobs.CrawlProgressChannelName, blogId, logPayloadStr, wasTruncatedLog,
 			)
 			err = ws.WriteMessage(websocket.TextMessage, payloadBytes)
 			if err != nil {
