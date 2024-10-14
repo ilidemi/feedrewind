@@ -384,7 +384,18 @@ func crawlWithPuppeteerIfMatch(
 		logger.Info("Found load more button, rerunning with puppeteer")
 		puppeteerMatch = true
 		findLoadMoreButton = func(page *rod.Page) (*rod.Element, error) {
-			return page.Sleeper(rod.NotFoundSleeper).ElementX(loadMoreXPathStr)
+			element, err := page.Sleeper(rod.NotFoundSleeper).ElementX(loadMoreXPathStr)
+			if err != nil {
+				return nil, err
+			}
+			isVisible, err := element.Visible()
+			if err != nil {
+				return nil, err
+			}
+			if !isVisible {
+				return nil, errors.New("load more button is not visible")
+			}
+			return element, nil
 		}
 	case htmlquery.QuerySelector(page.Document, mediumFeedLinkXPath) != nil &&
 		len(htmlquery.Find(page.Document, "//article")) == 10:

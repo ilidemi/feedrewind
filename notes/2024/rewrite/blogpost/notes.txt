@@ -59,6 +59,7 @@ Missed:
 	moving contraints from activerecord to db made transactions fail and me need to think about them
 	db conversion bug in handling multiple feeds (not tested at all)
 	bug in displaying the initial progress (not validated at all)
+	puppeteer load more button started querying invisible
 
 
 ## Hours
