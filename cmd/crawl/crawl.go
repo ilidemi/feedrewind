@@ -585,6 +585,7 @@ func runScaleTest(ids []int64, successfulIds []int64, windowCount int, pool *pgw
 	successes := 0
 	var falsePositives []int64
 	var falseNegatives []int64
+	var unknowns []int64
 	var outputLock sync.Mutex
 	startTime := time.Now()
 	for windowIdx := range windowCount {
@@ -594,12 +595,14 @@ func runScaleTest(ids []int64, successfulIds []int64, windowCount int, pool *pgw
 			windowsWide := 4
 			width := 3840 / windowsWide
 			height := 500
-			left := (windowIdx % windowsWide) * width
-			var top int
-			if windowIdx/7 < (2120 / height) {
+			firstScreenTall := 2120 / height
+			var top, left int
+			if windowIdx/windowsWide < firstScreenTall {
 				top = (windowIdx / windowsWide) * height
+				left = (windowIdx % windowsWide) * width
 			} else {
-				top = 2160 + ((windowIdx/windowsWide - (2120 / height)) * height)
+				top = 2160 + (windowIdx-windowsWide*firstScreenTall)*height
+				left = 0
 			}
 			l := launcher.New().Append(flags.Arguments, "--force-device-scale-factor").Headless(false)
 			browserUrl := l.MustLaunch()
@@ -624,6 +627,7 @@ func runScaleTest(ids []int64, successfulIds []int64, windowCount int, pool *pgw
 				page.MustElement("#start_url").MustInput(startUrl)
 				page.MustElementR("button", "Go").MustClick()
 				err = page.WaitLoad()
+				var crawlSucceeded, crawlFailed bool
 				if err != nil {
 					fmt.Printf("!!! WaitLoad failed for %d (%s): %v\n", startLinkId, startUrl, err)
 				} else {
@@ -641,11 +645,19 @@ func runScaleTest(ids []int64, successfulIds []int64, windowCount int, pool *pgw
 					}
 					page.MustWaitLoad()
 					_, err = page.Timeout(3 * time.Second).Element("#select_posts")
+					crawlSucceeded = err == nil
+					if !crawlSucceeded {
+						_, err := page.Timeout(time.Second).Element("#blog_failed")
+						crawlFailed = err == nil
+					}
 				}
-				crawlSucceeded := err == nil
+
 				outputLock.Lock()
 				var status string
-				if crawlSucceeded == successfulIdsSet[startLinkId] {
+				if !crawlSucceeded && !crawlFailed {
+					status = "Neither succeeded nor failed"
+					unknowns = append(unknowns, startLinkId)
+				} else if crawlSucceeded == successfulIdsSet[startLinkId] {
 					status = "As expected"
 					successes++
 				} else if crawlSucceeded {
@@ -655,7 +667,8 @@ func runScaleTest(ids []int64, successfulIds []int64, windowCount int, pool *pgw
 					status = "Previously succeeded, now failed"
 					falseNegatives = append(falseNegatives, startLinkId)
 				}
-				progressFrac := float64(successes+len(falsePositives)+len(falseNegatives)) / float64(len(ids))
+				progressFrac := float64(successes+len(falsePositives)+len(falseNegatives)+len(unknowns)) /
+					float64(len(ids))
 				progressPercent := progressFrac * 100
 				eta := time.Duration(float64(time.Since(startTime)) / progressFrac * (1 - progressFrac)).
 					Round(time.Second)
@@ -675,6 +688,9 @@ func runScaleTest(ids []int64, successfulIds []int64, windowCount int, pool *pgw
 	}
 	if len(falseNegatives) > 0 {
 		fmt.Printf("Previously succeeded, now failed: %v\n", falseNegatives)
+	}
+	if len(unknowns) > 0 {
+		fmt.Printf("Neither succeeded nor failed: %v\n", unknowns)
 	}
 
 	return nil
