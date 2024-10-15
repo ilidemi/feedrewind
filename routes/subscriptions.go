@@ -19,6 +19,7 @@ import (
 	"feedrewind/util/schedule"
 	"fmt"
 	"html/template"
+	"maps"
 	"math"
 	"net/http"
 	"net/url"
@@ -2042,8 +2043,9 @@ func Subscriptions_MustStartListeningForNotifications() {
 			}
 
 			for _, ch := range notificationChan.Chans {
+				payloadCopy := maps.Clone(payload)
 				select {
-				case ch <- payload:
+				case ch <- payloadCopy:
 				default:
 					// The previous value hasn't been consumed, pop it to write the new one,
 					// but it's ok if it got consumed in between
@@ -2051,7 +2053,7 @@ func Subscriptions_MustStartListeningForNotifications() {
 					case <-ch:
 					default:
 					}
-					ch <- payload
+					ch <- payloadCopy
 				}
 			}
 		}
