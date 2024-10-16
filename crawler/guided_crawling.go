@@ -1676,7 +1676,7 @@ func postprocessSortLinksMaybeDates(
 	for _, link := range crawledLinks {
 		page := sortablePagesByCanonicalUrl[link.Curi().String()]
 		var ok bool
-		sortState, ok = historicalArchivesSortAdd(page, feedGenerator, sortState, logger)
+		sortState, ok = historicalArchivesSortAdd(page, sortState, logger)
 		if !ok {
 			logger.Info("Postprocess sort links, maybe dates failed during add already crawled")
 			return nil, errSortFailed
@@ -1696,7 +1696,7 @@ func postprocessSortLinksMaybeDates(
 		sortablePage := historicalArchivesToSortablePage(page, feedGenerator, logger)
 
 		var ok bool
-		sortState, ok = historicalArchivesSortAdd(sortablePage, feedGenerator, sortState, logger)
+		sortState, ok = historicalArchivesSortAdd(sortablePage, sortState, logger)
 		if !ok {
 			err := progressLogger.LogAndSavePostprocessingResetCount()
 			if err != nil {

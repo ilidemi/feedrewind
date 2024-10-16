@@ -68,21 +68,40 @@ func historicalArchivesToSortablePage(
 			}
 			tagCounts[tag]++
 
-			childXPathSegment := fmt.Sprintf("/%s[%d]", tag, tagCounts[tag])
-			childXPathSegments := slices.Clone(xpathSegments)
-			childXPathSegments = append(childXPathSegments, childXPathSegment)
-
 			if tag == "meta" && findAttr(child, "property") == "article:published_time" {
 				if content := findAttr(child, "content"); content != "" {
 					if metaDate := tryExtractTextDate(content, false); metaDate != nil {
+						lastSegment := "/meta[@property='article:published_time']"
 						datesXPathsSources = append(datesXPathsSources, dateXPathSource{
-							XPath:      strings.Join(childXPathSegments, ""),
+							XPath:      strings.Join(xpathSegments, "") + lastSegment,
 							Date:       *metaDate,
 							DateSource: dateSourceKindMeta,
 						})
 					}
 				}
 			}
+
+			gwernDate := false
+			if tag == "meta" && findAttr(child, "name") == "dc.date.issued" {
+				if content := findAttr(child, "content"); content != "" {
+					if metaDate := tryExtractTextDate(content, false); metaDate != nil {
+						gwernDate = true
+						lastSegment := "/meta[@name='dc.date.issued']"
+						datesXPathsSources = append(datesXPathsSources, dateXPathSource{
+							XPath:      strings.Join(xpathSegments, "") + lastSegment,
+							Date:       *metaDate,
+							DateSource: dateSourceKindMeta,
+						})
+					}
+				}
+			}
+			if !gwernDate {
+				_ = 1
+			}
+
+			childXPathSegment := fmt.Sprintf("/%s[%d]", tag, tagCounts[tag])
+			childXPathSegments := slices.Clone(xpathSegments)
+			childXPathSegments = append(childXPathSegments, childXPathSegment)
 
 			if dateSource := tryExtractElementDate(child, false); dateSource != nil {
 				datesXPathsSources = append(datesXPathsSources, dateXPathSource{
@@ -109,7 +128,7 @@ func historicalArchivesToSortablePage(
 }
 
 func historicalArchivesSortAdd(
-	page sortablePage, feedGenerator FeedGenerator, maybeSortState *sortState, logger Logger,
+	page sortablePage, maybeSortState *sortState, logger Logger,
 ) (*sortState, bool) {
 	logger.Info("Archives sort add start")
 

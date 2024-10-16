@@ -276,6 +276,11 @@ var SuggestedCategories = []SuggestedCategory{
 				FeedUrl: "https://feeds.feedburner.com/MeltingAsphalt",
 				Name:    "Melting Asphalt",
 			},
+			{
+				Url:     "https://gwern.net",
+				FeedUrl: "https://gwern.net",
+				Name:    "Gwern",
+			},
 		},
 	},
 }

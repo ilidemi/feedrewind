@@ -237,6 +237,22 @@ func tryExtractArchives(
 		}
 	}
 
+	if CanonicalUriEqual(fetchLink.Curi(), hardcodedGwern, guidedCtx.CuriEqCfg) {
+		logger.Info("Extracting archives for Gwern")
+		result, err := extractGwern(fetchLink, page, guidedCtx.CuriEqCfg, logger)
+		if err != nil {
+			logger.Error("Couldn't extract gwern archives: %v", err)
+			return nil
+		}
+		return []crawlHistoricalResult{
+			&archivesShuffledResults{
+				MainLnk:        *fetchLink,
+				Results:        []*archivesShuffledResult{result},
+				SpeculativeCnt: result.SpeculativeCount(),
+			},
+		}
+	}
+
 	if CanonicalUriEqual(fetchLink.Curi(), hardcodedJuliaEvans, guidedCtx.CuriEqCfg) {
 		logger.Info("Extracting archives for Julia Evans")
 		starCountExtractions := extractionsByStarCount[1] // 2 stars
@@ -1195,6 +1211,7 @@ func tryExtractShuffled(
 
 		var postCategories []pristineHistoricalBlogPostCategory
 		if CanonicalUriEqual(mainLink.Curi(), hardcodedJuliaEvans, curiEqCfg) {
+			logger.Info("Extracting Julia Evans categories")
 			jvnsCategories, err := extractJuliaEvansCategories(page, logger)
 			if err != nil {
 				logger.Info("Couldn't extract Julia Evans categories: %v", err)
