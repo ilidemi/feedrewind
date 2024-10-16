@@ -39,6 +39,7 @@ var hardcodedDanLuu CanonicalUri
 var HardcodedDanLuuFeed CanonicalUri
 var HardcodedDontWorryAboutTheVaseFeed CanonicalUri
 var hardcodedFactorio CanonicalUri
+var hardcodedGwern CanonicalUri
 var hardcodedJuliaEvans CanonicalUri
 var hardcodedKalzumeus CanonicalUri
 var hardcodedMrMoneyMustache CanonicalUri
@@ -86,6 +87,7 @@ func init() {
 	hardcodedCryptographyEngineering = hardcodedMustParse(cryptographyEngineering)
 	hardcodedCryptographyEngineeringAll = hardcodedMustParse(cryptographyEngineering + "/all-posts/")
 	hardcodedFactorio = hardcodedMustParse("https://www.factorio.com/blog/")
+	hardcodedGwern = hardcodedMustParse("https://gwern.net/")
 	hardcodedJuliaEvans = hardcodedMustParse("https://jvns.ca")
 	hardcodedKalzumeus = hardcodedMustParse("https://www.kalzumeus.com/archive/")
 	hardcodedMrMoneyMustache = hardcodedMustParse("https://www.mrmoneymustache.com/blog")
@@ -494,11 +496,98 @@ func extractFactorioCategories(
 	}}, nil
 }
 
+func extractGwern(
+	fetchLink *pristineLink, page *htmlPage, curiEqCfg *CanonicalEqualityConfig, logger Logger,
+) (*archivesShuffledResult, error) {
+	sections := htmlquery.Find(page.Document, "//section")
+	if len(sections) == 0 {
+		return nil, oops.Newf("Gwern sections not found")
+	}
+
+	seenCuris := NewCanonicalUriSet(nil, curiEqCfg)
+	var links []*pristineMaybeTitledLink
+	var categories []pristineHistoricalBlogPostCategory
+	for _, section := range sections {
+		id := htmlquery.SelectAttr(section, "id")
+		if id == "newest" || id == "docs" || strings.HasPrefix(id, "docs-") {
+			continue
+		}
+
+		heading := htmlquery.FindOne(section, "//h1")
+		if heading == nil {
+			return nil, oops.Newf("Couldn't extract heading for section %s", id)
+		}
+		categoryName := htmlquery.InnerText(heading)
+		lineElements := htmlquery.Find(section, "//li")
+		if len(lineElements) == 0 {
+			return nil, oops.Newf("Couldn't extract line elements for section %s", id)
+		}
+
+		var categoryLinks []Link
+		for _, lineElement := range lineElements {
+			lineLinks := htmlquery.Find(lineElement, "//a")
+			if len(lineLinks) == 0 {
+				continue
+			}
+			skipTitles := len(lineLinks) > 0
+
+			for _, linkElement := range lineLinks {
+				href := htmlquery.SelectAttr(linkElement, "href")
+				link, ok := ToCanonicalLink(href, logger, page.FetchUri)
+				if !ok {
+					return nil, oops.Newf("Couldn't canonicalize link %s from section %s", href, id)
+				}
+				if link.Uri.Fragment != "" {
+					logger.Info("Skipping %s (fragment)", link.Url)
+					continue
+				}
+				if link.Uri.Host != page.FetchUri.Host {
+					logger.Info("Skipping %s (host mismatch)", link.Url)
+					continue
+				}
+				if link.Uri.Path == "/doc/newsletter/index" {
+					logger.Info("Skipping %s (newsletter index)", link.Url)
+					continue
+				}
+				if strings.HasSuffix(link.Uri.Path, "/index.html") {
+					logger.Info("Skipping %s (/index.html)", link.Url)
+					continue
+				}
+				categoryLinks = append(categoryLinks, *link)
+				if seenCuris.Contains(link.Curi) {
+					continue
+				}
+				seenCuris.add(link.Curi)
+				title := htmlquery.InnerText(linkElement)
+				var linkTitle *LinkTitle
+				if !skipTitles {
+					linkTitleVal := NewLinkTitle(title, LinkTitleSourceInnerText, nil)
+					linkTitle = &linkTitleVal
+				}
+				links = append(links, NewPristineMaybeTitledLink(&maybeTitledLink{
+					Link:       *link,
+					MaybeTitle: linkTitle,
+				}))
+			}
+		}
+
+		category := NewPristineHistoricalBlogPostCategory(categoryName, false, categoryLinks)
+		categories = append(categories, category)
+	}
+
+	return &archivesShuffledResult{
+		MainLnk:        *fetchLink,
+		Pattern:        "archives_shuffled",
+		Links:          links,
+		MaybeDates:     make([]*date, len(links)),
+		PostCategories: categories,
+		Extra:          nil,
+	}, nil
+}
+
 func extractJuliaEvansCategories(
 	page *htmlPage, logger Logger,
 ) ([]pristineHistoricalBlogPostCategory, error) {
-	logger.Info("Extracting Julia Evans categories")
-
 	headings := htmlquery.Find(page.Document, "//article/a/h3")
 	if len(headings) == 0 {
 		return nil, oops.Newf("Julia Evans categories not found")
@@ -573,11 +662,43 @@ func extractSubstackCategories(
 	return []pristineHistoricalBlogPostCategory{publicCategory}
 }
 
+func generateGwernFeed(rootLink *Link, page *htmlPage, logger Logger) DiscoverFeedsResult {
+	feedTitle := "Essays · Gwern.net"
+	newestElements, err := htmlquery.QueryAll(page.Document, "//section[@id='newest']/ul//a")
+	if err != nil {
+		logger.Error("Coulnd't query Gwern newest: %v", err)
+		return &DiscoverFeedsErrorBadFeed{}
+	}
+	if len(newestElements) == 0 {
+		logger.Error("No newest entries at Gwern")
+		return &DiscoverFeedsErrorBadFeed{}
+	}
+
+	var urls []string
+	var titles []string
+	for _, element := range newestElements {
+		for _, attr := range element.Attr {
+			if attr.Key == "href" {
+				relUri, err := neturl.Parse(attr.Val)
+				if err != nil {
+					logger.Error("Couldn't parse gwern url: %v", err)
+					return &DiscoverFeedsErrorBadFeed{}
+				}
+				uri := page.pageBase.FetchUri.ResolveReference(relUri)
+				urls = append(urls, uri.String())
+				titles = append(titles, htmlquery.InnerText(element))
+				break
+			}
+		}
+	}
+
+	return hardcodedGenerateFeed(rootLink.Url, feedTitle, page.Content, urls, titles, logger)
+}
+
 func generatePgFeed(
 	rootLink *Link, page *htmlPage, crawlCtx *CrawlContext, curiEqCfg *CanonicalEqualityConfig,
 	logger Logger,
 ) DiscoverFeedsResult {
-	feedTitle := "Paul Graham: Essays"
 	sampleFeedEntryUrls := []string{
 		"https://paulgraham.com/icad.html",
 		"https://paulgraham.com/power.html",
@@ -589,17 +710,21 @@ func generatePgFeed(
 		"What Languages Fix",
 	}
 	curisToExclude := NewCanonicalUriSet(nil, curiEqCfg)
-	return generateFakeFeed(
-		rootLink, feedTitle, sampleFeedEntryUrls, sampleFeedEntryTitles, curisToExclude, page, crawlCtx,
-		curiEqCfg, logger,
+	urls, titles := hardcodedExtractLinks(
+		rootLink, sampleFeedEntryUrls, sampleFeedEntryTitles, curisToExclude, page, crawlCtx, curiEqCfg,
+		logger,
 	)
+	if urls == nil || titles == nil {
+		return &DiscoverFeedsErrorBadFeed{}
+	}
+	feedTitle := "Paul Graham: Essays"
+	return hardcodedGenerateFeed(rootLink.Url, feedTitle, page.Content, urls, titles, logger)
 }
 
 func generateTransformerCircuitsFeed(
 	rootLink *Link, page *htmlPage, crawlCtx *CrawlContext, curiEqCfg *CanonicalEqualityConfig,
 	logger Logger,
 ) DiscoverFeedsResult {
-	feedTitle := "Transformer Circuits"
 	sampleFeedEntryUrls := []string{
 		"https://transformer-circuits.pub/2022/solu/index.html",
 		"https://transformer-circuits.pub/2022/mech-interp-essay/index.html",
@@ -610,17 +735,21 @@ func generateTransformerCircuitsFeed(
 		"Mechanistic Interpretability, Variables, and the Importance of Interpretable Bases",
 		"In-Context Learning and Induction Heads",
 	}
-	return generateFakeFeed(
-		rootLink, feedTitle, sampleFeedEntryUrls, sampleFeedEntryTitles,
-		hardcodedTransformerCircuitsEntriesToExclude, page, crawlCtx, curiEqCfg, logger,
+	urls, titles := hardcodedExtractLinks(
+		rootLink, sampleFeedEntryUrls, sampleFeedEntryTitles, hardcodedTransformerCircuitsEntriesToExclude,
+		page, crawlCtx, curiEqCfg, logger,
 	)
+	if urls == nil || titles == nil {
+		return &DiscoverFeedsErrorBadFeed{}
+	}
+	feedTitle := "Transformer Circuits"
+	return hardcodedGenerateFeed(rootLink.Url, feedTitle, page.Content, urls, titles, logger)
 }
 
-func generateFakeFeed(
-	rootLink *Link, feedTitle string, sampleFeedEntryUrls, sampleFeedEntryTitles []string,
-	curisToExclude CanonicalUriSet, page *htmlPage, crawlCtx *CrawlContext,
-	curiEqCfg *CanonicalEqualityConfig, logger Logger,
-) DiscoverFeedsResult {
+func hardcodedExtractLinks(
+	rootLink *Link, sampleFeedEntryUrls, sampleFeedEntryTitles []string, curisToExclude CanonicalUriSet,
+	page *htmlPage, crawlCtx *CrawlContext, curiEqCfg *CanonicalEqualityConfig, logger Logger,
+) (urls, titles []string) {
 	pageAllLinks := extractLinks(
 		page.Document, page.FetchUri, nil, crawlCtx.Redirects, logger, includeXPathOnly,
 	)
@@ -628,15 +757,13 @@ func generateFakeFeed(
 	feedEntryCurisTitlesMap := NewCanonicalUriMap[MaybeLinkTitle](curiEqCfg)
 	for i, entryUrl := range sampleFeedEntryUrls {
 		entryLink, _ := ToCanonicalLink(entryUrl, logger, page.FetchUri)
-		linkBuckets = append(linkBuckets, []FeedEntryLink{
-			FeedEntryLink{
-				maybeTitledLink: maybeTitledLink{
-					Link:       *entryLink,
-					MaybeTitle: nil,
-				},
-				MaybeDate: nil,
+		linkBuckets = append(linkBuckets, []FeedEntryLink{{
+			maybeTitledLink: maybeTitledLink{
+				Link:       *entryLink,
+				MaybeTitle: nil,
 			},
-		})
+			MaybeDate: nil,
+		}})
 		title := NewLinkTitle(sampleFeedEntryTitles[i], LinkTitleSourceFeed, nil)
 		feedEntryCurisTitlesMap.Add(*entryLink, &title)
 	}
@@ -652,51 +779,64 @@ func generateFakeFeed(
 		logger.Error(
 			"Couldn't parse %s: %d extractions", rootLink.Url, len(extractionsByStarCount[0].Extractions),
 		)
-		return &DiscoverFeedsErrorBadFeed{}
+		return nil, nil
 	}
 	entryLinks := extractionsByStarCount[0].Extractions[0].LinksExtraction.Links
-	filteredEntryLinks := make([]*maybeTitledHtmlLink, 0, len(entryLinks))
+	filteredEntryUrls := make([]string, 0, len(entryLinks))
+	filteredEntryTitles := make([]string, 0, len(entryLinks))
 	for _, entryLink := range entryLinks {
 		if !curisToExclude.Contains(entryLink.Curi) {
-			filteredEntryLinks = append(filteredEntryLinks, entryLink)
+			filteredEntryUrls = append(filteredEntryUrls, entryLink.Url)
+			filteredEntryTitles = append(filteredEntryTitles, entryLink.MaybeTitle.Value)
 		}
 	}
+	return filteredEntryUrls, filteredEntryTitles
+}
+
+func hardcodedGenerateFeed(
+	rootUrl, feedTitle, pageContent string, urls, titles []string, logger Logger,
+) DiscoverFeedsResult {
 	var feedSb strings.Builder
 	fmt.Fprintln(&feedSb, `<?xml version="1.0" encoding="UTF-8"?>`)
 	fmt.Fprintln(&feedSb, `<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0">`)
 	fmt.Fprintln(&feedSb, `  <channel>`)
-	fmt.Fprintf(&feedSb, "    <atom:link href=\"%s\" rel=\"self\" type=\"application/rss+xml\"/>\n", rootLink.Url)
+	fmt.Fprintf(&feedSb, "    <atom:link href=\"%s\" rel=\"self\" type=\"application/rss+xml\"/>\n", rootUrl)
 	fmt.Fprintf(&feedSb, "    <title>%s</title>\n", feedTitle)
-	fmt.Fprintf(&feedSb, "    <link>%s</link>\n", rootLink.Url)
-	for _, link := range filteredEntryLinks {
+	fmt.Fprintf(&feedSb, "    <link>%s</link>\n", rootUrl)
+	for i, url := range urls {
 		fmt.Fprint(&feedSb, "    <item>\n")
 		fmt.Fprint(&feedSb, "      <title>")
-		_ = xml.EscapeText(&feedSb, []byte(link.MaybeTitle.Value))
+		_ = xml.EscapeText(&feedSb, []byte(titles[i]))
 		fmt.Fprint(&feedSb, "</title>\n")
 		fmt.Fprint(&feedSb, "      <link>")
-		_ = xml.EscapeText(&feedSb, []byte(link.Url))
+		_ = xml.EscapeText(&feedSb, []byte(url))
 		fmt.Fprint(&feedSb, "</link>\n")
 		fmt.Fprint(&feedSb, "    </item>\n")
 	}
 	fmt.Fprintln(&feedSb, `  </channel>`)
 	fmt.Fprintln(&feedSb, `</rss>`)
 	feedContent := feedSb.String()
-	parsedFeed, err := ParseFeed(feedContent, rootLink.Uri, logger)
+	rootUri, err := neturl.Parse(rootUrl)
 	if err != nil {
-		logger.Error("Couldn't parse %s feed we just created: %v", rootLink.Url, err)
+		logger.Error("Coulnd't parse root url %s: %v", rootUrl, err)
+		return &DiscoverFeedsErrorBadFeed{}
+	}
+	parsedFeed, err := ParseFeed(feedContent, rootUri, logger)
+	if err != nil {
+		logger.Error("Couldn't parse %s feed we just created: %v", rootUrl, err)
 		return &DiscoverFeedsErrorBadFeed{}
 	}
 
 	return &DiscoveredSingleFeed{
 		MaybeStartPage: &DiscoveredStartPage{
-			Url:      rootLink.Url,
-			FinalUrl: rootLink.Url,
-			Content:  page.Content,
+			Url:      rootUrl,
+			FinalUrl: rootUrl,
+			Content:  pageContent,
 		},
 		Feed: DiscoveredFetchedFeed{
 			Title:      feedTitle,
-			Url:        rootLink.Url,
-			FinalUrl:   rootLink.Url,
+			Url:        rootUrl,
+			FinalUrl:   rootUrl,
 			Content:    feedContent,
 			ParsedFeed: parsedFeed,
 		},

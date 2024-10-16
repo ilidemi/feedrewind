@@ -141,7 +141,9 @@ func DiscoverFeedsAtUrl(
 			Feed:           feed,
 		}
 	case *htmlPage:
-		if CanonicalUriEqual(startLink.Curi, hardcodedPaulGraham, &curiEqCfg) {
+		if CanonicalUriEqual(startLink.Curi, hardcodedGwern, &curiEqCfg) {
+			return generateGwernFeed(startLink, p, logger)
+		} else if CanonicalUriEqual(startLink.Curi, hardcodedPaulGraham, &curiEqCfg) {
 			return generatePgFeed(startLink, p, crawlCtx, &curiEqCfg, logger)
 		} else if CanonicalUriEqual(startLink.Curi, hardcodedTransformerCircuits, &curiEqCfg) {
 			return generateTransformerCircuitsFeed(startLink, p, crawlCtx, &curiEqCfg, logger)

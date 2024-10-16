@@ -185,18 +185,18 @@ type pristineLinkTitle struct {
 
 func NewPristineLinkTitle(title LinkTitle) pristineLinkTitle {
 	var altValuesBySource map[linkTitleSource]string
-	if title.AltValuesBySource != nil {
+	if title.MaybeAltValuesBySource != nil {
 		altValuesBySource = map[linkTitleSource]string{}
-		for source, value := range title.AltValuesBySource {
+		for source, value := range title.MaybeAltValuesBySource {
 			altValuesBySource[source] = strings.Clone(value)
 		}
 	}
 	return pristineLinkTitle{
 		Title: LinkTitle{
-			Value:             strings.Clone(title.Value),
-			EqualizedValue:    strings.Clone(title.EqualizedValue),
-			Source:            title.Source,
-			AltValuesBySource: altValuesBySource,
+			Value:                  strings.Clone(title.Value),
+			EqualizedValue:         strings.Clone(title.EqualizedValue),
+			Source:                 title.Source,
+			MaybeAltValuesBySource: altValuesBySource,
 		},
 	}
 }

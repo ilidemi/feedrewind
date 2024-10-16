@@ -10,10 +10,10 @@ import (
 )
 
 type LinkTitle struct {
-	Value             string
-	EqualizedValue    string
-	Source            linkTitleSource
-	AltValuesBySource map[linkTitleSource]string
+	Value                  string
+	EqualizedValue         string
+	Source                 linkTitleSource
+	MaybeAltValuesBySource map[linkTitleSource]string
 }
 
 type MaybeLinkTitle *LinkTitle
@@ -31,23 +31,23 @@ const (
 )
 
 func NewLinkTitle(
-	value string, source linkTitleSource, altValuesBySource map[linkTitleSource]string,
+	value string, source linkTitleSource, maybeAltValuesBySource map[linkTitleSource]string,
 ) LinkTitle {
 	if source == "" {
 		source = LinkTitleSourceInnerText
 	}
 	return LinkTitle{
-		Value:             value,
-		EqualizedValue:    equalizeTitle(value),
-		Source:            source,
-		AltValuesBySource: altValuesBySource,
+		Value:                  value,
+		EqualizedValue:         equalizeTitle(value),
+		Source:                 source,
+		MaybeAltValuesBySource: maybeAltValuesBySource,
 	}
 }
 
 func (t *LinkTitle) PrintString() string {
 	alternatives := ""
-	if len(t.AltValuesBySource) > 0 {
-		alternatives = fmt.Sprintf(", alternatives: %v", t.AltValuesBySource)
+	if len(t.MaybeAltValuesBySource) > 0 {
+		alternatives = fmt.Sprintf(", alternatives: %v", t.MaybeAltValuesBySource)
 	}
 	return fmt.Sprintf("%q (%s)%s", t.Value, t.Source, alternatives)
 }
