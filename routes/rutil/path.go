@@ -10,10 +10,12 @@ import (
 	"strings"
 )
 
-const SubscriptionAddUrl = "https://feedrewind.com/subscriptions/add"
-
 func BlogUnsupportedPath(blogId models.BlogId) string {
 	return fmt.Sprintf("/blogs/%d/unsupported", blogId)
+}
+
+func SubscriptionAddUrl() string {
+	return fmt.Sprintf("%s/subscriptions/add", config.Cfg.RootUrl)
 }
 
 func SubscriptionSetupPath(subscriptionId models.SubscriptionId) string {
@@ -73,7 +75,7 @@ func SubscriptionUnpausePath(subscriptionId models.SubscriptionId) string {
 }
 
 func SubscriptionUrl(subscriptionId models.SubscriptionId) string {
-	return fmt.Sprintf("https://feedrewind.com/subscriptions/%d", subscriptionId)
+	return fmt.Sprintf("%s/subscriptions/%d", config.Cfg.RootUrl, subscriptionId)
 }
 
 func SubscriptionPath(subscriptionId models.SubscriptionId) string {
@@ -118,7 +120,7 @@ func parseHostPort(r *http.Request) (host, port string) {
 
 func SubscriptionPostUrl(title string, randomId models.SubscriptionPostRandomId) string {
 	slug := postSlug(title)
-	return fmt.Sprintf("https://feedrewind.com/posts/%s/%s/", slug, randomId)
+	return fmt.Sprintf("%s/posts/%s/%s/", config.Cfg.RootUrl, slug, randomId)
 }
 
 var postSlugRegex regexp.Regexp

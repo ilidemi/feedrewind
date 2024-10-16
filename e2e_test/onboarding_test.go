@@ -3,8 +3,12 @@
 package e2etest
 
 import (
+	"bytes"
+	"encoding/xml"
 	"feedrewind/oops"
 	"feedrewind/util/schedule"
+	"io"
+	"net/http"
 	"testing"
 	"time"
 
@@ -70,6 +74,33 @@ func TestOnboardingSuggestion(t *testing.T) {
 	page = visitDevf(browser, "subscriptions/%s", subscriptionId)
 	publishedCount := parsePublishedCount(page)
 	require.Equal(t, "1", publishedCount)
+
+	// Get feed body
+	feedUrl := page.MustElement("#feed_url").MustText()
+	resp, err := http.Get(feedUrl)
+	oops.RequireNoError(t, err)
+	feedBody, err := io.ReadAll(resp.Body)
+	oops.RequireNoError(t, err)
+	oops.RequireNoError(t, resp.Body.Close())
+	type Item struct {
+		Link string `xml:"link"`
+	}
+	type Channel struct {
+		Items []Item `xml:"item"`
+	}
+	type RSS struct {
+		Channel Channel `xml:"channel"`
+	}
+	var rss RSS
+	err = xml.NewDecoder(bytes.NewReader(feedBody)).Decode(&rss)
+	oops.RequireNoError(t, err)
+	require.NotEmpty(t, rss.Channel.Items)
+
+	// Assert redirect
+	resp, err = http.Get(rss.Channel.Items[0].Link)
+	oops.RequireNoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	oops.RequireNoError(t, resp.Body.Close())
 
 	// Cleanup
 	page = visitAdminf(browser, "destroy_user?email=%s", email)
