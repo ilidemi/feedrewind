@@ -183,3 +183,27 @@ func TestOnboardingCustomLink(t *testing.T) {
 	browser.MustClose()
 	l.Cleanup()
 }
+
+func TestOnboardingMultipleFeeds(t *testing.T) {
+	l := launcher.New().Headless(false)
+	browserUrl := l.MustLaunch()
+	browser := rod.New().ControlURL(browserUrl).MustConnect()
+
+	feedButtonCount := 6 // 3 feeds, a title and a button each
+	for i := range feedButtonCount {
+		page := visitDev(browser, "")
+		page.MustElement("#start_url").
+			MustInput("https://ilidemi.github.io/dummy-blogs/multiple-feeds/multiple/")
+		page.MustElement("#discover_go").MustClick()
+
+		feedElements := page.MustElements(".feeds-choose")
+		require.Equal(t, feedButtonCount, len(feedElements))
+		feedElements[i].MustClick()
+		page.MustWaitLoad()
+
+		page.MustElement("#select_posts")
+	}
+
+	browser.MustClose()
+	l.Cleanup()
+}
