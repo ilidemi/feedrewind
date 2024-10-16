@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-rod/rod"
@@ -44,6 +45,7 @@ func NewPuppeteerClientImpl() *PuppeteerClientImpl {
 }
 
 var maxBrowserCount int
+var browserContenderCount atomic.Int64
 var browserLimitCh chan struct{}
 
 func SetMaxBrowserCount(count int) {
@@ -71,14 +73,16 @@ func (c *PuppeteerClientImpl) Fetch(
 	isInitialRequest := true
 	puppeteerStart := time.Now()
 
+	browserContenderCount.Add(1)
 	select {
 	case <-browserLimitCh:
 	default:
-		logger.Warn("Out of browser instances (%d)", maxBrowserCount)
+		logger.Warn("Out of browser instances (%d/%d)", browserContenderCount.Load(), maxBrowserCount)
 		<-browserLimitCh
 	}
 	defer func() {
 		browserLimitCh <- struct{}{}
+		browserContenderCount.Add(-1)
 	}()
 	browserAcquiredTime := time.Now()
 	logger.Info("Browser acquired in %v", browserAcquiredTime.Sub(puppeteerStart))
