@@ -217,20 +217,9 @@ func runServer(port int) {
 	staticR.Use(frmiddleware.RedirectHttpToHttps)
 	staticR.Use(middleware.GetHead)
 	staticR.Use(frmiddleware.DB)
+	staticR.Use(frmiddleware.RedirectSlashes("/subscriptions/add/"))
 
 	staticR.Group(func(r chi.Router) {
-		r.Use(frmiddleware.Session)
-		r.Use(frmiddleware.CurrentUser)
-		r.Use(frmiddleware.CSRF)
-		r.Use(frmiddleware.EmitVisit)
-
-		// For the convenience of testing and sharing links
-		r.Get("/subscriptions/add/{start_url}", routes.Onboarding_Add)
-		r.Post("/subscriptions/add/{start_url}", routes.Onboarding_Add)
-	})
-
-	staticR.Group(func(r chi.Router) {
-		r.Use(middleware.RedirectSlashes)
 		r.Use(frmiddleware.Session)
 		r.Use(frmiddleware.CurrentUser)
 		r.Use(frmiddleware.CSRF)
@@ -246,6 +235,9 @@ func runServer(port int) {
 
 		r.Get("/subscriptions/add", routes.Onboarding_Add)
 		r.Post("/subscriptions/add", routes.Onboarding_AddLanding)
+		// For the convenience of testing and sharing links
+		r.Get("/subscriptions/add/{start_url}", routes.Onboarding_Add)
+		r.Post("/subscriptions/add/{start_url}", routes.Onboarding_Add)
 		r.Post("/subscriptions/discover_feeds", routes.Onboarding_DiscoverFeeds)
 		r.Get("/preview/{slug}", routes.Onboarding_Preview)
 		r.Get("/pricing", routes.Onboarding_Pricing)
@@ -327,8 +319,6 @@ func runServer(port int) {
 	})
 
 	staticR.Group(func(anonR chi.Router) {
-		anonR.Use(middleware.RedirectSlashes)
-
 		anonR.Get("/subscriptions/{id}/feed", routes.Rss_SubscriptionFeed) // Legacy
 		anonR.Get("/feeds/single/{id}", routes.Rss_UserFeed)
 		anonR.Get("/feeds/{id}", routes.Rss_SubscriptionFeed)
