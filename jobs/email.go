@@ -83,10 +83,10 @@ func newFinalEmail(
 		AddUrl string
 	}
 	htmlBody := templates.MustFormat("email/final", &TemplateData{
-		AddUrl: rutil.SubscriptionAddUrl,
+		AddUrl: rutil.SubscriptionAddUrl(),
 	})
 	textBody := templates.MustFormat("email/final.txt", &TemplateData{
-		AddUrl: rutil.SubscriptionAddUrl,
+		AddUrl: rutil.SubscriptionAddUrl(),
 	})
 
 	metadata := map[string]string{

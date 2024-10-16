@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/xml"
+	"feedrewind/config"
 	"feedrewind/db/pgw"
 	"feedrewind/models"
 	"feedrewind/oops"
@@ -302,8 +303,10 @@ func publishRssFeeds(
 					Guid:        makeGuid(fmt.Sprintf("%d-final", subscription.Id)),
 					IsPermalink: false,
 				},
-				Description: `<a href="https://feedrewind.com/subscriptions/add">Want to read something else?</a>`,
-				PubDate:     subscription.MaybeFinalItemPublishedAt.Format(time.RFC1123Z),
+				Description: fmt.Sprintf(
+					`<a href="%s">Want to read something else?</a>`, rutil.SubscriptionAddUrl(),
+				),
+				PubDate: subscription.MaybeFinalItemPublishedAt.Format(time.RFC1123Z),
 			}
 			subscriptionItems = append(subscriptionItems, finalItem)
 			userDatesItems = append(userDatesItems, UserDateItem{
@@ -483,7 +486,7 @@ func generateSubscriptionRss(subscriptionName string, subscriptionUrl string, it
 }
 
 func generateUserRss(items []item) (string, error) {
-	return generateRss("FeedRewind", "https://feedrewind.com", items)
+	return generateRss("FeedRewind", config.Cfg.RootUrl, items)
 }
 
 func generateRss(title string, url string, items []item) (string, error) {
