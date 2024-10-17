@@ -66,7 +66,7 @@ func init() {
 	}
 }
 
-var defaultStartLinkId = 1655
+var defaultStartLinkId = 1132
 var threads int
 var allowJS bool
 
@@ -557,7 +557,7 @@ func hn1000ScaleTest() error {
 		return err
 	}
 
-	return runScaleTest(ids, successfulIds, 10, pool)
+	return runScaleTest(ids, successfulIds, 15, pool)
 }
 
 func runScaleTest(ids []int64, successfulIds []int64, windowCount int, pool *pgw.Pool) error {
