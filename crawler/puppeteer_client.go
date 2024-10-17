@@ -237,6 +237,7 @@ func (c *PuppeteerClientImpl) Fetch(
 					if err != nil {
 						return nil, oops.Wrap(err)
 					}
+					logger.Info("Puppeteer validation succeeded")
 				}
 				content, err = page.HTML()
 				if err != nil {
