@@ -103,7 +103,7 @@ func registerJobNameFunc(className string, f jobFunc) {
 
 const stripeWebhookWorkerCount = 100
 const defaultWorkerCount = 100
-const guidedCrawlingWorkerCount = 100
+const guidedCrawlingWorkerCount = 15
 const totalWorkerCount = stripeWebhookWorkerCount + defaultWorkerCount + guidedCrawlingWorkerCount
 const stripeWebhookQueue = "stripe_webhook"
 const defaultQueue = "default"
