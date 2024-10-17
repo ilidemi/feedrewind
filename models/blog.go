@@ -29,6 +29,7 @@ const (
 	BlogStatusCrawledLooksWrong    BlogStatus = "crawled_looks_wrong"
 	BlogStatusManuallyInserted     BlogStatus = "manually_inserted"
 	BlogStatusUpdateFromFeedFailed BlogStatus = "update_from_feed_failed"
+	BlogStatusKnownBad             BlogStatus = "known_bad"
 )
 
 var BlogFailedAutoStatuses = map[BlogStatus]bool{
@@ -40,6 +41,7 @@ var BlogFailedStatuses = map[BlogStatus]bool{
 	BlogStatusCrawlFailed:          true,
 	BlogStatusCrawledLooksWrong:    true,
 	BlogStatusUpdateFromFeedFailed: true,
+	BlogStatusKnownBad:             true,
 }
 
 var BlogCrawledStatuses = map[BlogStatus]bool{
