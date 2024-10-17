@@ -752,7 +752,8 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		case models.BlogStatusCrawlFailed,
-			models.BlogStatusUpdateFromFeedFailed:
+			models.BlogStatusUpdateFromFeedFailed,
+			models.BlogStatusKnownBad:
 			hasCredits := false
 			notifyWhenSupportedChecked := false
 			notifyWhenSupportedVersion := 0
