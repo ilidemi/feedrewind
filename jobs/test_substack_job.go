@@ -30,7 +30,7 @@ func TestSubstackJob_PerformAt(qu pgw.Queryable, runAt schedule.Time) error {
 func TestSubstackJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 	logger := pool.Logger()
 
-	httpClient := crawler.NewHttpClientImplCtx(ctx, false)
+	httpClient := crawler.NewHttpClientImpl(ctx, nil, false)
 	dlogger := crawler.NewDummyLogger()
 	progressLogger := crawler.NewMockProgressLogger(dlogger)
 	crawlCtx := crawler.NewCrawlContext(httpClient, nil, progressLogger)

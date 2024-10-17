@@ -162,7 +162,7 @@ func Admin_PostBlog(w http.ResponseWriter, r *http.Request) {
 		var discardedFromFeedEntryUrls []string
 		var missingFromFeedEntryUrls []string
 		if util.EnsureParamStr(r, "skip_feed_validation") != "1" {
-			httpClient := crawler.NewHttpClientImplCtx(r.Context(), false)
+			httpClient := crawler.NewHttpClientImpl(r.Context(), nil, false)
 			progressLogger := crawler.NewMockProgressLogger(&zlogger)
 			crawlCtx := crawler.NewCrawlContext(httpClient, nil, progressLogger)
 			feedResult := crawler.FetchFeedAtUrl(feedUrl, false, &crawlCtx, &zlogger)

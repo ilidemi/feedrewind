@@ -87,7 +87,7 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 	}
 	slices.Sort(feedUrls)
 
-	httpClient := crawler.NewHttpClientImplCtx(ctx, false)
+	httpClient := crawler.NewHttpClientImpl(ctx, nil, false)
 feeds:
 	for _, feedUrl := range feedUrls {
 		if err := ctx.Err(); err != nil {

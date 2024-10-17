@@ -23,7 +23,7 @@ func NewMockHttpClient(conn *pgw.Conn, startLinkId int) MockHttpClient {
 		NetworkRequestsMade: 0,
 		conn:                conn,
 		startLinkId:         startLinkId,
-		httpClient:          crawler.NewHttpClientImplCtx(context.Background(), true),
+		httpClient:          crawler.NewHttpClientImpl(context.Background(), nil, true),
 	}
 }
 
