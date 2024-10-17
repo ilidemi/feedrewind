@@ -154,7 +154,7 @@ func GuidedCrawlingJob_Perform(
 		}
 		return nil
 	}
-	httpClient := crawler.NewHttpClientImplFunc(checkCancellationFunc, true)
+	httpClient := crawler.NewHttpClientImpl(ctx, checkCancellationFunc, true)
 	puppeteerClient := crawler.NewPuppeteerClientImpl()
 	progressSaver := NewProgressSaver(blogId, blogFeedUrl, logger, pool)
 	progressLogger := crawler.NewProgressLogger(progressSaver)

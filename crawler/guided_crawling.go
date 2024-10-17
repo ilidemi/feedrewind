@@ -858,7 +858,7 @@ func (c *RobotsClient) Test(uri *url.URL, logger Logger) bool {
 	return result
 }
 
-func (c *RobotsClient) Throttle() {
+func (c *RobotsClient) Throttle(ctx context.Context) error {
 	now := time.Now().UTC()
 	if !c.LastRequestTimestamp.IsZero() {
 		timeDelta := now.Sub(c.LastRequestTimestamp)
@@ -867,11 +867,18 @@ func (c *RobotsClient) Throttle() {
 			crawlDelay = c.MaybeGroup.CrawlDelay
 		}
 		if timeDelta < crawlDelay {
-			time.Sleep(crawlDelay - timeDelta)
+			sleepDelay := crawlDelay - timeDelta
+			timer := time.NewTimer(sleepDelay)
+			select {
+			case <-ctx.Done():
+				return ErrCrawlCanceled
+			case <-timer.C:
+			}
 			now = time.Now().UTC()
 		}
 	}
 	c.LastRequestTimestamp = now
+	return nil
 }
 
 func isNewAndAllowed(

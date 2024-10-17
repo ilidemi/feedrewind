@@ -376,7 +376,7 @@ func onboarding_MustDiscoverFeeds(
 		return &discoveredSubscription{subscription: subscription}, models.TypedBlogUrlResultHardcoded
 	}
 
-	httpClient := crawler.NewHttpClientImplCtx(pool.Context(), false)
+	httpClient := crawler.NewHttpClientImpl(pool.Context(), nil, false)
 	zlogger := crawler.ZeroLogger{Logger: logger, MaybeLogScreenshotFunc: nil}
 	progressLogger := crawler.NewMockProgressLogger(&zlogger)
 	crawlCtx := crawler.NewCrawlContext(httpClient, nil, progressLogger)

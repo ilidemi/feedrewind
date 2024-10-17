@@ -41,33 +41,24 @@ var ErrCrawlCanceled = errors.New("crawl canceled")
 type CancellationFunc func() error
 
 type HttpClientImpl struct {
-	CancellationFunc CancellationFunc
-	EnableThrottling bool
-	PrevTimestamp    time.Time
-	Client           *http.Client
+	Context               context.Context
+	MaybeCancellationFunc CancellationFunc
+	EnableThrottling      bool
+	PrevTimestamp         time.Time
+	Client                *http.Client
 }
 
-func NewHttpClientImplFunc(cancellationFunc CancellationFunc, enableThrottling bool) *HttpClientImpl {
+func NewHttpClientImpl(
+	ctx context.Context, maybeCancellationFunc CancellationFunc, enableThrottling bool,
+) *HttpClientImpl {
 	var client http.Client
 	client.Timeout = time.Minute
 	return &HttpClientImpl{
-		CancellationFunc: cancellationFunc,
-		EnableThrottling: enableThrottling,
-		PrevTimestamp:    time.Time{},
-		Client:           &client,
-	}
-}
-
-func NewHttpClientImplCtx(ctx context.Context, enableThrottling bool) *HttpClientImpl {
-	var client http.Client
-	client.Timeout = time.Minute
-	return &HttpClientImpl{
-		CancellationFunc: func() error {
-			return ctx.Err()
-		},
-		EnableThrottling: enableThrottling,
-		PrevTimestamp:    time.Time{},
-		Client:           &client,
+		Context:               ctx,
+		MaybeCancellationFunc: maybeCancellationFunc,
+		EnableThrottling:      enableThrottling,
+		PrevTimestamp:         time.Time{},
+		Client:                &client,
 	}
 }
 
@@ -79,12 +70,20 @@ const codeResponseBodyTooBig = "ResponseBodyTooBig"
 func (c *HttpClientImpl) Request(
 	uri *url.URL, shouldThrottle bool, maybeRobotsClient *RobotsClient, logger Logger,
 ) (*HttpResponse, error) {
-	if err := c.CancellationFunc(); err != nil {
+	if err := c.Context.Err(); err != nil {
 		return nil, err
+	}
+	if c.MaybeCancellationFunc != nil {
+		if err := c.MaybeCancellationFunc(); err != nil {
+			return nil, err
+		}
 	}
 
 	if c.EnableThrottling && shouldThrottle && maybeRobotsClient != nil {
-		maybeRobotsClient.Throttle()
+		err := maybeRobotsClient.Throttle(c.Context)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	req, err := http.NewRequest(http.MethodGet, uri.String(), nil)
