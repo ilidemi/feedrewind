@@ -72,7 +72,8 @@ CREATE TYPE public.blog_status AS ENUM (
     'crawled_confirmed',
     'crawled_looks_wrong',
     'manually_inserted',
-    'update_from_feed_failed'
+    'update_from_feed_failed',
+    'known_bad'
 );
 
 
@@ -2512,4 +2513,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20240705190748'),
 ('20241002143639'),
 ('20241002163413'),
-('20241007122317');
+('20241007122317'),
+('20241016184250');
