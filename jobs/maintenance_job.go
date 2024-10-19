@@ -220,7 +220,7 @@ func MaintenanceJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 	// Check for overactive users
 	//
 	rows, err = pool.Query(`
-		select user_id, (select email from users_without_discarded where id = user_id) count(1) as count
+		select user_id, (select email from users_without_discarded where id = user_id), count(1) as count
 		from subscriptions_with_discarded
 		where user_id is not null
 		group by user_id, email
