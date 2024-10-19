@@ -18,13 +18,8 @@ func IpBan(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		userIp := util.UserIp(r)
 		if (*bannedIps.Load())[userIp] {
-			if hj, ok := w.(http.Hijacker); ok {
-				conn, _, err := hj.Hijack()
-				if err == nil {
-					conn.Close()
-					return
-				}
-			}
+			w.WriteHeader(http.StatusNotFound)
+			return
 		}
 		next.ServeHTTP(w, r)
 	}
