@@ -224,7 +224,7 @@ func MaintenanceJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 		from subscriptions_with_discarded
 		where user_id is not null
 		group by user_id, email
-		having count >= 30
+		having count(1) >= 30
 		order by count desc
 	`)
 	if err != nil {
