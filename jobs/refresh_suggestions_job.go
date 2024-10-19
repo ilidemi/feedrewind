@@ -51,17 +51,23 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 		feedUrlsSet[miscBlog.FeedUrl] = true
 	}
 
-	result, err := pool.Exec(`
+	rows, err := pool.Query(`
 		delete from ignored_suggestion_feeds where created_at < (utc_now() - interval '23:30')
+		returning feed_url
 	`)
 	if err != nil {
 		return err
 	}
-	if result.RowsAffected() > 0 {
-		logger.Info().Msgf("Expired %d previously ignored feed(s)", result.RowsAffected())
+	for rows.Next() {
+		var feedUrl string
+		err := rows.Scan(&feedUrl)
+		if err != nil {
+			return err
+		}
+		logger.Warn().Msgf("Expired previously ignored feed: %s", feedUrl)
 	}
 
-	rows, err := pool.Query(`select feed_url from ignored_suggestion_feeds`)
+	rows, err = pool.Query(`select feed_url from ignored_suggestion_feeds`)
 	if err != nil {
 		return err
 	}
