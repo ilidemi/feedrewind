@@ -18,6 +18,7 @@ func IpBan(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		userIp := util.UserIp(r)
 		if (*bannedIps.Load())[userIp] {
+			GetLogger(r).Info().Msg("ip is banned")
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
