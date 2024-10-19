@@ -241,6 +241,17 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: banned_ips; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.banned_ips (
+    ip text NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
+);
+
+
+--
 -- Name: blog_canonical_equality_configs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1338,6 +1349,14 @@ ALTER TABLE ONLY public.ar_internal_metadata
 
 
 --
+-- Name: banned_ips banned_ips_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.banned_ips
+    ADD CONSTRAINT banned_ips_pkey PRIMARY KEY (ip);
+
+
+--
 -- Name: blog_canonical_equality_configs blog_canonical_equality_configs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1760,6 +1779,13 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.admin_telemetries FOR EAC
 --
 
 CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.ar_internal_metadata FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
+
+
+--
+-- Name: banned_ips bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.banned_ips FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
 
 
 --
@@ -2515,4 +2541,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20241002163413'),
 ('20241007122317'),
 ('20241016184250'),
-('20241018150103');
+('20241018150103'),
+('20241018153403');

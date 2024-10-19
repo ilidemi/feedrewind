@@ -198,6 +198,7 @@ func runServer(port int) {
 	}
 
 	models.MustInit(db.RootPool)
+	frmiddleware.MustInitBannedIps()
 	routes.Subscriptions_MustStartListeningForNotifications()
 	parentCtx := context.Background()
 	signalCtx, signalCancel := signal.NotifyContext(parentCtx, syscall.SIGINT, syscall.SIGTERM)
@@ -211,6 +212,7 @@ func runServer(port int) {
 
 	staticR := chi.NewRouter()
 	staticR.Use(frmiddleware.Logger)
+	staticR.Use(frmiddleware.IpBan)
 	staticR.Use(middleware.Compress(3))
 	staticR.Use(frmiddleware.Recoverer)
 	staticR.Use(frmiddleware.DefaultHeaders)
