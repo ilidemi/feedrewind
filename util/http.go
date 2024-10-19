@@ -2,11 +2,13 @@ package util
 
 import (
 	"errors"
+	"feedrewind/config"
 	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -161,7 +163,11 @@ func DeleteCookie(w http.ResponseWriter, name string) {
 }
 
 func UserIp(r *http.Request) string {
-	return r.Header.Get("X-Forwarded-For")
+	if config.Cfg.Env.IsDevOrTest() {
+		return r.RemoteAddr[:strings.LastIndex(r.RemoteAddr, ":")]
+	} else {
+		return r.Header.Get("X-Forwarded-For")
+	}
 }
 
 func MustWrite(w http.ResponseWriter, plainText string) {
