@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/antchfx/htmlquery"
+	"github.com/antchfx/xpath"
 )
 
 type DiscoveredSingleFeed struct {
@@ -62,11 +63,30 @@ func (*DiscoverFeedsErrorBadFeed) discoverFeedsResultTag()       {}
 var commentsFeedRegex *regexp.Regexp
 var atomUrlRegex *regexp.Regexp
 var rssUrlRegex *regexp.Regexp
+var feedSelector *xpath.Expr
 
 func init() {
 	commentsFeedRegex = regexp.MustCompile("/comments/(feed|default)/?$")
 	atomUrlRegex = regexp.MustCompile("(.+)atom(.*)") // Last occurrence of "atom"
 	rssUrlRegex = regexp.MustCompile("(.+)rss(.*)")   // Last occurrence of "rss"
+	feedSelector = xpath.MustCompile(
+		`//*[self::a or self::area or self::link][
+			(@rel='alternate' and @type='application/rss+xml') or
+			(@rel='alternate' and @type='application/atom+xml') or ends-with(@href, '/feed.xml') or
+			ends-with(@href, '/feed') or
+			ends-with(@href, '/feed/') or
+			ends-with(@href, '/index.xml') or
+			ends-with(@href, '/rss.xml') or
+			ends-with(@href, '/atom.xml') or
+			ends-with(@href, '/default') or
+			ends-with(@href, '/rss') or
+			ends-with(@href, '/rss/') or
+			ends-with(@href, '/all.atom.xml') or
+			ends-with(@href, '/feed.rss') or
+			ends-with(@href, '/feed.atom') or
+			ends-with(@href, '/index.rss')
+		]`,
+	)
 }
 
 const atomUrlReplacement = "$1atom$2"
@@ -155,10 +175,7 @@ func DiscoverFeedsAtUrl(
 			Content:  p.Content,
 		}
 
-		linkNodes := htmlquery.Find(
-			p.Document,
-			"//*[self::a or self::area or self::link][@rel='alternate'][@type='application/rss+xml' or @type='application/atom+xml']",
-		)
+		linkNodes := htmlquery.QuerySelectorAll(p.Document, feedSelector)
 		var feeds []DiscoveredFeed
 		for _, linkNode := range linkNodes {
 			var title string
