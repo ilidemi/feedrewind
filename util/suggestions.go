@@ -121,6 +121,7 @@ type Suggestions struct {
 	SuggestedCategories []SuggestedCategory
 	MiscellaneousBlogs  []MiscellaneousBlog
 	WidthClass          string
+	IsPlayful           bool
 }
 
 type SuggestedCategory struct {

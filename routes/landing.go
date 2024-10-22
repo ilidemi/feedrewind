@@ -73,6 +73,7 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 			SuggestedCategories: util.SuggestedCategories,
 			MiscellaneousBlogs:  util.MiscellaneousBlogs,
 			WidthClass:          "max-w-[531px]",
+			IsPlayful:           true,
 		},
 	})
 }

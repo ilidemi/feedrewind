@@ -172,6 +172,7 @@ func Onboarding_Add(w http.ResponseWriter, r *http.Request) {
 				SuggestedCategories: util.SuggestedCategories,
 				MiscellaneousBlogs:  util.MiscellaneousBlogs,
 				WidthClass:          "max-w-full",
+				IsPlayful:           false,
 			},
 		}
 	}
