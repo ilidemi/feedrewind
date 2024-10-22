@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/format"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/goccy/go-json"
@@ -14,7 +15,7 @@ type tzRow struct {
 	AlternativeName    string
 	Group              []string
 	RawOffsetInMinutes int
-	RawFormat          string
+	MainCities         []string
 }
 
 type friendlyTimezone struct {
@@ -42,10 +43,15 @@ func main() {
 	overrides := map[string]friendlyTimezone{
 		"Pacific/Kanton": {
 			groupId:                 "Pacific/Enderbury",
-			friendlyName:            "+13:00 Phoenix Islands Time - Endenbury",
+			friendlyName:            "+13:00 Phoenix Islands Time",
 			shortFriendlyPrefixName: "+13:00 Phoenix Islands Time",
 			shortFriendlySuffixName: "Phoenix Islands Time (+13:00)",
 		},
+	}
+
+	countByAlternativeName := map[string]int{}
+	for _, tzRow := range tzRows {
+		countByAlternativeName[tzRow.AlternativeName]++
 	}
 
 	var friendlyTimezones []friendlyTimezone
@@ -63,13 +69,19 @@ func main() {
 			}
 			hours := offsetAbs / 60
 			minutes := offsetAbs % 60
+			citySuffix := ""
+			if countByAlternativeName[tzRow.AlternativeName] > 1 {
+				citySuffix = fmt.Sprintf(" - %s", tzRow.MainCities[0])
+			}
+			friendlyName :=
+				fmt.Sprintf("%s%02d:%02d %s%s", sign, hours, minutes, tzRow.AlternativeName, citySuffix)
 			shortFriendlyPrefixName :=
 				fmt.Sprintf("%s%02d:%02d %s", sign, hours, minutes, tzRow.AlternativeName)
 			shortFriendlySuffixName :=
 				fmt.Sprintf("%s (%s%02d:%02d)", tzRow.AlternativeName, sign, hours, minutes)
 			friendlyTz = friendlyTimezone{
 				groupId:                 tzRow.Name,
-				friendlyName:            tzRow.RawFormat,
+				friendlyName:            friendlyName,
 				shortFriendlyPrefixName: shortFriendlyPrefixName,
 				shortFriendlySuffixName: shortFriendlySuffixName,
 			}
@@ -79,6 +91,7 @@ func main() {
 		tzdbGroups[friendlyTz.groupId] = true
 	}
 
+	var timezoneIds []string
 	groupIdByTz := make(map[string]string)
 	tzdbTimezones := make(map[string]bool)
 	for _, tzRow := range tzRows {
@@ -94,8 +107,10 @@ func main() {
 				groupId = tzRow.Name
 			}
 			groupIdByTz[timezone] = groupId
+			timezoneIds = append(timezoneIds, timezone)
 		}
 	}
+	slices.Sort(timezoneIds)
 
 	shortFriendlyPrefixNameByGroupId := make(map[string]string)
 	shortFriendlySuffixNameByGroupId := make(map[string]string)
@@ -158,8 +173,8 @@ func main() {
 	fmt.Fprintln(&b, "}")
 	fmt.Fprintln(&b)
 	fmt.Fprintln(&b, "var GroupIdByTimezoneId = map[string]string {")
-	for tz, groupId := range groupIdByTz {
-		fmt.Fprintf(&b, "    %q: %q,\n", tz, groupId)
+	for _, tz := range timezoneIds {
+		fmt.Fprintf(&b, "    %q: %q,\n", tz, groupIdByTz[tz])
 	}
 	fmt.Fprintln(&b, "}")
 	fmt.Fprintln(&b)
