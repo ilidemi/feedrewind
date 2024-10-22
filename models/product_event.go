@@ -187,7 +187,12 @@ func ProductEvent_StartDummyEventsSync(ctx context.Context, wg *sync.WaitGroup) 
 		defer wg.Done()
 
 	tick:
-		for range ticker.C {
+		for {
+			select {
+			case <-ticker.C:
+			case <-ctx.Done():
+			}
+
 			if ctx.Err() != nil {
 				if maybeCanceledAt == nil {
 					now := time.Now()
