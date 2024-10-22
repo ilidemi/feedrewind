@@ -183,6 +183,11 @@ var SuggestedCategories = []SuggestedCategory{
 				Name:    "Our Machinery",
 			},
 			{
+				Url:     "http://antirez.com",
+				FeedUrl: "http://antirez.com/rss",
+				Name:    "Antirez",
+			},
+			{
 				Url:     "https://www.factorio.com/blog/",
 				FeedUrl: "https://www.factorio.com/blog/rss",
 				Name:    "Factorio",
