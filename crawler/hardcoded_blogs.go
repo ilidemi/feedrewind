@@ -24,6 +24,7 @@ const HardcodedSequences = "https://www.lesswrong.com/rationality"
 const HardcodedDanLuuFeedName = "Dan Luu"
 
 var hardcodedACOUP CanonicalUri
+var hardcodedAntirez CanonicalUri
 var HardcodedAstralCodexTenFeed CanonicalUri
 var hardcodedBenKuhn *Link
 var hardcodedBenKuhnArchives CanonicalUri
@@ -53,6 +54,7 @@ func init() {
 	logger := NewDummyLogger()
 
 	hardcodedACOUP = hardcodedMustParse("https://acoup.blog/")
+	hardcodedAntirez = hardcodedMustParse("http://antirez.com/")
 	HardcodedAstralCodexTenFeed = hardcodedMustParse("https://www.astralcodexten.com/feed")
 	benKuhn := "https://www.benkuhn.net/"
 	hardcodedBenKuhn, _ = ToCanonicalLink(benKuhn, logger, nil)

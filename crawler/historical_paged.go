@@ -970,6 +970,18 @@ func findLinkToPage2(
 	page1Links []*xpathLink, page1 *htmlPage, feedGenerator FeedGenerator, curiEqCfg *CanonicalEqualityConfig,
 	logger Logger,
 ) (*linkPatternToPage2, bool) {
+	if page1.FetchUri.Host == hardcodedAntirez.Host {
+		for _, link := range page1Links {
+			if strings.HasSuffix(link.Curi.TrimmedPath, "/latest/100") {
+				return &linkPatternToPage2{
+					Link:          link.Link,
+					IsCertain:     true,
+					PagingPattern: &pagingPatternAntirez{},
+				}, true
+			}
+		}
+	}
+
 	var bloggerNextPageLinks []*xpathLink
 	for _, link := range page1Links {
 		if link.Curi.TrimmedPath == "/search" && len(link.Uri.Query()["updated-max"]) == 1 {
@@ -1076,6 +1088,25 @@ func findLinkToPage2(
 type pagingPattern interface {
 	String() string
 	FindLinksToNextPage(currentPage *htmlPage, currentPageLinks []*xpathLink, nextPageNumber int) []*Link
+}
+
+type pagingPatternAntirez struct{}
+
+func (*pagingPatternAntirez) String() string {
+	return ":antirez"
+}
+
+func (*pagingPatternAntirez) FindLinksToNextPage(
+	currentPage *htmlPage, currentPageLinks []*xpathLink, nextPageNumber int,
+) []*Link {
+	suffix := fmt.Sprintf("/latest/%d00", nextPageNumber-1)
+	var matchingLinks []*Link
+	for _, link := range currentPageLinks {
+		if strings.HasSuffix(link.Curi.Path, suffix) {
+			matchingLinks = append(matchingLinks, &link.Link)
+		}
+	}
+	return matchingLinks
 }
 
 type pagingPatternBlogger struct{}
