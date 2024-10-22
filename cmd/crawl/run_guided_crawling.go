@@ -160,8 +160,12 @@ type GuidedCrawlingError struct {
 	Result GuidedCrawlingResult
 }
 
-func (e *GuidedCrawlingError) Error() string {
+func (e GuidedCrawlingError) Error() string {
 	return e.Inner.Error()
+}
+
+func (e GuidedCrawlingError) Unwrap() error {
+	return e.Inner
 }
 
 func newError(inner error, result GuidedCrawlingResult) *GuidedCrawlingError {

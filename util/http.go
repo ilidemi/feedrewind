@@ -23,6 +23,10 @@ func (e HttpError) Error() string {
 	return fmt.Sprintf("HTTP %d: %s", e.Status, e.Inner.Error())
 }
 
+func (e HttpError) Unwrap() error {
+	return e.Inner
+}
+
 func HttpPanic(status int, text string) {
 	panic(HttpError{
 		Status: status,
