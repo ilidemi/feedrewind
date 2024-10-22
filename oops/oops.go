@@ -56,12 +56,8 @@ func (err *Error) Error() string {
 	return err.Inner.Error()
 }
 
-func (err *Error) Is(target error) bool {
-	return errors.Is(err.Inner, target)
-}
-
-func (err *Error) As(target any) bool {
-	return errors.As(err.Inner, target)
+func (err *Error) Unwrap() error {
+	return err.Inner
 }
 
 func (err *Error) StackTrace() errors.StackTrace {

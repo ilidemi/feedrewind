@@ -131,9 +131,10 @@ func runSingle(startLinkId int) {
 	logger := &FileLogger{File: os.Stdout}
 
 	result, err := runGuidedCrawl(startLinkId, false, allowJS, conn, logger)
-	var gErr *GuidedCrawlingError
-	var ok bool
-	if gErr, ok = err.(*GuidedCrawlingError); ok {
+	var gErr GuidedCrawlingError
+	var isGuidedCrawlingError bool
+	if errors.As(err, &gErr) {
+		isGuidedCrawlingError = true
 		result = &gErr.Result
 	} else if err != nil {
 		panic(err)
@@ -152,7 +153,7 @@ func runSingle(startLinkId int) {
 			fmt.Printf("%s\t%v\t%s\n", GuidedCrawlingColumnNames[i], columnValues[i], columnStatuses[i])
 		}
 	}
-	if gErr != nil {
+	if isGuidedCrawlingError {
 		fmt.Println()
 		fmt.Print(gErr.Inner.FullString())
 		os.Exit(1)
@@ -258,7 +259,8 @@ func runAll() {
 
 		logger := FileLogger{File: logFile}
 		result, err := runGuidedCrawl(startLinkId, true, allowJS, threadConn, &logger)
-		if gErr, ok := err.(*GuidedCrawlingError); ok {
+		var gErr GuidedCrawlingError
+		if errors.As(err, &gErr) {
 			errorFilename := fmt.Sprintf("%s/error%d.txt", logDir, startLinkId)
 			errorFile, err := os.Create(errorFilename)
 			if err != nil {
