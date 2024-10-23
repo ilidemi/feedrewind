@@ -1267,7 +1267,7 @@ func postprocessArchivesSortedResult(
 		} else {
 			postCategories, err := extractBenKuhnCategories(page, logger)
 			if err != nil {
-				logger.Info("Ben Kuhn categories extract error: %v", err)
+				logger.Warn("Ben Kuhn categories extract error: %v", err)
 				guidedCtx.HardcodedError = err
 			} else {
 				logger.Info("Categories: %s", categoryCountsString(postCategories))
@@ -1560,7 +1560,7 @@ func postprocessPartialPagedResult(
 	if CanonicalUriEqual(fullResult.MainLnk.Curi(), hardcodedCaseyHandmer, guidedCtx.CuriEqCfg) {
 		postCategories, err := crawlCaseyHandmerCategories(fullResult, guidedCtx, crawlCtx, logger)
 		if err != nil {
-			logger.Info("Couldn't fetch Casey Handmer categories: %v", err)
+			logger.Warn("Couldn't fetch Casey Handmer categories: %v", err)
 			guidedCtx.HardcodedError = err
 		} else {
 			logger.Info("Categories: %s", categoryCountsString(postCategories))

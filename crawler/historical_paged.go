@@ -836,7 +836,7 @@ func tryExtractNextPage(
 	case CanonicalUriEqual(pagedState.MainLnk.Curi(), hardcodedFactorio, curiEqCfg):
 		factorioCategories, err := extractFactorioCategories(nextEntryLinks)
 		if err != nil {
-			logger.Info("Couldn't extract Factorio categories: %v", err)
+			logger.Warn("Couldn't extract Factorio categories: %v", err)
 			guidedCtx.HardcodedError = err
 		} else {
 			postCategoriesOrTags = factorioCategories
@@ -845,7 +845,7 @@ func tryExtractNextPage(
 	case CanonicalUriEqual(pagedState.MainLnk.Curi(), hardcodedACOUP, curiEqCfg):
 		acoupCategoires, err := extractACOUPCategories(nextEntryLinks)
 		if err != nil {
-			logger.Info("Couldn't extract ACOUP categories: %v", err)
+			logger.Warn("Couldn't extract ACOUP categories: %v", err)
 			guidedCtx.HardcodedError = err
 		} else {
 			postCategoriesOrTags = acoupCategoires
