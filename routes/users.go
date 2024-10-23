@@ -477,11 +477,11 @@ func Users_SignUp(w http.ResponseWriter, r *http.Request) {
 			return
 		} else {
 			util.DeleteCookie(w, rutil.AnonymousSubscription)
-			http.Redirect(w, r, "/subscriptions", http.StatusSeeOther)
+			http.Redirect(w, r, "/subscriptions/add", http.StatusSeeOther)
 			return
 		}
 	} else {
-		http.Redirect(w, r, "/subscriptions", http.StatusSeeOther)
+		http.Redirect(w, r, "/subscriptions/add", http.StatusSeeOther)
 		return
 	}
 }
