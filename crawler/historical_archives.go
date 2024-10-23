@@ -1214,7 +1214,7 @@ func tryExtractShuffled(
 			logger.Info("Extracting Julia Evans categories")
 			jvnsCategories, err := extractJuliaEvansCategories(page, logger)
 			if err != nil {
-				logger.Info("Couldn't extract Julia Evans categories: %v", err)
+				logger.Warn("Couldn't extract Julia Evans categories: %v", err)
 				guidedCtx.HardcodedError = err
 			} else {
 				postCategories = jvnsCategories

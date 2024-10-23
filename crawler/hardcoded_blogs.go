@@ -590,15 +590,18 @@ func extractGwern(
 func extractJuliaEvansCategories(
 	page *htmlPage, logger Logger,
 ) ([]pristineHistoricalBlogPostCategory, error) {
-	headings := htmlquery.Find(page.Document, "//article/a/h3")
+	headings := htmlquery.Find(page.Document, "//article/h3[a]")
 	if len(headings) == 0 {
 		return nil, oops.Newf("Julia Evans categories not found")
 	}
 
 	categories := make([]pristineHistoricalBlogPostCategory, 1+len(headings))
 	for categoryIdx, heading := range headings {
-		categoryName := innerText(heading)
-		postLinkElements := htmlquery.Find(heading.Parent.NextSibling, ".//a")
+		categoryName := strings.TrimSpace(innerText(heading))
+		postLinkElements := htmlquery.Find(heading.NextSibling.NextSibling, ".//a")
+		if len(postLinkElements) == 0 {
+			return nil, oops.Newf("Julia Evans category empty: %s", categoryName)
+		}
 		postLinks := make([]Link, len(postLinkElements))
 		for i, element := range postLinkElements {
 			href := findAttr(element, "href")
@@ -614,7 +617,8 @@ func extractJuliaEvansCategories(
 
 	var postLinksExceptRC []pristineLink
 	for _, category := range categories {
-		if strings.Contains(category.Name, "Recurse center") || category.Name == "Conferences" {
+		nameLower := strings.ToLower(category.Name)
+		if strings.Contains(nameLower, "recurse center") || nameLower == "conferences" {
 			continue
 		}
 		postLinksExceptRC = append(postLinksExceptRC, category.PostLinks...)
