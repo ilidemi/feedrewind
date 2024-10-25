@@ -32,10 +32,12 @@ func CleanupDbJob_PerformAt(qu pgw.Queryable, runAt schedule.Time) error {
 func CleanupDbJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 	logger := pool.Logger()
 	utcNow := schedule.UTCNow()
-	cutoffTime := utcNow.Add(-45 * 24 * time.Hour)
+	subscriptionsCutoff := utcNow.Add(-45 * 24 * time.Hour)
 
 	{
-		result, err := pool.Exec(`delete from subscriptions_with_discarded where discarded_at < $1`, cutoffTime)
+		result, err := pool.Exec(`
+			delete from subscriptions_with_discarded where discarded_at < $1
+		`, subscriptionsCutoff)
 		if err != nil {
 			return err
 		}
@@ -43,7 +45,9 @@ func CleanupDbJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 	}
 
 	err := util.Tx(pool, func(tx *pgw.Tx, pool util.Clobber) error {
-		rows, err := tx.Query(`select id from users_with_discarded where discarded_at < $1`, cutoffTime)
+		rows, err := tx.Query(`
+			select id from users_with_discarded where discarded_at < $1
+		`, subscriptionsCutoff)
 		if err != nil {
 			return err
 		}
@@ -81,12 +85,13 @@ func CleanupDbJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 		return err
 	}
 
+	startFeedCutoff := utcNow.Add(-7 * 24 * time.Hour)
 	{
 		result, err := pool.Exec(`
 			delete from start_feeds
 			where created_at < $1 and
 				id not in (select start_feed_id from blogs where start_feed_id is not null)
-		`, cutoffTime)
+		`, startFeedCutoff)
 		if err != nil {
 			return err
 		}
@@ -98,7 +103,7 @@ func CleanupDbJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 			delete from start_pages
 			where created_at < $1 and
 				id not in (select start_page_id from start_feeds where start_page_id is not null)
-		`, cutoffTime)
+		`, startFeedCutoff)
 		if err != nil {
 			return err
 		}
