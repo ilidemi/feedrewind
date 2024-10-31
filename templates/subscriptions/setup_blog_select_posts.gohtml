@@ -277,7 +277,7 @@
               <rect x="4.48193" y="4" width="11" height="11" rx="1.5" fill="#F9FAFB" stroke="#334155"/>
               <rect x="1.48193" y="1" width="11" height="11" rx="1.5" fill="#F9FAFB" stroke="#334155"/>
             </svg>
-            Unselect all
+            Deselect all
           </button>
           {{if not .IsCheckedEverything}}
             <button id="reset_selection_btn"
@@ -298,6 +298,33 @@
             <span id="selected_count_label">
               {{.CheckedTopCategoryName}} ({{.CheckedBlogPostIdsCount}})
             </span>
+          </div>
+
+          <div id="selection_menu_background" class="hidden z-20 fixed inset-0 bg-transparent"></div>
+          <div class="hidden">
+            <div id="selection_menu_template"
+                 class="z-30 origin-top-right absolute right-0 mt-2 rounded-md shadow-sm bg-white border border-gray-300 focus:outline-none text-gray-700 text-sm whitespace-nowrap"
+                 aria-orientation="vertical"
+                 aria-labelledby="user_button"
+                 tabindex="-1"
+            >
+              <button type="button"
+                      class="selection-menu-button rounded-t-md px-2 py-1.5 hover:bg-gray-50 flex items-center w-full text-nowrap gap-1.5">
+                <!-- arrow-narrow-up icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+                <div class="selection-menu-label"></div>
+              </button>
+              <button type="button"
+                      class="selection-menu-button rounded-b-md px-2 py-1.5 hover:bg-gray-50 flex items-center w-full text-nowrap gap-1.5">
+                <!-- arrow-narrow-down icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+                <div class="selection-menu-label"></div>
+              </button>
+            </div>
           </div>
 
           {{if .CustomCategories}}
@@ -342,19 +369,40 @@
               }
 
               let updateCategoryCountAndSelection = (categoryIndex, checkedDelta) => {
-                let categoryCheckbox = document.getElementById(`category_${categoryIndex}`);
+                let categoryCheckbox = allCategoryCheckboxes[categoryIndex];
                 categoryCheckbox.dataset.postsCheckedCount =
                   (parseInt(categoryCheckbox.dataset.postsCheckedCount) + checkedDelta)
                     .toString();
                 updateCategorySelection(categoryCheckbox);
               };
 
+              class CategoryUpdater {
+                constructor() {
+                  this.checkedDeltaByCategoryIndex = new Map();
+                }
+
+                add(categoryIndex, checkedDelta) {
+                  if (this.checkedDeltaByCategoryIndex.has(categoryIndex)) {
+                    let prevCheckedDelta = this.checkedDeltaByCategoryIndex.get(categoryIndex);
+                    this.checkedDeltaByCategoryIndex.set(categoryIndex, prevCheckedDelta + checkedDelta);
+                  } else {
+                    this.checkedDeltaByCategoryIndex.set(categoryIndex, checkedDelta);
+                  }
+                }
+
+                updateCategoryCountsAndSelections() {
+                  for (let [categoryIndex, checkedDelta] of this.checkedDeltaByCategoryIndex) {
+                    updateCategoryCountAndSelection(categoryIndex, checkedDelta);
+                  }
+                }
+              }
+
               let handleCategoryChange = (event) => {
                 let categoryIndex = parseInt(event.target.dataset.selfIndex);
                 let checkedDelta = event.target.checked ? 1 : -1;
                 let childCheckboxes = postCheckboxesByCategoryIndex[categoryIndex];
                 let selectedCountDelta = 0;
-                let checkedDeltaByCategoryIndex = new Map();
+                let categoryUpdater = new CategoryUpdater();
                 for (let childCheckbox of childCheckboxes) {
                   if (childCheckbox.checked === event.target.checked) continue;
 
@@ -369,19 +417,10 @@
                     if (postCategoryIndex === categoryIndex) continue;
 
                     postCheckbox.checked = event.target.checked;
-                    if (checkedDeltaByCategoryIndex.has(postCategoryIndex)) {
-                      let prevCheckedDelta = checkedDeltaByCategoryIndex.get(postCategoryIndex);
-                      checkedDeltaByCategoryIndex.set(
-                        postCategoryIndex, prevCheckedDelta + checkedDelta
-                      );
-                    } else {
-                      checkedDeltaByCategoryIndex.set(postCategoryIndex, checkedDelta);
-                    }
+                    categoryUpdater.add(postCategoryIndex, checkedDelta);
                   }
                 }
-                for (let [categoryIndex, checkedDelta] of checkedDeltaByCategoryIndex) {
-                  updateCategoryCountAndSelection(categoryIndex, checkedDelta);
-                }
+                categoryUpdater.updateCategoryCountsAndSelections();
                 event.target.dataset.postsCheckedCount =
                   event.target.checked ? event.target.dataset.postsCount : '0';
                 updateSelectedCountAndButtons();
@@ -424,6 +463,102 @@
                   }
                 }
               }
+
+              let openSelectionMenu = (clickedCategoryIndex, clickedPostId) => {
+                let setTillTheBeginning = (newValue) => {
+                  let checkedDelta = newValue ? 1 : -1;
+                  let checkboxes = postCheckboxesByCategoryIndex[clickedCategoryIndex];
+                  let categoryUpdater = new CategoryUpdater();
+                  for (let checkbox of checkboxes) {
+                    if (checkbox.checked === newValue) {
+                      continue;
+                    }
+                    let postId = parseInt(checkbox.dataset.postId);
+                    let hiddenField = postHiddenFieldsByPostId.get(postId);
+                    hiddenField.value = newValue ? "1" : "0";
+                    let postCheckboxes = postCheckboxesByPostId.get(postId);
+                    for (let postCheckbox of postCheckboxes) {
+                      postCheckbox.checked = newValue;
+                      categoryUpdater.add(postCheckbox.dataset.categoryIndex, checkedDelta);
+                    }
+                    if (postId === clickedPostId) {
+                      break;
+                    }
+                  }
+                  categoryUpdater.updateCategoryCountsAndSelections();
+                  updateSelectedCountAndButtons();
+                  closeSelectionMenu();
+                };
+
+                let setTillTheEnd = (newValue) => {
+                  let checkedDelta = newValue ? 1 : -1;
+                  let checkboxes = postCheckboxesByCategoryIndex[clickedCategoryIndex];
+                  let categoryUpdater = new CategoryUpdater();
+                  let sawCurrentPost = false;
+                  for (let checkbox of checkboxes) {
+                    let postId = parseInt(checkbox.dataset.postId);
+                    if (postId === clickedPostId) {
+                      sawCurrentPost = true;
+                    }
+                    if (!sawCurrentPost) {
+                      continue;
+                    }
+                    if (checkbox.checked === newValue) {
+                      continue;
+                    }
+                    let hiddenField = postHiddenFieldsByPostId.get(postId);
+                    hiddenField.value = newValue ? "1" : "0";
+                    let postCheckboxes = postCheckboxesByPostId.get(postId);
+                    for (let postCheckbox of postCheckboxes) {
+                      postCheckbox.checked = newValue;
+                      categoryUpdater.add(postCheckbox.dataset.categoryIndex, checkedDelta);
+                    }
+                  }
+                  categoryUpdater.updateCategoryCountsAndSelections();
+                  updateSelectedCountAndButtons();
+                  closeSelectionMenu();
+                };
+
+                let selectionMenuTemplate = document.getElementById("selection_menu_template");
+                let selectionMenu = selectionMenuTemplate.cloneNode(true);
+                selectionMenu.id = "selection_menu";
+                let buttons = selectionMenu.getElementsByClassName("selection-menu-button");
+                let labels = selectionMenu.getElementsByClassName("selection-menu-label");
+                let hiddenField = document.getElementById(`post_${clickedPostId}`);
+                if (hiddenField.value === "1") {
+                  labels[0].innerText = "Deselect from here up";
+                  labels[1].innerText = "Deselect from here down";
+                  buttons[0].addEventListener("click", () => setTillTheBeginning(false));
+                  buttons[1].addEventListener("click", () => setTillTheEnd(false));
+                } else {
+                  labels[0].innerText = "Select from here up";
+                  labels[1].innerText = "Select from here down";
+                  buttons[0].addEventListener("click", () => setTillTheBeginning(true));
+                  buttons[1].addEventListener("click", () => setTillTheEnd(true));
+                }
+                selectionMenu.addEventListener("animationend", (event) => {
+                  if (event.animationName === "dropdown-disappear") {
+                    selectionMenu.remove();
+                  }
+                });
+                selectionMenuBackground.classList.remove("hidden");
+                let parent =
+                  document.getElementById(`selection_menu_parent_${clickedCategoryIndex}_${clickedPostId}`);
+                parent.appendChild(selectionMenu);
+              };
+
+              let closeSelectionMenu = () => {
+                let selectionMenu = document.getElementById("selection_menu");
+                if (!selectionMenu) {
+                  return;
+                }
+                selectionMenu.classList.remove("dropdown-appear");
+                selectionMenu.classList.add("dropdown-disappear");
+                selectionMenuBackground.classList.add("hidden");
+              };
+
+              const selectionMenuBackground = document.getElementById("selection_menu_background");
+              selectionMenuBackground.addEventListener("click", closeSelectionMenu);
             </script>
 
             <div class="flex flex-col gap-6">
@@ -455,7 +590,7 @@
                              {{if $customCategory.IsChecked}}
                              checked="checked"
                              {{end}}
-                             >
+                      >
                     </div>
 
                     <label id="category_{{$categoryIndex}}_label"
@@ -480,9 +615,19 @@
                                {{end}}
                         >
                       </div>
-                      <label for="post_{{$categoryIndex}}_{{.Id}}">
+                      <label for="post_{{$categoryIndex}}_{{.Id}}" class="flex-1">
                         <a href="{{.Url}}" class="link text-black" target="_blank">{{.Title}}</a>
                       </label>
+                      <div id="selection_menu_parent_{{$categoryIndex}}_{{.Id}}" class="relative">
+                        <button id="selection-menu-button_{{$categoryIndex}}_{{.Id}}"
+                                type="button"
+                                class="hover:bg-gray-100 rounded-md px-1 py-1 cursor-pointer">
+                          <!-- dots-vertical icon -->
+                          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   {{end}}
                 {{end}}
@@ -528,6 +673,9 @@
                           postCheckboxesByPostId.set({{.Id}}, []);
                         }
                         postCheckboxesByPostId.get({{.Id}}).push(postCheckbox);
+
+                        document.getElementById("selection-menu-button_{{$categoryIndex}}_{{.Id}}")
+                          .addEventListener("click", () => openSelectionMenu({{$categoryIndex}}, {{.Id}}));
                       }
                     {{end}}
                   {{end}}
@@ -566,22 +714,92 @@
             </div>
           {{else}}
             <script>
-                let updatePostSelection = (isPostIdSelected) => {
-                  let form = document.getElementById("custom_form");
-                  for (let checkbox of allPostCheckboxes) {
-                    checkbox.checked = isPostIdSelected(checkbox.dataset.postId);
+              let updatePostSelection = (isPostIdSelected) => {
+                let form = document.getElementById("custom_form");
+                for (let checkbox of allPostCheckboxes) {
+                  checkbox.checked = isPostIdSelected(checkbox.dataset.postId);
+                }
+                updateSelectedCountAndButtons();
+              };
+
+              let openSelectionMenu = (postId) => {
+                let setTillTheBeginning = (newValue) => {
+                  let postIdStr = postId.toString();
+                  let checkboxes = document.getElementsByClassName("post-checkbox");
+                  for (let checkbox of checkboxes) {
+                    checkbox.checked = newValue;
+                    if (checkbox.dataset.postId === postIdStr) {
+                      break;
+                    }
                   }
                   updateSelectedCountAndButtons();
+                  closeSelectionMenu();
                 };
-            </script>
 
+                let setTillTheEnd = (newValue) => {
+                  let postIdStr = postId.toString();
+                  let checkboxes = document.getElementsByClassName("post-checkbox");
+                  let sawCurrentPost = false;
+                  for (let checkbox of checkboxes) {
+                    if (checkbox.dataset.postId === postIdStr) {
+                      sawCurrentPost = true;
+                    }
+                    if (sawCurrentPost) {
+                      checkbox.checked = newValue;
+                    }
+                  }
+                  updateSelectedCountAndButtons();
+                  closeSelectionMenu();
+                };
+
+                let selectionMenuTemplate = document.getElementById("selection_menu_template");
+                let selectionMenu = selectionMenuTemplate.cloneNode(true);
+                selectionMenu.id = "selection_menu";
+                let buttons = selectionMenu.getElementsByClassName("selection-menu-button");
+                let labels = selectionMenu.getElementsByClassName("selection-menu-label");
+                let checkbox = document.getElementById(`post_${postId}`);
+                if (checkbox.checked) {
+                  labels[0].innerText = "Deselect from here up";
+                  labels[1].innerText = "Deselect from here down";
+                  buttons[0].addEventListener("click", () => setTillTheBeginning(false));
+                  buttons[1].addEventListener("click", () => setTillTheEnd(false));
+                } else {
+                  labels[0].innerText = "Select from here up";
+                  labels[1].innerText = "Select from here down";
+                  buttons[0].addEventListener("click", () => setTillTheBeginning(true));
+                  buttons[1].addEventListener("click", () => setTillTheEnd(true));
+                }
+                selectionMenu.addEventListener("animationend", (event) => {
+                  if (event.animationName === "dropdown-disappear") {
+                    selectionMenu.remove();
+                  }
+                });
+                selectionMenuBackground.classList.remove("hidden");
+                let parent = document.getElementById(`selection_menu_parent_${postId}`);
+                parent.appendChild(selectionMenu);
+              };
+
+              let closeSelectionMenu = () => {
+                let selectionMenu = document.getElementById("selection_menu");
+                if (!selectionMenu) {
+                  return;
+                }
+                selectionMenu.classList.remove("dropdown-appear");
+                selectionMenu.classList.add("dropdown-disappear");
+                selectionMenuBackground.classList.add("hidden");
+              };
+
+              const selectionMenuBackground = document.getElementById("selection_menu_background");
+              selectionMenuBackground.addEventListener("click", closeSelectionMenu);
+            </script>
+              
             <form id="custom_form"
                   class="flex flex-col gap-6"
                   action="{{.SubscriptionSelectPostsPath}}"
                   accept-charset="UTF-8"
                   method="post"
             >
-            {{.Session.CSRFField}}
+              {{.Session.CSRFField}}
               <div class="flex flex-col gap-1.5">
                 {{range $index, $blogPost := .AllPosts}}
                   <div class="flex flex-row gap-2 items-top">
@@ -590,14 +808,14 @@
                              name="post_{{$blogPost.Id}}"
                              id="post_{{$blogPost.Id}}"
                              value="1"
-                             class="rounded w-4 h-4"
+                             class="post-checkbox rounded w-4 h-4"
                              data-post-id="{{$blogPost.Id}}"
                              {{if .IsChecked}}
                              checked="checked"
                              {{end}}
                       >
                     </div>
-                    <label for="post_{{$blogPost.Id}}">
+                    <label for="post_{{$blogPost.Id}}" class="flex-1">
                       <a href="{{$blogPost.Url}}"
                          class="link text-black"
                          target="_blank"
@@ -610,13 +828,27 @@
                         <span class="text-gray-500">(latest)</span>
                       {{end}}
                     </label>
+                    <div id="selection_menu_parent_{{$blogPost.Id}}" class="relative">
+                      <button id="selection-menu-button_{{$blogPost.Id}}"
+                              type="button"
+                              class="hover:bg-gray-100 rounded-md px-1 py-1 cursor-pointer">
+                        <!-- dots-vertical icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
+
                   <script>
                     {
                       let postCheckbox = document.getElementById("post_{{$blogPost.Id}}");
                       postCheckbox.addEventListener("change", updateSelectedCountAndButtons);
                       allPostFormInputs.push(postCheckbox);
                       allPostCheckboxes.push(postCheckbox);
+
+                      document.getElementById("selection-menu-button_{{$blogPost.Id}}")
+                        .addEventListener("click", () => openSelectionMenu({{$blogPost.Id}}));
                     }
                   </script>
                 {{end}}
