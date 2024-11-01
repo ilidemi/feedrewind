@@ -9,9 +9,17 @@ import (
 )
 
 func ReportHerokuMetrics(logger log.Logger) {
+	var lastErrorTime time.Time
 	// Adapted from https://github.com/heroku/x/blob/v0.1.0/hmetrics/onload/init.go
 	var errorHandler hmetrics.ErrHandler = func(err error) error {
-		logger.Error().Err(err).Msg("Error sending heroku metrics")
+		if time.Since(lastErrorTime) < time.Hour {
+			logger.Error().Err(err).
+				Msgf("Error sending heroku metrics (previously errored at %v)", lastErrorTime)
+		} else {
+			logger.Info().Err(err).
+				Msgf("Error sending heroku metrics (first error within an hour)")
+		}
+		lastErrorTime = time.Now().UTC()
 		return nil
 	}
 	for backoff := int64(1); ; backoff++ {
