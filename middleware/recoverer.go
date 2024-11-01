@@ -20,7 +20,8 @@ func Recoverer(next http.Handler) http.Handler {
 				}
 
 				status := http.StatusInternalServerError
-				if httpErr, ok := err.(util.HttpError); ok {
+				var httpErr util.HttpError
+				if errors.As(err, &httpErr) {
 					status = httpErr.Status
 					err = httpErr.Inner
 				}
