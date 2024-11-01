@@ -211,10 +211,10 @@
             let topCategoryIdField = document.getElementById("top_category_custom");
             if (selectedCategoryId) {
               let selectedCategoryName = topCategoryNamesById.get(selectedCategoryId);
-              selectedCountLabel.innerText = `${selectedCategoryName} (${selectedPostIds.size})`;
+              selectedCountLabel.textContent = `${selectedCategoryName} (${selectedPostIds.size})`;
               topCategoryIdField.value = selectedCategoryId;
             } else {
-              selectedCountLabel.innerText = `${selectedPostIds.size}`;
+              selectedCountLabel.textContent = `${selectedPostIds.size}`;
               topCategoryIdField.value = null;
             }
 
@@ -342,15 +342,21 @@
                   categoryCheckbox.checked = false;
                   categoryCheckbox.indeterminate = false;
                 } else {
+                  categoryCheckbox.checked = false;
                   categoryCheckbox.indeterminate = true;
                 }
               };
 
+              let updateCategoryCount = (categoryCheckbox, categoryIndex) => {
+                let categoryLabel = document.getElementById(`category_${categoryIndex}_label`);
+                categoryLabel.textContent = `${categoryCheckbox.dataset.name}\u00a0(${categoryCheckbox.dataset.postsCheckedCount}/${categoryCheckbox.dataset.postsCount})`
+              }
+
               let updatePostSelection = (isPostIdSelected) => {
                 for (let checkbox of allPostCheckboxes) {
                   checkbox.checked = isPostIdSelected(checkbox.dataset.postId);
-                  let postId = checkbox.dataset.postId;
-                  let hiddenField = document.getElementById(`post_${postId}`);
+                  let postId = parseInt(checkbox.dataset.postId);
+                  let hiddenField = postHiddenFieldsByPostId.get(postId);
                   hiddenField.value = checkbox.checked ? "1" : "0";
                 }
                 for (let categoryCheckbox of allCategoryCheckboxes) {
@@ -364,6 +370,7 @@
                   }
                   categoryCheckbox.dataset.postsCheckedCount = childrenCheckedCount.toString();
                   updateCategorySelection(categoryCheckbox);
+                  updateCategoryCount(categoryCheckbox, categoryIndex);
                 }
                 updateSelectedCountAndButtons();
               }
@@ -374,6 +381,7 @@
                   (parseInt(categoryCheckbox.dataset.postsCheckedCount) + checkedDelta)
                     .toString();
                 updateCategorySelection(categoryCheckbox);
+                updateCategoryCount(categoryCheckbox, categoryIndex);
               };
 
               class CategoryUpdater {
@@ -526,13 +534,13 @@
                 let labels = selectionMenu.getElementsByClassName("selection-menu-label");
                 let hiddenField = document.getElementById(`post_${clickedPostId}`);
                 if (hiddenField.value === "1") {
-                  labels[0].innerText = "Deselect from here up";
-                  labels[1].innerText = "Deselect from here down";
+                  labels[0].textContent = "Deselect from here up";
+                  labels[1].textContent = "Deselect from here down";
                   buttons[0].addEventListener("click", () => setTillTheBeginning(false));
                   buttons[1].addEventListener("click", () => setTillTheEnd(false));
                 } else {
-                  labels[0].innerText = "Select from here up";
-                  labels[1].innerText = "Select from here down";
+                  labels[0].textContent = "Select from here up";
+                  labels[1].textContent = "Select from here down";
                   buttons[0].addEventListener("click", () => setTillTheBeginning(true));
                   buttons[1].addEventListener("click", () => setTillTheEnd(true));
                 }
@@ -585,6 +593,7 @@
                              id="category_{{$categoryIndex}}"
                              name="category_{{$categoryIndex}}"
                              data-self-index="{{$categoryIndex}}"
+                             data-name="{{$customCategory.Name}}"
                              data-posts-count="{{$customCategory.PostsCount}}"
                              data-posts-checked-count="{{$customCategory.CheckedCount}}"
                              {{if $customCategory.IsChecked}}
@@ -597,7 +606,7 @@
                            for="category_{{$categoryIndex}}"
                            class="font-semibold"
                     >
-                      {{$customCategory.Name}}&nbsp;({{$customCategory.PostsCount}})
+                      {{$customCategory.Name}}&nbsp;({{$customCategory.CheckedCount}}/{{$customCategory.PostsCount}})
                     </label>
                   </div>
 
@@ -759,13 +768,13 @@
                 let labels = selectionMenu.getElementsByClassName("selection-menu-label");
                 let checkbox = document.getElementById(`post_${postId}`);
                 if (checkbox.checked) {
-                  labels[0].innerText = "Deselect from here up";
-                  labels[1].innerText = "Deselect from here down";
+                  labels[0].textContent = "Deselect from here up";
+                  labels[1].textContent = "Deselect from here down";
                   buttons[0].addEventListener("click", () => setTillTheBeginning(false));
                   buttons[1].addEventListener("click", () => setTillTheEnd(false));
                 } else {
-                  labels[0].innerText = "Select from here up";
-                  labels[1].innerText = "Select from here down";
+                  labels[0].textContent = "Select from here up";
+                  labels[1].textContent = "Select from here down";
                   buttons[0].addEventListener("click", () => setTillTheBeginning(true));
                   buttons[1].addEventListener("click", () => setTillTheEnd(true));
                 }
