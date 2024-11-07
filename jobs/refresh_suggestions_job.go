@@ -109,7 +109,7 @@ feeds:
 			if _, ok := discoverFeedsResult.(*crawler.DiscoverFeedsErrorCouldNotReach); !ok {
 				break
 			}
-			maxAttempts := 5
+			maxAttempts := 6
 			if config.Cfg.Env.IsDevOrTest() {
 				maxAttempts = 2
 			}
