@@ -1,12 +1,13 @@
 package middleware
 
 import (
-	"feedrewind/db"
-	"feedrewind/log"
-	"feedrewind/util"
 	"net/http"
 	"sync/atomic"
 	"time"
+
+	"feedrewind.com/db"
+	"feedrewind.com/log"
+	"feedrewind.com/util"
 )
 
 var bannedIps atomic.Pointer[map[string]bool]

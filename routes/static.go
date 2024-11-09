@@ -1,9 +1,10 @@
 package routes
 
 import (
-	"feedrewind/models"
-	"feedrewind/util"
 	"net/http"
+
+	"feedrewind.com/models"
+	"feedrewind.com/util"
 )
 
 func Static_File(w http.ResponseWriter, r *http.Request) {

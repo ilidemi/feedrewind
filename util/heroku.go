@@ -2,8 +2,9 @@ package util
 
 import (
 	"context"
-	"feedrewind/log"
 	"time"
+
+	"feedrewind.com/log"
 
 	"github.com/heroku/x/hmetrics"
 )

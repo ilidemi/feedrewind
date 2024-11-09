@@ -1,13 +1,14 @@
 package crawler
 
 import (
-	"feedrewind/oops"
 	"fmt"
 	"math"
 	neturl "net/url"
 	"slices"
 	"strings"
 	"time"
+
+	"feedrewind.com/oops"
 
 	"github.com/goccy/go-json"
 )

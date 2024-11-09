@@ -1,14 +1,15 @@
 package routes
 
 import (
-	"feedrewind/config"
-	"feedrewind/jobs"
-	"feedrewind/models"
-	"feedrewind/oops"
-	"feedrewind/routes/rutil"
-	"feedrewind/util"
 	"io"
 	"net/http"
+
+	"feedrewind.com/config"
+	"feedrewind.com/jobs"
+	"feedrewind.com/models"
+	"feedrewind.com/oops"
+	"feedrewind.com/routes/rutil"
+	"feedrewind.com/util"
 
 	"github.com/goccy/go-json"
 	"github.com/mrz1836/postmark"

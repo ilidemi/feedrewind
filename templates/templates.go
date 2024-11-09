@@ -3,14 +3,15 @@ package templates
 import (
 	"bytes"
 	"embed"
-	"feedrewind/util"
-	"feedrewind/util/schedule"
 	"fmt"
 	"html/template"
 	"net/http"
 	"path"
 	"reflect"
 	"strings"
+
+	"feedrewind.com/util"
+	"feedrewind.com/util/schedule"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

@@ -1,10 +1,11 @@
 package crawler
 
 import (
-	"feedrewind/util"
 	"fmt"
 	"slices"
 	"strings"
+
+	"feedrewind.com/util"
 
 	"golang.org/x/net/html"
 )

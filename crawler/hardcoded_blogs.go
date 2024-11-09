@@ -2,12 +2,13 @@ package crawler
 
 import (
 	"encoding/xml"
-	"feedrewind/log"
-	"feedrewind/oops"
 	"fmt"
 	neturl "net/url"
 	"regexp"
 	"strings"
+
+	"feedrewind.com/log"
+	"feedrewind.com/oops"
 
 	"github.com/antchfx/htmlquery"
 	"github.com/antchfx/xpath"

@@ -3,15 +3,16 @@ package jobs
 import (
 	"context"
 	"errors"
-	"feedrewind/crawler"
-	"feedrewind/db/pgw"
-	"feedrewind/log"
-	"feedrewind/models"
-	"feedrewind/oops"
-	"feedrewind/publish"
-	"feedrewind/util"
 	"fmt"
 	"time"
+
+	"feedrewind.com/crawler"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/log"
+	"feedrewind.com/models"
+	"feedrewind.com/oops"
+	"feedrewind.com/publish"
+	"feedrewind.com/util"
 
 	"github.com/goccy/go-json"
 	"github.com/jackc/pgx/v5"

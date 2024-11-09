@@ -1,9 +1,10 @@
 package crawler
 
 import (
-	"feedrewind/oops"
 	"net/url"
 	"testing"
+
+	"feedrewind.com/oops"
 
 	"github.com/stretchr/testify/require"
 )

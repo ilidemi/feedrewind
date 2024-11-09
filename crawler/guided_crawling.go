@@ -3,8 +3,6 @@ package crawler
 import (
 	"context"
 	"errors"
-	"feedrewind/oops"
-	"feedrewind/util"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -13,6 +11,9 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"feedrewind.com/oops"
+	"feedrewind.com/util"
 
 	"github.com/temoto/robotstxt"
 )

@@ -1,17 +1,18 @@
 package routes
 
 import (
-	"feedrewind/config"
-	"feedrewind/jobs"
-	"feedrewind/models"
-	"feedrewind/routes/rutil"
-	"feedrewind/templates"
-	"feedrewind/third_party/tzdata"
-	"feedrewind/util"
 	"fmt"
 	"html/template"
 	"net/http"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/jobs"
+	"feedrewind.com/models"
+	"feedrewind.com/routes/rutil"
+	"feedrewind.com/templates"
+	"feedrewind.com/third_party/tzdata"
+	"feedrewind.com/util"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"

@@ -2,16 +2,17 @@ package models
 
 import (
 	"context"
-	"feedrewind/db"
-	"feedrewind/db/pgw"
-	"feedrewind/log"
-	"feedrewind/oops"
-	"feedrewind/util"
 	"fmt"
 	"math"
 	"net/http"
 	"sync"
 	"time"
+
+	"feedrewind.com/db"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/log"
+	"feedrewind.com/oops"
+	"feedrewind.com/util"
 
 	"github.com/google/uuid"
 	"github.com/mileusna/useragent"

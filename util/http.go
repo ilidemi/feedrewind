@@ -2,7 +2,6 @@ package util
 
 import (
 	"errors"
-	"feedrewind/config"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -10,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"feedrewind.com/config"
 
 	"github.com/go-chi/chi/v5"
 )

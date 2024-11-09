@@ -2,9 +2,10 @@ package middleware
 
 import (
 	"context"
-	"feedrewind/db"
-	"feedrewind/db/pgw"
 	"net/http"
+
+	"feedrewind.com/db"
+	"feedrewind.com/db/pgw"
 )
 
 func DB(next http.Handler) http.Handler {

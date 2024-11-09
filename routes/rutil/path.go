@@ -1,13 +1,14 @@
 package rutil
 
 import (
-	"feedrewind/config"
-	"feedrewind/models"
-	"feedrewind/util"
 	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
+
+	"feedrewind.com/config"
+	"feedrewind.com/models"
+	"feedrewind.com/util"
 )
 
 func BlogUnsupportedPath(blogId models.BlogId) string {

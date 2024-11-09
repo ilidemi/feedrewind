@@ -1,4 +1,4 @@
-module feedrewind
+module feedrewind.com
 
 go 1.22
 

@@ -3,9 +3,10 @@ package crawl
 import (
 	"context"
 	"errors"
-	"feedrewind/crawler"
-	"feedrewind/db/pgw"
 	"net/url"
+
+	"feedrewind.com/crawler"
+	"feedrewind.com/db/pgw"
 
 	"github.com/jackc/pgx/v5"
 )

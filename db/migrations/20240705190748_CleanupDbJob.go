@@ -1,8 +1,8 @@
 package migrations
 
 import (
-	"feedrewind/db/pgw"
-	"feedrewind/util/schedule"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/util/schedule"
 )
 
 type CleanupDbJob struct{}

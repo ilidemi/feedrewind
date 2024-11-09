@@ -1,21 +1,22 @@
 package routes
 
 import (
-	"feedrewind/db/pgw"
-	"feedrewind/jobs"
-	"feedrewind/middleware"
-	"feedrewind/models"
-	"feedrewind/models/mutil"
-	"feedrewind/oops"
-	"feedrewind/publish"
-	"feedrewind/routes/rutil"
-	"feedrewind/templates"
-	"feedrewind/util"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/jobs"
+	"feedrewind.com/middleware"
+	"feedrewind.com/models"
+	"feedrewind.com/models/mutil"
+	"feedrewind.com/oops"
+	"feedrewind.com/publish"
+	"feedrewind.com/routes/rutil"
+	"feedrewind.com/templates"
+	"feedrewind.com/util"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"

@@ -6,12 +6,13 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
-	"feedrewind/config"
-	"feedrewind/util"
 	"fmt"
 	"net/http"
 	"slices"
 	"strings"
+
+	"feedrewind.com/config"
+	"feedrewind.com/util"
 )
 
 const CSRFFormKey = "authenticity_token"

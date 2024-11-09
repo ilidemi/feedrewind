@@ -3,8 +3,9 @@ package middleware
 import (
 	"context"
 	"errors"
-	"feedrewind/models"
 	"net/http"
+
+	"feedrewind.com/models"
 )
 
 // CurrentUser should come after Session

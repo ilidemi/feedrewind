@@ -1,14 +1,6 @@
 package routes
 
 import (
-	"feedrewind/db/pgw"
-	"feedrewind/jobs"
-	"feedrewind/models"
-	"feedrewind/oops"
-	"feedrewind/routes/rutil"
-	"feedrewind/third_party/tzdata"
-	"feedrewind/util"
-	"feedrewind/util/schedule"
 	"fmt"
 	"math"
 	"net/http"
@@ -16,6 +8,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/jobs"
+	"feedrewind.com/models"
+	"feedrewind.com/oops"
+	"feedrewind.com/routes/rutil"
+	"feedrewind.com/third_party/tzdata"
+	"feedrewind.com/util"
+	"feedrewind.com/util/schedule"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"

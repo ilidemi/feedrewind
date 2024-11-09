@@ -5,15 +5,16 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/xml"
-	"feedrewind/config"
-	"feedrewind/db/pgw"
-	"feedrewind/models"
-	"feedrewind/oops"
-	"feedrewind/routes/rutil"
-	"feedrewind/util/schedule"
 	"fmt"
 	"slices"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models"
+	"feedrewind.com/oops"
+	"feedrewind.com/routes/rutil"
+	"feedrewind.com/util/schedule"
 )
 
 const defaultPostsInRss = 30

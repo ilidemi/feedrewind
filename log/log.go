@@ -2,8 +2,9 @@
 package log
 
 import (
-	"feedrewind/oops"
 	"time"
+
+	"feedrewind.com/oops"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"

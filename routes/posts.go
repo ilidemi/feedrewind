@@ -1,10 +1,11 @@
 package routes
 
 import (
-	"feedrewind/models"
-	"feedrewind/routes/rutil"
-	"feedrewind/util"
 	"net/http"
+
+	"feedrewind.com/models"
+	"feedrewind.com/routes/rutil"
+	"feedrewind.com/util"
 )
 
 func Posts_Post(w http.ResponseWriter, r *http.Request) {

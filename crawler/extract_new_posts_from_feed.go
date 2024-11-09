@@ -2,10 +2,11 @@ package crawler
 
 import (
 	"errors"
-	"feedrewind/oops"
 	"fmt"
 	neturl "net/url"
 	"strings"
+
+	"feedrewind.com/oops"
 )
 
 var ErrExtractNewPostsNoMatch = errors.New("extract new posts no match")

@@ -3,14 +3,15 @@ package jobs
 import (
 	"context"
 	"errors"
-	"feedrewind/config"
-	"feedrewind/db/migrations"
-	"feedrewind/db/pgw"
-	"feedrewind/models"
-	"feedrewind/oops"
-	"feedrewind/util/schedule"
 	"strings"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/db/migrations"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models"
+	"feedrewind.com/oops"
+	"feedrewind.com/util/schedule"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/stripe/stripe-go/v78"

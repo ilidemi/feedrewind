@@ -2,12 +2,13 @@ package crawler
 
 import (
 	"errors"
-	"feedrewind/oops"
 	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
+
+	"feedrewind.com/oops"
 
 	"github.com/antchfx/htmlquery"
 	"github.com/antchfx/xpath"

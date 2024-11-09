@@ -2,11 +2,12 @@ package models
 
 import (
 	"bytes"
-	"feedrewind/db/pgw"
-	"feedrewind/models/mutil"
-	"feedrewind/util/schedule"
 	"fmt"
 	"strings"
+
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models/mutil"
+	"feedrewind.com/util/schedule"
 
 	"errors"
 

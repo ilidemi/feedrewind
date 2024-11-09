@@ -1,7 +1,6 @@
 package crawler
 
 import (
-	"feedrewind/oops"
 	"fmt"
 	"math"
 	"regexp"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"feedrewind.com/oops"
 
 	"github.com/antchfx/htmlquery"
 	om "github.com/wk8/go-ordered-map/v2"

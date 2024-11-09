@@ -2,13 +2,14 @@ package crawl
 
 import (
 	"errors"
-	"feedrewind/crawler"
 	"fmt"
 	"html"
 	"os"
 	"slices"
 	"strings"
 	"time"
+
+	"feedrewind.com/crawler"
 )
 
 func outputReport(filename string, results []Result, expectedTotal int) error {

@@ -3,16 +3,17 @@ package jobs
 import (
 	"context"
 	"errors"
-	"feedrewind/db/pgw"
-	"feedrewind/log"
-	"feedrewind/models"
-	"feedrewind/oops"
-	"feedrewind/publish"
-	"feedrewind/third_party/tzdata"
-	"feedrewind/util"
-	"feedrewind/util/schedule"
 	"fmt"
 	"time"
+
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/log"
+	"feedrewind.com/models"
+	"feedrewind.com/oops"
+	"feedrewind.com/publish"
+	"feedrewind.com/third_party/tzdata"
+	"feedrewind.com/util"
+	"feedrewind.com/util/schedule"
 
 	"github.com/jackc/pgx/v5"
 )

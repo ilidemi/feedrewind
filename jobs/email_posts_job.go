@@ -2,13 +2,14 @@ package jobs
 
 import (
 	"context"
-	"feedrewind/db/pgw"
-	"feedrewind/models"
-	"feedrewind/oops"
-	"feedrewind/publish"
-	"feedrewind/util"
-	"feedrewind/util/schedule"
 	"time"
+
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models"
+	"feedrewind.com/oops"
+	"feedrewind.com/publish"
+	"feedrewind.com/util"
+	"feedrewind.com/util/schedule"
 
 	"github.com/mrz1836/postmark"
 )

@@ -1,12 +1,13 @@
 package crawler
 
 import (
-	"feedrewind/util"
 	"fmt"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+
+	"feedrewind.com/util"
 
 	"github.com/antchfx/htmlquery"
 	om "github.com/wk8/go-ordered-map/v2"

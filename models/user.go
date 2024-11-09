@@ -4,11 +4,12 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"feedrewind/config"
-	"feedrewind/db/pgw"
-	"feedrewind/models/mutil"
-	"feedrewind/oops"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models/mutil"
+	"feedrewind.com/oops"
 
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
