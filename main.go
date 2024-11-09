@@ -29,7 +29,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/spf13/cobra"
 	"github.com/stripe/stripe-go/v78"
-	"github.com/stripe/stripe-go/v78/billingportal/configuration"
 )
 
 //go:generate go run cmd/timezones/main.go
@@ -73,110 +72,6 @@ func main() {
 			if err := stripeCmd.Run(); err != nil {
 				panic(err)
 			}
-		},
-	})
-	rootCmd.AddCommand(&cobra.Command{
-		Use: "stripe-configure-portal",
-		Run: func(_ *cobra.Command, _ []string) {
-			pool := db.RootPool
-			models.MustInit(pool)
-
-			stripe.Key = config.Cfg.StripeApiKey
-
-			//nolint:exhaustruct
-			params := &stripe.BillingPortalConfigurationParams{
-				BusinessProfile: &stripe.BillingPortalConfigurationBusinessProfileParams{
-					Headline:          stripe.String("FeedRewind partners with Stripe for simplified billing."),
-					PrivacyPolicyURL:  stripe.String("https://feedrewind.com/privacy"),
-					TermsOfServiceURL: stripe.String("https://feedrewind.com/terms"),
-				},
-				Features: &stripe.BillingPortalConfigurationFeaturesParams{
-					CustomerUpdate: &stripe.BillingPortalConfigurationFeaturesCustomerUpdateParams{
-						AllowedUpdates: []*string{
-							stripe.String(string(stripe.BillingPortalConfigurationFeaturesCustomerUpdateAllowedUpdateName)),
-							stripe.String(string(stripe.BillingPortalConfigurationFeaturesCustomerUpdateAllowedUpdateEmail)),
-							stripe.String(string(stripe.BillingPortalConfigurationFeaturesCustomerUpdateAllowedUpdateAddress)),
-							stripe.String(string(stripe.BillingPortalConfigurationFeaturesCustomerUpdateAllowedUpdatePhone)),
-						},
-						Enabled: stripe.Bool(true),
-					},
-					InvoiceHistory: &stripe.BillingPortalConfigurationFeaturesInvoiceHistoryParams{
-						Enabled: stripe.Bool(true),
-					},
-					PaymentMethodUpdate: &stripe.BillingPortalConfigurationFeaturesPaymentMethodUpdateParams{
-						Enabled: stripe.Bool(true),
-					},
-					SubscriptionCancel: &stripe.BillingPortalConfigurationFeaturesSubscriptionCancelParams{
-						CancellationReason: &stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonParams{
-							Enabled: stripe.Bool(true),
-							Options: []*string{
-								stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonOptionTooExpensive)),
-								stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonOptionMissingFeatures)),
-								stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonOptionSwitchedService)),
-								stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonOptionUnused)),
-								stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelCancellationReasonOptionOther)),
-							},
-						},
-						Enabled:           stripe.Bool(true),
-						Mode:              stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelModeAtPeriodEnd)),
-						ProrationBehavior: stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionCancelProrationBehaviorNone)),
-					},
-					SubscriptionUpdate: &stripe.BillingPortalConfigurationFeaturesSubscriptionUpdateParams{
-						DefaultAllowedUpdates: []*string{
-							stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionUpdateDefaultAllowedUpdatePrice)),
-						},
-						Enabled:           stripe.Bool(true),
-						ProrationBehavior: stripe.String(string(stripe.BillingPortalConfigurationFeaturesSubscriptionUpdateProrationBehaviorAlwaysInvoice)),
-					},
-				},
-			}
-
-			row := pool.QueryRow(`
-				select stripe_product_id, stripe_monthly_price_id, stripe_yearly_price_id
-				from pricing_offers
-				where id = (select default_offer_id from pricing_plans where id = 'supporter')
-			`)
-			var stripeProductId, stripeMonthlyPriceId, stripeYearlyPriceId string
-			err := row.Scan(&stripeProductId, &stripeMonthlyPriceId, &stripeYearlyPriceId)
-			if err != nil {
-				panic(err)
-			}
-			params.Features.SubscriptionUpdate.Products =
-				[]*stripe.BillingPortalConfigurationFeaturesSubscriptionUpdateProductParams{{
-					Product: stripe.String(stripeProductId),
-					Prices: []*string{
-						stripe.String(stripeMonthlyPriceId),
-						stripe.String(stripeYearlyPriceId),
-					},
-				}}
-			supporterResult, err := configuration.New(params)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println("Supporter", supporterResult.ID)
-
-			row = pool.QueryRow(`
-				select stripe_product_id, stripe_monthly_price_id, stripe_yearly_price_id
-				from pricing_offers
-				where id = (select default_offer_id from pricing_plans where id = 'patron')
-			`)
-			err = row.Scan(&stripeProductId, &stripeMonthlyPriceId, &stripeYearlyPriceId)
-			if err != nil {
-				panic(err)
-			}
-			params.Features.SubscriptionUpdate.Products =
-				[]*stripe.BillingPortalConfigurationFeaturesSubscriptionUpdateProductParams{{
-					Product: stripe.String(stripeProductId),
-					Prices: []*string{
-						stripe.String(stripeMonthlyPriceId),
-						stripe.String(stripeYearlyPriceId),
-					},
-				}}
-			patronResult, err := configuration.New(params)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println("Patron", patronResult.ID)
 		},
 	})
 
