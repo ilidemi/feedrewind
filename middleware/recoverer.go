@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"errors"
-	"feedrewind/oops"
-	"feedrewind/templates"
-	"feedrewind/util"
 	"net/http"
+
+	"feedrewind.com/oops"
+	"feedrewind.com/templates"
+	"feedrewind.com/util"
 )
 
 func Recoverer(next http.Handler) http.Handler {

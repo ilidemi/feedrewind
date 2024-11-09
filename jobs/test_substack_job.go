@@ -2,12 +2,13 @@ package jobs
 
 import (
 	"context"
-	"feedrewind/crawler"
-	"feedrewind/db/pgw"
-	"feedrewind/oops"
-	"feedrewind/third_party/tzdata"
-	"feedrewind/util/schedule"
 	"time"
+
+	"feedrewind.com/crawler"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/oops"
+	"feedrewind.com/third_party/tzdata"
+	"feedrewind.com/util/schedule"
 )
 
 func init() {

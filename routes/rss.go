@@ -1,11 +1,12 @@
 package routes
 
 import (
-	"feedrewind/models"
-	"feedrewind/routes/rutil"
-	"feedrewind/util"
 	"net/http"
 	"strings"
+
+	"feedrewind.com/models"
+	"feedrewind.com/routes/rutil"
+	"feedrewind.com/util"
 )
 
 func Rss_SubscriptionFeed(w http.ResponseWriter, r *http.Request) {

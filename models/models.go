@@ -2,13 +2,14 @@ package models
 
 import (
 	"bytes"
-	"feedrewind/crawler"
-	"feedrewind/db/pgw"
-	"feedrewind/models/mutil"
-	"feedrewind/oops"
-	"feedrewind/util"
 	"fmt"
 	"strings"
+
+	"feedrewind.com/crawler"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models/mutil"
+	"feedrewind.com/oops"
+	"feedrewind.com/util"
 )
 
 func MustInit(qu pgw.Queryable) {

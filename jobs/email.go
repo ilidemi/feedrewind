@@ -2,12 +2,13 @@ package jobs
 
 import (
 	"errors"
-	"feedrewind/config"
-	"feedrewind/db/pgw"
-	"feedrewind/models"
-	"feedrewind/routes/rutil"
-	"feedrewind/templates"
 	"fmt"
+
+	"feedrewind.com/config"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models"
+	"feedrewind.com/routes/rutil"
+	"feedrewind.com/templates"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/mrz1836/postmark"

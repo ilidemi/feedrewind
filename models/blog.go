@@ -2,15 +2,16 @@ package models
 
 import (
 	"errors"
-	"feedrewind/crawler"
-	"feedrewind/db/pgw"
-	"feedrewind/models/mutil"
-	"feedrewind/oops"
-	"feedrewind/util"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
+
+	"feedrewind.com/crawler"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models/mutil"
+	"feedrewind.com/oops"
+	"feedrewind.com/util"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"

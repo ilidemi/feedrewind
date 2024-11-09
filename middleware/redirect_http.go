@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"feedrewind/config"
 	"net/http"
+
+	"feedrewind.com/config"
 )
 
 func RedirectHttpToHttps(next http.Handler) http.Handler {

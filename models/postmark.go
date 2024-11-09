@@ -2,7 +2,8 @@ package models
 
 import (
 	"errors"
-	"feedrewind/db/pgw"
+
+	"feedrewind.com/db/pgw"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/mrz1836/postmark"

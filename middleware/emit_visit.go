@@ -1,13 +1,14 @@
 package middleware
 
 import (
-	"feedrewind/models"
-	"feedrewind/util"
 	"net/http"
 	"reflect"
 	"runtime"
 	"strings"
 	"sync"
+
+	"feedrewind.com/models"
+	"feedrewind.com/util"
 
 	"github.com/go-chi/chi/v5"
 )

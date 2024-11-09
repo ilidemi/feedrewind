@@ -1,6 +1,6 @@
 package migrations
 
-import "feedrewind/config"
+import "feedrewind.com/config"
 
 type RemoveLogPostgresRowCountJob struct{}
 

@@ -1,10 +1,11 @@
 package rutil
 
 import (
-	"feedrewind/models"
-	"feedrewind/util"
 	"net/http"
 	"strconv"
+
+	"feedrewind.com/models"
+	"feedrewind.com/util"
 
 	"github.com/goccy/go-json"
 )

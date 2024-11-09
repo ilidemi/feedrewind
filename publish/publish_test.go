@@ -3,15 +3,16 @@
 package publish
 
 import (
-	"feedrewind/db"
-	"feedrewind/db/pgw"
-	"feedrewind/models"
-	"feedrewind/oops"
-	"feedrewind/util"
-	"feedrewind/util/schedule"
 	"fmt"
 	"strings"
 	"testing"
+
+	"feedrewind.com/db"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models"
+	"feedrewind.com/oops"
+	"feedrewind.com/util"
+	"feedrewind.com/util/schedule"
 
 	"github.com/stretchr/testify/require"
 )

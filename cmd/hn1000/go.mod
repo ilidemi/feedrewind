@@ -3,12 +3,15 @@ module hn1000
 go 1.22
 
 require (
+	feedrewind.com v0.0.0
 	gioui.org v0.7.1
 	github.com/go-rod/rod v0.114.5
 	github.com/goccy/go-json v0.10.2
 	github.com/spf13/cobra v1.8.0
 	modernc.org/sqlite v1.33.1
 )
+
+replace feedrewind.com => ../..
 
 require (
 	gioui.org/cpu v0.0.0-20210817075930-8d6a761490d2 // indirect

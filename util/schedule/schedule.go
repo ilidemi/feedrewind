@@ -1,10 +1,11 @@
 package schedule
 
 import (
-	"feedrewind/config"
-	"feedrewind/oops"
 	"html/template"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/oops"
 
 	"github.com/goccy/go-json"
 	"github.com/jackc/pgx/v5/pgtype"

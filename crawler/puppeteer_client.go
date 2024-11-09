@@ -3,13 +3,14 @@ package crawler
 import (
 	"context"
 	"errors"
-	"feedrewind/config"
-	"feedrewind/oops"
 	"net"
 	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/oops"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"

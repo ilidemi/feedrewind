@@ -1,12 +1,13 @@
 package routes
 
 import (
-	"feedrewind/models"
-	"feedrewind/routes/rutil"
-	"feedrewind/templates"
-	"feedrewind/util"
-	"feedrewind/util/schedule"
 	"net/http"
+
+	"feedrewind.com/models"
+	"feedrewind.com/routes/rutil"
+	"feedrewind.com/templates"
+	"feedrewind.com/util"
+	"feedrewind.com/util/schedule"
 )
 
 func Landing_Index(w http.ResponseWriter, r *http.Request) {

@@ -1,10 +1,11 @@
 package crawler
 
 import (
-	"feedrewind/oops"
 	neturl "net/url"
 	"strings"
 	"testing"
+
+	"feedrewind.com/oops"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/stretchr/testify/require"

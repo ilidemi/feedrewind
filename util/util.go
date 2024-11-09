@@ -5,13 +5,14 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
-	"feedrewind/db/pgw"
-	"feedrewind/oops"
 	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
 	"time"
+
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/oops"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"

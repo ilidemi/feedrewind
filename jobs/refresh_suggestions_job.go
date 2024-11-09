@@ -3,17 +3,18 @@ package jobs
 import (
 	"context"
 	"errors"
-	"feedrewind/config"
-	"feedrewind/crawler"
-	"feedrewind/db/pgw"
-	"feedrewind/models"
-	"feedrewind/oops"
-	"feedrewind/util"
-	"feedrewind/util/schedule"
 	"math"
 	neturl "net/url"
 	"slices"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/crawler"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models"
+	"feedrewind.com/oops"
+	"feedrewind.com/util"
+	"feedrewind.com/util/schedule"
 
 	"github.com/jackc/pgx/v5"
 )

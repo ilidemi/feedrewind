@@ -2,15 +2,6 @@ package routes
 
 import (
 	"cmp"
-	"feedrewind/crawler"
-	"feedrewind/db/pgw"
-	"feedrewind/jobs"
-	"feedrewind/models"
-	"feedrewind/models/mutil"
-	"feedrewind/oops"
-	"feedrewind/routes/rutil"
-	"feedrewind/templates"
-	"feedrewind/util"
 	"fmt"
 	"math"
 	"net/http"
@@ -18,6 +9,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"feedrewind.com/crawler"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/jobs"
+	"feedrewind.com/models"
+	"feedrewind.com/models/mutil"
+	"feedrewind.com/oops"
+	"feedrewind.com/routes/rutil"
+	"feedrewind.com/templates"
+	"feedrewind.com/util"
 
 	"github.com/goccy/go-json"
 	"github.com/jackc/pgx/v5"

@@ -3,11 +3,6 @@ package crawl
 import (
 	"context"
 	"errors"
-	"feedrewind/config"
-	"feedrewind/crawler"
-	"feedrewind/db/pgw"
-	"feedrewind/log"
-	"feedrewind/oops"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -21,6 +16,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/crawler"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/log"
+	"feedrewind.com/oops"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"

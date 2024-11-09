@@ -3,14 +3,6 @@ package jobs
 import (
 	"context"
 	"errors"
-	"feedrewind/config"
-	"feedrewind/crawler"
-	"feedrewind/db"
-	"feedrewind/db/pgw"
-	"feedrewind/log"
-	"feedrewind/oops"
-	"feedrewind/util"
-	"feedrewind/util/schedule"
 	"fmt"
 	"math"
 	"net/http"
@@ -20,6 +12,15 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/crawler"
+	"feedrewind.com/db"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/log"
+	"feedrewind.com/oops"
+	"feedrewind.com/util"
+	"feedrewind.com/util/schedule"
 
 	_ "net/http/pprof"
 

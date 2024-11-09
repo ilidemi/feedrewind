@@ -1,9 +1,10 @@
 package util
 
 import (
-	"feedrewind/third_party/tzdata"
 	"strings"
 	"testing"
+
+	"feedrewind.com/third_party/tzdata"
 
 	"github.com/stretchr/testify/require"
 )

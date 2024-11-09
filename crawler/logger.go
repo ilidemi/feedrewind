@@ -1,8 +1,9 @@
 package crawler
 
 import (
-	"feedrewind/log"
 	"fmt"
+
+	"feedrewind.com/log"
 
 	"github.com/rs/zerolog"
 )

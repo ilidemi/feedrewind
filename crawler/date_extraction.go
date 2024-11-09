@@ -1,12 +1,13 @@
 package crawler
 
 import (
-	"feedrewind/crawler/rubydate"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"feedrewind.com/crawler/rubydate"
 
 	"golang.org/x/net/html"
 )

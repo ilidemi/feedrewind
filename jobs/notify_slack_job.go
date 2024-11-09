@@ -3,13 +3,14 @@ package jobs
 import (
 	"bytes"
 	"context"
-	"feedrewind/config"
-	"feedrewind/db/pgw"
-	"feedrewind/models"
-	"feedrewind/oops"
 	"io"
 	"net/http"
 	"strings"
+
+	"feedrewind.com/config"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models"
+	"feedrewind.com/oops"
 
 	"github.com/goccy/go-json"
 )

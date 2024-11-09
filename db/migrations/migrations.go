@@ -1,9 +1,10 @@
 package migrations
 
 import (
-	"feedrewind/db/pgw"
 	"slices"
 	"strings"
+
+	"feedrewind.com/db/pgw"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )

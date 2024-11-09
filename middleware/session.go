@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"context"
-	"feedrewind/config"
-	"feedrewind/models"
 	"net/http"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/models"
 
 	"github.com/gorilla/securecookie"
 )

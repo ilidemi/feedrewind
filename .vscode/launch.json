@@ -54,6 +54,15 @@
             "args": ["find-feeds"]
         },
         {
+            "name": "HMN - find feeds",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "./cmd/hmn",
+            "cwd": "cmd/hmn",
+            "args": ["find-feeds"]
+        },
+        {
             "name": "Test current package",
             "type": "go",
             "request": "launch",

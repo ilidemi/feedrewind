@@ -2,13 +2,14 @@ package jobs
 
 import (
 	"bytes"
-	"feedrewind/db/migrations"
-	"feedrewind/db/pgw"
-	"feedrewind/oops"
-	"feedrewind/util/schedule"
 	"fmt"
 	"strings"
 	"time"
+
+	"feedrewind.com/db/migrations"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/oops"
+	"feedrewind.com/util/schedule"
 
 	"github.com/google/uuid"
 )

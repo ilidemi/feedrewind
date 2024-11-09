@@ -1,12 +1,13 @@
 package routes
 
 import (
-	"feedrewind/jobs"
-	"feedrewind/models"
-	"feedrewind/routes/rutil"
-	"feedrewind/templates"
-	"feedrewind/util"
 	"net/http"
+
+	"feedrewind.com/jobs"
+	"feedrewind.com/models"
+	"feedrewind.com/routes/rutil"
+	"feedrewind.com/templates"
+	"feedrewind.com/util"
 )
 
 type miscResult struct {

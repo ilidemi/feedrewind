@@ -2,10 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"feedrewind/config"
-	"feedrewind/db"
-	"feedrewind/db/migrations"
-	"feedrewind/db/pgw"
 	"fmt"
 	"go/token"
 	"hash/crc32"
@@ -13,6 +9,11 @@ import (
 	"os/exec"
 	"text/template"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/db"
+	"feedrewind.com/db/migrations"
+	"feedrewind.com/db/pgw"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"

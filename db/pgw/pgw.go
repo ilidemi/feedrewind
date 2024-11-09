@@ -4,11 +4,12 @@ package pgw
 import (
 	"context"
 	"errors"
-	"feedrewind/log"
-	"feedrewind/oops"
 	"net/http"
 	"regexp"
 	"time"
+
+	"feedrewind.com/log"
+	"feedrewind.com/oops"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"

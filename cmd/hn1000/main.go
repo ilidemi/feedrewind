@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"feedrewind/crawler"
 	"fmt"
 	"io"
 	"log"
@@ -17,6 +16,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"feedrewind.com/crawler"
 
 	"gioui.org/app"
 	"gioui.org/layout"
@@ -640,7 +641,6 @@ func mustFindFeeds() {
 		}()
 	}
 	wg.Wait()
-
 }
 
 func toCanonicalUrl(url string) string {

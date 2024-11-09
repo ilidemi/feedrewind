@@ -3,17 +3,18 @@ package jobs
 import (
 	"bytes"
 	"context"
-	"feedrewind/config"
-	"feedrewind/db/migrations"
-	"feedrewind/db/pgw"
-	"feedrewind/oops"
-	"feedrewind/util/schedule"
 	"io"
 	"net/http"
 	"os/exec"
 	"slices"
 	"strings"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/db/migrations"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/oops"
+	"feedrewind.com/util/schedule"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"

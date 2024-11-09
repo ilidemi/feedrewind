@@ -4,10 +4,11 @@ package e2etest
 
 import (
 	"encoding/json"
-	"feedrewind/models"
 	"fmt"
 	"regexp"
 	"testing"
+
+	"feedrewind.com/models"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"

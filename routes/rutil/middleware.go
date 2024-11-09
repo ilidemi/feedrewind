@@ -1,14 +1,15 @@
 package rutil
 
 import (
-	"feedrewind/db/pgw"
-	"feedrewind/log"
-	"feedrewind/middleware"
-	"feedrewind/models"
-	"feedrewind/util"
 	"fmt"
 	"html/template"
 	"net/http"
+
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/log"
+	"feedrewind.com/middleware"
+	"feedrewind.com/models"
+	"feedrewind.com/util"
 )
 
 // This file wraps calls to the middleware package so that the routes don't have to reference it

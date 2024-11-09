@@ -3,11 +3,12 @@ package jobs
 import (
 	"context"
 	"errors"
-	"feedrewind/db/pgw"
-	"feedrewind/models"
-	"feedrewind/oops"
-	"feedrewind/publish"
-	"feedrewind/util"
+
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/models"
+	"feedrewind.com/oops"
+	"feedrewind.com/publish"
+	"feedrewind.com/util"
 
 	"github.com/jackc/pgx/v5"
 )

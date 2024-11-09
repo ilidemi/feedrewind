@@ -3,13 +3,14 @@
 package e2etest
 
 import (
-	"feedrewind/config"
-	"feedrewind/oops"
 	"fmt"
 	"math/rand"
 	"strings"
 	"testing"
 	"time"
+
+	"feedrewind.com/config"
+	"feedrewind.com/oops"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"

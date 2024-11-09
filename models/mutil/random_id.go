@@ -2,8 +2,9 @@ package mutil
 
 import (
 	"errors"
-	"feedrewind/db/pgw"
-	"feedrewind/util"
+
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/util"
 
 	"github.com/jackc/pgx/v5"
 )

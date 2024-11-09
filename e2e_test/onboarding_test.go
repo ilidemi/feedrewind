@@ -5,12 +5,13 @@ package e2etest
 import (
 	"bytes"
 	"encoding/xml"
-	"feedrewind/oops"
-	"feedrewind/util/schedule"
 	"io"
 	"net/http"
 	"testing"
 	"time"
+
+	"feedrewind.com/oops"
+	"feedrewind.com/util/schedule"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"

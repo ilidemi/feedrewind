@@ -2,14 +2,15 @@ package crawl
 
 import (
 	"errors"
-	"feedrewind/crawler"
-	"feedrewind/db/pgw"
-	"feedrewind/oops"
 	"fmt"
 	"math"
 	"reflect"
 	"strings"
 	"time"
+
+	"feedrewind.com/crawler"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/oops"
 
 	"github.com/jackc/pgx/v5"
 )

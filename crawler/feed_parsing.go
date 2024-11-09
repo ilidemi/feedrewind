@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"errors"
-	"feedrewind/oops"
 	"fmt"
 	"html"
 	"io"
@@ -10,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"feedrewind.com/oops"
 
 	"github.com/antchfx/xmlquery"
 	"golang.org/x/text/encoding/charmap"

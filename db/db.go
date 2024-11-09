@@ -2,11 +2,12 @@ package db
 
 import (
 	"context"
-	"feedrewind/config"
-	"feedrewind/db/migrations"
-	"feedrewind/db/pgw"
-	"feedrewind/log"
-	"feedrewind/oops"
+
+	"feedrewind.com/config"
+	"feedrewind.com/db/migrations"
+	"feedrewind.com/db/pgw"
+	"feedrewind.com/log"
+	"feedrewind.com/oops"
 )
 
 var RootPool *pgw.Pool

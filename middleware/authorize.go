@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"feedrewind/util"
 	"net/http"
+
+	"feedrewind.com/util"
 )
 
 func Authorize(next http.Handler) http.Handler {
