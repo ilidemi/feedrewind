@@ -551,6 +551,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				Id                          models.BlogPostCategoryId
 				Name                        string
 				PostsCount                  int
+				HintToCustom                bool
 				Posts                       TopCategoryPosts
 				BlogPostIdsJS               template.JS
 				SSCAbridgedAttribution      bool
@@ -679,6 +680,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 						Id:                          category.Id,
 						Name:                        category.Name,
 						PostsCount:                  len(category.BlogPostIds),
+						HintToCustom:                len(category.BlogPostIds) > 200,
 						Posts:                       topPosts,
 						BlogPostIdsJS:               template.JS(idsBuilder.String()),
 						SSCAbridgedAttribution:      sscAbridgedAttribution,

@@ -15,7 +15,7 @@
   </div>
 
   <div class="overflow-wrap-break-word">
-    <div id="select_posts" class="flex flex-col gap-6 mb-8">
+    <div id="select_posts" class="flex flex-col mb-8">
       <style>
         body {
           overflow-y: scroll; /* Show scrollbars */
@@ -128,7 +128,7 @@
         <section id="category_posts_{{$index}}"
                  role="tabpanel"
                  aria-labelledby="category_tab_{{$index}}"
-                 class="category-posts {{if $index}}hidden{{end}} flex flex-col gap-2"
+                 class="category-posts {{if $index}}hidden{{end}} flex flex-col gap-2 mt-3"
         >
           <form class="flex flex-col gap-6"
                 action="{{.SubscriptionSelectPostsPath}}"
@@ -136,8 +136,21 @@
                 method="post"
           >
             {{$csrfField}}
-            <div class="flex flex-col gap-3">
-              {{template "partial_posts" $topCategory.Posts}}
+            <div class="flex flex-col">
+              {{if .HintToCustom}}
+              <span class="text-sm">
+                You can select a subset of posts on the Custom tab
+                <span class="inline-flex items-baseline">
+                  <!-- arrow-turn-right-up icon -->
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m11.99 7.5 3.75-3.75m0 0 3.75 3.75m-3.75-3.75v16.499H4.49" />
+                  </svg>
+                </span>
+              </span>
+              {{end}}
+              <div class="mt-3">
+                {{template "partial_posts" $topCategory.Posts}}
+              </div>
               {{if $topCategory.SSCAbridgedAttribution}}
               <div class="text-xs text-gray-500 italic">
                 Curated by <a href="https://www.slatestarcodexabridged.com/" class="link-secondary">Slate Star Codex Abridged</a>, licensed under <a href="https://creativecommons.org/licenses/by/4.0/" class="link-secondary">CC BY 4.0</a>
@@ -257,7 +270,7 @@
           };
         </script>
 
-        <div class="flex flex-row flex-wrap gap-3 -mt-3">
+        <div class="flex flex-row flex-wrap gap-3 mt-6">
           <button id="select_all_btn"
                   class="btn-secondary bg-gray-50 disabled:cursor-default disabled:hover:bg-gray-50 disabled:opacity-50 flex flex-row gap-1.5 items-center whitespace-nowrap"
                   {{if .IsCheckedEverything}}
