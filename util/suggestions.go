@@ -195,52 +195,8 @@ var SuggestedCategories = []SuggestedCategory{
 		},
 	},
 	{
-		Name:           "Machine Learning",
-		IsRightAligned: true,
-		Blogs: []SuggestedBlog{
-			{
-				Url:     "https://karpathy.github.io",
-				FeedUrl: "https://karpathy.github.io/feed.xml",
-				Name:    "Andrej Karpathy",
-			},
-			{
-				Url:     "https://distill.pub/",
-				FeedUrl: "https://distill.pub/rss.xml",
-				Name:    "Distill",
-			},
-			{
-				Url:     "https://transformer-circuits.pub",
-				FeedUrl: "https://transformer-circuits.pub",
-				Name:    "Transformer Circuits",
-			},
-			// TODO: reenable when/if they fix the 403 from cloudflare
-			// {
-			// 	Url:     "https://openai.com/news/",
-			// 	FeedUrl: "https://openai.com/news/rss.xml",
-			// 	Name:    "OpenAI",
-			// },
-			// Unclear if should ever be reenabled, they keep updating posts in the feed
-			// (or should that be handled instead?)
-			// {
-			// 	Url:     "https://deepmind.google/discover/blog/",
-			// 	FeedUrl: "https://deepmind.google/blog/rss.xml",
-			// 	Name:    "Google DeepMind",
-			// },
-			{
-				Url:     "https://bair.berkeley.edu/blog/",
-				FeedUrl: "https://bair.berkeley.edu/blog/feed.xml",
-				Name:    "BAIR",
-			},
-			{
-				Url:     "https://jalammar.github.io/",
-				FeedUrl: "https://jalammar.github.io/feed.xml",
-				Name:    "Jay Alammar",
-			},
-		},
-	},
-	{
 		Name:           "Rationality",
-		IsRightAligned: false,
+		IsRightAligned: true,
 		Blogs: []SuggestedBlog{
 			{
 				Url:     "https://www.astralcodexten.com/",
@@ -286,6 +242,50 @@ var SuggestedCategories = []SuggestedCategory{
 				Url:     "https://gwern.net",
 				FeedUrl: "https://gwern.net",
 				Name:    "Gwern",
+			},
+		},
+	},
+	{
+		Name:           "AI",
+		IsRightAligned: false,
+		Blogs: []SuggestedBlog{
+			{
+				Url:     "https://karpathy.github.io",
+				FeedUrl: "https://karpathy.github.io/feed.xml",
+				Name:    "Andrej Karpathy",
+			},
+			{
+				Url:     "https://distill.pub/",
+				FeedUrl: "https://distill.pub/rss.xml",
+				Name:    "Distill",
+			},
+			{
+				Url:     "https://transformer-circuits.pub",
+				FeedUrl: "https://transformer-circuits.pub",
+				Name:    "Transformer Circuits",
+			},
+			// TODO: reenable when/if they fix the 403 from cloudflare
+			// {
+			// 	Url:     "https://openai.com/news/",
+			// 	FeedUrl: "https://openai.com/news/rss.xml",
+			// 	Name:    "OpenAI",
+			// },
+			// Unclear if should ever be reenabled, they keep updating posts in the feed
+			// (or should that be handled instead?)
+			// {
+			// 	Url:     "https://deepmind.google/discover/blog/",
+			// 	FeedUrl: "https://deepmind.google/blog/rss.xml",
+			// 	Name:    "Google DeepMind",
+			// },
+			{
+				Url:     "https://bair.berkeley.edu/blog/",
+				FeedUrl: "https://bair.berkeley.edu/blog/feed.xml",
+				Name:    "BAIR",
+			},
+			{
+				Url:     "https://jalammar.github.io/",
+				FeedUrl: "https://jalammar.github.io/feed.xml",
+				Name:    "Jay Alammar",
 			},
 		},
 	},
