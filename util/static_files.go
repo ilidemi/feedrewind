@@ -76,38 +76,63 @@ findRoot:
 		panic(err)
 	}
 
+	type FilePathName struct {
+		Path string
+		Name string
+	}
+
 	for _, dirEntry := range dirEntries {
-		filePath := path.Join(staticDir, dirEntry.Name())
-		stat, err := os.Stat(filePath)
+		childPath := path.Join(staticDir, dirEntry.Name())
+		stat, err := os.Stat(childPath)
 		if err != nil {
 			panic(err)
 		}
-		lastModified := stat.ModTime().UTC().Format(http.TimeFormat)
-
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			panic(err)
+		var filePathNames []FilePathName
+		if stat.IsDir() {
+			childEntries, err := os.ReadDir(childPath)
+			if err != nil {
+				panic(err)
+			}
+			for _, childEntry := range childEntries {
+				filePathNames = append(filePathNames, FilePathName{
+					Path: path.Join(childPath, childEntry.Name()),
+					Name: dirEntry.Name() + "/" + childEntry.Name(),
+				})
+			}
+		} else {
+			filePathNames = []FilePathName{{
+				Path: childPath,
+				Name: dirEntry.Name(),
+			}}
 		}
 
-		hasher := fnv.New32a()
-		hasher.Write(content)
-		hash := hasher.Sum32()
-		ext := path.Ext(filePath)
+		for _, filePathName := range filePathNames {
+			lastModified := stat.ModTime().UTC().Format(http.TimeFormat)
 
-		name := dirEntry.Name()
-		urlPath := fmt.Sprintf("%s/%s", StaticUrlPrefix, name)
-		hashedPath := fmt.Sprintf("%s.%08x%s", urlPath[:len(urlPath)-len(ext)], hash, ext)
+			content, err := os.ReadFile(filePathName.Path)
+			if err != nil {
+				panic(err)
+			}
 
-		mimeType, ok := contentTypesByExt[ext]
-		if !ok {
-			panic(fmt.Errorf("extension doesn't have mime type: %s", ext))
-		}
+			hasher := fnv.New32a()
+			hasher.Write(content)
+			hash := hasher.Sum32()
+			ext := path.Ext(filePathName.Path)
 
-		hashedPathsByFilename[name] = hashedPath
-		files[hashedPath] = &StaticFile{
-			ContentType:  mimeType,
-			LastModified: lastModified,
-			Content:      content,
+			urlPath := fmt.Sprintf("%s/%s", StaticUrlPrefix, filePathName.Name)
+			hashedPath := fmt.Sprintf("%s.%08x%s", urlPath[:len(urlPath)-len(ext)], hash, ext)
+
+			mimeType, ok := contentTypesByExt[ext]
+			if !ok {
+				panic(fmt.Errorf("extension doesn't have mime type: %s", ext))
+			}
+
+			hashedPathsByFilename[filePathName.Name] = hashedPath
+			files[hashedPath] = &StaticFile{
+				ContentType:  mimeType,
+				LastModified: lastModified,
+				Content:      content,
+			}
 		}
 	}
 }

@@ -123,6 +123,7 @@ func runServer(port int) {
 		r.Use(frmiddleware.EmitVisit)
 
 		r.Get("/", routes.Landing_Index)
+		r.Get("/hmn", routes.Landing_HMN)
 
 		r.Get(util.LoginPath, routes.Users_LoginPage)
 		r.Post(util.LoginPath, routes.Users_Login)

@@ -163,6 +163,8 @@ func DiscoverFeedsAtUrl(
 	case *htmlPage:
 		if CanonicalUriEqual(startLink.Curi, hardcodedGwern, &curiEqCfg) {
 			return generateGwernFeed(startLink, p, logger)
+		} else if CanonicalUriEqual(startLink.Curi, hardcodedHmnFishbowl, &curiEqCfg) {
+			return generateHmnFishbowlFeed(startLink, p, crawlCtx, &curiEqCfg, logger)
 		} else if CanonicalUriEqual(startLink.Curi, hardcodedPaulGraham, &curiEqCfg) {
 			return generatePgFeed(startLink, p, crawlCtx, &curiEqCfg, logger)
 		} else if CanonicalUriEqual(startLink.Curi, hardcodedTransformerCircuits, &curiEqCfg) {
