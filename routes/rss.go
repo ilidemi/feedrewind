@@ -7,6 +7,8 @@ import (
 	"feedrewind.com/models"
 	"feedrewind.com/routes/rutil"
 	"feedrewind.com/util"
+	"github.com/jackc/pgx/v5"
+	"github.com/pkg/errors"
 )
 
 func Rss_SubscriptionFeed(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +33,10 @@ func Rss_SubscriptionFeed(w http.ResponseWriter, r *http.Request) {
 		from subscriptions_without_discarded where id = $1
 	`, subscriptionId)
 	err := row.Scan(&isPausedOrFinished, &rss, &blogBestUrl, &productUserId)
-	if err != nil {
+	if errors.Is(err, pgx.ErrNoRows) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	} else if err != nil {
 		panic(err)
 	}
 
@@ -74,7 +79,10 @@ func Rss_UserFeed(w http.ResponseWriter, r *http.Request) {
 		where id = $1
 	`, userId)
 	err := row.Scan(&hasActiveSubscriptions, &rss, &productUserId)
-	if err != nil {
+	if errors.Is(err, pgx.ErrNoRows) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	} else if err != nil {
 		panic(err)
 	}
 
