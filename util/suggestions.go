@@ -265,19 +265,6 @@ var SuggestedCategories = []SuggestedCategory{
 				FeedUrl: "https://transformer-circuits.pub",
 				Name:    "Transformer Circuits",
 			},
-			// TODO: reenable when/if they fix the 403 from cloudflare
-			// {
-			// 	Url:     "https://openai.com/news/",
-			// 	FeedUrl: "https://openai.com/news/rss.xml",
-			// 	Name:    "OpenAI",
-			// },
-			// Unclear if should ever be reenabled, they keep updating posts in the feed
-			// (or should that be handled instead?)
-			// {
-			// 	Url:     "https://deepmind.google/discover/blog/",
-			// 	FeedUrl: "https://deepmind.google/blog/rss.xml",
-			// 	Name:    "Google DeepMind",
-			// },
 			{
 				Url:     "https://bair.berkeley.edu/blog/",
 				FeedUrl: "https://bair.berkeley.edu/blog/feed.xml",
