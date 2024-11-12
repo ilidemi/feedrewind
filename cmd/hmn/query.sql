@@ -1,7 +1,9 @@
 WITH limited_urls AS (
     SELECT
         ml.link_id,
-        ml.feed_root_canonical_url,
+        ml.feed_root_canonical_url as root_canonical_url,
+        (select feed_url from feeds where feeds.root_canonical_url = ml.feed_root_canonical_url) as feed_url,
+        (select root_url from feeds where feeds.root_canonical_url = ml.feed_root_canonical_url) as root_url,
         rl.author,
         rl.channel,
         rl.url,
@@ -23,12 +25,14 @@ selected_urls AS (
 limited_authors AS (
     SELECT
         su.link_id,
-        su.feed_root_canonical_url,
+        su.root_canonical_url,
+        su.root_url,
+        su.feed_url,
         su.author,
         su.channel,
         su.url,
         ROW_NUMBER() OVER (
-            PARTITION BY su.feed_root_canonical_url, su.author
+            PARTITION BY su.root_canonical_url, su.author
             ORDER BY su.link_id
         ) AS rn_author
     FROM selected_urls su
@@ -40,13 +44,15 @@ selected_links AS (
 ),
 mlinks AS (
 	SELECT
-	    sl.feed_root_canonical_url,
+	    sl.root_canonical_url,
+	    sl.root_url,
+	    sl.feed_url,
 	    COUNT(*) AS total_matches,
 	    -- Top Author
 	    (
 	        SELECT sl2.author || ' (' || COUNT(*) || ')'
 	        FROM selected_links sl2
-	        WHERE sl2.feed_root_canonical_url = sl.feed_root_canonical_url
+	        WHERE sl2.root_canonical_url = sl.root_canonical_url
 	        GROUP BY sl2.author
 	        ORDER BY COUNT(*) DESC
 	        LIMIT 1
@@ -55,7 +61,7 @@ mlinks AS (
 	    (
 	        SELECT sl3.channel || ' (' || COUNT(*) || ')'
 	        FROM selected_links sl3
-	        WHERE sl3.feed_root_canonical_url = sl.feed_root_canonical_url
+	        WHERE sl3.root_canonical_url = sl.root_canonical_url
 	        GROUP BY sl3.channel
 	        ORDER BY COUNT(*) DESC
 	        LIMIT 1
@@ -64,16 +70,16 @@ mlinks AS (
 	    (
 	        SELECT COUNT(*)
 	        FROM selected_links sl4
-	        WHERE sl4.feed_root_canonical_url = sl.feed_root_canonical_url
+	        WHERE sl4.root_canonical_url = sl.root_canonical_url
 	          AND sl4.channel = 'the-library'
 	    ) AS library_count
 	FROM selected_links sl
-	GROUP BY sl.feed_root_canonical_url
+	GROUP BY sl.root_canonical_url
 	ORDER BY total_matches DESC
 )
 SELECT * from mlinks
 WHERE (total_matches >= 6 or library_count >= 3) and
-	feed_root_canonical_url not in (
+	root_canonical_url not in (
 		'khronos.org/', 'gafferongames.com', 'cs.cmu.edu/', 'odin-lang.org', 'gnu.org/', 'theverge.com/',
 		'jcgt.org/', 'lwn.net/', 'microsoft.com/en-us/research/', 'old.reddit.com/', 'unicode.org/',
 		'joelonsoftware.com/', 'code.visualstudio.com/', 'dev.to/', 'gpuopen.com/', 'phoronix.com/', 

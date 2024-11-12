@@ -1,0 +1,200 @@
+{{template "layouts/hmn" .}}
+
+{{define "content"}}
+<div class="p-6 flex flex-col">
+  <div class="flex flex-row gap-x-9 gap-y-2 items-end flex-wrap">
+  	<a href="/" class="cursor-pointer flex-none pt-1">
+  		<img src="{{static "logo.svg"}}" class="w-40 my-1" alt="Logo">
+  	</a>
+  	<div class="mb-1.5">
+      Read your favorite blogs, start to finish. On your own schedule.
+  	</div>
+  </div>
+  {{$session := .Session}}
+  <div id="library_background" class="hidden z-20 fixed inset-0 bg-transparent"></div>
+  <script>
+    let libraryBackground = document.getElementById("library_background");
+    let activeDropdown;
+    let closeActiveDropdown = () => {
+      libraryBackground.classList.add("hidden");
+      activeDropdown.classList.add("hidden");
+    };
+    libraryBackground.addEventListener("click", closeActiveDropdown);
+  </script>
+  {{range $catIdx, $_ := .Categories}}
+  <div class="mt-6">
+    <h2>{{.Name}}</h2>
+    {{if .IsBig}}
+    <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {{range $blogIdx, $_ := .Blogs}}
+      <div class="border border-gray-300 rounded-2xl shadow-sm p-3 flex flex-row gap-3 items-start justify-between">
+        <div class="flex items-start gap-3 flex-grow h-full">
+          <div class="flex-shrink-0 m-1">
+            <img src="{{static .IconPath}}" class="rounded-md w-12 h-12">
+          </div>
+          <div class="flex-grow min-w-0 flex flex-col h-full justify-between">
+            <div class="flex flex-col gap-3">
+              <a href="{{.Url}}" target="_blank"><span class="link text-black text-lg">{{.Name}}</span></a>
+              <div class="flex flex-wrap gap-2">
+                {{range .NonBreakingTags}}
+                <div class="rounded-full bg-primary-100 text-sm px-2">{{.}}</div>
+                {{end}}
+              </div>
+              <div class="flex flex-row items-center">
+                {{range $libIdx, $_ := .LibraryMentions}}
+                <div class="relative">
+                  <button id="lib_{{$catIdx}}_{{$blogIdx}}_{{$libIdx}}">
+                    <!-- tabler.io books icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 4m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z"/><path d="M9 4m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z"/><path d="M5 8h4"/><path d="M9 16h4"/><path d="M13.803 4.56l2.184 -.53c.562 -.135 1.133 .19 1.282 .732l3.695 13.418a1.02 1.02 0 0 1 -.634 1.219l-.133 .041l-2.184 .53c-.562 .135 -1.133 -.19 -1.282 -.732l-3.695 -13.418a1.02 1.02 0 0 1 .634 -1.219l.133 -.041z"/><path d="M14 9l4 -1"/><path d="M16 16l3.923 -.98"/>
+                    </svg>
+                  </button>
+                  <div id="lib_dropdown_{{$catIdx}}_{{$blogIdx}}_{{$libIdx}}"
+                       class="hidden absolute z-40 -left-3 top-8 w-max rounded-md shadow-lg bg-white border
+                              border-gray-300 focus:outline-none
+                              before:content-[''] before:absolute before:left-3.5 before:-top-[0.42rem]
+                              before:w-3 before:h-3 before:rotate-45 before:border-t before:border-l
+                              before:border-gray-300 before:bg-white before:shadow-lg"
+                       tabindex="-1"
+                  >
+                    <div class="relative z-30 flex flex-col divide-y divide-gray-100 text-sm">
+                      <div class="flex flex-row gap-1 px-3 py-2 text-primary-700">
+                        #the-library
+                      </div>
+                      <div class="flex flex-col px-3 pt-2 pb-3 break-words">
+                        <div>{{.Author}}:</div>
+                        <div>{{.MessageHtml}}</div>
+                        {{range .Posts}}
+                        <div><a class="link" href="{{.Url}}" target="_blank">{{.Title}}</a></div>
+                        {{end}}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <script>
+                  document.getElementById("lib_{{$catIdx}}_{{$blogIdx}}_{{$libIdx}}")
+                    .addEventListener("click", (event) => {
+                      libraryBackground.classList.remove("hidden");
+                      let dropdown =
+                        document.getElementById("lib_dropdown_{{$catIdx}}_{{$blogIdx}}_{{$libIdx}}");
+                      dropdown.classList.remove("hidden");
+
+                      let buttonRect = event.currentTarget.getBoundingClientRect();
+                      let maxWidth = window.innerWidth - buttonRect.left;
+                      dropdown.style.maxWidth = `calc(min(${maxWidth}px - 0.75rem, 20rem))`;
+
+                      activeDropdown = dropdown;
+                    });
+                </script>
+                {{end}}
+              </div>
+            </div>
+            <form action="{{.AddFeedPath}}" method="post" class="self-end">
+              {{$session.CSRFField}}
+              <button type="submit" name="submit" class="block text-white bg-primary-700 hover:bg-primary-900 rounded-md px-2 py-1.5 text-sm cursor-pointer flex items-center gap-1">
+                <!-- plus-sm icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                Add
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <div class="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+      {{range $blogIdx, $_ := .Blogs}}
+      <div class="border border-gray-300 rounded-2xl shadow-sm p-3 flex flex-row gap-3 items-start justify-between">
+        <div class="flex items-start gap-3 flex-grow">
+          <div class="flex-shrink-0 m-1">
+            {{if .IconPath}}
+            <img src="{{static .IconPath}}" class="rounded-md w-6 h-6">
+            {{else}}
+            <!-- rss icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 11-2 0 1 1 0 012 0z" />
+            </svg>
+            {{end}}
+          </div>
+          <div class="flex-grow min-w-0">
+            <a href="{{.Url}}" target="_blank"><span class="link text-black text-lg">{{.Name}}</span></a>
+            <div class="flex flex-wrap gap-2 mt-2">
+              {{range .Tags}}
+              <div class="rounded-xl bg-primary-100 text-sm px-2">{{.}}</div>
+              {{end}}
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col h-full justify-between items-end gap-3">
+          <div class="flex flex-row flex-wrap justify-end items-center mt-1.5">
+            {{range $libIdx, $_ := .LibraryMentions}}
+              <div class="relative">
+                <button id="lib_{{$catIdx}}_{{$blogIdx}}_{{$libIdx}}">
+                  <!-- tabler.io books icon -->
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 4m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z"/><path d="M9 4m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z"/><path d="M5 8h4"/><path d="M9 16h4"/><path d="M13.803 4.56l2.184 -.53c.562 -.135 1.133 .19 1.282 .732l3.695 13.418a1.02 1.02 0 0 1 -.634 1.219l-.133 .041l-2.184 .53c-.562 .135 -1.133 -.19 -1.282 -.732l-3.695 -13.418a1.02 1.02 0 0 1 .634 -1.219l.133 -.041z"/><path d="M14 9l4 -1"/><path d="M16 16l3.923 -.98"/>
+                  </svg>
+                </button>
+                <div id="lib_dropdown_{{$catIdx}}_{{$blogIdx}}_{{$libIdx}}"
+                     class="hidden absolute z-40 -right-3 bottom-8 w-max rounded-md shadow-lg bg-white border
+                            border-gray-300 focus:outline-none
+                            after:content-[''] after:absolute after:right-3.5 after:-bottom-[0.42rem]
+                            after:w-3 after:h-3 after:rotate-45 after:border-b after:border-r
+                            after:border-gray-300 after:bg-white after:shadow-lg"
+                     tabindex="-1"
+                >
+                  <div class="relative z-30 flex flex-col divide-y divide-gray-100 text-sm">
+                    <div class="flex flex-row gap-1 px-3 py-2 text-primary-700">
+                      #the-library
+                    </div>
+                    <div class="flex flex-col px-3 pt-2 pb-3 break-words">
+                      <div>{{.Author}}:</div>
+                      <div>{{.MessageHtml}}</div>
+                      {{range .Posts}}
+                      <div><a class="link" href="{{.Url}}" target="_blank">{{.Title}}</a></div>
+                      {{end}}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <script>
+                document.getElementById("lib_{{$catIdx}}_{{$blogIdx}}_{{$libIdx}}")
+                  .addEventListener("click", (event) => {
+                    libraryBackground.classList.remove("hidden");
+                    let dropdown =
+                      document.getElementById("lib_dropdown_{{$catIdx}}_{{$blogIdx}}_{{$libIdx}}");
+                    dropdown.classList.remove("hidden");
+
+                    let dropdownRect = dropdown.getBoundingClientRect();
+                    let maxWidth = dropdownRect.right;
+                    dropdown.style.maxWidth = `calc(min(${maxWidth}px - 0.75rem, 20rem))`;
+                    activeDropdown = dropdown;
+                  });
+              </script>
+            {{end}}
+          </div>
+          <form action="{{.AddFeedPath}}" method="post">
+            {{$session.CSRFField}}
+            <button type="submit" name="submit" class="block text-white bg-primary-700 hover:bg-primary-900 rounded-md px-2 py-1.5 text-sm cursor-pointer flex items-center gap-1">
+              <!-- plus-sm icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+              </svg>
+              Add
+            </button>
+          </form>
+        </div>
+      </div>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+  <div class="mt-6">
+    Not seeing your favorite blog? We likely still support it, <a href="{{.TryItOutPath}}" class="link">give it a try</a>!
+  </div>
+</div>
+{{end}}

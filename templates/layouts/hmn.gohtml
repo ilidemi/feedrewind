@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>FeedRewind</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Read Handmade Network's most shared blogs, start to finish. On your own schedule.">
+  <meta property="og:title" content="FeedRewind">
+  <meta property="og:description" content="Read Handmade Network's most shared blogs, start to finish. On your own schedule.">
+  <meta property="og:image" content="{{static "favicon_192x192.png"}}">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://feedrewind.com">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#4c5171">
+  <link rel="canonical" href="https://feedrewind.com">
+  {{template "layouts/partial_icons"}}
+  <link rel="stylesheet" media="screen" href="{{static "tailwind.css"}}">
+  <meta name="csrf-param" content="authenticity_token">
+  <meta name="csrf-token" content="{{.Session.CSRFToken}}">
+  {{template "layouts/partial_wicg_inert"}}
+  {{template "layouts/partial_rails_ujs"}}
+</head>
+
+<body class="container mx-auto max-w-screen-lg">
+{{template "layouts/partial_popups"}}
+<div class="modal-inert">
+  {{block "content" .}}
+  {{end}}
+</div>
+</body>
+</html>

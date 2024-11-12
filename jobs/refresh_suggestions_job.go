@@ -48,8 +48,13 @@ func RefreshSuggestionsJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 			feedUrlsSet[blog.FeedUrl] = true
 		}
 	}
-	for _, miscBlog := range util.MiscellaneousBlogs {
-		feedUrlsSet[miscBlog.FeedUrl] = true
+	for _, blog := range util.MiscellaneousBlogs {
+		feedUrlsSet[blog.FeedUrl] = true
+	}
+	for _, category := range util.HmnCategories {
+		for _, blog := range category.Blogs {
+			feedUrlsSet[blog.FeedUrl] = true
+		}
 	}
 
 	rows, err := pool.Query(`

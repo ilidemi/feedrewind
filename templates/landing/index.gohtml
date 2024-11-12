@@ -211,50 +211,53 @@
     </script>
     {{end}}
 
-    <div class="
-      flex flex-col gap-2 mt-44 mx-auto bg-primary-50 shadow-lg shadow-primary-700/20 rounded-xl max-w-full
-      w-[480px] p-3
-      2xs:p-6
-      md:p-6 md:w-[531px]
-    ">
-      <div class="font-semibold">Try it out:</div>
-      <form novalidate="novalidate" action="/subscriptions/add" accept-charset="UTF-8" method="POST">
-        {{.Session.CSRFField}}
-        <div class="flex flex-row">
-          <input
-            placeholder="Feed or blog link"
-            autocomplete="off"
-            class="border border-primary-700 rounded-l-md w-full focus:ring-transparent focus:shadow-none"
-            type="url"
-            name="start_url"
-            id="start_url"
-          >
-          <button id="discover_go"
-                  type="submit"
-                  class="btn-no-disable rounded-l-none border border-primary-700 rounded-r-md relative"
-          >
-            <div id="discover_go_label">Go</div>
-            <div id="discover_spinner" class="absolute-center hidden">
-              <div class="spinner spinner-dark"></div>
-            </div>
-          </button>
+    <div id="try_it_out"
+         class="mt-24"
+    >
+      <div class="flex flex-col gap-2 mt-20 mx-auto bg-primary-50 shadow-lg shadow-primary-700/20 rounded-xl
+                  max-w-full w-[480px] p-3
+                  2xs:p-6
+                  md:p-6 md:w-[531px]"
+      >
+        <div class="font-semibold">Try it out:</div>
+        <form novalidate="novalidate" action="/subscriptions/add" accept-charset="UTF-8" method="POST">
+          {{.Session.CSRFField}}
+          <div class="flex flex-row">
+            <input
+              placeholder="Feed or blog link"
+              autocomplete="off"
+              class="border border-primary-700 rounded-l-md w-full focus:ring-transparent focus:shadow-none"
+              type="url"
+              name="start_url"
+              id="start_url"
+            >
+            <button id="discover_go"
+                    type="submit"
+                    class="btn-no-disable rounded-l-none border border-primary-700 rounded-r-md relative"
+            >
+              <div id="discover_go_label">Go</div>
+              <div id="discover_spinner" class="absolute-center hidden">
+                <div class="spinner spinner-dark"></div>
+              </div>
+            </button>
 
-          <script>
-            function showSpinner() {
-              const label = document.getElementById("discover_go_label");
-              label.classList.add("invisible");
-              const spinner = document.getElementById("discover_spinner");
-              spinner.classList.remove("hidden");
-              void spinner.offsetWidth; // trigger reflow
-            }
+            <script>
+              function showSpinner() {
+                const label = document.getElementById("discover_go_label");
+                label.classList.add("invisible");
+                const spinner = document.getElementById("discover_spinner");
+                spinner.classList.remove("hidden");
+                void spinner.offsetWidth; // trigger reflow
+              }
 
-            const discoverButton = document.getElementById("discover_go");
-            discoverButton.addEventListener("click", () => {
-              showSpinner();
-            });
-          </script>
-        </div>
-      </form>
+              const discoverButton = document.getElementById("discover_go");
+              discoverButton.addEventListener("click", () => {
+                showSpinner();
+              });
+            </script>
+          </div>
+        </form>
+      </div>
     </div>
 
     <div id="suggestions" class="flex flex-col gap-y-6 mt-40 w-[480px] md:w-[531px] mx-auto max-w-full">

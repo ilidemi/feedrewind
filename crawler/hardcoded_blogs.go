@@ -42,6 +42,7 @@ var HardcodedDanLuuFeed CanonicalUri
 var HardcodedDontWorryAboutTheVaseFeed CanonicalUri
 var hardcodedFactorio CanonicalUri
 var hardcodedGwern CanonicalUri
+var hardcodedHmnFishbowl CanonicalUri
 var hardcodedJuliaEvans CanonicalUri
 var hardcodedKalzumeus CanonicalUri
 var hardcodedMrMoneyMustache CanonicalUri
@@ -90,6 +91,7 @@ func init() {
 	hardcodedCryptographyEngineering = hardcodedMustParse(cryptographyEngineering)
 	hardcodedCryptographyEngineeringAll = hardcodedMustParse(cryptographyEngineering + "/all-posts/")
 	hardcodedFactorio = hardcodedMustParse("https://www.factorio.com/blog/")
+	hardcodedHmnFishbowl = hardcodedMustParse("https://handmade.network/fishbowl")
 	hardcodedGwern = hardcodedMustParse("https://gwern.net/")
 	hardcodedJuliaEvans = hardcodedMustParse("https://jvns.ca")
 	hardcodedKalzumeus = hardcodedMustParse("https://www.kalzumeus.com/archive/")
@@ -699,6 +701,32 @@ func generateGwernFeed(rootLink *Link, page *htmlPage, logger Logger) DiscoverFe
 		}
 	}
 
+	return hardcodedGenerateFeed(rootLink.Url, feedTitle, page.Content, urls, titles, logger)
+}
+
+func generateHmnFishbowlFeed(
+	rootLink *Link, page *htmlPage, crawlCtx *CrawlContext, curiEqCfg *CanonicalEqualityConfig,
+	logger Logger,
+) DiscoverFeedsResult {
+	sampleFeedEntryUrls := []string{
+		"https://handmade.network/fishbowl/skimming/",
+		"https://handmade.network/fishbowl/parallel-programming/",
+		"https://handmade.network/fishbowl/lisp-jam/",
+	}
+	sampleFeedEntryTitles := []string{
+		"Code skimmability as the root cause for bad code structure decisions",
+		"Approaches to parallel programming",
+		"Lessons from the Lisp Jam",
+	}
+	curisToExclude := NewCanonicalUriSet(nil, curiEqCfg)
+	urls, titles := hardcodedExtractLinks(
+		rootLink, sampleFeedEntryUrls, sampleFeedEntryTitles, curisToExclude, page, crawlCtx, curiEqCfg,
+		logger,
+	)
+	if urls == nil || titles == nil {
+		return &DiscoverFeedsErrorBadFeed{}
+	}
+	feedTitle := "Fishbowls | Handmade Network"
 	return hardcodedGenerateFeed(rootLink.Url, feedTitle, page.Content, urls, titles, logger)
 }
 

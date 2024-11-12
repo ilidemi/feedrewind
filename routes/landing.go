@@ -78,3 +78,20 @@ func Landing_Index(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
+
+func Landing_HMN(w http.ResponseWriter, r *http.Request) {
+	type HmnResult struct {
+		Session      *util.Session
+		Categories   []util.HmnCategory
+		TryItOutPath string
+	}
+	tryItOutPath := "/#try_it_out"
+	if rutil.CurrentUser(r) != nil {
+		tryItOutPath = "/subscriptions/add"
+	}
+	templates.MustWrite(w, "landing/hmn", HmnResult{
+		Session:      rutil.Session(r),
+		Categories:   util.HmnCategories,
+		TryItOutPath: tryItOutPath,
+	})
+}
