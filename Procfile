@@ -1,3 +1,3 @@
-web: feedrewind web --port $PORT
-worker: feedrewind worker
-release: feedrewind db migrate
+web: feedrewind.com web --port $PORT
+worker: feedrewind.com worker
+release: feedrewind.com db migrate
