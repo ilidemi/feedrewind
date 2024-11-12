@@ -1,7 +1,7 @@
 {{template "layouts/hmn" .}}
 
 {{define "content"}}
-<div class="p-6 flex flex-col">
+<div id="container" class="p-6 flex flex-col">
   <div class="flex flex-row gap-x-9 gap-y-2 items-end flex-wrap">
   	<a href="/" class="cursor-pointer flex-none pt-1">
   		<img src="{{static "logo.svg"}}" class="w-40 my-1" alt="Logo">
@@ -80,8 +80,9 @@
                       dropdown.classList.remove("hidden");
 
                       let buttonRect = event.currentTarget.getBoundingClientRect();
-                      let maxWidth = window.innerWidth - buttonRect.left;
-                      dropdown.style.maxWidth = `calc(min(${maxWidth}px - 0.75rem, 20rem))`;
+                      let containerRect = document.getElementById("container").getBoundingClientRect();
+                      let maxWidth = containerRect.width - buttonRect.left;
+                      dropdown.style.maxWidth = `calc(min(${maxWidth}px, 20rem))`;
 
                       activeDropdown = dropdown;
                     });
