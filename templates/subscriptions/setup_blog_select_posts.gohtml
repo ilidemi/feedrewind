@@ -141,9 +141,9 @@
               <span class="text-sm">
                 You can select a subset of posts on the Custom tab
                 <span class="inline-flex items-baseline">
-                  <!-- arrow-turn-right-up icon -->
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m11.99 7.5 3.75-3.75m0 0 3.75 3.75m-3.75-3.75v16.499H4.49" />
+                  <!-- arrow-up-right icon -->
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="2 -2 26 22" stroke-width="1.5" stroke="currentColor" class="size-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />
                   </svg>
                 </span>
               </span>
@@ -152,8 +152,13 @@
                 {{template "partial_posts" $topCategory.Posts}}
               </div>
               {{if $topCategory.SSCAbridgedAttribution}}
-              <div class="text-xs text-gray-500 italic">
-                Curated by <a href="https://www.slatestarcodexabridged.com/" class="link-secondary">Slate Star Codex Abridged</a>, licensed under <a href="https://creativecommons.org/licenses/by/4.0/" class="link-secondary">CC BY 4.0</a>
+              <div class="text-xs text-gray-500 italic mt-3">
+                Curation courtesy of <a href="https://www.slatestarcodexabridged.com/" class="link-secondary" target="_blank">Slate Star Codex Abridged</a>, licensed under <a href="https://creativecommons.org/licenses/by/4.0/" class="link-secondary">CC BY 4.0</a>
+              </div>
+              {{end}}
+              {{if $topCategory.OldNewWin32ApiAttribution}}
+              <div class="text-xs text-gray-500 italic mt-3">
+                Curation courtesy of <a href="https://github.com/mity/old-new-win32api" class="link-secondary" target="_blank">mity</a>
               </div>
               {{end}}
             </div>

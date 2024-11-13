@@ -80,7 +80,7 @@ func (c *HttpClientImpl) Request(
 	}
 
 	if c.EnableThrottling && shouldThrottle && maybeRobotsClient != nil {
-		err := maybeRobotsClient.Throttle(c.Context)
+		err := maybeRobotsClient.Throttle(c.Context, uri)
 		if err != nil {
 			return nil, err
 		}

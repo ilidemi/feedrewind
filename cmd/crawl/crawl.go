@@ -67,7 +67,7 @@ func init() {
 	}
 }
 
-var defaultStartLinkId = 1132
+var defaultStartLinkId = 703
 var threads int
 var allowJS bool
 

@@ -555,6 +555,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				Posts                       TopCategoryPosts
 				BlogPostIdsJS               template.JS
 				SSCAbridgedAttribution      bool
+				OldNewWin32ApiAttribution   bool
 				SubscriptionSelectPostsPath string
 				Submit                      Submit
 			}
@@ -671,10 +672,8 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 					}
 					idsBuilder.WriteString("]")
 
-					sscAbridgedAttribution := false
-					if feedUrl == crawler.HardcodedSlateStarCodexFeed && i == 0 {
-						sscAbridgedAttribution = true
-					}
+					sscAbridgedAttribution := feedUrl == crawler.HardcodedSlateStarCodexFeed && i == 0
+					oldNewWin32ApiAttribution := feedUrl == crawler.HardcodedTheOldNewThingFeed && i == 0
 
 					topCategories = append(topCategories, TopCategory{
 						Id:                          category.Id,
@@ -684,6 +683,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 						Posts:                       topPosts,
 						BlogPostIdsJS:               template.JS(idsBuilder.String()),
 						SSCAbridgedAttribution:      sscAbridgedAttribution,
+						OldNewWin32ApiAttribution:   oldNewWin32ApiAttribution,
 						SubscriptionSelectPostsPath: subscriptionSelectPostsPath,
 						Submit: Submit{
 							Suffix:                    suffix,

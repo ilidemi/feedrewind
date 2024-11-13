@@ -434,6 +434,77 @@ var HmnCategories = []HmnCategory{
 				},
 			},
 			{
+				IconName: "oldnewthing.jpg",
+				Url:      "https://devblogs.microsoft.com/oldnewthing/",
+				FeedUrl:  "https://devblogs.microsoft.com/oldnewthing/feed/",
+				Name:     "The Old New Thing",
+				Tags:     []string{"win32", "c++", "low level programming"},
+				LibraryMentions: []HmnLibraryMention{
+					{
+						Author: "Deleted User",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "What order are pages in a memory-mapped file flushed out to disk?",
+							Url:   "https://blogs.msdn.microsoft.com/oldnewthing/20190307-00/?p=101115",
+						}},
+					},
+					{
+						Author: "nakst",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "Renaming a file is a multi-step process, only one of which is chang...",
+							Url:   "https://devblogs.microsoft.com/oldnewthing/20211022-00/?p=105822",
+						}},
+					},
+					{
+						Author:  "Shazan",
+						Message: "Optimizing code to darken a 32bpp ARGB bitmap",
+						Posts: []HmnLibraryMentionPost{
+							{
+								Title: "Optimizing code to darken a bitmap, part 1",
+								Url:   "https://devblogs.microsoft.com/oldnewthing/20211022-00/?p=105822",
+							},
+							{
+								Title: "Optimizing code to darken a bitmap, part 2",
+								Url:   "https://devblogs.microsoft.com/oldnewthing/20220308-00/?p=106321",
+							},
+							{
+								Title: "Optimizing code to darken a bitmap, part 3",
+								Url:   "https://devblogs.microsoft.com/oldnewthing/20220309-00/?p=106331",
+							},
+							{
+								Title: "Optimizing code to darken a bitmap, part 4",
+								Url:   "https://devblogs.microsoft.com/oldnewthing/20220310-00/?p=106335",
+							},
+							{
+								Title: "Optimizing code to darken a bitmap, part 5",
+								Url:   "https://devblogs.microsoft.com/oldnewthing/20220311-00/?p=106340",
+							},
+						},
+					},
+					{
+						Author: "Deleted User",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "Injected class names: The C++ feature you didn’t even realize that you were using",
+							Url:   "https://devblogs.microsoft.com/oldnewthing/20220321-00/?p=106367",
+						}},
+					},
+					{
+						Author: "Deleted User",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "An interesting and helpful series of posts about C++ coroutines.",
+							Url:   "https://devblogs.microsoft.com/oldnewthing/20191209-00/?p=103195",
+						}},
+					},
+					{
+						Author:  "Deleted User",
+						Message: "An article series concerning linkers, linking, libraries, symbols, object files, relocations, adressing modes, tables of these and more, by Raymond Chen.",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "Understanding the classical model for linking, groundwork: The algorithm",
+							Url:   "https://devblogs.microsoft.com/oldnewthing/20130107-00/?p=5633",
+						}},
+					},
+				},
+			},
+			{
 				IconName: "digitalgrove.png",
 				Url:      "https://www.rfleury.com/",
 				FeedUrl:  "https://www.rfleury.com/feed",
@@ -453,83 +524,6 @@ var HmnCategories = []HmnCategory{
 						Posts: []HmnLibraryMentionPost{{
 							Title: "The Easiest Way To Handle Errors Is To Not Have Them",
 							Url:   "https://www.rfleury.com/p/the-easiest-way-to-handle-errors",
-						}},
-					},
-				},
-			},
-			{
-				IconName: "fabiensanglard.png",
-				Url:      "https://fabiensanglard.net/",
-				FeedUrl:  "http://fabiensanglard.net/rss.xml",
-				Name:     "Fabien Sanglard",
-				Tags:     []string{"retro gamedev"},
-				LibraryMentions: []HmnLibraryMention{
-					{
-						Author: "mofelia",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "Game Engine Black Book: Wolfenstein 3D",
-							Url:   "http://fabiensanglard.net/Game_Engine_Black_Book_Release_Date/index.php",
-						}},
-					},
-					{
-						Author: "Jim0_o",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "How DOOM fire was done",
-							Url:   "https://fabiensanglard.net/doom_fire_psx/",
-						}},
-					},
-					{
-						Author: "ryza",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "\"Another World\" Code Review",
-							Url:   "http://fabiensanglard.net/anotherWorld_code_review/index.php",
-						}},
-					},
-					{
-						Author:  "Ben Visness",
-						Message: "Both of Fabien Sanglard's Game Engine Black Books, on Wolfenstein and DOOM, are available on his website as both free PDFs and high-quality physical versions sold at cost:",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "Game Engine Black Books Update",
-							Url:   "http://fabiensanglard.net/gebb/index.html",
-						}},
-					},
-					{
-						Author:  "ReasonableCoder",
-						Message: "Not sure if these have been shared before... Great technical books/write-ups on DOOM and Wolfenstein 3D. PDFs freely available online:",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "Game Engine Black Books Update",
-							Url:   "http://fabiensanglard.net/gebb/index.html",
-						}},
-					},
-					{
-						Author: "Martins",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "The polygons of DOOM: PSX",
-							Url:   "http://fabiensanglard.net/doom_psx/index.html",
-						}},
-					},
-					{
-						Author:  "ktr_synchronizer",
-						Message: "Virtual-machine based game and the adventures in porting it to other platforms.",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "\"Another World\" Code Review",
-							Url:   "https://fabiensanglard.net/anotherWorld_code_review/",
-						}},
-					},
-					{
-						Author:  "Cirdan",
-						Message: "STREET FIGHTER II, PAPER TRAILS - sprite sheets",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "Street Fighter II, paper trails",
-							Url:   "https://fabiensanglard.net/sf2_sheets/index.html",
-						}},
-					},
-					{
-						Author:  "Uneven Prankster",
-						Message: "Driving Compilers: 5-page walk through the process of the creation of an executable by Fabien Sanglard.",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "Driving Compilers",
-							Url:   "https://fabiensanglard.net/dc/index.php",
 						}},
 					},
 				},
@@ -1391,6 +1385,83 @@ var HmnCategories = []HmnCategory{
 		Name:  "General Programming",
 		IsBig: false,
 		Blogs: []HmnBlog{
+			{
+				IconName: "fabiensanglard.png",
+				Url:      "https://fabiensanglard.net/",
+				FeedUrl:  "http://fabiensanglard.net/rss.xml",
+				Name:     "Fabien Sanglard",
+				Tags:     []string{"retro gamedev"},
+				LibraryMentions: []HmnLibraryMention{
+					{
+						Author: "mofelia",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "Game Engine Black Book: Wolfenstein 3D",
+							Url:   "http://fabiensanglard.net/Game_Engine_Black_Book_Release_Date/index.php",
+						}},
+					},
+					{
+						Author: "Jim0_o",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "How DOOM fire was done",
+							Url:   "https://fabiensanglard.net/doom_fire_psx/",
+						}},
+					},
+					{
+						Author: "ryza",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "\"Another World\" Code Review",
+							Url:   "http://fabiensanglard.net/anotherWorld_code_review/index.php",
+						}},
+					},
+					{
+						Author:  "Ben Visness",
+						Message: "Both of Fabien Sanglard's Game Engine Black Books, on Wolfenstein and DOOM, are available on his website as both free PDFs and high-quality physical versions sold at cost:",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "Game Engine Black Books Update",
+							Url:   "http://fabiensanglard.net/gebb/index.html",
+						}},
+					},
+					{
+						Author:  "ReasonableCoder",
+						Message: "Not sure if these have been shared before... Great technical books/write-ups on DOOM and Wolfenstein 3D. PDFs freely available online:",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "Game Engine Black Books Update",
+							Url:   "http://fabiensanglard.net/gebb/index.html",
+						}},
+					},
+					{
+						Author: "Martins",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "The polygons of DOOM: PSX",
+							Url:   "http://fabiensanglard.net/doom_psx/index.html",
+						}},
+					},
+					{
+						Author:  "ktr_synchronizer",
+						Message: "Virtual-machine based game and the adventures in porting it to other platforms.",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "\"Another World\" Code Review",
+							Url:   "https://fabiensanglard.net/anotherWorld_code_review/",
+						}},
+					},
+					{
+						Author:  "Cirdan",
+						Message: "STREET FIGHTER II, PAPER TRAILS - sprite sheets",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "Street Fighter II, paper trails",
+							Url:   "https://fabiensanglard.net/sf2_sheets/index.html",
+						}},
+					},
+					{
+						Author:  "Uneven Prankster",
+						Message: "Driving Compilers: 5-page walk through the process of the creation of an executable by Fabien Sanglard.",
+						Posts: []HmnLibraryMentionPost{{
+							Title: "Driving Compilers",
+							Url:   "https://fabiensanglard.net/dc/index.php",
+						}},
+					},
+				},
+			},
 			{
 				Url:     "https://danluu.com/",
 				FeedUrl: "https://danluu.com/atom.xml",

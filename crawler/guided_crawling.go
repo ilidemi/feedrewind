@@ -140,8 +140,8 @@ func GuidedCrawl(
 			pageBase: pageBase{
 				Curi:     startPageFinalLink.Curi,
 				FetchUri: startPageFinalLink.Uri,
+				Content:  maybeStartPage.Content,
 			},
-			Content:               maybeStartPage.Content,
 			Document:              startPageDocument,
 			MaybeTopScreenshot:    nil,
 			MaybeBottomScreenshot: nil,
@@ -859,13 +859,18 @@ func (c *RobotsClient) Test(uri *url.URL, logger Logger) bool {
 	return result
 }
 
-func (c *RobotsClient) Throttle(ctx context.Context) error {
+func (c *RobotsClient) Throttle(ctx context.Context, uri *url.URL) error {
 	now := time.Now().UTC()
 	if !c.LastRequestTimestamp.IsZero() {
 		timeDelta := now.Sub(c.LastRequestTimestamp)
 		crawlDelay := time.Second
 		if c.MaybeGroup != nil && c.MaybeGroup.CrawlDelay > time.Second {
 			crawlDelay = c.MaybeGroup.CrawlDelay
+		}
+		if uri.Host == hardcodedTheOldNewThingUri.Host &&
+			strings.HasPrefix(uri.Path, hardcodedTheOldNewThingUri.Path) {
+			// sorry Microsoft
+			crawlDelay = 500 * time.Millisecond
 		}
 		if timeDelta < crawlDelay {
 			sleepDelay := crawlDelay - timeDelta
@@ -1558,15 +1563,34 @@ func postprocessPartialPagedResult(
 		}
 	}
 
+	var postCategories []pristineHistoricalBlogPostCategory
+	var links []*pristineMaybeTitledLink
 	if CanonicalUriEqual(fullResult.MainLnk.Curi(), hardcodedCaseyHandmer, guidedCtx.CuriEqCfg) {
-		postCategories, err := crawlCaseyHandmerCategories(fullResult, guidedCtx, crawlCtx, logger)
+		var err error
+		postCategories, err = crawlCaseyHandmerCategories(fullResult, guidedCtx, crawlCtx, logger)
 		if err != nil {
 			logger.Warn("Couldn't fetch Casey Handmer categories: %v", err)
 			guidedCtx.HardcodedError = err
 		} else {
 			logger.Info("Categories: %s", categoryCountsString(postCategories))
-			fullResult.PostCategories = postCategories
 		}
+	} else if CanonicalUriEqual(fullResult.MainLnk.Curi(), hardcodedTheOldNewThing, guidedCtx.CuriEqCfg) {
+		var err error
+		postCategories, links, err =
+			crawlTheOldNewThingCategories(fullResult, guidedCtx, crawlCtx, logger)
+		if err != nil {
+			logger.Warn("Couldn't fetch The Old New Thing categories: %v", err)
+			guidedCtx.HardcodedError = err
+		} else {
+			logger.Info("Categories: %s", categoryCountsString(postCategories))
+			logger.Info("Links: %d -> %d", len(fullResult.Lnks), len(links))
+		}
+	}
+	if len(fullResult.Lnks) == 0 {
+		fullResult.Lnks = links
+	}
+	if len(fullResult.PostCategories) == 0 {
+		fullResult.PostCategories = postCategories
 	}
 
 	titleCount := countLinkTitles(fullResult.Lnks)
@@ -1578,9 +1602,9 @@ func postprocessPartialPagedResult(
 	return &postprocessedResult{
 		MainLnk:                 fullResult.MainLnk,
 		Pattern:                 fullResult.Pattern,
-		Links:                   fullResult.Lnks,
+		Links:                   links,
 		IsMatchingFeed:          true,
-		PostCategories:          fullResult.PostCategories,
+		PostCategories:          postCategories,
 		Extra:                   fullResult.Extra,
 		MaybePartialPagedResult: nil,
 	}, nil
@@ -1632,6 +1656,36 @@ func crawlCaseyHandmerCategories(
 	}
 
 	return postCategories, nil
+}
+
+func crawlTheOldNewThingCategories(
+	pagedResult *fullPagedResult, guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext, logger Logger,
+) ([]pristineHistoricalBlogPostCategory, []*pristineMaybeTitledLink, error) {
+	progressLogger := crawlCtx.ProgressLogger
+	logger.Info("Extra requests for The Old New Thing categories")
+	titleCount := countLinkTitles(pagedResult.Lnks)
+	err := progressLogger.LogAndSaveFetchedCount(&titleCount)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	theOldNewThingWin32ApiPage, err := crawlNonHtmlPage(hardcodedTheOldNewThingWin32Api, crawlCtx, logger)
+	err2 := progressLogger.LogAndSavePostprocessing()
+	if err2 != nil {
+		return nil, nil, err2
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	postCategories, mergedLinks, err := ExtractTheOldNewThingCategories(
+		theOldNewThingWin32ApiPage, pagedResult.Lnks, guidedCtx.CuriEqCfg, logger,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return postCategories, mergedLinks, nil
 }
 
 type sortedLinks struct {

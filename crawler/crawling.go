@@ -56,18 +56,15 @@ func NewCrawlContext(
 type pageBase struct {
 	Curi     CanonicalUri
 	FetchUri *url.URL
+	Content  string
 }
 
 type nonHtmlPage pageBase
 
-type feedPage struct {
-	pageBase
-	Content string
-}
+type feedPage pageBase
 
 type htmlPage struct {
 	pageBase
-	Content               string
 	Document              *html.Node
 	MaybeTopScreenshot    []byte
 	MaybeBottomScreenshot []byte
@@ -86,7 +83,7 @@ func (p *htmlPage) base() *pageBase {
 	return &p.pageBase
 }
 func (p *feedPage) base() *pageBase {
-	return &p.pageBase
+	return (*pageBase)(p)
 }
 func (p *nonHtmlPage) base() *pageBase {
 	return (*pageBase)(p)
@@ -101,6 +98,7 @@ func (p *feedPage) feedOrHtmlPageTag() {}
 
 var ErrNotAnHtmlPage = errors.New("not an html page")
 var ErrNotAFeedOrHtmlPage = errors.New("not a feed or html page")
+var ErrNotAnNonHtmlPage = errors.New("not an non-html page")
 
 func crawlHtmlPage(initialLink *Link, crawlCtx *CrawlContext, logger Logger) (*htmlPage, error) {
 	page, err := crawlPage(initialLink, false, crawlCtx, logger)
@@ -128,6 +126,18 @@ func crawlFeedOrHtmlPage(initialLink *Link, crawlCtx *CrawlContext, logger Logge
 	default:
 		return nil, ErrNotAFeedOrHtmlPage
 	}
+}
+
+func crawlNonHtmlPage(initialLink *Link, crawlCtx *CrawlContext, logger Logger) (*nonHtmlPage, error) {
+	page, err := crawlPage(initialLink, false, crawlCtx, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	if nonHtmlPage, ok := page.(*nonHtmlPage); ok {
+		return nonHtmlPage, nil
+	}
+	return nil, ErrNotAnNonHtmlPage
 }
 
 var metaRefreshContentRegex *regexp.Regexp
@@ -213,14 +223,12 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 			pageBase := pageBase{
 				Curi:     link.Curi,
 				FetchUri: link.Uri,
+				Content:  body,
 			}
 			var page page
 			switch {
 			case isFeedExpected && isFeed(body, logger):
-				page = &feedPage{
-					pageBase: pageBase,
-					Content:  body,
-				}
+				page = (*feedPage)(&pageBase)
 			case contentType == "text/html":
 				document, err := parseHtml(body, logger)
 				if err != nil {
@@ -228,7 +236,6 @@ func crawlPage(initialLink *Link, isFeedExpected bool, crawlCtx *CrawlContext, l
 				}
 				page = &htmlPage{
 					pageBase:              pageBase,
-					Content:               body,
 					Document:              document,
 					MaybeTopScreenshot:    nil,
 					MaybeBottomScreenshot: nil,
@@ -455,8 +462,8 @@ func crawlWithPuppeteerIfMatch(
 		pageBase: pageBase{
 			Curi:     page.Curi,
 			FetchUri: page.FetchUri,
+			Content:  puppeteerPage.Content,
 		},
-		Content:               puppeteerPage.Content,
 		Document:              document,
 		MaybeTopScreenshot:    puppeteerPage.MaybeTopScreenshot,
 		MaybeBottomScreenshot: puppeteerPage.MaybeBottomScreenshot,
