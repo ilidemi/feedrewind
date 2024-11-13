@@ -5,6 +5,8 @@ import (
 	"fmt"
 	neturl "net/url"
 	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 
 	"feedrewind.com/log"
@@ -12,6 +14,9 @@ import (
 
 	"github.com/antchfx/htmlquery"
 	"github.com/antchfx/xpath"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/text"
 )
 
 /*
@@ -49,11 +54,16 @@ var hardcodedMrMoneyMustache CanonicalUri
 var HardcodedOvercomingBiasFeed CanonicalUri
 var hardcodedPaulGraham CanonicalUri
 var HardcodedSlateStarCodexFeed string
+var hardcodedTheOldNewThing CanonicalUri
+var hardcodedTheOldNewThingUri *neturl.URL
+var HardcodedTheOldNewThingFeed string
+var hardcodedTheOldNewThingWin32Api *Link
 var hardcodedTransformerCircuits CanonicalUri
 var hardcodedTransformerCircuitsEntriesToExclude CanonicalUriSet
 
 func init() {
 	logger := NewDummyLogger()
+	var err error
 
 	hardcodedACOUP = hardcodedMustParse("https://acoup.blog/")
 	hardcodedAntirez = hardcodedMustParse("http://antirez.com/")
@@ -99,6 +109,16 @@ func init() {
 	HardcodedOvercomingBiasFeed = hardcodedMustParse("https://www.overcomingbias.com/feed")
 	hardcodedPaulGraham = hardcodedMustParse("https://paulgraham.com/articles.html")
 	HardcodedSlateStarCodexFeed = "https://slatestarcodex.com/feed/"
+	hardcodedTheOldNewThing = hardcodedMustParse("https://devblogs.microsoft.com/oldnewthing/")
+	hardcodedTheOldNewThingUri, err = neturl.Parse("https://devblogs.microsoft.com/oldnewthing/")
+	if err != nil {
+		panic(err)
+	}
+	HardcodedTheOldNewThingFeed = "https://devblogs.microsoft.com/oldnewthing/feed/"
+	hardcodedTheOldNewThingWin32Api, _ = ToCanonicalLink(
+		"https://raw.githubusercontent.com/mity/old-new-win32api/refs/heads/master/README.md",
+		logger, nil,
+	)
 	hardcodedTransformerCircuits = hardcodedMustParse("https://transformer-circuits.pub")
 	curiEqCfg := NewCanonicalEqualityConfig()
 	hardcodedTransformerCircuitsEntriesToExclude = NewCanonicalUriSet(
@@ -669,6 +689,210 @@ func extractSubstackCategories(
 		}
 	}
 	return []pristineHistoricalBlogPostCategory{publicCategory}
+}
+
+func ExtractTheOldNewThingCategories(
+	theOldNewWin32ApiPage *nonHtmlPage, links []*pristineMaybeTitledLink, curiEqCfg *CanonicalEqualityConfig,
+	logger Logger,
+) ([]pristineHistoricalBlogPostCategory, []*pristineMaybeTitledLink, error) {
+	linksByPostId := map[string]*pristineMaybeTitledLink{}
+	for _, link := range links {
+		postId := link.Link.Uri.Uri.Query().Get("p")
+		if postId == "" {
+			logger.Warn("Couldn't extract The Old New Thing post id: %s", link.Link.Url)
+		}
+		linksByPostId[postId] = link
+	}
+
+	md := goldmark.New()
+	buffer := []byte(theOldNewWin32ApiPage.Content)
+	reader := text.NewReader(buffer)
+	doc := md.Parser().Parse(reader)
+
+	var categories []pristineHistoricalBlogPostCategory
+	var currentH2, currentH3 string
+	var currentLinks []Link
+	// Pagination on this blog doesn't go all the way to the end and so the win32 list has some older entries
+	// we can't easily crawl
+	extraLinksByPostId := map[int64]*pristineMaybeTitledLink{}
+
+	commitCategory := func() {
+		if currentH2 == "" {
+			logger.Warn("Current H2 empty at The Old New Thing Win32")
+			currentLinks = nil
+			return
+		}
+		categoryName := currentH2
+		if currentH3 != "" {
+			categoryName = currentH2 + " / " + currentH3
+		}
+		if categoryName == "Uncategorized" {
+			categoryName = "Uncategorized Win32"
+		}
+		categories = append(categories, NewPristineHistoricalBlogPostCategory(
+			categoryName, false, currentLinks,
+		))
+		currentLinks = nil
+	}
+
+	var collectLinks func(node ast.Node)
+	collectLinks = func(node ast.Node) {
+		if node == nil {
+			return
+		}
+
+		if node.Kind() == ast.KindLink {
+			if currentH2 == "" {
+				return
+			}
+			linkNode := node.(*ast.Link)
+			destination := string(linkNode.Destination)
+			if !strings.HasPrefix(destination, "http") {
+				return
+			}
+			switch {
+			case strings.HasSuffix(destination, "?p=38483"):
+				destination = "https://devblogs.microsoft.com/oldnewthing/20040712-00/?p=38483"
+			case strings.HasSuffix(destination, "?p=38733"):
+				destination = "https://devblogs.microsoft.com/oldnewthing/20040624-00/?p=38733"
+			case strings.HasSuffix(destination, "?p=100975"):
+				destination = "https://devblogs.microsoft.com/oldnewthing/20190220-00/?p=101060"
+			case strings.HasSuffix(destination, "?p=100985"):
+				destination = "https://devblogs.microsoft.com/oldnewthing/20190221-00/?p=101062"
+			case strings.HasSuffix(destination, "?p=100995"):
+				destination = "https://devblogs.microsoft.com/oldnewthing/20190222-00/?p=101064"
+			}
+			mdLink, ok := ToCanonicalLink(destination, logger, nil)
+			if !ok {
+				logger.Warn("Couldn't parse The Old New Thing Win32 link: %s", linkNode.Destination)
+				return
+			}
+			if mdLink.Uri.Host != "devblogs.microsoft.com" ||
+				!strings.HasPrefix(mdLink.Uri.Path, "/oldnewthing/") {
+				return
+			}
+			postIdStr := mdLink.Uri.Query().Get("p")
+			if postIdStr == "" {
+				logger.Warn("Couldn't extract The Old New Thing Win32 post id: %s", mdLink.Url)
+				return
+			}
+			postId, err := strconv.ParseInt(postIdStr, 10, 64)
+			if err != nil {
+				logger.Warn("Couldn't parse post id: %s (%v)", postIdStr, err)
+			}
+			link, ok := linksByPostId[postIdStr]
+			if !ok {
+				var extractTitle func(node ast.Node) string
+				extractTitle = func(node ast.Node) string {
+					if node.Kind() == ast.KindText {
+						textNode := node.(*ast.Text)
+						return string(textNode.Value(buffer))
+					}
+					var sb strings.Builder
+					for child := node.FirstChild(); child != nil; child = child.NextSibling() {
+						sb.WriteString(extractTitle(child))
+					}
+					return sb.String()
+				}
+				title := NewLinkTitle(extractTitle(linkNode), LinkTitleSourceInnerText, nil)
+				link = NewPristineMaybeTitledLink(&maybeTitledLink{
+					Link:       *mdLink.Lnk(),
+					MaybeTitle: &title,
+				})
+				linksByPostId[postIdStr] = link
+				extraLinksByPostId[postId] = link
+			}
+			currentLinks = append(currentLinks, *link.Lnk())
+		} else if node.Kind() == ast.KindHeading {
+			headingNode := node.(*ast.Heading)
+			if len(currentLinks) > 0 {
+				commitCategory()
+			}
+			if headingNode.Level == 2 {
+				currentH2 = string(headingNode.Lines().Value(buffer))
+				if currentH2 == "" {
+					logger.Warn("Couldn't extract an H2 at The Old New Thing Win32")
+					return
+				}
+				currentH3 = ""
+			} else if headingNode.Level == 3 {
+				currentH3 = string(headingNode.Lines().Value(buffer))
+				if currentH3 == "" {
+					logger.Warn("Couldn't extract an H2 at The Old New Thing Win32")
+					return
+				}
+			}
+		}
+
+		for child := node.FirstChild(); child != nil; child = child.NextSibling() {
+			collectLinks(child)
+		}
+	}
+
+	collectLinks(doc)
+	if len(currentLinks) > 0 {
+		commitCategory()
+	}
+
+	if len(categories) == 0 {
+		return nil, nil, oops.New("Couldn't extract The Old New Thing Win32 categories")
+	}
+
+	if len(categories) < 30 {
+		logger.Warn("Suspiciously few The Old New Thing Win32 categories: %d", len(categories))
+	}
+
+	var win32Links []pristineLink
+	win32CuriSet := NewCanonicalUriSet(nil, curiEqCfg)
+	for _, category := range categories {
+		for _, link := range category.PostLinks {
+			if win32CuriSet.Contains(link.Curi()) {
+				continue
+			}
+			win32CuriSet.add(link.Curi())
+			win32Links = append(win32Links, link)
+		}
+	}
+	if len(win32Links) < 500 {
+		logger.Warn("Suspiciously few The Old New Thing Win32 posts: %d", len(win32Links))
+	}
+	categories = append(
+		[]pristineHistoricalBlogPostCategory{{
+			Name:      "The Old New Win32API",
+			IsTop:     true,
+			PostLinks: win32Links,
+		}},
+		categories...,
+	)
+
+	categorizedLinksSet := NewCanonicalUriSet(nil, curiEqCfg)
+	for _, link := range win32Links {
+		categorizedLinksSet.add(link.Curi())
+	}
+	var uncategorizedLinks []pristineLink
+	for _, link := range links {
+		if !categorizedLinksSet.Contains(link.Link.Curi()) {
+			uncategorizedLinks = append(uncategorizedLinks, link.Link)
+		}
+	}
+	categories = append(categories, pristineHistoricalBlogPostCategory{
+		Name:      "Uncategorized",
+		IsTop:     false,
+		PostLinks: uncategorizedLinks,
+	})
+
+	var extraPostIds []int64
+	for postId := range extraLinksByPostId {
+		extraPostIds = append(extraPostIds, postId)
+	}
+	slices.Sort(extraPostIds) // The extra post ids are actually already reversed, likely after some migration
+	var extraLinks []*pristineMaybeTitledLink
+	for _, postId := range extraPostIds {
+		extraLinks = append(extraLinks, extraLinksByPostId[postId])
+	}
+	mergedLinks := slices.Concat(links, extraLinks)
+
+	return categories, mergedLinks, nil
 }
 
 func generateGwernFeed(rootLink *Link, page *htmlPage, logger Logger) DiscoverFeedsResult {
