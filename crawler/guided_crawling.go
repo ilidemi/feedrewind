@@ -566,6 +566,7 @@ func guidedCrawlHistorical(
 		FeedEntryLinks:          &parsedFeed.EntryLinks,
 		FeedEntryCurisTitlesMap: feedEntryCurisTitlesMap,
 		FeedGenerator:           parsedFeed.Generator,
+		FeedRootLinkCuri:        parsedFeed.RootLink.Curi,
 		CuriEqCfg:               curiEqCfg,
 		AllowedHosts:            allowedHosts,
 		HardcodedError:          nil,
@@ -773,6 +774,7 @@ type guidedCrawlContext struct {
 	FeedEntryLinks          *FeedEntryLinks
 	FeedEntryCurisTitlesMap CanonicalUriMap[MaybeLinkTitle]
 	FeedGenerator           FeedGenerator
+	FeedRootLinkCuri        CanonicalUri
 	CuriEqCfg               *CanonicalEqualityConfig
 	AllowedHosts            map[string]bool
 	HardcodedError          error
@@ -1574,7 +1576,7 @@ func postprocessPartialPagedResult(
 		} else {
 			logger.Info("Categories: %s", categoryCountsString(postCategories))
 		}
-	} else if CanonicalUriEqual(fullResult.MainLnk.Curi(), hardcodedTheOldNewThing, guidedCtx.CuriEqCfg) {
+	} else if CanonicalUriEqual(guidedCtx.FeedRootLinkCuri, hardcodedTheOldNewThing, guidedCtx.CuriEqCfg) {
 		var err error
 		postCategories, links, err =
 			crawlTheOldNewThingCategories(fullResult, guidedCtx, crawlCtx, logger)
@@ -1586,10 +1588,10 @@ func postprocessPartialPagedResult(
 			logger.Info("Links: %d -> %d", len(fullResult.Lnks), len(links))
 		}
 	}
-	if len(fullResult.Lnks) == 0 {
+	if len(links) != 0 {
 		fullResult.Lnks = links
 	}
-	if len(fullResult.PostCategories) == 0 {
+	if len(postCategories) != 0 {
 		fullResult.PostCategories = postCategories
 	}
 
@@ -2162,6 +2164,7 @@ func ExtractSubstackPublicAndTotalCounts(
 		FeedEntryLinks:          &parsedFeed.EntryLinks,
 		FeedEntryCurisTitlesMap: feedEntryCurisTitlesMap,
 		FeedGenerator:           parsedFeed.Generator,
+		FeedRootLinkCuri:        parsedFeed.RootLink.Curi,
 		CuriEqCfg:               curiEqCfg,
 		AllowedHosts:            nil,
 		HardcodedError:          nil,
