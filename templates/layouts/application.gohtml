@@ -132,18 +132,41 @@
       {{block "content" .}}
       {{end}}
     </main>
-    <footer class="flex flex-row items-baseline gap-6 pt-16 flex-wrap">
+    <footer class="flex flex-row justify-between pt-16">
       {{if .Session.IsLoggedIn}}
-        <div class="flex-grow">
-          <a href="mailto:support@feedrewind.com" target="_blank" class="link">support@feedrewind.com</a>
+      <div>
+        <a href="mailto:support@feedrewind.com" target="_blank" class="link">support@feedrewind.com</a>
+      </div>
+      <div class="text-sm flex flex-row gap-x-6 gap-y-3">
+        <a href="mailto:contact@feedrewind.com" target="_blank" class="link-secondary">Contact</a>
+        <a href="/terms" class="link-secondary">Terms</a>
+        <a href="/privacy" class="link-secondary">Privacy</a>
+        <a href="/about" class="link-secondary">About</a>
+        <div class="pt-[0.1875rem] pl-0.5">
+          <a href="https://x.com/feedrewind" target="_blank" class="link-secondary text-gray-600 hover:text-gray-800">
+            <!-- X logo -->
+            <svg class="w-3.5 h-3.5" width="1200" height="1227" viewBox="0 0 1200 1227" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z" fill="currentColor"/>
+            </svg>
+          </a>
         </div>
-      {{end}}
-      <div class="text-sm flex flex-row gap-6">
+      </div>
+      {{else}}
+      <div class="text-sm flex flex-row flex-wrap gap-x-6 gap-y-3">
         <a href="mailto:contact@feedrewind.com" target="_blank" class="link-secondary">Contact</a>
         <a href="/terms" class="link-secondary">Terms</a>
         <a href="/privacy" class="link-secondary">Privacy</a>
         <a href="/about" class="link-secondary">About</a>
       </div>
+      <div class="pt-[0.1875rem]">
+        <a href="https://x.com/feedrewind" target="_blank" class="link-secondary text-gray-600 hover:text-gray-800">
+          <!-- X logo -->
+          <svg class="w-3.5 h-3.5" width="1200" height="1227" viewBox="0 0 1200 1227" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z" fill="currentColor"/>
+          </svg>
+        </a>
+      </div>
+      {{end}}
     </footer>
   </div>
 </div>
