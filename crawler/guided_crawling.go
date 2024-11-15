@@ -1604,9 +1604,9 @@ func postprocessPartialPagedResult(
 	return &postprocessedResult{
 		MainLnk:                 fullResult.MainLnk,
 		Pattern:                 fullResult.Pattern,
-		Links:                   links,
+		Links:                   fullResult.Lnks,
 		IsMatchingFeed:          true,
-		PostCategories:          postCategories,
+		PostCategories:          fullResult.PostCategories,
 		Extra:                   fullResult.Extra,
 		MaybePartialPagedResult: nil,
 	}, nil
