@@ -296,6 +296,18 @@ func SubscriptionAddFeedPath(feedUrl string) string {
 //nolint:exhaustruct
 var MiscellaneousBlogs = []MiscellaneousBlog{
 	{
+		Url:     "https://paulgraham.com/articles.html",
+		FeedUrl: "https://paulgraham.com/articles.html",
+		Name:    "Paul Graham",
+		Tag:     "entrepreneurship",
+	},
+	{
+		Url:     "https://www.bitsaboutmoney.com/",
+		FeedUrl: "https://www.bitsaboutmoney.com/archive/rss/",
+		Name:    "Bits about Money",
+		Tag:     "finance",
+	},
+	{
 		Url:     "https://acoup.blog/",
 		FeedUrl: "https://acoup.blog/feed/",
 		Name:    "A Collection of Unmitigated Pedantry",
@@ -306,12 +318,6 @@ var MiscellaneousBlogs = []MiscellaneousBlog{
 		FeedUrl: "https://pedestrianobservations.com/feed/",
 		Name:    "Pedestrian Observations",
 		Tag:     "urbanism",
-	},
-	{
-		Url:     "https://paulgraham.com/articles.html",
-		FeedUrl: "https://paulgraham.com/articles.html",
-		Name:    "Paul Graham",
-		Tag:     "entrepreneurship",
 	},
 	{
 		Url:     "https://caseyhandmer.wordpress.com/",
