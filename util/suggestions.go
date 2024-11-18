@@ -1292,38 +1292,6 @@ var HmnCategories = []HmnCategory{
 				},
 			},
 			{
-				Url:     "https://maskray.me/",
-				FeedUrl: "https://maskray.me/blog/atom.xml",
-				Name:    "MaskRay",
-				Tags:    []string{"compilers"},
-				LibraryMentions: []HmnLibraryMention{
-					{
-						Author:  "Martins",
-						Message: "Subtitle: How to make my /usr/bin executables 8% smaller?",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "Relative relocations and RELR",
-							Url:   "https://maskray.me/blog/2021-10-31-relative-relocations-and-relr",
-						}},
-					},
-					{
-						Author:  "Martins",
-						Message: ".init, .ctors, and .init_array - how gcc/linux runtime initializes/destructs global C & C++ things:",
-						Posts: []HmnLibraryMentionPost{{
-							Title: ".init, .ctors, and .init_array",
-							Url:   "https://maskray.me/blog/2021-11-07-init-ctors-init-array",
-						}},
-					},
-					{
-						Author:  "Ali A.",
-						Message: "Somewhat an introduction to object file format coff Mach-o and elf",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "Exploring object file formats",
-							Url:   "https://maskray.me/blog/2024-01-14-exploring-object-file-formats",
-						}},
-					},
-				},
-			},
-			{
 				Url:     "https://nigeltao.github.io/",
 				FeedUrl: "https://nigeltao.github.io/feed.xml",
 				Name:    "Nigel Tao's blog",
