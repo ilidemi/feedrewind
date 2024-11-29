@@ -151,6 +151,13 @@ feeds:
 			discoverLogger.Replay(logger)
 			continue
 		}
+		if ignoredFeedUrls[feedUrl] {
+			_, err := pool.Exec(`delete from ignored_feed_urls where feed_url = $1`, feedUrl)
+			if err != nil {
+				return err
+			}
+			logger.Info().Msgf("Expired previously ignored feed: %s", feedUrl)
+		}
 
 		row := pool.QueryRow(`
 			select id, status, start_feed_id from blogs where feed_url = $1 and version = $2
