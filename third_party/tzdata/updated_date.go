@@ -2,4 +2,4 @@
 
 package tzdata
 
-const UpdatedDate = "2024-05-30"
+const UpdatedDate = "2024-12-02"
