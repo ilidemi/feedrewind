@@ -666,8 +666,8 @@ func Blog_InitCrawled(
 	}
 	if len(crawledBlogPosts) < prevPostsCount {
 		tx.Logger().Warn().Msgf(
-			"Blog %d has fewer posts after recrawling: %d -> %d",
-			blogId, prevPostsCount, len(crawledBlogPosts),
+			"Blog %d (%s) has fewer posts after recrawling: %d -> %d",
+			blogId, url, prevPostsCount, len(crawledBlogPosts),
 		)
 	}
 
