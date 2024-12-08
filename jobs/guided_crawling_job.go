@@ -311,26 +311,29 @@ func GuidedCrawlingJob_Perform(
 			return err
 		}
 
-		var slackBlogUrl string
-		switch {
-		case maybeBlogUrl != nil:
-			slackBlogUrl = NotifySlackJob_Escape(*maybeBlogUrl)
-		case maybeStartPage != nil:
-			slackBlogUrl = NotifySlackJob_Escape(maybeStartPage.Url)
-		default:
-			slackBlogUrl = NotifySlackJob_Escape(startFeed.Url)
-		}
-		slackBlogName := NotifySlackJob_Escape(blogName)
-		slackVerb := "succeeded"
-		if !crawlSucceeded {
-			slackVerb = "failed"
-		}
-		slackText := fmt.Sprintf(
-			"Crawling *<%s|%s>* %s in %.1f seconds", slackBlogUrl, slackBlogName, slackVerb, elapsedSeconds,
-		)
-		err = NotifySlackJob_PerformNow(tx, slackText)
-		if err != nil {
-			return err
+		if !(util.SuggestionFeedUrls[startFeed.Url] && crawlSucceeded) {
+			var slackBlogUrl string
+			switch {
+			case maybeBlogUrl != nil:
+				slackBlogUrl = NotifySlackJob_Escape(*maybeBlogUrl)
+			case maybeStartPage != nil:
+				slackBlogUrl = NotifySlackJob_Escape(maybeStartPage.Url)
+			default:
+				slackBlogUrl = NotifySlackJob_Escape(startFeed.Url)
+			}
+			slackBlogName := NotifySlackJob_Escape(blogName)
+			slackVerb := "succeeded"
+			if !crawlSucceeded {
+				slackVerb = "failed"
+			}
+			slackText := fmt.Sprintf(
+				"Crawling *<%s|%s>* %s in %.1f seconds",
+				slackBlogUrl, slackBlogName, slackVerb, elapsedSeconds,
+			)
+			err = NotifySlackJob_PerformNow(tx, slackText)
+			if err != nil {
+				return err
+			}
 		}
 
 		if crawlCtx.TitleFetchDuration > 0 {
