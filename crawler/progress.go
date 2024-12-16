@@ -100,6 +100,17 @@ func (l *ProgressLogger) LogAndSavePostprocessingResetCount() error {
 }
 
 // The error can only be ErrCrawlCanceled
+func (l *ProgressLogger) LogAndSaveResetCount() error {
+	err := l.ProgressSaver.SaveCount(nil)
+	if err != nil {
+		return err
+	}
+	isPostprocessing := false
+	l.trackRegressions(true, &isPostprocessing, true, nil, true, nil)
+	return nil
+}
+
+// The error can only be ErrCrawlCanceled
 func (l *ProgressLogger) LogAndSavePostprocessingCounts(fetchedCount, remainingCount int) error {
 	l.Status += fmt.Sprintf("F%d", remainingCount)
 	err := l.ProgressSaver.SaveStatusAndCount(l.Status, &fetchedCount)

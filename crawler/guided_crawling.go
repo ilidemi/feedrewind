@@ -575,7 +575,7 @@ func guidedCrawlHistorical(
 	result, err := guidedCrawlFetchLoop(
 		[]*guidedCrawlQueue{&archivesQueue, &mainPageQueue}, nil, 1, &guidedCtx, crawlCtx, logger,
 	)
-	if errors.Is(err, ErrCrawlCanceled) {
+	if errors.Is(err, ErrCrawlCanceled) || errors.Is(err, ErrBlogTooLong) {
 		return nil, err
 	} else if err == nil {
 		if len(result.Links) >= 11 {
@@ -667,7 +667,7 @@ func guidedCrawlHistorical(
 		[]*guidedCrawlQueue{&archivesQueue, &mainPageQueue}, result, 2, &guidedCtx, crawlCtx, logger,
 	)
 	phase2Ok := err == nil
-	if errors.Is(err, ErrCrawlCanceled) {
+	if errors.Is(err, ErrCrawlCanceled) || errors.Is(err, ErrBlogTooLong) {
 		return nil, err
 	} else if phase2Ok {
 		if len(result.Links) >= 11 {
@@ -758,7 +758,7 @@ func guidedCrawlHistorical(
 		[]*guidedCrawlQueue{&archivesQueue, &mainPageQueue, &othersQueue}, result, 3, &guidedCtx, crawlCtx,
 		logger,
 	)
-	if errors.Is(err, ErrCrawlCanceled) {
+	if errors.Is(err, ErrCrawlCanceled) || errors.Is(err, ErrBlogTooLong) {
 		return nil, err
 	} else if err == nil {
 		logger.Info("Phase 3 succeeded")
@@ -1067,7 +1067,7 @@ func guidedCrawlFetchLoop(
 	if errors.Is(err, ErrCrawlCanceled) {
 		return nil, err
 	} else if err != nil {
-		logger.Info("Guided crawl loop finished (phase %d), no result", phaseNumber)
+		logger.Info("Guided crawl loop finished (phase %d), no result (%v)", phaseNumber, err)
 		return nil, err
 	}
 
@@ -1205,7 +1205,7 @@ func postprocessResults(
 			panic("Unknown result type")
 		}
 
-		if errors.Is(ppErr, ErrCrawlCanceled) {
+		if errors.Is(ppErr, ErrCrawlCanceled) || errors.Is(ppErr, ErrBlogTooLong) {
 			return nil, ppErr
 		} else if ppErr != nil {
 			logger.Info("Postprocessing failed for %s, continuing", result.mainLink().Url)
@@ -1222,7 +1222,7 @@ func postprocessResults(
 				ppResult, err = postprocessPartialPagedResult(
 					ppResult.MaybePartialPagedResult, guidedCtx, crawlCtx, logger,
 				)
-				if errors.Is(err, ErrCrawlCanceled) {
+				if errors.Is(err, ErrCrawlCanceled) || errors.Is(err, ErrBlogTooLong) {
 					return nil, err
 				} else if err != nil {
 					logger.Info("Postprocessing failed for %s, continuing", result.mainLink().Url)
@@ -1522,6 +1522,8 @@ func postprocessPage1Result(
 	return nil, errPostprocessingFailed
 }
 
+var ErrBlogTooLong = errors.New("blog too long")
+
 func postprocessPartialPagedResult(
 	partialResult *partialPagedResult, guidedCtx *guidedCrawlContext, crawlCtx *CrawlContext, logger Logger,
 ) (*postprocessedResult, error) {
@@ -1562,6 +1564,10 @@ func postprocessPartialPagedResult(
 		}
 		if fullResult != nil {
 			break
+		}
+
+		if partialResult.SpeculativeCount() > 10000 {
+			return nil, ErrBlogTooLong
 		}
 	}
 
