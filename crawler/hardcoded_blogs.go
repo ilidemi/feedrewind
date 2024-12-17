@@ -56,7 +56,7 @@ var HardcodedOvercomingBiasFeed CanonicalUri
 var hardcodedPaulGraham CanonicalUri
 var HardcodedSlateStarCodexFeed string
 var hardcodedTheOldNewThing CanonicalUri
-var hardcodedTheOldNewThingUri *neturl.URL
+var HardcodedTheOldNewThingUri *neturl.URL
 var HardcodedTheOldNewThingFeed string
 var hardcodedTheOldNewThingWin32Api *Link
 var hardcodedTransformerCircuits CanonicalUri
@@ -112,7 +112,7 @@ func init() {
 	hardcodedPaulGraham = hardcodedMustParse("https://paulgraham.com/articles.html")
 	HardcodedSlateStarCodexFeed = "https://slatestarcodex.com/feed/"
 	hardcodedTheOldNewThing = hardcodedMustParse("https://devblogs.microsoft.com/oldnewthing/")
-	hardcodedTheOldNewThingUri, err = neturl.Parse("https://devblogs.microsoft.com/oldnewthing/")
+	HardcodedTheOldNewThingUri, err = neturl.Parse("https://devblogs.microsoft.com/oldnewthing/")
 	if err != nil {
 		panic(err)
 	}
