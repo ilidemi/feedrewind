@@ -48,6 +48,7 @@ var HardcodedDontWorryAboutTheVaseFeed CanonicalUri
 var hardcodedFactorio CanonicalUri
 var hardcodedGwern CanonicalUri
 var hardcodedHmnFishbowl CanonicalUri
+var hardcodedInkAndSwitchFeed CanonicalUri
 var hardcodedJuliaEvans CanonicalUri
 var hardcodedKalzumeus CanonicalUri
 var hardcodedMrMoneyMustache CanonicalUri
@@ -102,6 +103,7 @@ func init() {
 	hardcodedCryptographyEngineeringAll = hardcodedMustParse(cryptographyEngineering + "/all-posts/")
 	hardcodedFactorio = hardcodedMustParse("https://www.factorio.com/blog/")
 	hardcodedHmnFishbowl = hardcodedMustParse("https://handmade.network/fishbowl")
+	hardcodedInkAndSwitchFeed = hardcodedMustParse("https://www.inkandswitch.com/index.xml")
 	hardcodedGwern = hardcodedMustParse("https://gwern.net/")
 	hardcodedJuliaEvans = hardcodedMustParse("https://jvns.ca")
 	hardcodedKalzumeus = hardcodedMustParse("https://www.kalzumeus.com/archive/")
@@ -608,6 +610,20 @@ func extractGwern(
 		PostCategories: categories,
 		Extra:          nil,
 	}, nil
+}
+
+func extractInkAndSwitch(links []*maybeTitledLink, logger Logger) []*maybeTitledLink {
+	var result []*maybeTitledLink
+	unconfs := 0
+	for _, link := range links {
+		if strings.Contains(link.Curi.Path, "-unconf-") {
+			unconfs++
+			continue
+		}
+		result = append(result, link)
+	}
+	logger.Info("Filtered out %d unconfs", unconfs)
+	return result
 }
 
 func extractJuliaEvansCategories(
