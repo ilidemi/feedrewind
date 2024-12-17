@@ -876,8 +876,8 @@ func (c *RobotsClient) Throttle(ctx context.Context, uri *url.URL) error {
 		if c.MaybeGroup != nil && c.MaybeGroup.CrawlDelay > time.Second {
 			crawlDelay = c.MaybeGroup.CrawlDelay
 		}
-		if uri.Host == hardcodedTheOldNewThingUri.Host &&
-			strings.HasPrefix(uri.Path, hardcodedTheOldNewThingUri.Path) {
+		if uri.Host == HardcodedTheOldNewThingUri.Host &&
+			strings.HasPrefix(uri.Path, HardcodedTheOldNewThingUri.Path) {
 			// sorry Microsoft
 			crawlDelay = 500 * time.Millisecond
 		}

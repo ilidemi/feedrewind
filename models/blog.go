@@ -3,7 +3,7 @@ package models
 import (
 	"errors"
 	"fmt"
-	"net/url"
+	neturl "net/url"
 	"strings"
 	"time"
 
@@ -210,7 +210,7 @@ func Blog_CreateOrUpdate(
 		return nil, err
 	}
 
-	finalUri, err := url.Parse(startFeed.Url)
+	finalUri, err := neturl.Parse(startFeed.Url)
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
@@ -664,7 +664,12 @@ func Blog_InitCrawled(
 	if err != nil {
 		return updatedAt, err
 	}
-	if len(crawledBlogPosts) < prevPostsCount {
+
+	uri, err := neturl.Parse(url)
+	oldNewThingSkipWarning := err == nil &&
+		uri.Host == crawler.HardcodedTheOldNewThingUri.Host &&
+		len(crawledBlogPosts) > 6000
+	if len(crawledBlogPosts) < prevPostsCount && !oldNewThingSkipWarning {
 		tx.Logger().Warn().Msgf(
 			"Blog %d (%s) has fewer posts after recrawling: %d -> %d",
 			blogId, url, prevPostsCount, len(crawledBlogPosts),
