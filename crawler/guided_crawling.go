@@ -232,10 +232,11 @@ func GuidedCrawl(
 	var historicalResult *HistoricalResult
 	var historicalMaybeTitledLinks []*maybeTitledLink
 	var historicalError error
-	if parsedFeed.EntryLinks.Length <= 50 ||
-		parsedFeed.EntryLinks.Length%100 == 0 ||
-		CanonicalUriEqual(feedLink.Curi, HardcodedDanLuuFeed, &curiEqCfg) {
-
+	shouldUseFeed := (parsedFeed.EntryLinks.Length > 50 &&
+		parsedFeed.EntryLinks.Length%100 != 0 &&
+		!CanonicalUriEqual(feedLink.Curi, HardcodedDanLuuFeed, &curiEqCfg)) ||
+		CanonicalUriEqual(feedLink.Curi, hardcodedInkAndSwitchFeed, &curiEqCfg)
+	if !shouldUseFeed {
 		var postprocessedResult *postprocessedResult
 		if parsedFeed.Generator != FeedGeneratorTumblr {
 			postprocessedResult, historicalError = guidedCrawlHistorical(
@@ -297,7 +298,13 @@ func GuidedCrawl(
 			PostCategories:         PristineHistoricalBlogPostCategoriesUnwrap(postCategories),
 			Extra:                  postCategoriesExtra,
 		}
-		historicalMaybeTitledLinks = parsedFeed.EntryLinks.ToMaybeTitledSlice()
+
+		if CanonicalUriEqual(feedLink.Curi, hardcodedInkAndSwitchFeed, &curiEqCfg) {
+			historicalMaybeTitledLinks =
+				extractInkAndSwitch(parsedFeed.EntryLinks.ToMaybeTitledSlice(), logger)
+		} else {
+			historicalMaybeTitledLinks = parsedFeed.EntryLinks.ToMaybeTitledSlice()
+		}
 	}
 
 	if historicalResult != nil {
