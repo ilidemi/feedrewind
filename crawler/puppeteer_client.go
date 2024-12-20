@@ -108,6 +108,7 @@ func (c *PuppeteerClientImpl) Fetch(
 		maxScrollTime = extendedMaxScrollTime
 	}
 	maxInitialWaitTime := 15 * time.Second
+	logger.Info("Max initial wait time: %v, max scroll time: %v", maxInitialWaitTime, maxScrollTime)
 
 	errorsCount := 0
 	for {
