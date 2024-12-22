@@ -122,17 +122,16 @@ func (c *PuppeteerClientImpl) Fetch(
 			page := rawPage.Timeout(maxInitialWaitTime + maxScrollTime + 10*time.Second)
 
 			hijackRouter := page.HijackRequests()
-			err = hijackRouter.Add("*", proto.NetworkResourceTypeImage, func(h *rod.Hijack) {
-				h.Response.Fail(proto.NetworkErrorReasonBlockedByClient)
-			})
-			if err != nil {
-				return nil, oops.Wrap(err)
+			blockedResourceTypes := []proto.NetworkResourceType{
+				proto.NetworkResourceTypeImage, proto.NetworkResourceTypeMedia, proto.NetworkResourceTypeFont,
 			}
-			err = hijackRouter.Add("*", proto.NetworkResourceTypeFont, func(h *rod.Hijack) {
-				h.Response.Fail(proto.NetworkErrorReasonBlockedByClient)
-			})
-			if err != nil {
-				return nil, oops.Wrap(err)
+			for _, blockedResourceType := range blockedResourceTypes {
+				err := hijackRouter.Add("*", blockedResourceType, func(h *rod.Hijack) {
+					h.Response.Fail(proto.NetworkErrorReasonBlockedByClient)
+				})
+				if err != nil {
+					return nil, oops.Wrap(err)
+				}
 			}
 			go hijackRouter.Run()
 			defer func() {
