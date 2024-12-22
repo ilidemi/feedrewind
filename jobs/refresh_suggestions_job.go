@@ -152,7 +152,7 @@ feeds:
 			continue
 		}
 		if ignoredFeedUrls[feedUrl] {
-			_, err := pool.Exec(`delete from ignored_feed_urls where feed_url = $1`, feedUrl)
+			_, err := pool.Exec(`delete from ignored_suggestion_feeds where feed_url = $1`, feedUrl)
 			if err != nil {
 				return err
 			}
