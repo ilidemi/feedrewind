@@ -1,0 +1,9 @@
+{
+    "db_user": "postgres",
+    "db_password": null,
+    "db_host": "127.0.0.1",
+    "db_port": 5432,
+    "db_name": "feedrewind_development",
+    "session_hash_key": "de63fb972fdcc903958f2a91f1860a407cdfd375556f8ffec551e070c52ed7a0f69987f6eeb8d82e44f099d3580f1d0f1fe6088197e55b202427d971d0cf03a8",
+    "session_block_key": "78c428769a7d39b86ffa804e9bfb8711980c7a860dd5e0bcc06cd82dcf4b3d1d"
+}

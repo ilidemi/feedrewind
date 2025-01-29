@@ -40,6 +40,10 @@ func NotifySlackJob_PerformNow(qu pgw.Queryable, text string) error {
 func NotifySlackJob_Perform(ctx context.Context, pool *pgw.Pool, text string) error {
 	logger := pool.Logger()
 	webhookUrl := config.Cfg.SlackWebhook
+	if webhookUrl == config.DemoValue {
+		logger.Info().Msg("Skipping Slack notifications in demo mode")
+		return nil
+	}
 
 	body, err := json.Marshal(map[string]string{
 		"text": text,

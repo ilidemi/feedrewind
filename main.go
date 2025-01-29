@@ -74,6 +74,41 @@ func main() {
 			}
 		},
 	})
+	rootCmd.AddCommand(&cobra.Command{
+		Use: "demo-seed-db",
+		Run: func(_ *cobra.Command, _ []string) {
+			conn, err := db.RootPool.AcquireBackground()
+			if err != nil {
+				panic(err)
+			}
+			defer conn.Release()
+
+			tx, err := conn.Begin()
+			if err != nil {
+				panic(err)
+			}
+			_, err = tx.Exec(`
+				insert into pricing_plans (id, default_offer_id)
+				values ('free', 'free_demo'), ('supporter', 'supporter_demo'), ('patron', 'patron_demo')
+			`)
+			if err != nil {
+				panic(err)
+			}
+			_, err = tx.Exec(`
+				insert into pricing_offers (id, monthly_rate, yearly_rate, plan_id)
+				values ('free_demo', '$0.00', '$0.00', 'free'),
+					('supporter_demo', '$1.00', '$10.00', 'supporter'),
+					('patron_demo', '$10.00', '$100.00', 'patron')
+			`)
+			if err != nil {
+				panic(err)
+			}
+			err = tx.Commit()
+			if err != nil {
+				panic(err)
+			}
+		},
+	})
 
 	if err := rootCmd.Execute(); err != nil {
 		panic(err)

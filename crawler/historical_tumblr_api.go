@@ -20,11 +20,14 @@ func getTumblrApiHistorical(
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Get Tumblr historical start")
 
+	tumblrApiKey := config.Cfg.TumblrApiKey
+	if tumblrApiKey == config.DemoValue {
+		return nil, oops.New("Tumblr API is disabled in demo mode")
+	}
+
 	var links []*pristineMaybeTitledLink
 	var timestamps []int64
-	url := fmt.Sprintf(
-		"https://api.tumblr.com/v2/blog/%s/posts?api_key=%s", hostname, config.Cfg.TumblrApiKey,
-	)
+	url := fmt.Sprintf("https://api.tumblr.com/v2/blog/%s/posts?api_key=%s", hostname, tumblrApiKey)
 	var blogLink *pristineLink
 	var blogTitle string
 	var expectedCount int
@@ -158,7 +161,7 @@ func getTumblrApiHistorical(
 			break
 		}
 
-		url = fmt.Sprintf("https://api.tumblr.com%s&api_key=%s", nextUrl, config.Cfg.TumblrApiKey)
+		url = fmt.Sprintf("https://api.tumblr.com%s&api_key=%s", nextUrl, tumblrApiKey)
 	}
 
 	areTimestampsSorted := true
