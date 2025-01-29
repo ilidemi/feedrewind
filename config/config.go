@@ -27,6 +27,7 @@ type Config struct {
 	StripeCustomBlogProductId string
 	StripeCustomBlogPriceId   string
 	StripeCustomBlogPrice     string
+	TumblrApiKey              string
 	AdminUserIds              map[int64]bool
 }
 

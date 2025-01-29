@@ -64,6 +64,7 @@ func productionConfig() Config {
 		StripeCustomBlogProductId: "REDACTED_STRIPE_CUSTOM_BLOG_PRODUCT_ID",
 		StripeCustomBlogPriceId:   "REDACTED_STRIPE_CUSTOM_BLOG_PRICE_ID",
 		StripeCustomBlogPrice:     "REDACTED_STRIPE_CUSTOM_BLOG_PRICE",
+		TumblrApiKey:              "REDACTED_TUMBLR_API_KEY",
 		AdminUserIds: map[int64]bool{
 			6835322936850076956: true, // belk94@gmail.com
 			6862710086337347875: true, // test@test.com
