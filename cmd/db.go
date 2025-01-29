@@ -118,7 +118,7 @@ func dumpStructure() {
 	}()
 
 	fmt.Fprintln(file)
-	fmt.Fprintln(file, `INSERT INTO "schema_migrations" (version) VALUES`)
+	fmt.Fprintln(file, `INSERT INTO public.schema_migrations (version) VALUES`)
 	for i, version := range versions {
 		sep := ','
 		if i == len(versions)-1 {

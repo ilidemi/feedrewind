@@ -31,6 +31,10 @@ func GetPostmarkClientAndMaybeMetadata(qu pgw.Queryable) (*postmark.Client, *str
 		apiToken = config.Cfg.PostmarkApiToken
 	}
 
+	if apiToken == config.DemoValue {
+		panic("Can't send emails in demo mode")
+	}
+
 	client := postmark.NewClient(apiToken, "")
 	return client, maybeTestMetadata
 }

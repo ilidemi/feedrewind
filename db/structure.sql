@@ -2314,7 +2314,7 @@ ALTER TABLE ONLY public.pricing_offers
 --
 
 ALTER TABLE ONLY public.pricing_plans
-    ADD CONSTRAINT pricing_plans_default_offer_id_fkey FOREIGN KEY (default_offer_id) REFERENCES public.pricing_offers(id);
+    ADD CONSTRAINT pricing_plans_default_offer_id_fkey FOREIGN KEY (default_offer_id) REFERENCES public.pricing_offers(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
@@ -2338,7 +2338,7 @@ ALTER TABLE ONLY public.users
 --
 
 
-INSERT INTO "schema_migrations" (version) VALUES
+INSERT INTO public.schema_migrations (version) VALUES
 ('20201211221209'),
 ('20201211235524'),
 ('20201211235717'),
@@ -2542,4 +2542,5 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20241007122317'),
 ('20241016184250'),
 ('20241018150103'),
-('20241018153403');
+('20241018153403'),
+('20250129143507');

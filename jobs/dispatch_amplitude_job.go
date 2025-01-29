@@ -45,6 +45,12 @@ func DispatchAmplitudeJob_PerformAt(qu pgw.Queryable, runAt schedule.Time) error
 
 func DispatchAmplitudeJob_Perform(ctx context.Context, pool *pgw.Pool, isManual bool) error {
 	logger := pool.Logger()
+	amplitudeApiKey := config.Cfg.AmplitudeApiKey
+	if amplitudeApiKey == config.DemoValue {
+		logger.Info().Msg("Skipping Amplitude dispatch in demo mode")
+		return nil
+	}
+
 	eventsToDispatch, err := models.ProductEvent_GetNotDispatched(pool)
 	if err != nil {
 		return err
@@ -79,7 +85,7 @@ func DispatchAmplitudeJob_Perform(ctx context.Context, pool *pgw.Pool, isManual 
 		}
 
 		body := map[string]any{
-			"api_key": config.Cfg.AmplitudeApiKey,
+			"api_key": amplitudeApiKey,
 			"events": []map[string]any{{
 				"user_id":          productEvent.ProductUserId,
 				"event_type":       productEvent.EventType,

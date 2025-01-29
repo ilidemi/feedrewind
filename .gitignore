@@ -7,3 +7,7 @@ tmp/
 static/tailwind.css
 trace.out
 cpuprofile
+
+.cache_ggshield
+config/wsl_ip.txt
+config/devbox.json

@@ -36,6 +36,12 @@ func productionConfig() Config {
 		panic(err)
 	}
 
+	adminUserIdStr := mustLookupEnv("ADMIN_USER_ID")
+	adminUserId, err := strconv.ParseInt(adminUserIdStr, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+
 	return Config{
 		Env:  EnvProduction,
 		Dyno: mustLookupEnv("DYNO"),
@@ -50,7 +56,7 @@ func productionConfig() Config {
 		RootUrl:                   "https://feedrewind.com",
 		SessionHashKey:            sessionHashKey,
 		SessionBlockKey:           sessionBlockKey,
-		AmplitudeApiKey:           "REDACTED_AMPLITUDE_API_KEY",
+		AmplitudeApiKey:           mustLookupEnv("AMPLITUDE_API_KEY"),
 		AwsAccessKey:              mustLookupEnv("AWS_ACCESS_KEY"),
 		AwsSecretAccessKey:        mustLookupEnv("AWS_SECRET_ACCESS_KEY"),
 		PostmarkApiSandboxToken:   "",
@@ -59,15 +65,14 @@ func productionConfig() Config {
 		SlackWebhook:              mustLookupEnv("SLACK_WEBHOOK"),
 		StripeApiKey:              mustLookupEnv("STRIPE_KEY"),
 		StripeWebhookSecret:       mustLookupEnv("STRIPE_WEBHOOK_SECRET"),
-		StripeSupporterConfigId:   "REDACTED_STRIPE_SUPPORTER_CONFIG_ID",
-		StripePatronConfigId:      "REDACTED_STRIPE_PATRON_CONFIG_ID",
-		StripeCustomBlogProductId: "REDACTED_STRIPE_CUSTOM_BLOG_PRODUCT_ID",
-		StripeCustomBlogPriceId:   "REDACTED_STRIPE_CUSTOM_BLOG_PRICE_ID",
-		StripeCustomBlogPrice:     "REDACTED_STRIPE_CUSTOM_BLOG_PRICE",
-		TumblrApiKey:              "REDACTED_TUMBLR_API_KEY",
+		StripeSupporterConfigId:   mustLookupEnv("STRIPE_SUPPORTER_CONFIG_ID"),
+		StripePatronConfigId:      mustLookupEnv("STRIPE_PATRON_CONFIG_ID"),
+		StripeCustomBlogProductId: mustLookupEnv("STRIPE_CUSTOM_BLOG_PRODUCT_ID"),
+		StripeCustomBlogPriceId:   mustLookupEnv("STRIPE_CUSTOM_BLOG_PRICE_ID"),
+		StripeCustomBlogPrice:     mustLookupEnv("STRIPE_CUSTOM_BLOG_PRICE"),
+		TumblrApiKey:              mustLookupEnv("TUMBLR_API_KEY"),
 		AdminUserIds: map[int64]bool{
-			6835322936850076956: true, // belk94@gmail.com
-			6862710086337347875: true, // test@test.com
+			adminUserId: true,
 		},
 	}
 }
