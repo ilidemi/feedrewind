@@ -82,6 +82,7 @@ func developmentConfig() Config {
 		StripeCustomBlogProductId: "REDACTED_DEV_STRIPE_CUSTOM_BLOG_PRODUCT_ID",
 		StripeCustomBlogPriceId:   "REDACTED_DEV_STRIPE_CUSTOM_BLOG_PRICE_ID",
 		StripeCustomBlogPrice:     "REDACTED_STRIPE_CUSTOM_BLOG_PRICE",
+		TumblrApiKey:              "REDACTED_TUMBLR_API_KEY",
 		AdminUserIds:              nil,
 	}
 }

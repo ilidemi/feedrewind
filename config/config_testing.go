@@ -34,6 +34,7 @@ func testingConfig() Config {
 		StripeCustomBlogProductId: devCfg.StripeCustomBlogProductId,
 		StripeCustomBlogPriceId:   devCfg.StripeCustomBlogPriceId,
 		StripeCustomBlogPrice:     devCfg.StripeCustomBlogPrice,
+		TumblrApiKey:              devCfg.TumblrApiKey,
 		AdminUserIds:              nil,
 	}
 }

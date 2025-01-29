@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"feedrewind.com/config"
 	"feedrewind.com/oops"
 
 	"github.com/goccy/go-json"
@@ -18,11 +19,12 @@ func getTumblrApiHistorical(
 ) (*postprocessedResult, error) {
 	progressLogger := crawlCtx.ProgressLogger
 	logger.Info("Get Tumblr historical start")
-	apiKey := "REDACTED_TUMBLR_API_KEY"
 
 	var links []*pristineMaybeTitledLink
 	var timestamps []int64
-	url := fmt.Sprintf("https://api.tumblr.com/v2/blog/%s/posts?api_key=%s", hostname, apiKey)
+	url := fmt.Sprintf(
+		"https://api.tumblr.com/v2/blog/%s/posts?api_key=%s", hostname, config.Cfg.TumblrApiKey,
+	)
 	var blogLink *pristineLink
 	var blogTitle string
 	var expectedCount int
@@ -156,7 +158,7 @@ func getTumblrApiHistorical(
 			break
 		}
 
-		url = fmt.Sprintf("https://api.tumblr.com%s&api_key=%s", nextUrl, apiKey)
+		url = fmt.Sprintf("https://api.tumblr.com%s&api_key=%s", nextUrl, config.Cfg.TumblrApiKey)
 	}
 
 	areTimestampsSorted := true
