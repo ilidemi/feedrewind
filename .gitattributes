@@ -1,8 +1,8 @@
 assets/legal/*.html linguist-vendored
-notes/* linguist-documentation
 cmd/crawl/*.html linguist-documentation
 crawler/rubydate/zonetab.go linguist-vendored
 cmd/timezones/raw-time-zones.json linguist-vendored
+notes/**/* linguist-documentation
 templates/layouts/partial_rails_ujs.gohtml linguist-vendored
 templates/layouts/partial_wicg_inert.gohtml linguist-vendored
 third_party/* linguist-vendored
