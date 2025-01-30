@@ -6,6 +6,8 @@ If video works better for you, here's an [overview](https://youtu.be/Gyodk7r9F60
 
 The code is published for demo purposes. You can crawl blogs, create free accounts and have feeds come out as expected when running locally. Like in a typical SaaS, full functionality depends on integrations with other services which need more involved setup.
 
+The app was initially built in Ruby on Rails then rewritten to Go for performance reasons. The Rails version can be found [here](https://github.com/ilidemi/feedrewind-rails), for the sake of comparison. The codebases correspond roughly file-for-file.
+
 ## Architecture
 
 Hosted app has a typical PaaS structure with a `web` and a `worker` role. About a third of the code is a [crawler](https://github.com/ilidemi/feedrewind/tree/master/crawler) that can scan an arbitrary blog and extract chronologically ordered list of posts from it in a close to minimal number of requests. When the crawler runs in a worker, the progress is communicated to web instances via Postgres listen/notify and streamed to the user via a websocket. When multiple users request the same blog at the same time, they get assigned to the same crawling job and get to watch the same progress bar.
