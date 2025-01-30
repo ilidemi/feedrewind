@@ -8,7 +8,7 @@ The code is published for demo purposes. You can crawl blogs, create free accoun
 
 ## Architecture
 
-Hosted app has a typical PaaS structure with a `web` and a `worker` role. About a third of the code is a [crawler](https://github.com/ilidemi/feedrewind/tree/master/crawler/rubydate) that can scan an arbitrary blog and extract chronologically ordered list of posts from it in a close to minimal number of requests. When the crawler runs in a worker, the progress is communicated to web instances via Postgres listen/notify and streamed to the user via a websocket. When multiple users request the same blog at the same time, they get assigned to the same crawling job and get to watch the same progress bar.
+Hosted app has a typical PaaS structure with a `web` and a `worker` role. About a third of the code is a [crawler](https://github.com/ilidemi/feedrewind/tree/master/crawler) that can scan an arbitrary blog and extract chronologically ordered list of posts from it in a close to minimal number of requests. When the crawler runs in a worker, the progress is communicated to web instances via Postgres listen/notify and streamed to the user via a websocket. When multiple users request the same blog at the same time, they get assigned to the same crawling job and get to watch the same progress bar.
 
 Iterating on crawler heuristics is aided by an [admin tool](https://github.com/ilidemi/feedrewind/blob/master/cmd/crawl/crawl.go) that runs it in parallel on a known set of blogs (not included in the repo), compares the results with manually vetted ground truth and produces a report [like this one](https://github.com/ilidemi/feedrewind/blob/master/cmd/crawl/example_report.html).
 
