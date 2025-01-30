@@ -10,7 +10,7 @@ The code is published for demo purposes. You can crawl blogs, create free accoun
 
 Hosted app has a typical PaaS structure with a `web` and a `worker` role. About a third of the code is a [crawler](https://github.com/ilidemi/feedrewind/tree/master/crawler) that can scan an arbitrary blog and extract chronologically ordered list of posts from it in a close to minimal number of requests. When the crawler runs in a worker, the progress is communicated to web instances via Postgres listen/notify and streamed to the user via a websocket. When multiple users request the same blog at the same time, they get assigned to the same crawling job and get to watch the same progress bar.
 
-Iterating on crawler heuristics is aided by an [admin tool](https://github.com/ilidemi/feedrewind/blob/master/cmd/crawl/crawl.go) that runs it in parallel on a known set of blogs (not included in the repo), compares the results with manually vetted ground truth and produces a report [like this one](https://github.com/ilidemi/feedrewind/blob/master/cmd/crawl/example_report.html).
+Iterating on crawler heuristics is aided by an [admin tool](https://github.com/ilidemi/feedrewind/blob/master/cmd/crawl/crawl.go) that runs it in parallel on a known set of blogs (not included in the repo), compares the results with manually vetted ground truth and produces a report [like this one](https://html-preview.github.io/?url=https://github.com/ilidemi/feedrewind/blob/master/cmd/crawl/example_report.html).
 
 Users are expected to come from any timezone and still receive their feeds in the morning - the list of timezones is vendored from Go standard library and augmented with human-friendly names from [vvo/tzdb](https://github.com/vvo/tzdb), making sure the two sources match.
 
