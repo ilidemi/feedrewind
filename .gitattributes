@@ -1,3 +1,4 @@
+assets/legal/*.html linguist-vendored
 cmd/crawl/*.html linguist-vendored
 crawler/rubydate/zonetab.go linguist-vendored
 cmd/timezones/raw-time-zones.json linguist-vendored
