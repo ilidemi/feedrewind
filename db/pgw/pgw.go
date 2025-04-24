@@ -597,10 +597,10 @@ func WithDBDuration(r *http.Request) *http.Request {
 }
 
 var fromSubscriptionsRegex *regexp.Regexp
-var ErrDontUseSubscriptions = errors.New("Use of subscriptions table is deprecated. Use subscriptions_with_discarded or subscriptions_without_discarded instead.")
+var ErrDontUseSubscriptions = errors.New("use of subscriptions table is deprecated. Use subscriptions_with_discarded or subscriptions_without_discarded instead")
 var CheckSubscriptionsUsage = true
 var fromUsersRegex *regexp.Regexp
-var ErrDontUseUsers = errors.New("Use of users table is deprecated. Use users_with_discarded or users_without_discarded instead.")
+var ErrDontUseUsers = errors.New("use of users table is deprecated. Use users_with_discarded or users_without_discarded instead")
 var CheckUsersUsage = true
 
 func init() {

@@ -933,7 +933,7 @@ func generateGwernFeed(rootLink *Link, page *htmlPage, logger Logger) DiscoverFe
 					logger.Error("Couldn't parse gwern url: %v", err)
 					return &DiscoverFeedsErrorBadFeed{}
 				}
-				uri := page.pageBase.FetchUri.ResolveReference(relUri)
+				uri := page.FetchUri.ResolveReference(relUri)
 				urls = append(urls, uri.String())
 				titles = append(titles, htmlquery.InnerText(element))
 				break

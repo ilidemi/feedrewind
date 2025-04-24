@@ -509,7 +509,7 @@ func trySortReverseChronological(
 	items []feedEntry, logger Logger,
 ) (sortedItems []feedEntry, areDatesCertain bool) {
 	for _, item := range items {
-		if item.pubDate == (time.Time{}) { //nolint:exhaustruct
+		if item.pubDate == (time.Time{}) { //nolint:exhaustruct,staticcheck
 			logger.Info("Dates are missing")
 			return items, false
 		}

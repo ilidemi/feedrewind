@@ -75,7 +75,7 @@ func ExtractNewPostsFromFeed(
 				if i > 0 {
 					fmt.Fprint(&bucketSb, " ")
 				}
-				fmt.Fprint(&bucketSb, link.maybeTitledLink.Url)
+				fmt.Fprint(&bucketSb, link.Url)
 			}
 			fmt.Fprintln(&bucketSb, "]")
 			logger.Info(bucketSb.String())

@@ -215,7 +215,7 @@ func migrate() {
 	for _, migration := range migrations.All {
 		version := migration.Version()
 		if version <= latestDbVersion && !dbVersions[version] {
-			panic(fmt.Errorf("Old migration is not in db: %s", version))
+			panic(fmt.Errorf("old migration is not in db: %s", version))
 		}
 	}
 
@@ -299,7 +299,7 @@ func rollback() {
 			panic(err)
 		}
 		if tag.RowsAffected() != 1 {
-			panic(fmt.Errorf("Expected to delete a single row, got %d", tag.RowsAffected()))
+			panic(fmt.Errorf("expected to delete a single row, got %d", tag.RowsAffected()))
 		}
 		if err := tx.Commit(); err != nil {
 			panic(err)
@@ -314,7 +314,7 @@ func rollback() {
 	}
 
 	if !found {
-		panic(fmt.Errorf("Migration version %s not found in code", maxVersion))
+		panic(fmt.Errorf("migration version %s not found in code", maxVersion))
 	}
 }
 

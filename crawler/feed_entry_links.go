@@ -227,10 +227,7 @@ func (l *FeedEntryLinks) sequenceSuffixMatch(
 	startBucket := l.LinkBuckets[startBucketIndex]
 	var startBucketMatchingLinks []FeedEntryLink
 	seqOffset := 0
-	for {
-		if seqOffset >= len(seqCuris) {
-			break
-		}
+	for seqOffset < len(seqCuris) {
 		matchingLinkIndex := slices.IndexFunc(startBucket, func(link FeedEntryLink) bool {
 			return CanonicalUriEqual(link.Curi, seqCuris[seqOffset], curiEqCfg)
 		})

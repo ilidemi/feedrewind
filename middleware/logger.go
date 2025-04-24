@@ -126,7 +126,7 @@ func Logger(next http.Handler) http.Handler {
 
 		defer func() {
 			status := ww.Status()
-			isCsrfError := errorWrapper.err != nil && errors.Is(errorWrapper.err, csrfValidationFailed)
+			isCsrfError := errorWrapper.err != nil && errors.Is(errorWrapper.err, errCsrfValidationFailed)
 			if (status/100 == 4 || status/100 == 5) &&
 				status != http.StatusMethodNotAllowed &&
 				status != http.StatusNotFound &&
@@ -159,7 +159,7 @@ func Logger(next http.Handler) http.Handler {
 					TimeDiff("duration", time.Now(), t1).
 					Dur("db_duration", dbDuration)
 				if isCsrfError {
-					event = event.Str("omitted_error", csrfValidationFailed.Error())
+					event = event.Str("omitted_error", errCsrfValidationFailed.Error())
 				}
 				event.Msg("completed")
 			}

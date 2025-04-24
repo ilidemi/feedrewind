@@ -37,7 +37,7 @@ func CodeMaintenanceJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 	logger := pool.Logger()
 	utcNow := schedule.UTCNow()
 
-	tzDateCutoff := utcNow.AddDate(0, -6, 0).Format("2006-01-02")
+	tzDateCutoff := utcNow.AddDate(-1, 0, 0).Format("2006-01-02")
 	if tzdata.UpdatedDate < tzDateCutoff {
 		logger.Warn().Msgf("tzdata is from %s, please update", tzdata.UpdatedDate)
 	} else {

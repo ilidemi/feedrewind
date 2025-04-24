@@ -1932,8 +1932,8 @@ func fetchMissingTitles(
 			if errors.Is(err, ErrCrawlCanceled) {
 				return nil, err
 			} else if err != nil {
-				logger.Info("Couldn't fetch link title, going with url: %s (%v)", link.Link.Url, err)
-				title = NewLinkTitle(link.Link.Url, LinkTitleSourceUrl, nil)
+				logger.Info("Couldn't fetch link title, going with url: %s (%v)", link.Url, err)
+				title = NewLinkTitle(link.Url, LinkTitleSourceUrl, nil)
 			} else {
 				pageTitle := strings.Clone(getPageTitle(page, feedGenerator, logger))
 				pageTitles = append(pageTitles, pageTitle)
@@ -2211,7 +2211,7 @@ func ExtractSubstackPublicAndTotalCounts(
 	for _, bucket := range guidedCtx.FeedEntryLinks.LinkBuckets {
 		var filteredBucket []FeedEntryLink
 		for _, link := range bucket {
-			if pageCurisSet.Contains(link.Link.Curi) {
+			if pageCurisSet.Contains(link.Curi) {
 				filteredBucket = append(filteredBucket, link)
 			}
 		}

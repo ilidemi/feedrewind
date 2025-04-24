@@ -1,20 +1,41 @@
-run:
-  exclude-files:
-    - lint/gorules.go
+version: "2"
 linters:
   enable:
     - exhaustruct
     - gocritic
-linters-settings:
-  exhaustruct:
-    exclude:
-      - '.*cobra\.Command$'
-      - '.*http\.Cookie$'
-  gocritic:
-    enabled-checks:
-      - ruleguard
-    settings:
-      ruleguard:
-        rules: "lint\\gorules.go"
-      ifElseChain:
-        minThreshold: 4
+  settings:
+    exhaustruct:
+      exclude:
+        - .*cobra\.Command$
+        - .*http\.Cookie$
+    gocritic:
+      enabled-checks:
+        - ruleguard
+      settings:
+        ifElseChain:
+          minThreshold: 4
+        ruleguard:
+          rules: lint\gorules.go
+    staticcheck:
+      checks:
+        all
+        - -QF1001
+        - -QF1003
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
