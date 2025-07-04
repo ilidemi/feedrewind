@@ -349,12 +349,6 @@ var MiscellaneousBlogs = []MiscellaneousBlog{
 		Name:    "Ken Shirriff",
 		Tag:     "hardware",
 	},
-	{
-		Url:     "https://daniellakens.blogspot.com/",
-		FeedUrl: "https://daniellakens.blogspot.com/feeds/posts/default",
-		Name:    "The 20% Statistician",
-		Tag:     "statistics",
-	},
 }
 
 func init() {
