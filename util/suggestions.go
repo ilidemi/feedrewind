@@ -995,31 +995,6 @@ var HmnCategories = []HmnCategory{
 				},
 			},
 			{
-				IconName: "computerenhance.png",
-				Url:      "https://computerenhance.com",
-				FeedUrl:  "https://computerenhance.com/feed",
-				Name:     "Computer, Enhance!",
-				Tags:     []string{"performance-aware programming"},
-				LibraryMentions: []HmnLibraryMention{
-					{
-						Author:  "feynon",
-						Message: "Recent Microsoft linkers accumulate large amounts of outdated data in PDBs, even when all incremental build options are disabled, leading to potential debugger bugs and bloated PDB sizes; deleting PDBs before building can help manage this issue:",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "MSVC PDBs Are Filled With Stale Debug Info",
-							Url:   "https://www.computerenhance.com/p/msvc-pdbs-are-filled-with-stale-debug",
-						}},
-					},
-					{
-						Author:  "Oscar",
-						Message: "Casey Muratori's article discussing higher than expected performance of a microbenchmark on Golden Cove / Alder Lake P-cores, and speculation on the scarcely documented changes that may lead to these results:",
-						Posts: []HmnLibraryMentionPost{{
-							Title: "The Case of the Missing Increment",
-							Url:   "https://www.computerenhance.com/p/the-case-of-the-missing-increment",
-						}},
-					},
-				},
-			},
-			{
 				IconName: "randomascii.png",
 				Url:      "https://randomascii.wordpress.com/",
 				FeedUrl:  "https://randomascii.wordpress.com/feed/",
