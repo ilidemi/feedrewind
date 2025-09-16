@@ -220,11 +220,6 @@ var SuggestedCategories = []SuggestedCategory{
 				Name:    "Overcoming Bias",
 			},
 			{
-				Url:     "https://thezvi.substack.com/",
-				FeedUrl: "https://thezvi.substack.com/feed",
-				Name:    "Don't Worry About the Vase",
-			},
-			{
 				Url:     "https://dynomight.net/",
 				FeedUrl: "https://dynomight.net/feed.xml",
 				Name:    "DYNOMIGHT",

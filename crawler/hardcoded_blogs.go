@@ -44,7 +44,6 @@ var hardcodedCryptographyEngineering CanonicalUri
 var hardcodedCryptographyEngineeringAll CanonicalUri
 var hardcodedDanLuu CanonicalUri
 var HardcodedDanLuuFeed CanonicalUri
-var HardcodedDontWorryAboutTheVaseFeed CanonicalUri
 var hardcodedFactorio CanonicalUri
 var hardcodedGwern CanonicalUri
 var hardcodedHmnFishbowl CanonicalUri
@@ -97,7 +96,6 @@ func init() {
 	danLuu := "https://danluu.com"
 	hardcodedDanLuu = hardcodedMustParse(danLuu)
 	HardcodedDanLuuFeed = hardcodedMustParse(danLuu + "/atom.xml")
-	HardcodedDontWorryAboutTheVaseFeed = hardcodedMustParse("https://thezvi.substack.com/feed")
 	cryptographyEngineering := "https://blog.cryptographyengineering.com"
 	hardcodedCryptographyEngineering = hardcodedMustParse(cryptographyEngineering)
 	hardcodedCryptographyEngineeringAll = hardcodedMustParse(cryptographyEngineering + "/all-posts/")
@@ -484,24 +482,6 @@ func extractCaseyHandmerCategories(
 			PostLinks: uncategorizedLinks,
 		},
 	}, nil
-}
-
-func ExtractDontWorryAboutTheVaseCategories(postLink *FeedEntryLink, logger log.Logger) []string {
-	path := postLink.Curi.Path
-	// Everything that can show up in the feed from now on is 2023+
-	// Also assuming covid is over
-	categories := []string{"2023+", "Non-Covid"}
-	dontWorryAboutTheVaseAIRegex := regexp.MustCompile("^/p/ai-[0-9]")
-	if dontWorryAboutTheVaseAIRegex.MatchString(path) {
-		categories = append(categories, "AI Series")
-	}
-	if postLink.MaybeDate == nil {
-		logger.Error().Msgf("Don't Worry About The Vase feed entry doesn't have date: %s", postLink.Url)
-		return categories
-	}
-	yearStr := fmt.Sprint(postLink.MaybeDate.Year())
-	categories = append(categories, yearStr)
-	return categories
 }
 
 func extractFactorioCategories(

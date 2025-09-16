@@ -336,9 +336,6 @@ func Blog_CreateOrUpdate(
 				isACX := crawler.CanonicalUriEqual(
 					feedLink.Curi, crawler.HardcodedAstralCodexTenFeed, curiEqCfg,
 				)
-				isDontWorryAboutTheVase := crawler.CanonicalUriEqual(
-					feedLink.Curi, crawler.HardcodedDontWorryAboutTheVaseFeed, curiEqCfg,
-				)
 				isOvercomingBias := crawler.CanonicalUriEqual(
 					feedLink.Curi, crawler.HardcodedOvercomingBiasFeed, curiEqCfg,
 				)
@@ -363,8 +360,6 @@ func Blog_CreateOrUpdate(
 					switch {
 					case isACX:
 						categoryNames = crawler.ExtractACXCategories(link, logger)
-					case isDontWorryAboutTheVase:
-						categoryNames = crawler.ExtractDontWorryAboutTheVaseCategories(link, logger)
 					case isOvercomingBias:
 						categoryNames = crawler.ExtractOvercomingBiasCategories(link, logger)
 					}
