@@ -16,9 +16,6 @@ type Config struct {
 	AmplitudeApiKey           string
 	AwsAccessKey              string
 	AwsSecretAccessKey        string
-	PostmarkApiSandboxToken   string
-	PostmarkApiToken          string
-	PostmarkWebhookSecret     string
 	SlackWebhook              string
 	TumblrApiKey              string
 	AdminUserIds              map[int64]bool

@@ -34,24 +34,13 @@ func CurrentUser(next http.Handler) http.Handler {
 			MustSetSessionProductUserId(w, r, productUserId)
 		}
 
-		var currentUserHasBounced bool
-		if maybeCurrentUser != nil {
-			var err error
-			currentUserHasBounced, err = models.PostmarkBouncedUser_Exists(pool, maybeCurrentUser.Id)
-			if err != nil {
-				panic(err)
-			}
-		} else {
-			currentUserHasBounced = false
-		}
-
 		if maybeCurrentUser != nil {
 			setLoggerUserId(r, maybeCurrentUser.Id)
 		} else {
 			setLoggerUserId(r, 0)
 		}
 
-		setCurrentUserData(r, maybeCurrentUser, productUserId, currentUserHasBounced)
+		setCurrentUserData(r, maybeCurrentUser, productUserId)
 		next.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)
@@ -65,7 +54,6 @@ type currentUserData struct {
 	IsSet         bool
 	MaybeUser     *models.User
 	ProductUserId models.ProductUserId
-	HasBounced    bool
 }
 
 // To be called by Logger middleware so that the context persists till request completion
@@ -77,13 +65,12 @@ func withCurrentUserData(r *http.Request) *http.Request {
 
 // To be called by CurrentUser middleware
 func setCurrentUserData(
-	r *http.Request, maybeUser *models.User, productUserId models.ProductUserId, hasBounced bool,
+	r *http.Request, maybeUser *models.User, productUserId models.ProductUserId,
 ) {
 	data := r.Context().Value(currentUserDataKey).(*currentUserData)
 	data.IsSet = true
 	data.MaybeUser = maybeUser
 	data.ProductUserId = productUserId
-	data.HasBounced = hasBounced
 }
 
 func GetCurrentUser(r *http.Request) *models.User {
@@ -94,6 +81,3 @@ func GetCurrentProductUserId(r *http.Request) models.ProductUserId {
 	return r.Context().Value(currentUserDataKey).(*currentUserData).ProductUserId
 }
 
-func GetCurrentUserHasBounced(r *http.Request) bool {
-	return r.Context().Value(currentUserDataKey).(*currentUserData).HasBounced
-}

@@ -11,7 +11,6 @@ import (
 	"feedrewind.com/log"
 	"feedrewind.com/models"
 	"feedrewind.com/oops"
-	"feedrewind.com/publish"
 	"feedrewind.com/util"
 
 	"github.com/goccy/go-json"
@@ -44,8 +43,6 @@ func init() {
 			return GuidedCrawlingJob_Perform(ctx, id, pool, blogId, argsJson)
 		},
 	)
-
-	publish.EmailPostsJob_PerformNowFunc = EmailPostsJob_PerformNow
 }
 
 type GuidedCrawlingJobArgs struct {

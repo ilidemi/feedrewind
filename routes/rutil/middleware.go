@@ -46,22 +46,19 @@ func Session(r *http.Request) *util.Session {
 
 	currentUser := CurrentUser(r)
 	isLoggedIn := false
-	userHasBounced := false
 	userEmail := ""
 	userName := ""
 	if currentUser != nil {
 		isLoggedIn = true
-		userHasBounced = middleware.GetCurrentUserHasBounced(r)
 		userEmail = currentUser.Email
 		userName = currentUser.Name
 	}
 
 	return &util.Session{
-		CSRFToken:      csrfToken,
-		CSRFField:      csrfField,
-		IsLoggedIn:     isLoggedIn,
-		UserHasBounced: userHasBounced,
-		UserEmail:      userEmail,
-		UserName:       userName,
+		CSRFToken:  csrfToken,
+		CSRFField:  csrfField,
+		IsLoggedIn: isLoggedIn,
+		UserEmail:  userEmail,
+		UserName:   userName,
 	}
 }

@@ -288,8 +288,6 @@ func PublishPostsJob_GetNextScheduledDate(qu pgw.Queryable, userId models.UserId
 
 func PublishPostsJob_GetHourOfDay(deliveryChannel models.DeliveryChannel) int {
 	switch deliveryChannel {
-	case models.DeliveryChannelEmail:
-		return 5
 	case models.DeliveryChannelMultipleFeeds, models.DeliveryChannelSingleFeed:
 		return 2
 	default:

@@ -1,4 +1,0 @@
-{{.BlogName}} was added to FeedRewind.
-
-Manage subscription:
-{{.Url}}

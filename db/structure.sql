@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version 12.5 (Ubuntu 12.5-0ubuntu0.20.04.1)
--- Dumped by pg_dump version 14.10
+-- Dumped by pg_dump version 12.5 (Ubuntu 12.5-0ubuntu0.20.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -616,46 +616,6 @@ CREATE SEQUENCE public.page_screenshots_id_seq
 --
 
 ALTER SEQUENCE public.page_screenshots_id_seq OWNED BY public.page_screenshots.id;
-
-
---
--- Name: postmark_bounced_users; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.postmark_bounced_users (
-    user_id bigint NOT NULL,
-    example_bounce_id bigint NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
-);
-
-
---
--- Name: postmark_bounces; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.postmark_bounces (
-    id bigint NOT NULL,
-    bounce_type text NOT NULL,
-    message_id text,
-    payload json NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
-);
-
-
---
--- Name: postmark_messages; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.postmark_messages (
-    message_id text NOT NULL,
-    subscription_post_id bigint,
-    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    message_type public.postmark_message_type NOT NULL,
-    subscription_id bigint NOT NULL
-);
 
 
 --
@@ -1354,30 +1314,6 @@ ALTER TABLE ONLY public.page_screenshots
 
 
 --
--- Name: postmark_bounced_users postmark_bounced_users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.postmark_bounced_users
-    ADD CONSTRAINT postmark_bounced_users_pkey PRIMARY KEY (user_id);
-
-
---
--- Name: postmark_bounces postmark_bounces_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.postmark_bounces
-    ADD CONSTRAINT postmark_bounces_pkey PRIMARY KEY (id);
-
-
---
--- Name: postmark_messages postmark_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.postmark_messages
-    ADD CONSTRAINT postmark_messages_pkey PRIMARY KEY (message_id);
-
-
---
 -- Name: pricing_offers pricing_offers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1731,27 +1667,6 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.page_screenshots FOR EACH
 
 
 --
--- Name: postmark_bounced_users bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.postmark_bounced_users FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
-
-
---
--- Name: postmark_bounces bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.postmark_bounces FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
-
-
---
--- Name: postmark_messages bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.postmark_messages FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
-
-
---
 -- Name: pricing_offers bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1928,14 +1843,6 @@ ALTER TABLE ONLY public.blog_post_category_assignments
 
 
 --
--- Name: postmark_messages fk_rails_897226ae9c; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.postmark_messages
-    ADD CONSTRAINT fk_rails_897226ae9c FOREIGN KEY (subscription_post_id) REFERENCES public.subscription_posts(id) ON DELETE CASCADE;
-
-
---
 -- Name: blog_canonical_equality_configs fk_rails_9b3fd3910a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2024,14 +1931,6 @@ ALTER TABLE ONLY public.blog_post_category_assignments
 
 
 --
--- Name: postmark_bounced_users fk_rails_cf5feb15c9; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.postmark_bounced_users
-    ADD CONSTRAINT fk_rails_cf5feb15c9 FOREIGN KEY (example_bounce_id) REFERENCES public.postmark_bounces(id) ON DELETE CASCADE;
-
-
---
 -- Name: user_settings fk_rails_d1371c6356; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2053,14 +1952,6 @@ ALTER TABLE ONLY public.subscription_posts
 
 ALTER TABLE ONLY public.start_feeds
     ADD CONSTRAINT fk_rails_d91add3512 FOREIGN KEY (start_page_id) REFERENCES public.start_pages(id) ON DELETE CASCADE;
-
-
---
--- Name: postmark_messages fk_rails_e906f9105c; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.postmark_messages
-    ADD CONSTRAINT fk_rails_e906f9105c FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id) ON DELETE CASCADE;
 
 
 --
@@ -2306,4 +2197,5 @@ INSERT INTO public.schema_migrations (version) VALUES
 ('20241018150103'),
 ('20241018153403'),
 ('20250129143507'),
-('20260524120000');
+('20260524120000'),
+('20260524130000');

@@ -1,3 +1,5 @@
+//go:build e2etesting
+
 package e2etest
 
 import (
@@ -8,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/proto"
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/require"
 )
@@ -121,6 +124,28 @@ func requireSchedulePreview(t *testing.T, page *rod.Page, expectedPreview string
 		}
 		require.Equal(t, expectedDate, rowDate, description)
 	}
+}
+
+// mustEnsureTestUser destroys any existing user, signs up fresh with a browser timezone
+// override so the server auto-detects the correct timezone, and verifies it was set.
+func mustEnsureTestUser(browser *rod.Browser, email string, timezone string) {
+	page := visitAdminf(browser, "destroy_user?email=%s", email)
+	mustPageText(page) // "OK" or "NotFound", either is fine
+
+	visitDev(browser, "logout")
+
+	page = visitDev(browser, "signup")
+	err := proto.EmulationSetTimezoneOverride{TimezoneID: timezone}.Call(page)
+	if err != nil {
+		panic(err)
+	}
+	page.MustElement("#email").MustInput(email)
+	page.MustElement("#new-password").MustInput("tz123456")
+	page.MustElementR("input", "Sign up").MustClick()
+	page.MustWaitLoad()
+
+	page = visitDev(browser, "settings")
+	page.MustElement(fmt.Sprintf("option[value='%s'][selected='selected']", timezone))
 }
 
 func splitAndTrimSpace(s string, sep string) []string {

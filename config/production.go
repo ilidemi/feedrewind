@@ -59,9 +59,6 @@ func productionConfig() Config {
 		AmplitudeApiKey:           mustLookupEnv("AMPLITUDE_API_KEY"),
 		AwsAccessKey:              mustLookupEnv("AWS_ACCESS_KEY"),
 		AwsSecretAccessKey:        mustLookupEnv("AWS_SECRET_ACCESS_KEY"),
-		PostmarkApiSandboxToken:   "",
-		PostmarkApiToken:          mustLookupEnv("POSTMARK_API_TOKEN"),
-		PostmarkWebhookSecret:     mustLookupEnv("POSTMARK_WEBHOOK_SECRET"),
 		SlackWebhook:              mustLookupEnv("SLACK_WEBHOOK"),
 		TumblrApiKey:              mustLookupEnv("TUMBLR_API_KEY"),
 		AdminUserIds: map[int64]bool{

@@ -27,12 +27,11 @@ func LoginPathWithRedirect(r *http.Request) string {
 }
 
 type Session struct {
-	CSRFToken      string
-	CSRFField      template.HTML
-	IsLoggedIn     bool
-	UserHasBounced bool
-	UserEmail      string
-	UserName       string
+	CSRFToken  string
+	CSRFField  template.HTML
+	IsLoggedIn bool
+	UserEmail  string
+	UserName   string
 }
 
 func CommitOrRollbackMsg(tx *pgw.Tx, isSuccess *bool, successMsg string) {

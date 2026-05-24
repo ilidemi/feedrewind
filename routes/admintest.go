@@ -21,10 +21,7 @@ func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
 	pool := rutil.DBPool(r)
 	_, err := pool.Exec(`
 		delete from delayed_jobs
-		where (handler like '%class: PublishPostsJob%' or
-			handler like '%class: EmailInitialItemJob%' or
-			handler like '%class: EmailPostsJob%' or
-			handler like '%class: EmailFinalItemJob%') and
+		where handler like '%class: PublishPostsJob%' and
 			handler like concat('%- ', $1::text, E'\n%')
 	`, fmt.Sprint(currentUserId))
 	if err != nil {
@@ -34,6 +31,10 @@ func AdminTest_RescheduleUserJob(w http.ResponseWriter, r *http.Request) {
 	userSettings, err := models.UserSettings_Get(pool, currentUserId)
 	if err != nil {
 		panic(err)
+	}
+	if userSettings.MaybeDeliveryChannel == nil {
+		dc := models.DeliveryChannelMultipleFeeds
+		userSettings.MaybeDeliveryChannel = &dc
 	}
 
 	err = jobs.PublishPostsJob_ScheduleInitial(pool, currentUserId, userSettings, false)
@@ -67,7 +68,6 @@ func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 	email := util.EnsureParamStr(r, "email")
 	pool := rutil.DBPool(r)
 
-	logger := rutil.Logger(r)
 	rows, err := pool.Query(`delete from users_with_discarded where email = $1 returning id`, email)
 	if err != nil {
 		panic(err)
@@ -90,7 +90,11 @@ func AdminTest_DestroyUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, userId := range deletedIds {
-		err := jobs.PublishPostsJob_Delete(r.Context(), pool, userId, logger)
+		_, err := pool.Exec(`
+			delete from delayed_jobs
+			where handler like '%class: PublishPostsJob%'
+				and handler like concat(E'%arguments:\n  - ', $1::text, E'\n%')
+		`, fmt.Sprint(userId))
 		if err != nil {
 			panic(err)
 		}
@@ -133,58 +137,6 @@ func AdminTest_DeleteTestSingleton(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	util.MustWrite(w, "OK")
-}
-
-func AdminTest_AssertEmailCountWithMetadata(w http.ResponseWriter, r *http.Request) {
-	value := util.EnsureParamStr(r, "value")
-	count := util.EnsureParamInt(r, "count")
-	lastTimestamp := util.EnsureParamStr(r, "last_timestamp")
-	lastTag := util.EnsureParamStr(r, "last_tag")
-
-	pollCount := 0
-	pool := rutil.DBPool(r)
-	postmarkClient, _ := jobs.GetPostmarkClientAndMaybeMetadata(pool)
-	for {
-		messages, _, err := postmarkClient.GetOutboundMessages(
-			r.Context(), 100, 0, map[string]any{"metadata_test": value},
-		)
-		if err != nil {
-			panic(err)
-		}
-
-		if len(messages) == count {
-			lastMessage := messages[0]
-			for i := 1; i < len(messages); i++ {
-				if messages[i].Metadata["server_timestamp"].(string) >
-					lastMessage.Metadata["server_timestamp"].(string) {
-
-					lastMessage = messages[i]
-				}
-			}
-
-			if count != 0 && lastMessage.Metadata["server_timestamp"] != lastTimestamp {
-				panic(oops.Newf(
-					"Last message timestamp doesn't match. Expected: %s, actual: %s",
-					lastTimestamp, lastMessage.Metadata["server_timestamp"],
-				))
-			}
-
-			if count != 0 && lastMessage.Tag != lastTag {
-				panic(oops.Newf(
-					"Last message tag doesn't match. Expected: %s, actual: %s", lastTag, lastMessage.Tag,
-				))
-			}
-
-			util.MustWrite(w, "OK")
-			return
-		}
-
-		time.Sleep(time.Second)
-		pollCount++
-		if pollCount >= 20 {
-			panic(oops.Newf("Email count doesn't match: expected %d, actual %d", count, len(messages)))
-		}
-	}
 }
 
 func AdminTest_TravelTo(w http.ResponseWriter, r *http.Request) {

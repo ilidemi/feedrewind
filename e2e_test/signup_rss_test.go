@@ -18,42 +18,23 @@ import (
 
 func TestSignupRss(t *testing.T) {
 	type TestCase struct {
-		Email                 string
-		Timezone              string
-		SetDeliveryInSettings bool
+		Email    string
+		Timezone string
 	}
 
 	tests := []TestCase{
 		{
-			Email:                 "test_nz@feedrewind.com",
-			Timezone:              "Pacific/Auckland",
-			SetDeliveryInSettings: true,
+			Email:    "test_nz@feedrewind.com",
+			Timezone: "Pacific/Auckland",
 		},
 		{
-			Email:                 "test_pst@feedrewind.com",
-			Timezone:              "America/Los_Angeles",
-			SetDeliveryInSettings: true,
-		},
-		{
-			Email:                 "test_nz@feedrewind.com",
-			Timezone:              "Pacific/Auckland",
-			SetDeliveryInSettings: false,
-		},
-		{
-			Email:                 "test_pst@feedrewind.com",
-			Timezone:              "America/Los_Angeles",
-			SetDeliveryInSettings: false,
+			Email:    "test_pst@feedrewind.com",
+			Timezone: "America/Los_Angeles",
 		},
 	}
 
 	for _, tc := range tests {
-		setDeliveryPage := "schedule"
-		if tc.SetDeliveryInSettings {
-			setDeliveryPage = "settings"
-		}
-		description := fmt.Sprintf(
-			"Timezone %s, sign up and choose rss delivery in %s", tc.Timezone, setDeliveryPage,
-		)
+		description := fmt.Sprintf("Timezone %s", tc.Timezone)
 
 		l := launcher.New().Headless(false)
 		browserUrl := l.MustLaunch()
@@ -92,12 +73,6 @@ func TestSignupRss(t *testing.T) {
 		page = visitDev(browser, "settings")
 		page.MustElement(fmt.Sprintf("option[value='%s'][selected='selected']", tc.Timezone))
 
-		if tc.SetDeliveryInSettings {
-			// Set delivery channel
-			page.MustElement("#delivery_rss").MustClick()
-			page.MustElement("#delivery_channel_save_spinner.hidden")
-		}
-
 		// Add a subscription
 		page = visitDev(browser, "subscriptions/add")
 		page.MustElement("#start_url").MustInput("https://ilidemi.github.io/dummy-blogs/1a/rss.xml")
@@ -106,13 +81,6 @@ func TestSignupRss(t *testing.T) {
 		page.MustElementR("input", "Continue").MustClick()
 
 		page.MustElement("#wed_add").MustClick()
-
-		if tc.SetDeliveryInSettings {
-			_, err := page.Sleeper(rod.NotFoundSleeper).Element("#delivery_channel_picker")
-			require.ErrorIs(t, err, &rod.ErrElementNotFound{}, description)
-		} else {
-			page.MustElement("#delivery_rss").MustClick()
-		}
 
 		page.MustElement("#save_button").MustClick()
 		page.MustElement("#arrival_msg")

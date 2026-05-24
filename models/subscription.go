@@ -396,9 +396,6 @@ type PostPublishStatus string
 
 const (
 	PostPublishStatusRssPublished PostPublishStatus = "rss_published"
-	PostPublishStatusEmailPending PostPublishStatus = "email_pending"
-	PostPublishStatusEmailSkipped PostPublishStatus = "email_skipped"
-	PostPublishStatusEmailSent    PostPublishStatus = "email_sent"
 )
 
 func SubscriptionPost_GetNextUnpublished(

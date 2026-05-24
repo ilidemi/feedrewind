@@ -153,7 +153,6 @@ func runServer(port int) {
 
 			authorized.Get("/settings", routes.UserSettings_Page)
 			authorized.Post("/settings/save_timezone", routes.UserSettings_SaveTimezone)
-			authorized.Post("/settings/save_delivery_channel", routes.UserSettings_SaveDeliveryChannel)
 			authorized.Post("/delete_account", routes.Users_DeleteAccount)
 		})
 
@@ -175,7 +174,6 @@ func runServer(port int) {
 			r.Get("/test/get_test_singleton", routes.AdminTest_GetTestSingleton)
 			r.Get("/test/set_test_singleton", routes.AdminTest_SetTestSingleton)
 			r.Get("/test/delete_test_singleton", routes.AdminTest_DeleteTestSingleton)
-			r.Get("/test/assert_email_count_with_metadata", routes.AdminTest_AssertEmailCountWithMetadata)
 			r.Get("/test/travel_to", routes.AdminTest_TravelTo)
 			r.Get("/test/travel_back", routes.AdminTest_TravelBack)
 			r.Get("/test/wait_for_publish_posts_job", routes.AdminTest_WaitForPublishPostsJob)
@@ -190,7 +188,6 @@ func runServer(port int) {
 
 		anonR.Get("/posts/{slug}/{random_id:[A-Za-z0-9_-]+}", routes.Posts_Post)
 
-		anonR.Post("/postmark/report_bounce", routes.Webhooks_PostmarkReportBounce)
 	})
 
 	staticR.Get(util.StaticRouteTemplate, routes.Static_File)

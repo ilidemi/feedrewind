@@ -51,7 +51,7 @@ go run . web
 go run . worker
 ```
 
-Navigate to `http://localhost:3000` and click around, making sure to use a free account and RSS delivery (not email).
+Navigate to `http://localhost:3000` and click around.
 
 Supported in the demo:
 - Crawling blogs
@@ -60,7 +60,6 @@ Supported in the demo:
 
 Not supported in the demo:
 - Crawling Tumblr (needs API key)
-- Sending emails (needs Postmark key)
 - Various maintenance jobs (needs a seeded DB and AWS key)
 - Sending out events to Amplitude and Slack (needs API keys)
 - End to end tests (need all of the above)

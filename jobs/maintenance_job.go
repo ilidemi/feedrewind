@@ -115,7 +115,6 @@ func MaintenanceJob_Perform(ctx context.Context, pool *pgw.Pool) error {
 			return err
 		}
 		if strings.HasSuffix(email, "@feedrewind.com") ||
-			strings.HasSuffix(email, "@bounce-testing.postmarkapp.com") ||
 			config.Cfg.AdminUserIds[int64(userId)] ||
 			warnedActiveUserIds[userId] {
 			continue

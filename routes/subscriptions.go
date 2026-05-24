@@ -248,10 +248,7 @@ func Subscriptions_Show(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	feedUrl := ""
-	if *userSettings.MaybeDeliveryChannel != models.DeliveryChannelEmail {
-		feedUrl = rutil.SubscriptionFeedUrl(r, subscriptionId)
-	}
+	feedUrl := rutil.SubscriptionFeedUrl(r, subscriptionId)
 	countByDay, err := models.Schedule_GetCountsByDay(pool, subscriptionId)
 	if err != nil {
 		panic(err)
@@ -806,8 +803,6 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			Schedule                 subscriptionsScheduleResult
 			SchedulePreview          schedulePreview
 			ScheduleJS               subscriptionsScheduleJsResult
-			IsDeliveryChannelSet     bool
-			DeliveryChannel          deliverySettings
 			SubscriptionSchedulePath string
 		}
 		templates.MustWrite(w, "subscriptions/setup_subscription_set_schedule", SetScheduleResult{
@@ -828,8 +823,6 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 				ValidateCallback:      template.JS("onValidateSchedule"),
 				SetNameChangeCallback: template.JS("setNameChangeScheduleCallback"),
 			},
-			IsDeliveryChannelSet:     userSettings.MaybeDeliveryChannel != nil,
-			DeliveryChannel:          newDeliverySettings(userSettings),
 			SubscriptionSchedulePath: rutil.SubscriptionSchedulePath(subscriptionId),
 		})
 	case models.SubscriptionStatusLive:
@@ -909,14 +902,7 @@ func Subscriptions_Setup(w http.ResponseWriter, r *http.Request) {
 			WillArriveDate:   willArriveDate,
 			SubscriptionPath: rutil.SubscriptionPath(subscriptionId),
 		}
-		switch *userSettings.MaybeDeliveryChannel {
-		case models.DeliveryChannelSingleFeed, models.DeliveryChannelMultipleFeeds:
-			templates.MustWrite(w, "subscriptions/setup_subscription_heres_feed", result)
-		case models.DeliveryChannelEmail:
-			templates.MustWrite(w, "subscriptions/setup_subscription_heres_email", result)
-		default:
-			panic(fmt.Errorf("Unknown delivery channel: %s", *userSettings.MaybeDeliveryChannel))
-		}
+		templates.MustWrite(w, "subscriptions/setup_subscription_heres_feed", result)
 
 	default:
 		panic(fmt.Errorf("Unknown subscription status: %s", subscriptionStatus))
@@ -1417,7 +1403,6 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 		panic("Expecting some count to not be zero")
 	}
 
-	deliveryChannelParam := r.Form.Get("delivery_channel")
 	currentUser := rutil.CurrentUser(r)
 
 	// Initializing subscription feed may race with user's update rss job.
@@ -1450,16 +1435,8 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 
 		pc := models.NewProductEventContext(tx, r, rutil.CurrentProductUserId(r))
 		var deliveryChannel models.DeliveryChannel
-		switch {
-		case deliveryChannelParam != "":
-			switch deliveryChannelParam {
-			case "rss":
-				deliveryChannel = models.DeliveryChannelMultipleFeeds
-			case "email":
-				deliveryChannel = models.DeliveryChannelEmail
-			default:
-				panic(fmt.Errorf("unknown delivery channel: %s", deliveryChannelParam))
-			}
+		if oldUserSettings.MaybeDeliveryChannel == nil {
+			deliveryChannel = models.DeliveryChannelMultipleFeeds
 			err := models.UserSettings_SaveDeliveryChannel(tx, currentUser.Id, deliveryChannel)
 			if err != nil {
 				panic(err)
@@ -1477,9 +1454,7 @@ func Subscriptions_Schedule(w http.ResponseWriter, r *http.Request) {
 			}, map[string]any{
 				"delivery_channel": newUserSettings.MaybeDeliveryChannel,
 			})
-		case oldUserSettings.MaybeDeliveryChannel == nil:
-			panic("Delivery channel is not set for the user and is not passed in the params")
-		default:
+		} else {
 			deliveryChannel = *oldUserSettings.MaybeDeliveryChannel
 		}
 

@@ -237,7 +237,6 @@ type DeliveryChannel string
 const (
 	DeliveryChannelSingleFeed    DeliveryChannel = "single_feed"
 	DeliveryChannelMultipleFeeds DeliveryChannel = "multiple_feeds"
-	DeliveryChannelEmail         DeliveryChannel = "email"
 )
 
 type UserSettings struct {

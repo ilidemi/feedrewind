@@ -42,15 +42,6 @@ func PublishForUser(
 	)
 }
 
-var EmailInitialItemJob_PerformNowFunc func(
-	qu pgw.Queryable, userId models.UserId, subscriptionId models.SubscriptionId, scheduledFor string,
-) error
-
-var EmailPostsJob_PerformNowFunc func(
-	qu pgw.Queryable, userId models.UserId, date schedule.Date, scheduledFor string,
-	finalItemSubscriptionIds []models.SubscriptionId,
-) error
-
 func initSubscriptionImpl(
 	tx *pgw.Tx, userId models.UserId, productUserId models.ProductUserId,
 	subscriptionId models.SubscriptionId, subscriptionName string, blogBestUrl string,
@@ -138,19 +129,6 @@ func initSubscriptionImpl(
 				return err
 			}
 		}
-	case models.DeliveryChannelEmail:
-		publishStatus = models.PostPublishStatusEmailPending
-		scheduledFor := utcNow.MustUTCString()
-		// The job won't be visible until the transaction is committed
-		err = EmailInitialItemJob_PerformNowFunc(tx, userId, subscriptionId, scheduledFor)
-		if err != nil {
-			return err
-		}
-
-		err = createEmptySubscriptionFeed(tx, subscriptionId, subscriptionName)
-		if err != nil {
-			return err
-		}
 	default:
 		panic(fmt.Errorf("Unknown delivery channel: %s", deliveryChannel))
 	}
@@ -235,13 +213,6 @@ func publishForUserImpl(
 			return err
 		}
 		publishStatus = models.PostPublishStatusRssPublished
-	case models.DeliveryChannelEmail:
-		// The job won't be visible until the transaction is committed
-		err := EmailPostsJob_PerformNowFunc(tx, userId, localDate, scheduledFor, finalItemSubscriptionIds)
-		if err != nil {
-			return err
-		}
-		publishStatus = models.PostPublishStatusEmailPending
 	default:
 		panic(fmt.Errorf("Unknown delivery channel for user %d: %s", userId, deliveryChannel))
 	}
@@ -423,23 +394,6 @@ func publishRssFeeds(
 func makeGuid(value string) string {
 	hashBytes := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(hashBytes[:])
-}
-
-func createEmptySubscriptionFeed(
-	tx *pgw.Tx, subscriptionId models.SubscriptionId, subscriptionName string,
-) error {
-	logger := tx.Logger()
-	subscriptionUrl := rutil.SubscriptionUrl(subscriptionId)
-	subscriptionRssText, err := generateSubscriptionRss(subscriptionName, subscriptionUrl, nil)
-	if err != nil {
-		return err
-	}
-	err = models.SubscriptionRss_Upsert(tx, subscriptionId, subscriptionRssText)
-	if err != nil {
-		return err
-	}
-	logger.Info().Msgf("Created empty RSS for subscription %d", subscriptionId)
-	return nil
 }
 
 func CreateEmptyUserFeed(tx *pgw.Tx, userId models.UserId) error {

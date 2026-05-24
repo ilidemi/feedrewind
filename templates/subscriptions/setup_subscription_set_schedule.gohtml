@@ -41,13 +41,6 @@
 
           {{template "partial_schedule_preview" .SchedulePreview}}
 
-          {{if not .IsDeliveryChannelSet}}
-            <div class="flex flex-col gap-1">
-              {{template "settings/partial_delivery_channel" .DeliveryChannel}}
-              <div id="delivery_channel_empty_error" class="text-red-600 text-sm">Pick one</div>
-            </div>
-          {{end}}
-
           <div>
             <button id="save_button" type="button" class="btn-no-disable relative">
               <div id="save_label">Continue</div>
@@ -63,11 +56,7 @@
           let isScheduleValid = true;
 
           function validateForm() {
-            {{if .IsDeliveryChannelSet}}
             let isFormValid = isNameValid && isScheduleValid;
-            {{else}}
-            let isFormValid = isNameValid && isScheduleValid && document.querySelectorAll("input[name='delivery_channel']:checked").length > 0;
-            {{end}}
             let saveButton = document.getElementById("save_button");
             if (isFormValid) {
               saveButton.disabled = false;
@@ -170,14 +159,6 @@
             }
             isScheduleValid = isValid;
             validateForm();
-          }
-
-          const deliveryChannelRadios = document.querySelectorAll("input[name='delivery_channel']");
-          for (let radio of deliveryChannelRadios) {
-            radio.addEventListener("change", () => {
-              document.getElementById("delivery_channel_empty_error").classList.add("hidden")
-              validateForm();
-            });
           }
         </script>
 

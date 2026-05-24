@@ -28,24 +28,6 @@ func strToYaml(str string) yamlString {
 	return yamlString(fmt.Sprintf("'%s'", str))
 }
 
-// Assumes top-level array and enmeshes indentation handling with the rest of args serialization
-func int64ListToYaml(values []int64) yamlString {
-	if len(values) == 0 {
-		return yamlString("[]")
-	}
-
-	var b strings.Builder
-	for i, value := range values {
-		if i == 0 {
-			fmt.Fprint(&b, "- ")
-		} else {
-			fmt.Fprint(&b, "\n    - ")
-		}
-		fmt.Fprint(&b, value)
-	}
-	return yamlString(b.String())
-}
-
 const yamlTimeFormat = "2006-01-02T15:04:05.000000000-07:00"
 
 func timeToYaml(value time.Time) yamlString {

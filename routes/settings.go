@@ -14,35 +14,6 @@ import (
 	"feedrewind.com/util"
 )
 
-type deliveryChannel string
-
-const (
-	deliveryChannelRSS   deliveryChannel = "rss"
-	deliveryChannelEmail deliveryChannel = "email"
-)
-
-type deliverySettings struct {
-	IsRSSSelected   bool
-	IsEmailSelected bool
-	RSSValue        deliveryChannel
-	EmailValue      deliveryChannel
-}
-
-func newDeliverySettings(userSettings *models.UserSettings) deliverySettings {
-	isRSSSelected := false
-	isEmailSelected := false
-	if userSettings.MaybeDeliveryChannel != nil {
-		isRSSSelected = *userSettings.MaybeDeliveryChannel == models.DeliveryChannelMultipleFeeds
-		isEmailSelected = *userSettings.MaybeDeliveryChannel == models.DeliveryChannelEmail
-	}
-	return deliverySettings{
-		IsRSSSelected:   isRSSSelected,
-		IsEmailSelected: isEmailSelected,
-		RSSValue:        deliveryChannelRSS,
-		EmailValue:      deliveryChannelEmail,
-	}
-}
-
 func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 	logger := rutil.Logger(r)
 	pool := rutil.DBPool(r)
@@ -81,7 +52,6 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		Title                                string
 		Session                              *util.Session
 		TimezoneOptions                      []TimezoneOption
-		DeliveryChannel                      deliverySettings
 		Version                              int
 		ShortFriendlyPrefixNameByGroupIdJson template.JS
 		GroupIdByTimezoneIdJson              template.JS
@@ -90,7 +60,6 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		Title:                                util.DecorateTitle("Settings"),
 		Session:                              rutil.Session(r),
 		TimezoneOptions:                      timezoneOptions,
-		DeliveryChannel:                      newDeliverySettings(userSettings),
 		Version:                              userSettings.Version,
 		ShortFriendlyPrefixNameByGroupIdJson: util.ShortFriendlyPrefixNameByGroupIdJson,
 		GroupIdByTimezoneIdJson:              util.GroupIdByTimezoneIdJson,
@@ -200,129 +169,3 @@ func UserSettings_SaveTimezone(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
-	logger := rutil.Logger(r)
-	pool := rutil.DBPool(r)
-	currentUser := rutil.CurrentUser(r)
-	deliveryChannelStr := util.EnsureParamStr(r, "delivery_channel")
-	newVersion := util.EnsureParamInt(r, "version")
-
-	var newDeliveryChannel models.DeliveryChannel
-	switch deliveryChannel(deliveryChannelStr) {
-	case deliveryChannelRSS:
-		newDeliveryChannel = models.DeliveryChannelMultipleFeeds
-	case deliveryChannelEmail:
-		newDeliveryChannel = models.DeliveryChannelEmail
-	default:
-		panic(util.HttpError{
-			Status: http.StatusBadRequest,
-			Inner:  fmt.Errorf("unknown delivery channel: %s", deliveryChannelStr),
-		})
-	}
-
-	// Saving delivery channel may race with user's update rss job.
-	// If the job is already running, wait till it finishes, otherwise lock the row so it doesn't start
-	mustSaveDeliveryChannel := func() (result bool) {
-		tx, err := pool.Begin()
-		if err != nil {
-			panic(err)
-		}
-		defer util.CommitOrRollbackMsg(tx, &result, "Unlocked PublishPostsJob")
-
-		logger.Info().Msg("Locking PublishPostsJob")
-		lockedJobs, err := jobs.PublishPostsJob_Lock(tx, currentUser.Id)
-		if err != nil {
-			panic(err)
-		}
-		logger.Info().Msgf("Locked PublishPostsJob %d", len(lockedJobs))
-
-		for _, job := range lockedJobs {
-			if job.LockedBy != "" {
-				logger.Info().Msgf("Some jobs are running, unlocking %d", len(lockedJobs))
-				return false
-			}
-		}
-
-		oldUserSettings, err := models.UserSettings_Get(tx, currentUser.Id)
-		if err != nil {
-			panic(err)
-		}
-		if !((oldUserSettings.MaybeDeliveryChannel != nil && len(lockedJobs) == 1) ||
-			(oldUserSettings.MaybeDeliveryChannel == nil && len(lockedJobs) == 0)) {
-			logger.Warn().Msgf("Unexpected amount of job rows for the user: %d", len(lockedJobs))
-			return false
-		}
-
-		if oldUserSettings.Version >= newVersion {
-			logger.Info().Msgf("Version conflict: existing %d, new %d", oldUserSettings.Version, newVersion)
-			rutil.MustWriteJson(w, http.StatusConflict, map[string]any{
-				"version": oldUserSettings.Version,
-			})
-			return true
-		}
-
-		oldDeliveryChannel := oldUserSettings.MaybeDeliveryChannel
-		err = models.UserSettings_SaveDeliveryChannelVersion(
-			tx, currentUser.Id, newDeliveryChannel, newVersion,
-		)
-		if err != nil {
-			panic(err)
-		}
-
-		if len(lockedJobs) > 0 {
-			job := lockedJobs[0]
-			jobDate, err := jobs.PublishPostsJob_GetNextScheduledDate(tx, currentUser.Id)
-			if err != nil {
-				panic(err)
-			}
-			location := tzdata.LocationByName[oldUserSettings.Timezone]
-			jobTime, err := jobDate.TimeIn(location)
-			if err != nil {
-				panic(err)
-			}
-			newHour := jobs.PublishPostsJob_GetHourOfDay(newDeliveryChannel)
-			newRunAt := jobTime.Add(time.Duration(newHour) * time.Hour).UTC()
-			err = jobs.PublishPostsJob_UpdateRunAt(tx, job.Id, newRunAt)
-			if err != nil {
-				panic(err)
-			}
-			logger.Info().Msgf("Rescheduled PublishPostsJob for %s", newRunAt)
-		} else {
-			newUserSettings, err := models.UserSettings_Get(tx, currentUser.Id)
-			if err != nil {
-				panic(err)
-			}
-			err = jobs.PublishPostsJob_ScheduleInitial(tx, currentUser.Id, newUserSettings, false)
-			if err != nil {
-				panic(err)
-			}
-			logger.Info().Msg("Did initial schedule for PublishPostsJob")
-		}
-
-		pc := models.NewProductEventContext(tx, r, rutil.CurrentProductUserId(r))
-		models.ProductEvent_MustEmitFromRequest(pc, "update delivery channel", map[string]any{
-			"old_delivery_channel": oldDeliveryChannel,
-			"new_delivery_channel": newDeliveryChannel,
-		}, map[string]any{
-			"delivery_channel": newDeliveryChannel,
-		})
-
-		w.WriteHeader(http.StatusOK)
-		return true
-	}
-
-	failedLockAttempts := 0
-	for {
-		if failedLockAttempts >= 3 {
-			panic("Couldn't lock the job rows")
-		} else if failedLockAttempts > 0 {
-			time.Sleep(time.Second)
-		}
-
-		if mustSaveDeliveryChannel() {
-			break
-		} else {
-			failedLockAttempts++
-		}
-	}
-}

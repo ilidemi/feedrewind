@@ -57,7 +57,6 @@ func TestOnboardingSuggestion(t *testing.T) {
 
 	// Add a subscription
 	page.MustElement("#wed_add").MustClick()
-	page.MustElement("#delivery_rss").MustClick()
 
 	page.MustElement("#save_button").MustClick()
 	page.MustElement("#arrival_msg")
@@ -150,7 +149,6 @@ func TestOnboardingCustomLink(t *testing.T) {
 
 	// Add a subscription
 	page.MustElement("#wed_add").MustClick()
-	page.MustElement("#delivery_rss").MustClick()
 
 	page.MustElement("#save_button").MustClick()
 	page.MustElement("#arrival_msg")

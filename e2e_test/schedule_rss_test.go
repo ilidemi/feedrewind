@@ -75,6 +75,17 @@ func TestRssSchedule(t *testing.T) {
 		"test_nz@feedrewind.com":  "Pacific/Auckland",
 	}
 
+	{
+		l := launcher.New().Headless(false)
+		setupBrowserUrl := l.MustLaunch()
+		setupBrowser := rod.New().ControlURL(setupBrowserUrl).MustConnect()
+		for email, timezone := range timezoneByEmail {
+			mustEnsureTestUser(setupBrowser, email, timezone)
+		}
+		setupBrowser.MustClose()
+		l.Cleanup()
+	}
+
 	for _, tc := range tests {
 		description := fmt.Sprintf("%#v", tc)
 		timezone := timezoneByEmail[tc.Email]

@@ -15,6 +15,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const miscTestEmail = "test_pst@feedrewind.com"
+const miscTestTimezone = "America/Los_Angeles"
+
 func TestUpdateFromFeedAndDelete(t *testing.T) {
 	l := launcher.New().Headless(false)
 	defer l.Cleanup()
@@ -23,13 +26,9 @@ func TestUpdateFromFeedAndDelete(t *testing.T) {
 	browser := rod.New().ControlURL(browserUrl).MustConnect()
 	defer browser.MustClose()
 
-	page := visitDev(browser, "login")
-	page.MustElement("#email").MustInput("test_pst@feedrewind.com")
-	page.MustElement("#current-password").MustInput("tz123456")
-	page.MustElementR("input", "Sign in").MustClick()
-	page.MustWaitLoad()
+	mustEnsureTestUser(browser, miscTestEmail, miscTestTimezone)
 
-	page = visitAdmin(browser, "destroy_user_subscriptions")
+	page := visitAdmin(browser, "destroy_user_subscriptions")
 	require.Equal(t, "OK", mustPageText(page))
 
 	page = visitDev(browser, "admin/add_blog")
@@ -94,13 +93,9 @@ func TestSubscriptionDeleteSettingUp(t *testing.T) {
 	browser := rod.New().ControlURL(browserUrl).MustConnect()
 	defer browser.MustClose()
 
-	page := visitDev(browser, "login")
-	page.MustElement("#email").MustInput("test_pst@feedrewind.com")
-	page.MustElement("#current-password").MustInput("tz123456")
-	page.MustElementR("input", "Sign in").MustClick()
-	page.MustWaitLoad()
+	mustEnsureTestUser(browser, miscTestEmail, miscTestTimezone)
 
-	page = visitAdmin(browser, "destroy_user_subscriptions")
+	page := visitAdmin(browser, "destroy_user_subscriptions")
 	require.Equal(t, "OK", mustPageText(page))
 
 	page = visitDev(browser, "subscriptions/add")
