@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"time"
 
 	"feedrewind.com/config"
 	"feedrewind.com/db/pgw"
@@ -147,8 +146,6 @@ func UserWithPassword_UpdatePassword(qu pgw.Queryable, id UserId, password strin
 
 func UserWithPassword_Create(
 	qu pgw.Queryable, email string, password string, name string, productUserId ProductUserId,
-	offerId OfferId, maybeStripeSubscriptionId *string, maybeStripeCustomerId *string,
-	maybeBillingInterval *BillingInterval, maybeStripeCurrentPeriodEnd *time.Time,
 ) (*UserWithPassword, error) {
 	passwordDigest, err := generatePasswordDigest(password)
 	if err != nil {
@@ -178,13 +175,13 @@ func UserWithPassword_Create(
 
 	_, err = qu.Exec(`
 		insert into users_without_discarded(
-			id, email, password_digest, auth_token, name, product_user_id, offer_id,
-			stripe_subscription_id, stripe_customer_id, billing_interval, stripe_current_period_end
+			id, email, password_digest, auth_token, name, product_user_id, offer_id
 		)
-		values($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-	`, id, email, passwordDigest, authToken, name, productUserId, offerId, maybeStripeSubscriptionId,
-		maybeStripeCustomerId, maybeBillingInterval, maybeStripeCurrentPeriodEnd,
-	)
+		values(
+			$1, $2, $3, $4, $5, $6,
+			(select default_offer_id from pricing_plans where id = $7)
+		)
+	`, id, email, passwordDigest, authToken, name, productUserId, PlanIdFree)
 	if err != nil {
 		return nil, err
 	}

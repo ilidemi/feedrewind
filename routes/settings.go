@@ -6,18 +6,12 @@ import (
 	"net/http"
 	"time"
 
-	"feedrewind.com/config"
 	"feedrewind.com/jobs"
 	"feedrewind.com/models"
 	"feedrewind.com/routes/rutil"
 	"feedrewind.com/templates"
 	"feedrewind.com/third_party/tzdata"
 	"feedrewind.com/util"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/pkg/errors"
-	"github.com/stripe/stripe-go/v78"
-	"github.com/stripe/stripe-go/v78/billingportal/session"
 )
 
 type deliveryChannel string
@@ -58,60 +52,6 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	userGroupId, userGroupFound := util.GroupIdByTimezoneId[userSettings.Timezone]
-	row := pool.QueryRow(`
-		select plan_id from pricing_offers
-		where id = (select offer_id from users_without_discarded where id = $1)
-	`, currentUser.Id)
-	var planId models.PlanId
-	err = row.Scan(&planId)
-	if err != nil {
-		panic(err)
-	}
-	var currentPlan string
-	switch planId {
-	case models.PlanIdFree:
-		currentPlan = "Free"
-	case models.PlanIdSupporter:
-		currentPlan = "Supporter"
-	case models.PlanIdPatron:
-		currentPlan = "Patron"
-	default:
-		panic(fmt.Errorf("Unknown plan: %s", planId))
-	}
-	isPaid := planId != models.PlanIdFree
-
-	cancelAtStr := ""
-	renewsOnStr := ""
-	if isPaid {
-		row := pool.QueryRow(`
-			select stripe_cancel_at, stripe_current_period_end from users_without_discarded where id = $1
-		`, currentUser.Id)
-		var maybeCancelAt, maybeCurrentPeriodEnd *time.Time
-		err := row.Scan(&maybeCancelAt, &maybeCurrentPeriodEnd)
-		if err != nil {
-			panic(err)
-		}
-		if maybeCancelAt != nil {
-			timezone := tzdata.LocationByName[userSettings.Timezone]
-			cancelAtStr = maybeCancelAt.In(timezone).Format("Jan 2, 2006")
-		}
-		if maybeCurrentPeriodEnd != nil {
-			timezone := tzdata.LocationByName[userSettings.Timezone]
-			renewsOnStr = maybeCurrentPeriodEnd.In(timezone).Format("Jan 2, 2006")
-		}
-	}
-
-	isPatron := planId == models.PlanIdPatron
-	patronCredits := 0
-	if isPatron {
-		row := pool.QueryRow(`select count from patron_credits where user_id = $1`, currentUser.Id)
-		err := row.Scan(&patronCredits)
-		if errors.Is(err, pgx.ErrNoRows) {
-			logger.Warn().Msgf("Displaying 0 credits to user %d who upgraded to paid", currentUser.Id)
-		} else if err != nil {
-			panic(err)
-		}
-	}
 
 	type TimezoneOption struct {
 		Value      string
@@ -145,12 +85,6 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		Version                              int
 		ShortFriendlyPrefixNameByGroupIdJson template.JS
 		GroupIdByTimezoneIdJson              template.JS
-		CurrentPlan                          string
-		IsPatron                             bool
-		PatronCredits                        int
-		CancelAt                             string
-		RenewsOn                             string
-		IsPaid                               bool
 	}
 	templates.MustWrite(w, "settings/settings", SettingsResult{
 		Title:                                util.DecorateTitle("Settings"),
@@ -160,12 +94,6 @@ func UserSettings_Page(w http.ResponseWriter, r *http.Request) {
 		Version:                              userSettings.Version,
 		ShortFriendlyPrefixNameByGroupIdJson: util.ShortFriendlyPrefixNameByGroupIdJson,
 		GroupIdByTimezoneIdJson:              util.GroupIdByTimezoneIdJson,
-		CurrentPlan:                          currentPlan,
-		IsPatron:                             planId == models.PlanIdPatron,
-		PatronCredits:                        patronCredits,
-		CancelAt:                             cancelAtStr,
-		RenewsOn:                             renewsOnStr,
-		IsPaid:                               isPaid,
 	})
 }
 
@@ -397,80 +325,4 @@ func UserSettings_SaveDeliveryChannel(w http.ResponseWriter, r *http.Request) {
 			failedLockAttempts++
 		}
 	}
-}
-
-func UserSettings_Billing(w http.ResponseWriter, r *http.Request) {
-	currentUserId := rutil.CurrentUserId(r)
-	pool := rutil.DBPool(r)
-	row := pool.QueryRow(`
-		select stripe_customer_id, (select plan_id from pricing_offers where id = offer_id)
-		from users_without_discarded
-		where id = $1
-	`, currentUserId)
-	var stripeCustomerId string
-	var planId models.PlanId
-	err := row.Scan(&stripeCustomerId, &planId)
-	if err != nil {
-		panic(err)
-	}
-
-	var billingPortalConfigurationId string
-	switch planId {
-	case models.PlanIdFree:
-		http.Redirect(w, r, "/settings", http.StatusSeeOther)
-		return
-	case models.PlanIdSupporter:
-		billingPortalConfigurationId = config.Cfg.StripeSupporterConfigId
-	case models.PlanIdPatron:
-		billingPortalConfigurationId = config.Cfg.StripePatronConfigId
-	default:
-		panic(fmt.Errorf("Unknown plan id: %s", planId))
-	}
-
-	//nolint:exhaustruct
-	params := &stripe.BillingPortalSessionParams{
-		Customer:      stripe.String(stripeCustomerId),
-		ReturnURL:     stripe.String(config.Cfg.RootUrl + "/settings"),
-		Configuration: stripe.String(billingPortalConfigurationId),
-	}
-	portalSession, err := session.New(params)
-	if err != nil {
-		panic(err)
-	}
-	http.Redirect(w, r, portalSession.URL, http.StatusSeeOther)
-}
-
-func UserSettings_BillingFull(w http.ResponseWriter, r *http.Request) {
-	currentUserId := rutil.CurrentUserId(r)
-	logger := rutil.Logger(r)
-	pool := rutil.DBPool(r)
-	row := pool.QueryRow(`
-		select stripe_customer_id, (select plan_id from pricing_offers where id = offer_id)
-		from users_without_discarded
-		where id = $1
-	`, currentUserId)
-	var stripeCustomerId string
-	var planId models.PlanId
-	err := row.Scan(&stripeCustomerId, &planId)
-	if err != nil {
-		panic(err)
-	}
-
-	if planId == models.PlanIdFree {
-		http.Redirect(w, r, "/settings", http.StatusSeeOther)
-		return
-	}
-
-	logger.Warn().Msgf("User %d has visited billing_full portal, consider Stripe flows?", currentUserId)
-
-	//nolint:exhaustruct
-	params := &stripe.BillingPortalSessionParams{
-		Customer:  stripe.String(stripeCustomerId),
-		ReturnURL: stripe.String(config.Cfg.RootUrl + "/pricing"),
-	}
-	portalSession, err := session.New(params)
-	if err != nil {
-		panic(err)
-	}
-	http.Redirect(w, r, portalSession.URL, http.StatusSeeOther)
 }

@@ -61,7 +61,6 @@ Supported in the demo:
 Not supported in the demo:
 - Crawling Tumblr (needs API key)
 - Sending emails (needs Postmark key)
-- Payments (needs Stripe key)
 - Various maintenance jobs (needs a seeded DB and AWS key)
 - Sending out events to Amplitude and Slack (needs API keys)
 - End to end tests (need all of the above)

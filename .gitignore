@@ -3,6 +3,7 @@
 
 *.sublime-workspace
 tmp/
+.gocache/
 
 static/tailwind.css
 trace.out

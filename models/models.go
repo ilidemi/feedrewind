@@ -3,7 +3,6 @@ package models
 import (
 	"bytes"
 	"fmt"
-	"strings"
 
 	"feedrewind.com/crawler"
 	"feedrewind.com/db/pgw"
@@ -49,29 +48,6 @@ func MustInit(qu pgw.Queryable) {
 	}
 	if err := rows.Err(); err != nil {
 		panic(err)
-	}
-
-	rows, err = qu.Query(`select id, plan_id from pricing_offers`)
-	if err != nil {
-		panic(err)
-	}
-	foundBadOffers := false
-	for rows.Next() {
-		var offerId OfferId
-		var planId PlanId
-		err := rows.Scan(&offerId, &planId)
-		if err != nil {
-			panic(err)
-		}
-		if !PricingOffer_ValidateId(offerId, planId) {
-			logger.Error().Msgf(
-				"Bad id for pricing offer %s: expected to start with \"%s_\"", offerId, planId,
-			)
-			foundBadOffers = true
-		}
-	}
-	if foundBadOffers {
-		panic("Found bad pricing offer ids")
 	}
 }
 
@@ -256,56 +232,7 @@ func SubscriptionRss_Upsert(qu pgw.Queryable, subscriptionId SubscriptionId, bod
 
 type PlanId string
 
-const (
-	PlanIdFree      PlanId = "free"
-	PlanIdSupporter PlanId = "supporter"
-	PlanIdPatron    PlanId = "patron"
-)
-
-type OfferId string
-
-func PricingOffer_ValidateId(offerId OfferId, planId PlanId) bool {
-	return strings.Split(string(offerId), "_")[0] == string(planId)
-}
-
-func PricingPlan_IdFromOfferId(offerId OfferId) PlanId {
-	return PlanId(strings.Split(string(offerId), "_")[0])
-}
-
-type BillingInterval string
-
-const (
-	BillingIntervalMonthly BillingInterval = "monthly"
-	BillingIntervalYearly  BillingInterval = "yearly"
-)
-
-func BillingInterval_GetByOffer(
-	qu pgw.Queryable, stripeProductId, stripePriceId string,
-) (BillingInterval, error) {
-	row := qu.QueryRow(`
-		select stripe_monthly_price_id, stripe_yearly_price_id from pricing_offers
-		where stripe_product_id = $1
-	`, stripeProductId)
-	var monthlyPriceId, yearlyPriceId string
-	err := row.Scan(&monthlyPriceId, &yearlyPriceId)
-	if err != nil {
-		return "", err
-	}
-
-	switch stripePriceId {
-	case monthlyPriceId:
-		return BillingIntervalMonthly, nil
-	case yearlyPriceId:
-		return BillingIntervalYearly, nil
-	default:
-		return "", oops.Newf("Unknown price id for stripe product %s: %s", stripeProductId, stripePriceId)
-	}
-}
-
-const PatronCreditsMonthly = 1
-const PatronCreditsYearly = 12
-
-type CustomBlogRequestId int64
+const PlanIdFree PlanId = "free"
 
 // AdminTelemetry
 

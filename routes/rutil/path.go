@@ -47,18 +47,6 @@ func SubscriptionNotifyWhenSupportedPath(subscriptionId models.SubscriptionId) s
 	return fmt.Sprintf("/subscriptions/%d/notify_when_supported", subscriptionId)
 }
 
-func SubscriptionRequestCustomBlogPath(subscriptionId models.SubscriptionId) string {
-	return fmt.Sprintf("/subscriptions/%d/request", subscriptionId)
-}
-
-func SubscriptionRequestCustomBlogSubmitPath(subscriptionId models.SubscriptionId) string {
-	return fmt.Sprintf("/subscriptions/%d/submit_request", subscriptionId)
-}
-
-func SubscriptionRequestCustomBlogCheckoutPath(subscriptionId models.SubscriptionId) string {
-	return fmt.Sprintf("/subscriptions/%d/checkout", subscriptionId)
-}
-
 func SubscriptionAddFeedPath(feedUrl string) string {
 	return util.SubscriptionAddFeedPath(feedUrl)
 }

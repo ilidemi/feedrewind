@@ -107,13 +107,6 @@ func developmentConfig() Config {
 		PostmarkApiToken:          getStringOrDemo("postmark_api_token"),
 		PostmarkWebhookSecret:     getStringOrDemo("postmark_webhook_secret"),
 		SlackWebhook:              getStringOrDemo("slack_webhook"),
-		StripeApiKey:              getStringOrDemo("stripe_api_key"),
-		StripeWebhookSecret:       getStringOrDemo("stripe_webhook_secret"),
-		StripeSupporterConfigId:   getStringOrDemo("stripe_supporter_config_id"),
-		StripePatronConfigId:      getStringOrDemo("stripe_patron_config_id"),
-		StripeCustomBlogProductId: getStringOrDemo("stripe_custom_blog_product_id"),
-		StripeCustomBlogPriceId:   getStringOrDemo("stripe_custom_blog_price_id"),
-		StripeCustomBlogPrice:     getStringOrDemo("stripe_custom_blog_price"),
 		TumblrApiKey:              getStringOrDemo("tumblr_api_key"),
 		AdminUserIds:              nil,
 	}

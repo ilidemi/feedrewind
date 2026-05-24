@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
-	"os/exec"
 	"os/signal"
 	"sync"
 	"syscall"
@@ -28,7 +26,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/spf13/cobra"
-	"github.com/stripe/stripe-go/v78"
 )
 
 //go:generate go run cmd/timezones/main.go
@@ -63,52 +60,6 @@ func main() {
 			logStalledJobs()
 		},
 	})
-	rootCmd.AddCommand(&cobra.Command{
-		Use: "stripe-listen",
-		Run: func(_ *cobra.Command, _ []string) {
-			stripeCmd := exec.Command("stripe", "listen", "--forward-to", "localhost:3000/stripe/webhook")
-			stripeCmd.Stdout = os.Stdout
-			stripeCmd.Stderr = os.Stderr
-			if err := stripeCmd.Run(); err != nil {
-				panic(err)
-			}
-		},
-	})
-	rootCmd.AddCommand(&cobra.Command{
-		Use: "demo-seed-db",
-		Run: func(_ *cobra.Command, _ []string) {
-			conn, err := db.RootPool.AcquireBackground()
-			if err != nil {
-				panic(err)
-			}
-			defer conn.Release()
-
-			tx, err := conn.Begin()
-			if err != nil {
-				panic(err)
-			}
-			_, err = tx.Exec(`
-				insert into pricing_plans (id, default_offer_id)
-				values ('free', 'free_demo'), ('supporter', 'supporter_demo'), ('patron', 'patron_demo')
-			`)
-			if err != nil {
-				panic(err)
-			}
-			_, err = tx.Exec(`
-				insert into pricing_offers (id, monthly_rate, yearly_rate, plan_id)
-				values ('free_demo', '$0.00', '$0.00', 'free'),
-					('supporter_demo', '$1.00', '$10.00', 'supporter'),
-					('patron_demo', '$10.00', '$100.00', 'patron')
-			`)
-			if err != nil {
-				panic(err)
-			}
-			err = tx.Commit()
-			if err != nil {
-				panic(err)
-			}
-		},
-	})
 
 	if err := rootCmd.Execute(); err != nil {
 		panic(err)
@@ -136,9 +87,6 @@ func runServer(port int) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	models.ProductEvent_StartDummyEventsSync(signalCtx, &wg)
-
-	stripe.Key = config.Cfg.StripeApiKey
-	stripe.DefaultLeveledLogger = &log.StripeLogger{Logger: logger}
 
 	staticR := chi.NewRouter()
 	staticR.Use(frmiddleware.Logger)
@@ -173,8 +121,9 @@ func runServer(port int) {
 		r.Post("/subscriptions/add/{start_url}", routes.Onboarding_Add)
 		r.Post("/subscriptions/discover_feeds", routes.Onboarding_DiscoverFeeds)
 		r.Get("/preview/{slug}", routes.Onboarding_Preview)
-		r.Get("/pricing", routes.Onboarding_Pricing)
-		r.Post("/checkout", routes.Onboarding_Checkout)
+		r.Get("/pricing", func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "/signup", http.StatusPermanentRedirect)
+		})
 
 		r.Get("/subscriptions/{id:\\d+}/setup", routes.Subscriptions_Setup)
 		r.Post("/subscriptions", routes.Subscriptions_Create)
@@ -201,23 +150,10 @@ func runServer(port int) {
 			authorized.Post("/subscriptions/{id:\\d+}", routes.Subscriptions_Update)
 			authorized.Post("/subscriptions/{id:\\d+}/pause", routes.Subscriptions_Pause)
 			authorized.Post("/subscriptions/{id:\\d+}/unpause", routes.Subscriptions_Unpause)
-			authorized.Get("/subscriptions/{id:\\d+}/request", routes.Subscriptions_RequestCustomBlogPage)
-			authorized.Post(
-				"/subscriptions/{id:\\d+}/checkout", routes.Subscriptions_CheckoutCustomBlogRequest,
-			)
-			authorized.Get(
-				"/subscriptions/{id:\\d+}/submit_request", routes.Subscriptions_SubmitCustomBlogRequest,
-			)
-			authorized.Post(
-				"/subscriptions/{id:\\d+}/submit_request", routes.Subscriptions_SubmitCustomBlogRequest,
-			)
 
 			authorized.Get("/settings", routes.UserSettings_Page)
 			authorized.Post("/settings/save_timezone", routes.UserSettings_SaveTimezone)
 			authorized.Post("/settings/save_delivery_channel", routes.UserSettings_SaveDeliveryChannel)
-			authorized.Get("/billing", routes.UserSettings_Billing)
-			authorized.Get("/billing_full", routes.UserSettings_BillingFull)
-			authorized.Get("/upgrade", routes.Users_Upgrade)
 			authorized.Post("/delete_account", routes.Users_DeleteAccount)
 		})
 
@@ -244,10 +180,6 @@ func runServer(port int) {
 			r.Get("/test/travel_back", routes.AdminTest_TravelBack)
 			r.Get("/test/wait_for_publish_posts_job", routes.AdminTest_WaitForPublishPostsJob)
 			r.Get("/test/execute_sql", routes.AdminTest_ExecuteSql)
-			r.Get("/test/ensure_stripe_listen", routes.AdminTest_EnsureStripeListen)
-			r.Get("/test/delete_stripe_subscription", routes.AdminTest_DeleteStripeSubscription)
-			r.Get("/test/forward_stripe_customer", routes.AdminTest_ForwardStripeCustomer)
-			r.Get("/test/delete_stripe_clocks", routes.AdminTest_DeleteStripeClocks)
 		}
 	})
 
@@ -259,7 +191,6 @@ func runServer(port int) {
 		anonR.Get("/posts/{slug}/{random_id:[A-Za-z0-9_-]+}", routes.Posts_Post)
 
 		anonR.Post("/postmark/report_bounce", routes.Webhooks_PostmarkReportBounce)
-		anonR.Post("/stripe/webhook", routes.Webhooks_Stripe)
 	})
 
 	staticR.Get(util.StaticRouteTemplate, routes.Static_File)

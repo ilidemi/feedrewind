@@ -63,13 +63,6 @@ func productionConfig() Config {
 		PostmarkApiToken:          mustLookupEnv("POSTMARK_API_TOKEN"),
 		PostmarkWebhookSecret:     mustLookupEnv("POSTMARK_WEBHOOK_SECRET"),
 		SlackWebhook:              mustLookupEnv("SLACK_WEBHOOK"),
-		StripeApiKey:              mustLookupEnv("STRIPE_KEY"),
-		StripeWebhookSecret:       mustLookupEnv("STRIPE_WEBHOOK_SECRET"),
-		StripeSupporterConfigId:   mustLookupEnv("STRIPE_SUPPORTER_CONFIG_ID"),
-		StripePatronConfigId:      mustLookupEnv("STRIPE_PATRON_CONFIG_ID"),
-		StripeCustomBlogProductId: mustLookupEnv("STRIPE_CUSTOM_BLOG_PRODUCT_ID"),
-		StripeCustomBlogPriceId:   mustLookupEnv("STRIPE_CUSTOM_BLOG_PRICE_ID"),
-		StripeCustomBlogPrice:     mustLookupEnv("STRIPE_CUSTOM_BLOG_PRICE"),
 		TumblrApiKey:              mustLookupEnv("TUMBLR_API_KEY"),
 		AdminUserIds: map[int64]bool{
 			adminUserId: true,

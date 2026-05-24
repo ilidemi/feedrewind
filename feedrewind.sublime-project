@@ -29,20 +29,16 @@
                     "shell_cmd": "go test ./e2e_test -tags emailtesting -timeout 60m -count=1 -v",
                 },
                 {
-                    "name": "test stripe",
-                    "shell_cmd": "go test ./e2e_test -tags stripetesting -timeout 60m -count=1 -v",
-                },
-                {
                     "name": "test all",
-                    "shell_cmd": "go test ./... -tags testing,e2etesting,emailtesting,stripetesting -timeout 60m -count=1 -v",
+                    "shell_cmd": "go test ./... -tags testing,e2etesting,emailtesting -timeout 60m -count=1 -v",
                 },
                 {
                     "name": "golangci-lint",
-                    "shell_cmd": "golangci-lint cache clean && golangci-lint run --build-tags testing,e2etesting,emailtesting,stripetesting",
+                    "shell_cmd": "golangci-lint cache clean && golangci-lint run --build-tags testing,e2etesting,emailtesting",
                 },
                 {
                     "name": "golangci-lint (with cache)",
-                    "shell_cmd": "golangci-lint run --build-tags testing,e2etesting,emailtesting,stripetesting",
+                    "shell_cmd": "golangci-lint run --build-tags testing,e2etesting,emailtesting",
                 },
                 {
                     "name": "govulncheck",
@@ -103,7 +99,7 @@
         "LSP": {
             "gopls": {
                 "settings": {
-                    "gopls.buildFlags": ["-tags", "testing,e2etesting,emailtesting,stripetesting"],
+                    "gopls.buildFlags": ["-tags", "testing,e2etesting,emailtesting"],
                 },
             },
         },

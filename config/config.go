@@ -20,13 +20,6 @@ type Config struct {
 	PostmarkApiToken          string
 	PostmarkWebhookSecret     string
 	SlackWebhook              string
-	StripeApiKey              string
-	StripeWebhookSecret       string
-	StripeSupporterConfigId   string
-	StripePatronConfigId      string
-	StripeCustomBlogProductId string
-	StripeCustomBlogPriceId   string
-	StripeCustomBlogPrice     string
 	TumblrApiKey              string
 	AdminUserIds              map[int64]bool
 }

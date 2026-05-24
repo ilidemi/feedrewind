@@ -28,7 +28,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-	"github.com/stripe/stripe-go/v78"
 	"gopkg.in/yaml.v3"
 )
 
@@ -69,9 +68,6 @@ func init() {
 			}
 			finishedJobs := make(chan jobResult, totalWorkerCount)
 
-			stripe.Key = config.Cfg.StripeApiKey
-			stripe.DefaultLeveledLogger = &log.StripeLogger{Logger: logger}
-
 			err = startWorker(conn, dynoId, workerNamePrefix, availableWorkers, finishedJobs, logger)
 			if errors.Is(err, context.Canceled) {
 				logger.Info().Msg("Context canceled, shutting down")
@@ -102,11 +98,9 @@ func registerJobNameFunc(className string, f jobFunc) {
 	})
 }
 
-const stripeWebhookWorkerCount = 100
 const defaultWorkerCount = 100
 const guidedCrawlingWorkerCount = 15
-const totalWorkerCount = stripeWebhookWorkerCount + defaultWorkerCount + guidedCrawlingWorkerCount
-const stripeWebhookQueue = "stripe_webhook"
+const totalWorkerCount = defaultWorkerCount + guidedCrawlingWorkerCount
 const defaultQueue = "default"
 const guidedCrawlingQueue = "guided_crawling"
 const maxBrowserCount = 2
@@ -204,7 +198,6 @@ func startWorker(
 	}
 
 	crawler.SetMaxBrowserCount(maxBrowserCount)
-	var lastStripeWebhookHoggedWarning time.Time
 	var lastGuidedCrawlingHoggedWarning time.Time
 	var defaultHoggedSince time.Time
 	var lastDefaultHoggedWarning time.Time
@@ -237,12 +230,9 @@ mainLoop:
 		for workerId, isAvailable := range availableWorkers {
 			if isAvailable {
 				var queue string
-				switch {
-				case workerId < stripeWebhookWorkerCount:
-					queue = stripeWebhookQueue
-				case workerId < stripeWebhookWorkerCount+defaultWorkerCount:
+				if workerId < defaultWorkerCount {
 					queue = defaultQueue
-				default:
+				} else {
 					queue = guidedCrawlingQueue
 				}
 				workerName := fmt.Sprintf("%s-%d", workerNamePrefix, workerId)
@@ -251,12 +241,6 @@ mainLoop:
 					availableWorkerNameByQueue[queue] = workerName
 				}
 				availableWorkerNames = append(availableWorkerNames, workerName)
-			}
-		}
-		if _, ok := availableWorkerIdByQueue[stripeWebhookQueue]; !ok {
-			if time.Since(lastStripeWebhookHoggedWarning) > 30*time.Minute {
-				logger.Warn().Msgf("All %d stripe webhook workers are hogged", stripeWebhookWorkerCount)
-				lastStripeWebhookHoggedWarning = time.Now()
 			}
 		}
 		if _, ok := availableWorkerIdByQueue[defaultQueue]; !ok {

@@ -519,52 +519,6 @@ CREATE TABLE public.blogs (
 
 
 --
--- Name: custom_blog_requests; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.custom_blog_requests (
-    id bigint NOT NULL,
-    blog_url text,
-    feed_url text NOT NULL,
-    stripe_payment_intent_id text,
-    user_id bigint,
-    subscription_id bigint,
-    blog_id bigint,
-    fulfilled_at timestamp without time zone,
-    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    why text NOT NULL,
-    enable_for_others boolean NOT NULL
-);
-
-
---
--- Name: COLUMN custom_blog_requests.subscription_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.custom_blog_requests.subscription_id IS 'Protects unfulfilled subscriptions from accidental deletion. Set to null when a request is fulfilled.';
-
-
---
--- Name: custom_blog_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.custom_blog_requests_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: custom_blog_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.custom_blog_requests_id_seq OWNED BY public.custom_blog_requests.id;
-
-
---
 -- Name: delayed_jobs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -665,30 +619,6 @@ ALTER SEQUENCE public.page_screenshots_id_seq OWNED BY public.page_screenshots.i
 
 
 --
--- Name: patron_credits; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.patron_credits (
-    user_id bigint NOT NULL,
-    count integer NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    CONSTRAINT count_non_negative CHECK ((count >= 0))
-);
-
-
---
--- Name: patron_invoices; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.patron_invoices (
-    id text NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
-);
-
-
---
 -- Name: postmark_bounced_users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -736,9 +666,6 @@ CREATE TABLE public.pricing_offers (
     id text NOT NULL,
     monthly_rate money NOT NULL,
     yearly_rate money NOT NULL,
-    stripe_product_id text,
-    stripe_monthly_price_id text,
-    stripe_yearly_price_id text,
     created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     plan_id text NOT NULL
@@ -898,34 +825,6 @@ CREATE TABLE public.stripe_hanging_sessions (
     stripe_session_id text NOT NULL,
     stripe_subscription_id text NOT NULL,
     stripe_customer_id text NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
-);
-
-
---
--- Name: stripe_subscription_tokens; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.stripe_subscription_tokens (
-    id bigint NOT NULL,
-    offer_id text NOT NULL,
-    stripe_subscription_id text NOT NULL,
-    stripe_customer_id text NOT NULL,
-    created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
-    billing_interval public.billing_interval NOT NULL,
-    current_period_end timestamp without time zone NOT NULL
-);
-
-
---
--- Name: stripe_webhook_events; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.stripe_webhook_events (
-    id text NOT NULL,
-    payload bytea NOT NULL,
     created_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT public.utc_now() NOT NULL
 );
@@ -1162,12 +1061,7 @@ CREATE TABLE public.users (
     name text NOT NULL,
     product_user_id uuid NOT NULL,
     discarded_at timestamp without time zone,
-    offer_id text NOT NULL,
-    stripe_subscription_id text,
-    stripe_customer_id text,
-    billing_interval public.billing_interval,
-    stripe_cancel_at timestamp without time zone,
-    stripe_current_period_end timestamp without time zone
+    offer_id text NOT NULL
 );
 
 
@@ -1185,12 +1079,7 @@ CREATE VIEW public.users_with_discarded AS
     users.name,
     users.product_user_id,
     users.discarded_at,
-    users.offer_id,
-    users.stripe_subscription_id,
-    users.stripe_customer_id,
-    users.billing_interval,
-    users.stripe_cancel_at,
-    users.stripe_current_period_end
+    users.offer_id
    FROM public.users
   WITH CASCADED CHECK OPTION;
 
@@ -1209,12 +1098,7 @@ CREATE VIEW public.users_without_discarded AS
     users.name,
     users.product_user_id,
     users.discarded_at,
-    users.offer_id,
-    users.stripe_subscription_id,
-    users.stripe_customer_id,
-    users.billing_interval,
-    users.stripe_cancel_at,
-    users.stripe_current_period_end
+    users.offer_id
    FROM public.users
   WHERE (users.discarded_at IS NULL)
   WITH CASCADED CHECK OPTION;
@@ -1267,13 +1151,6 @@ ALTER TABLE ONLY public.blog_post_category_assignments ALTER COLUMN id SET DEFAU
 --
 
 ALTER TABLE ONLY public.blog_posts ALTER COLUMN id SET DEFAULT nextval('public.blog_posts_id_seq'::regclass);
-
-
---
--- Name: custom_blog_requests id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.custom_blog_requests ALTER COLUMN id SET DEFAULT nextval('public.custom_blog_requests_id_seq'::regclass);
 
 
 --
@@ -1445,14 +1322,6 @@ ALTER TABLE ONLY public.blogs
 
 
 --
--- Name: custom_blog_requests custom_blog_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.custom_blog_requests
-    ADD CONSTRAINT custom_blog_requests_pkey PRIMARY KEY (id);
-
-
---
 -- Name: delayed_jobs delayed_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1482,22 +1351,6 @@ ALTER TABLE ONLY public.ignored_suggestion_feeds
 
 ALTER TABLE ONLY public.page_screenshots
     ADD CONSTRAINT page_screenshots_pkey PRIMARY KEY (id);
-
-
---
--- Name: patron_credits patron_credits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.patron_credits
-    ADD CONSTRAINT patron_credits_pkey PRIMARY KEY (user_id);
-
-
---
--- Name: patron_invoices patron_invoices_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.patron_invoices
-    ADD CONSTRAINT patron_invoices_pkey PRIMARY KEY (id);
 
 
 --
@@ -1586,22 +1439,6 @@ ALTER TABLE ONLY public.start_pages
 
 ALTER TABLE ONLY public.stripe_hanging_sessions
     ADD CONSTRAINT stripe_hanging_sessions_pkey PRIMARY KEY (stripe_session_id);
-
-
---
--- Name: stripe_subscription_tokens stripe_subscription_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.stripe_subscription_tokens
-    ADD CONSTRAINT stripe_subscription_tokens_pkey PRIMARY KEY (id);
-
-
---
--- Name: stripe_webhook_events stripe_webhook_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.stripe_webhook_events
-    ADD CONSTRAINT stripe_webhook_events_pkey PRIMARY KEY (id);
 
 
 --
@@ -1866,13 +1703,6 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.blogs FOR EACH ROW EXECUT
 
 
 --
--- Name: custom_blog_requests bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.custom_blog_requests FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
-
-
---
 -- Name: delayed_jobs bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1898,20 +1728,6 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.ignored_suggestion_feeds 
 --
 
 CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.page_screenshots FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
-
-
---
--- Name: patron_credits bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.patron_credits FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
-
-
---
--- Name: patron_invoices bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.patron_invoices FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
 
 
 --
@@ -1992,20 +1808,6 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.stripe_hanging_sessions F
 
 
 --
--- Name: stripe_subscription_tokens bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.stripe_subscription_tokens FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
-
-
---
--- Name: stripe_webhook_events bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.stripe_webhook_events FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
-
-
---
 -- Name: subscription_posts bump_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -2059,30 +1861,6 @@ CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.user_settings FOR EACH RO
 --
 
 CREATE TRIGGER bump_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.bump_updated_at_utc();
-
-
---
--- Name: custom_blog_requests custom_blog_requests_blog_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.custom_blog_requests
-    ADD CONSTRAINT custom_blog_requests_blog_id_fkey FOREIGN KEY (blog_id) REFERENCES public.blogs(id) ON DELETE SET NULL;
-
-
---
--- Name: custom_blog_requests custom_blog_requests_subscription_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.custom_blog_requests
-    ADD CONSTRAINT custom_blog_requests_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
-
-
---
--- Name: custom_blog_requests custom_blog_requests_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.custom_blog_requests
-    ADD CONSTRAINT custom_blog_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --
@@ -2294,14 +2072,6 @@ ALTER TABLE ONLY public.blog_crawl_votes
 
 
 --
--- Name: patron_credits patron_credits_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.patron_credits
-    ADD CONSTRAINT patron_credits_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
 -- Name: pricing_offers pricing_offers_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2315,14 +2085,6 @@ ALTER TABLE ONLY public.pricing_offers
 
 ALTER TABLE ONLY public.pricing_plans
     ADD CONSTRAINT pricing_plans_default_offer_id_fkey FOREIGN KEY (default_offer_id) REFERENCES public.pricing_offers(id) DEFERRABLE INITIALLY DEFERRED;
-
-
---
--- Name: stripe_subscription_tokens stripe_subscription_tokens_offer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.stripe_subscription_tokens
-    ADD CONSTRAINT stripe_subscription_tokens_offer_id_fkey FOREIGN KEY (offer_id) REFERENCES public.pricing_offers(id);
 
 
 --
@@ -2543,4 +2305,5 @@ INSERT INTO public.schema_migrations (version) VALUES
 ('20241016184250'),
 ('20241018150103'),
 ('20241018153403'),
-('20250129143507');
+('20250129143507'),
+('20260524120000');

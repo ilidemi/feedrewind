@@ -1,4 +1,4 @@
-//go:build !testing && !e2etesting && !emailtesting && !stripetesting
+//go:build !testing && !e2etesting && !emailtesting
 
 package oops
 

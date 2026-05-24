@@ -63,11 +63,6 @@ func mustPageText(page *rod.Page) string {
 	return page.MustElement("body").MustText()
 }
 
-func mustRequireNoElement(t *testing.T, page *rod.Page, selector string) {
-	elements := page.MustElements(selector)
-	require.True(t, elements.Empty())
-}
-
 func parsePublishedCount(page *rod.Page) string {
 	publishedCountText := page.MustElement("#published_count").MustText()
 	return publishedCountRegex.FindStringSubmatch(publishedCountText)[0]

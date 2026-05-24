@@ -27,13 +27,6 @@ func testingConfig() Config {
 		PostmarkApiToken:          devCfg.PostmarkApiToken,
 		PostmarkWebhookSecret:     devCfg.PostmarkWebhookSecret,
 		SlackWebhook:              devCfg.SlackWebhook,
-		StripeApiKey:              devCfg.StripeApiKey,
-		StripeWebhookSecret:       devCfg.StripeWebhookSecret,
-		StripeSupporterConfigId:   devCfg.StripeSupporterConfigId,
-		StripePatronConfigId:      devCfg.StripePatronConfigId,
-		StripeCustomBlogProductId: devCfg.StripeCustomBlogProductId,
-		StripeCustomBlogPriceId:   devCfg.StripeCustomBlogPriceId,
-		StripeCustomBlogPrice:     devCfg.StripeCustomBlogPrice,
 		TumblrApiKey:              devCfg.TumblrApiKey,
 		AdminUserIds:              nil,
 	}

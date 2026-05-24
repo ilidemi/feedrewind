@@ -19,10 +19,9 @@ type SubscriptionId int64
 type SubscriptionStatus string
 
 const (
-	SubscriptionStatusWaitingForBlog      = "waiting_for_blog"
-	SubscriptionStatusCustomBlogRequested = "custom_blog_requested"
-	SubscriptionStatusSetup               = "setup"
-	SubscriptionStatusLive                = "live"
+	SubscriptionStatusWaitingForBlog = "waiting_for_blog"
+	SubscriptionStatusSetup          = "setup"
+	SubscriptionStatusLive           = "live"
 )
 
 func Subscription_Exists(qu pgw.Queryable, id SubscriptionId) (bool, error) {

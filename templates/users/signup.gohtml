@@ -74,10 +74,6 @@
         document.getElementById("time_offset").value = new Date().getTimezoneOffset();
       </script>
 
-      {{if .StripeSubscriptionToken}}
-      <input type="hidden" name="stripe_subscription_token" value="{{.StripeSubscriptionToken}}">
-      {{end}}
-
       <input type="submit" name="commit" value="Sign up" class="btn" data-disable-with="Sign up">
     </div>
   </form>
